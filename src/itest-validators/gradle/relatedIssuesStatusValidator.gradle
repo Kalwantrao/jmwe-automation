@@ -1,0 +1,403 @@
+buildscript {
+    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
+    dependencies {
+        classpath 'org.gint:gint-atlassian:' + gintVersion
+    }
+    repositories {
+        flatDir { dirs 'libs' }
+        mavenLocal()
+        mavenCentral()
+        maven { url 'https://plugins.gradle.org/m2/' }
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: 'common/tearDown.gradle'
+apply from: 'configValidators/addRelatedIssuesStatusValidator.gradle'
+apply from: 'common/setUp.gradle'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def saved =	[:]
+def savedIssues1 = [:]
+def savedIssues2 = [:]
+//def transition = 'relatedIssuesStatusValidator'
+def user = info.user
+def userqa1 = project.toLowerCase()+'qa1'
+def userqa2 = project.toLowerCase()+'qa2'
+def userdev1 = project.toLowerCase()+'dev1'
+def userdev2 = project.toLowerCase()+'dev2'
+
+def statusOfRelatedIssueToBeIn = "In Progress"
+def baseStatus = "To Do"
+
+def testCase1 = 'testCase1- Check if related issues subtask Or parent issue not in selected status error should be display on transition screen'
+def testCase2 = 'testCase2- Check if allSubtasks of parent issue in selected status then error should not be display on transition screen'
+def testCase3 = 'testCase3- Check if parentIssue of subtask in selected status then error should not be display on transition screen'
+def testCase4 = 'testCase4- Check if at least one subtask of the parent issue in selected status then error should not be display on transition screen'
+def testCase5 = 'testCase5- Each sub-task of the current issue must not be in selected status'
+def testCase6 = 'testCase6- The parent issue of the current sub-task must not be in selected status'
+
+(1..1).each { number ->
+def type = 'Bug'
+def summary
+	if (number == 1)
+		summary = 'parentIssueOfSubtasks'
+	else if(number == 2)
+		summary = 'parentIssueOfSubtaskMustBeInProgress'
+	else if(number == 3)
+		summary = 'atLeastOnesubtaskMustBeInProgress'
+	else if(number == 4)
+		summary = 'noSubtaskMustBeInProgress'
+	else if(number == 5)
+		summary = 'noParentIssueOfSubtaskInProgress'
+	else if (number == 6)
+		summary = 'atLeastOnesubtaskMustNotBeInProgress'
+
+    gint.taskHelper.add(
+        action: 'createIssue', ext: 'parent'+ number,
+        dependsOn: true,
+        group: 'create',
+        project: project,
+        parameters: [
+            type: type,
+            summary: summary ,
+        ],
+        stopOnFail: true,
+        finalClosure: { Task task ->
+            saved.issue = gint.searchForIssueKey(task.outData)
+            savedIssues1[number] = saved.issue
+            gint.helper.logVarWithFormat('saved')
+            gint.helper.log('create issues - parent',saved)
+        },
+    )
+}
+(1..3).each { number ->
+def type = 'Sub-task'
+def summary
+	if (number == 1)
+		summary = 'subtaskInProgress'
+	else if(number == 2)
+		summary = 'subtaskInProgress'
+	else if(number == 3)
+		summary = 'subtaskInProgress'
+
+    gint.taskHelper.add(
+        action: 'createIssue', ext: 'subtask'+number,
+        dependsOn: true,
+        group: 'create',
+        project: project,
+        parameters: [
+        	parent: ~/${project}-1/,
+            type: type,
+            summary: summary ,
+        ],
+        stopOnFail: true,
+        finalClosure: { Task task ->
+            saved.issue = gint.searchForIssueKey(task.outData)
+            savedIssues2[number] = saved.issue
+            gint.helper.logVarWithFormat('saved')
+            gint.helper.log('create issues - Subtasks',saved)
+        },
+    )
+}
+// 1,2 - Verify that when related issues are not in selected statuses system should display the error msg on transition screen
+(1..2).each{ number ->
+def parentIssue = ~/${project}-1/
+def subtask1 = ~/${project}-2/
+def subtask2 = ~/${project}-3/
+def subtask3 = ~/${project}-4/
+def transitionToCheckErrors = 'relatedIssuesStatusValidator1'
+
+def transition
+def issue
+def data
+def expected
+	if(number == 1)
+		issue = parentIssue
+		transition = transitionToCheckErrors
+		data = 'Remote error: subtasks: Transition is not authorized because issue(s) ZRELATEDISSUESSTATUSVALIDATOR-3, ZRELATEDISSUESSTATUSVALIDATOR-2, ZRELATEDISSUESSTATUSVALIDATOR-4 should be in one of the following statuses: In Progress'
+		expected =[ -3 ]
+	if(number == 2)
+		issue = subtask1
+		transition = transitionToCheckErrors
+		data = 'Remote error: subtasks: Transition is not authorized because issue(s) ZRELATEDISSUESSTATUSVALIDATOR-1 should be in one of the following statuses: In Progress'
+		expected =[ -3 ]
+
+    gint.taskHelper.add('transitionIssue', [
+        [action: 'transitionIssue', ext: testCase1 + number,
+            expected: expected,
+            parameters: [
+                issue: issue,
+                transition: transition + number,
+				],
+           data:[data],
+           finalClosure:{ Task task ->
+//         		gint.helper.log('Verify that when related issue is not in selected status system should display the error msg on transition screen',saved)
+         		gint.helper.log(testCase1,saved)
+         	},
+        ],
+    ])
+}
+// Verify that when subtasks of the issues are in selected statuses system should not display the error msg on transition screen
+(1..4).each{ number ->
+
+def parentIssue = ~/${project}-1/
+def subtask1 = ~/${project}-2/
+def subtask2 = ~/${project}-3/
+def subtask3 = ~/${project}-4/
+
+def transitionToCheckErrors = "relatedIssuesStatusValidator1"
+
+def transition
+def issue
+def data
+def expected
+	if(number == 1)
+		transition = statusOfRelatedIssueToBeIn
+		issue = subtask1
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${statusOfRelatedIssueToBeIn}'./
+		expected = [ 0 ]
+	if(number == 2)
+		transition = statusOfRelatedIssueToBeIn
+		issue = subtask2
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${statusOfRelatedIssueToBeIn}'./
+		expected = [ 0 ]
+	if(number == 3)
+		transition = statusOfRelatedIssueToBeIn
+		issue = subtask3
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${statusOfRelatedIssueToBeIn}'./
+		expected = [ 0 ]
+	if(number == 4)
+		issue = parentIssue
+		transition = transitionToCheckErrors
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${transitionToCheckErrors}'./
+		expected = [ 0 ]
+
+    gint.taskHelper.add('transitionIssue', [
+        [action: 'transitionIssue', ext: testCase2 +number,
+            expected: expected,
+            parameters: [
+                issue: issue,
+                transition: transition,
+				],
+           data:[data],
+           finalClosure:{ Task task ->
+//         		gint.helper.log('Verify that when subtasks of the issues are in selected statuses system should not display the error msg on transition screen',saved)
+         		gint.helper.log(testCase2,saved)
+         	},
+        ],
+    ])
+}
+// Verify that when parent issue of the subtask is in selected statuses system should not display the error msg on transition screen
+(1..5).each{ number ->
+
+def parentIssue = ~/${project}-1/
+def subtask1 = ~/${project}-2/
+def subtask2 = ~/${project}-3/
+def subtask3 = ~/${project}-4/
+
+def transitionToCheckErrors = "relatedIssuesStatusValidator2"
+
+def transition
+def issue
+def data
+def expected
+	if(number == 1)
+		transition = statusOfRelatedIssueToBeIn
+		issue = parentIssue
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${statusOfRelatedIssueToBeIn}'./
+		expected = [ 0 ]
+	if(number == 2)
+		transition = baseStatus
+		issue = subtask1
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${baseStatus}'./
+		expected = [ 0 ]
+	if(number == 3)
+		transition = transitionToCheckErrors
+		issue = subtask1
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${transitionToCheckErrors}'./
+		expected = [ 0 ]
+	if(number == 4)
+		transition = baseStatus
+		issue = subtask2
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${baseStatus}'./
+		expected = [ 0 ]
+	if(number == 5)
+		transition = baseStatus
+		issue = subtask3
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${baseStatus}'./
+		expected = [ 0 ]
+
+    gint.taskHelper.add('transitionIssue', [
+        [action: 'transitionIssue', ext: testCase3+number,
+            expected: [ 0 ],
+            parameters: [
+                issue: issue,
+                transition: transition,
+				],
+           data:[data],
+           finalClosure:{ Task task ->
+         		gint.helper.log( testCase3 , saved )
+         	},
+        ],
+    ])
+}
+
+// Verify that when at least one subtask is in selected status system should not display the error msg on transition screen
+(1..3).each{ number ->
+
+def parentIssue = ~/${project}-1/
+def subtask1 = ~/${project}-2/
+def subtask2 = ~/${project}-3/
+def subtask3 = ~/${project}-4/
+
+def transitionToCheckErrors = "relatedIssuesStatusValidator3"
+
+def issue
+def transition
+def data
+def expected
+	if(number == 1)
+		issue = parentIssue
+		transition = baseStatus
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${baseStatus}'./
+		expected = [ 0 ]
+	if(number == 2)
+		issue = subtask1
+		transition = statusOfRelatedIssueToBeIn
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${statusOfRelatedIssueToBeIn}'./
+		expected = [ 0 ]
+	if(number == 3)
+		issue = parentIssue
+		transition = transitionToCheckErrors
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${transitionToCheckErrors}'./
+		expected = [ 0 ]
+
+    gint.taskHelper.add('transitionIssue', [
+        [action: 'transitionIssue', ext: testCase4+number,
+            expected: expected,
+            parameters: [
+                issue: issue,
+                transition: transition,
+				],
+           data:[data],
+           finalClosure:{ Task task ->
+         		gint.helper.log(testCase4 , saved)
+         	},
+        ],
+    ])
+}
+// Verify that each sub-task of the current issue must not be in selected status
+(1..6).each{ number ->
+
+def parentIssue = ~/${project}-1/
+def subtask1 = ~/${project}-2/
+def subtask2 = ~/${project}-3/
+def subtask3 = ~/${project}-4/
+
+def transitionToCheckErrors = "relatedIssuesStatusValidator5"
+
+def transition
+def issue
+def data
+def expected
+
+	if(number == 1)
+		transition = baseStatus
+		issue = parentIssue
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${baseStatus}'./
+		expected = [ 0 ]
+
+	if(number == 2)
+		transition = transitionToCheckErrors
+		issue = parentIssue
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${transitionToCheckErrors}'./
+		expected = [ 0 ]
+
+	if(number == 3)
+		transition = baseStatus
+		issue = subtask1
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${baseStatus}'./
+		expected = [ 0 ]
+
+	if(number == 4)
+		transition = baseStatus
+		issue = subtask2
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${baseStatus}'./
+		expected = [ 0 ]
+
+	if(number == 5)
+		transition = baseStatus
+		issue = subtask3
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${baseStatus}'./
+		expected = [ 0 ]
+
+	if(number == 6)
+		transition = transitionToCheckErrors
+		issue = parentIssue
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${transitionToCheckErrors}'./
+		expected = [ 0 ]
+
+    gint.taskHelper.add('transitionIssue', [
+        [action: 'transitionIssue', ext: testCase5+number,
+            expected: expected,
+            parameters: [
+                issue: issue,
+                transition: transition,
+				],
+           data:[data],
+           finalClosure:{ Task task ->
+         		gint.helper.log(testCase5 , saved)
+         		},
+        ],
+    ])
+}
+// Verify that parent issue of the current sub-task must not be in selected status
+(1..3).each{ number ->
+
+def parentIssue = ~/${project}-1/
+def subtask1 = ~/${project}-2/
+def subtask2 = ~/${project}-3/
+def subtask3 = ~/${project}-4/
+
+def transitionToCheckErrors = "relatedIssuesStatusValidator5"
+
+def transition
+def issue
+def data
+	if(number == 1)
+		transition = transitionToCheckErrors
+		issue = parentIssue
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${transitionToCheckErrors}'./
+	if(number == 2)
+		transition = baseStatus
+		issue = subtask1
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${baseStatus}'./
+	if(number == 3)
+		transition = baseStatus
+		issue = subtask2
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${baseStatus}'./
+	if(number == 4)
+		transition = baseStatus
+		issue = subtask3
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${baseStatus}'./
+	if(number == 5)
+		transition = transitionToCheckErrors
+		issue = parentIssue
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${transitionToCheckErrors}'./
+
+    gint.taskHelper.add('transitionIssue', [
+        [action: 'transitionIssue', ext: testCase6+number,
+            expected: [ 0 ],
+            parameters: [
+                issue: issue,
+                transition: transition,
+				],
+           data:[data],
+           finalClosure:{ Task task ->
+         		gint.helper.log(testCase6 , saved)
+         	},
+        ],
+    ])
+}

@@ -1,0 +1,70 @@
+apply plugin: 'org.gint.atlassian'
+apply from: 'common/utils.gradle'
+
+def info =	gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def workflow = project
+def workflowScheme = project
+def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CommentRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentrequired-validator'	//function key for HideTransitionCondition
+def transition =	 'commentRequiredValidator'
+def type =	'validator'
+def screen = project
+def user = info.user
+def fieldList = ['Archiver','Archived','Assignee','Attachment','Comment','Component/s','Created','Creator','Development','Rank',"Epic Link", "Epic Status","Epic Name","Epic Colour",'Sprint',"Story Points","Parent Link","Target start","Target end","Original story points",'Team','Description',"Due Date",'Environment',"Fix Version/s","Linked Issues","Issue Type",'Labels',"Last Viewed",'Priority','Progress','Reporter','Project','Resolution',"Security Level",'Resolved','Status','Sub-Tasks','Summary',"Remaining Estimate","Original Estimate","Time Spent","Affects Version/s","Time Tracking",'Updated','Votes','Watchers',"Log Work","Work Ratio"]
+
+gint.xmlReport =	true	//xml report generates in projects root directory
+gint.verbose =	true
+
+(1..7).each { number ->
+    gint.taskHelper.addSetUp(
+        action: 'addTransition', ext: number,
+        dependsOn: true,
+        end: true,
+        parameters: [
+            workflow: workflow,
+            name: transition + number,
+            description: 'Transition for CommentRequiredValidator' + number,
+            step: startStep,
+            screen: screen,
+        ],
+        data: [
+            "Transition '${transition + number}' added to workflow '${workflow}' with id ",
+        ],
+    )
+}
+(1..7).each { number ->
+def CommentRequiredValidator
+    if (number == 1)
+    	CommentRequiredValidator = info?.isCloud ? "{\"problems\":\"\",\"expression\":\"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}" : '{\"errorMessage\":\"CommentRequired\",\"showAsterisk\":\"no\",\"conditionalValidation\":\"no\",\"groups\":\"\",\"correlationId\":\"\"}'
+     else if (number == 2)
+        CommentRequiredValidator = info?.isCloud ? "{\"problems\":\"\",\"expression\":\"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}" : "{\"errorMessage\":\"CommentRequired\",\"groups\":\"\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('assignee')\",\"correlationId\":\"\"}"
+     else if (number == 3)
+    	CommentRequiredValidator = info?.isCloud ? "{\"problems\":\"\",\"expression\":\"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}" : '{\"errorMessage\":\"\",\"showAsterisk\":\"no\",\"conditionalValidation\":\"no\",\"groups\":\"\",\"correlationId\":\"\"}'
+     else if (number == 4)
+        CommentRequiredValidator = info?.isCloud ? "{\"problems\":\"\",\"expression\":\"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}" : "{\"errorMessage\":\"\",\"groups\":\"\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"issue.getAsString('priority') == 'Medium'\",\"correlationId\":\"\"}"
+     else if (number == 5)
+        CommentRequiredValidator = info?.isCloud ? "{\"problems\":\"\",\"expression\":\"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}" : '{\"errorMessage\":\"CommentRequired\",\"groups\":\"jira-administrators\",\"correlationId\":\"\"}'
+     else if (number == 6)
+        CommentRequiredValidator = info?.isCloud ? "{\"problems\":\"\",\"expression\":\"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}" : '{\"errorMessage\":\"\",\"groups\":\"\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"\",\"correlationId\":\"\"}'
+     else if (number == 7)
+        CommentRequiredValidator = info?.isCloud ? "{\"problems\":\"\",\"expression\":\"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}" : '{\"errorMessage\":\"CommentRequired\",\"groups\":\"\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"\",\"correlationId\":\"\"}'
+
+gint.taskHelper.addSetUp(
+	action: 'addTransitionFunction', ext: 'commentRequired'+number,
+        dependsOn: true,
+        end: true, // one at a time
+        parameters: [
+            workflow: workflow,
+            transition: transition + number,
+            functionKey: functionKey,
+            type: type,
+            step: startStep,
+            data: CommentRequiredValidator,
+        ],
+        data: [
+            "Transition function of type ${type} added to workflow '${workflow}'.",
+        ],
+    )
+}
+

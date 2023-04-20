@@ -1,0 +1,46 @@
+apply plugin: 'org.gint.atlassian'
+apply from: 'common/utils.gradle'
+
+def info =	 gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project =	 gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def baseWorkflow = 'JIRA'
+def workflow =	 project
+def startStep =	'11' // depends on workflow. '11' (To Do) works for custom jira workflow
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:non-interactive-condition'	//function key for Hide transition condition
+def transition = 'hideTransitionFromUser'
+def type=	"condition"
+
+(1..2).each { number ->
+    gint.taskHelper.addSetUp(
+        action: 'addTransition', ext: number,
+        end: true,
+        parameters: [
+            workflow: workflow,
+            name: transition + number,
+            description: 'Transition for hideTransitionFromUser' + number,
+            step: startStep,
+        ],
+        data: [
+            "Transition '${transition + number}' added to workflow '${workflow}' with id ",
+        ],
+    )
+}
+(1..1).each { number ->
+gint.taskHelper.addSetUp(
+	action: 'addTransitionFunction', ext: 'ForHideTransitionFromUser'+number,
+        dependsOn: true,
+        end: true, // one at a time
+        parameters: [
+            workflow: workflow,
+            transition: transition + number,
+            functionKey: functionKey,
+            type: type,
+            step: startStep,
+        ],
+        data: [
+            "Transition function of type ${type} added to workflow '${workflow}'.",
+        ],
+    )
+}
+
+

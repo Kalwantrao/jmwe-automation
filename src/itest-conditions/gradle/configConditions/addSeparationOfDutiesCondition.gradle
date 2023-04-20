@@ -1,0 +1,69 @@
+apply plugin: 'org.gint.atlassian'
+apply from: 'common/utils.gradle'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def saved = [:]
+def workflow = project
+def transition = 'separationOfDutiesCondition'
+def type = "condition"
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:separationofduties-condition'	//function key for HideTransitionCondition
+
+(1..3).each { number ->
+def startStep
+	if(number == 1)
+		startStep = '11'
+	else if(number == 2)
+		startStep = '44'
+	else if(number == 3)
+		startStep = '22'
+
+    gint.taskHelper.addSetUp(
+        action: 'addTransition', ext: number,
+        end: true,
+        parameters: [
+            workflow: workflow,
+            name: transition + number,
+            description: 'Transition for userCondition' + number,
+            step: startStep,
+        ],
+        data: [
+            "Transition '${transition + number}' added to workflow '${workflow}' with id ",
+        ],
+    )
+}
+(1..3).each { number ->
+def startStep
+	if(number == 1)
+		startStep = '11'
+	else if(number == 2)
+		startStep = '44'
+	else if(number == 3)
+		startStep = '22'
+
+  def separationOfDutiesCondition
+    if (number == 1)
+    	separationOfDutiesCondition = "{\"fromStatus\":\"\",\"toStatus\":\"To Do\",\"correlationId\":\"\"}"
+     if (number == 2)
+        separationOfDutiesCondition  = "{\"fromStatus\":\"In Progress\",\"toStatus\":\"Done\",\"correlationId\":\"\"}"
+     if (number == 3)
+        separationOfDutiesCondition = "{\"fromStatus\":\"Done\",\"toStatus\":\"In Progress\",\"correlationId\":\"\"}"
+
+gint.taskHelper.addSetUp(
+	action: 'addTransitionFunction', ext: number,
+        dependsOn: true,
+        end: true, // one at a time
+        parameters: [
+            workflow: workflow,
+            transition: transition + number,
+            functionKey: functionKey,
+            type: type,
+            step: startStep,
+            data: separationOfDutiesCondition,
+        ],
+        data: [
+            "Transition function of type ${type} added to workflow '${workflow}'.",
+        ],
+    )
+}
+

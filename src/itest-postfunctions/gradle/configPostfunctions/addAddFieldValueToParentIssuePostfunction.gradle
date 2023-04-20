@@ -1,0 +1,54 @@
+apply plugin: 'org.gint.atlassian'
+apply from: 'common/utils.gradle'
+
+def info=	 gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project=	 gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def baseWorkflow = 'JIRA'
+def workflow=	 project	//Name of the workflow will be same as project name
+def workflowScheme=	 project	//Name of the workflow scheme will be same as project name
+def screen=	"Default Screen"	//Add screen to each transition to transition issue with required criteria
+def startStep=	 '11' // depends on workflow. '11' (To Do) works for custom jira workflow
+def functionKey=	 'com.innovalog.jmwe.jira-misc-workflow-extensions:AddFieldValueToParent-function'	//function key for current status condition
+def type=	'postfunction'
+def transition = 'addFieldValueToParentIssue'
+
+(1..2).each { number ->
+    gint.taskHelper.addSetUp(
+        action: 'addTransition', ext: number,
+        end: true,
+        parameters: [
+            workflow: workflow,
+            name: transition + number,
+            description: 'Transition for addFieldValueToParentIssuePF ' + number,
+            step: startStep,
+            screen: screen,
+        ],
+        data: [
+            "Transition '${transition + number}' added to workflow '${workflow}' with id ",
+        ],
+    )
+}
+(1..2).each { number ->
+  def addFieldValueToParentIssue
+    if (number == 1)
+    	addFieldValueToParentIssue = "{\"field\":\"labels\",\"correlationId\":\"\"}"
+     else if (number == 2)
+        addFieldValueToParentIssue = "{\"field\":\"labels\",\"useGroovyCondition\":\"yes\",\"groovyExpression\":\"!!issue.get('assignee')\",\"correlationId\":\"\"}"
+
+gint.taskHelper.addSetUp(
+	action: 'addTransitionFunction', ext: number,
+        dependsOn: true,
+        end: true, // one at a time
+        parameters: [
+            workflow: workflow,
+            transition: transition + number,
+            functionKey: functionKey,
+            type: type,
+            step: startStep,
+            data: addFieldValueToParentIssue,
+        ],
+        data: [
+            "Transition function of type ${type} added to workflow '${workflow}'.",
+        ],
+    )
+}

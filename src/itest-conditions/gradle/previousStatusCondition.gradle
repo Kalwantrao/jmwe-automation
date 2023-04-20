@@ -1,0 +1,247 @@
+//To run  this using gradle open command line in root directory and run below command on windows
+//gradlew -b src/itest-conditions/gradle/previousStatusCondition.gradle -Pcli="acli jira" -Dclean
+
+buildscript {
+    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
+    dependencies {
+        classpath 'org.gint:gint-atlassian:' + gintVersion
+    }
+    repositories {
+        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
+        mavenLocal()
+        mavenCentral()
+        maven { url 'https://plugins.gradle.org/m2/' }
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from:'common/tearDown.gradle'
+apply from:'configConditions/addPreviousStatusCondition.gradle'
+apply from: 'common/setUp.gradle'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def user = info.user
+def userqa1 = project.toLowerCase()+'qa1'
+def userqa2 = project.toLowerCase()+'qa2'
+def userdev1 = project.toLowerCase()+'dev1'
+def userdev2 = project.toLowerCase()+'dev2'
+
+def saved =	[:]
+def savedIssues = [:]
+def transition = 'previousStatusCondition'
+gint.xmlReport = true	//xml report generates in projects root directory
+gint.verbose = true
+
+// Create issues
+(1..8).each { number ->
+def type = 'Bug'
+def summary
+	if (number == 1)
+		summary = 'previousStatusMustBeInToDo'
+	else if(number == 2)
+		summary = 'previousStatusMustNotBeInToDo'
+	else if(number == 3)
+		summary = 'immediatelyBeforeCurrentStatusMustBeToDo'
+	else if(number == 4)
+		summary = 'orCurrentlyBeInProgressStatus'
+	else if(number == 5)
+		summary = 'ignoreAutoTransitions'
+	else if(number == 6)
+		summary = 'previousStatusMustBeInReviewOrInProgress'
+	else if(number == 7)
+		summary = 'ifNoStatusIsSelected'
+	else if(number == 8)
+		summary = 'onlyReverseIsSelected'
+
+    gint.taskHelper.add(
+        action: 'createIssue', ext: number,
+        dependsOn: true,
+        group: 'create',
+        project: project,
+        parameters: [
+            type: type,
+            summary: summary ,
+            description: 'previousStatusCondition' + number,
+        ],
+        stopOnFail: true,
+        finalClosure: { Task task ->
+            saved.issue = gint.searchForIssueKey(task.outData)
+            savedIssues[number] = saved.issue
+            gint.helper.logVarWithFormat('Create Issues to validate the previous status condition')
+        },
+    )
+}
+
+
+
+(1..3).each{ number ->
+def previousStatus
+	if(number == 1)
+		previousStatus = "To Do"
+	else if (number == 2)
+		previousStatus = "In Progress"
+	else if (number == 3)
+		previousStatus = 'previousStatusCondition1'
+
+def data
+	if(number == 1 )
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'To Do'./
+	else if(number == 2)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'In Progress'./
+	else if(number == 3)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'previousStatusCondition1'./
+
+def  expected =  [ 0 ]
+
+    gint.taskHelper.add('transitionIssueAll', [
+        [action: 'transitionIssue', ext: 'transitionIssueWithToDo'+number,
+            dependsOn: true,
+            parameters: [
+                issue: ~/${project}-1/,
+                transition: previousStatus,
+				],
+           data:[ data ],
+           finalClosure:{ Task task ->
+           		gint.helper.logVarWithFormat('transition the Issue to check the previous status of issue')
+
+            },
+
+        ],
+   ])
+}
+
+(1..3).each{ number ->
+def previousStatus
+	if(number == 1)
+		previousStatus = "To Do"
+	else if (number == 2)
+		previousStatus = "In Progress"
+	else if (number == 3)
+		previousStatus = 'previousStatusCondition2'
+
+def data
+	if(number == 1 )
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'To Do'./
+	else if(number == 2)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'In Progress'./
+	else if(number == 3)
+		data = 	~/Client error: Workflow transition 'previousStatusCondition2' is not valid for issue ${project}-\d+./
+
+def expected
+	if(number == 1)
+		expected = [ 0 ]
+	else if(number == 2)
+		expected = [ 0 ]
+	else if (number == 3)
+		expected =[ -1 ]
+    gint.taskHelper.add('transitionIssueAll', [
+        [action: 'transitionIssue', ext: 'WhenPreviousStatusIsNotToDo'+number,
+            dependsOn: true,
+            expected: expected ,
+            parameters: [
+                issue: ~/${project}-2/,
+                transition: previousStatus,
+				],
+           data:[ data  ],
+            finalClosure:{ Task task ->
+            	gint.helper.logVarWithFormat('Should throw error as previous status should not be To Do ')
+
+            },
+
+        ],
+    ])
+}
+(1..5).each{ number ->
+def previousStatus
+	if(number == 1)
+		previousStatus = "To Do"
+	else if (number == 2)
+		previousStatus = "In Progress"
+	else if (number == 3)
+		previousStatus = 'previousStatusCondition3'
+	else if (number == 4)
+		previousStatus = "Done"
+	else if (number == 5)
+		previousStatus = 'previousStatusCondition3'
+
+def data
+	if(number == 1 )
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'To Do'./
+	else if(number == 2)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'In Progress'./
+	else if(number == 3)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'previousStatusCondition3'./
+	else if(number == 4)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'Done'./
+	else if(number == 5)
+		data = ~/Client error: Workflow transition 'previousStatusCondition3' is not valid for issue ${project}-\d+./
+
+def expected
+	if(number == 1)
+		expected = [ 0 ]
+	else if(number == 2)
+		expected = [ 0 ]
+	else if(number == 3)
+		expected = [ 0 ]
+	else if(number == 4)
+		expected = [ 0 ]
+	else if(number == 5)
+		expected = [ -1 ]
+
+    gint.taskHelper.add('transitionIssueAll', [
+        [action: 'transitionIssue', ext: 'immediatelyBeforeCurrentStatusMustBeInProgress'+number,
+            dependsOn: true,
+            expected: expected,
+            parameters: [
+                issue: ~/${project}-3/,
+                transition: previousStatus,
+				],
+           data:[ data   ],
+            finalClosure:{ Task task ->
+            	gint.helper.logVarWithFormat('Should throw error as immediately Before Current Status should be To Do ')
+
+            },
+
+        ],
+    ])
+}
+
+// Check if the previous status of the issue should be In Progress or currently be in In Progress status
+
+(1..2).each{ number ->
+def previousStatus
+	if(number == 1)
+		previousStatus = "In Progress"
+	else if (number == 2)
+		previousStatus = "previousStatusCondition4"
+
+def data
+	if(number == 1 )
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'In Progress'./
+	else if(number == 2)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'previousStatusCondition4'./
+
+def expected
+	if(number == 1)
+		expected = [ 0 ]
+	else if(number == 2)
+		expected = [ 0 ]
+
+    gint.taskHelper.add('transitionIssueAll', [
+        [action: 'transitionIssue', ext: 'orCurrentlyBeInProgressStatus'+number,
+            dependsOn: true,
+            expected: expected,
+            parameters: [
+                issue: ~/${project}-4/,
+                transition: previousStatus,
+				],
+           data:[ data   ],
+            finalClosure:{ Task task ->
+            	gint.helper.logVarWithFormat('Should not throw error as previous or Current Status should be To Do ')
+
+            },
+
+        ],
+    ])
+}

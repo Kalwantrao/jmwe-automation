@@ -1,0 +1,74 @@
+apply plugin:'org.gint.atlassian'
+apply from: 'common/utils.gradle'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def baseWorkflow = 'JIRA'
+def workflow = project
+def workflowScheme = project
+def startStep = '22'
+def transition = 'previousStatusCondition'
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:previousstatus-condition'	//function key for Previous Status Condition
+def type = "condition"
+
+(1..12).each { number ->
+    gint.taskHelper.addSetUp(
+        action: 'addTransition', ext: number,
+        end: true,
+        parameters: [
+            workflow: workflow,
+            name: transition + number,
+            description: 'Transition for previousStatusCondition' + number,
+            step: startStep,
+        ],
+        data: [
+            "Transition '${transition + number}' added to workflow '${workflow}' with id ",
+        ],
+    )
+}
+(1..12).each { number ->
+def previousStatusCondition
+    if (number == 1)
+    	previousStatusCondition =  "{\"issue_statuses\":\"10000\",\"correlationId\":\"\"}"
+     else if (number == 2)
+        previousStatusCondition = "{\"issue_statuses\":\"10000\",\"not\":\"yes\",\"correlationId\":\"\"}"
+     else if (number == 3)
+        previousStatusCondition = "{\"issue_statuses\":\"10000\",\"mostRecentOnly\":\"yes\",\"correlationId\":\"\"}"
+     else if (number == 4)
+        previousStatusCondition = "{\"issue_statuses\":\"3\",\"includeCurrent\":\"yes\",\"correlationId\":\"\"}"
+     else if (number == 5)
+        previousStatusCondition = "{\"issue_statuses\":\"3\",\"ignoreLoopTransitions\":\"yes\",\"correlationId\":\"\"}"
+     else if (number == 6)
+        previousStatusCondition = "{\"issue_statuses\":\"3,10001\",\"correlationId\":\"\"}"
+     else if (number == 7)
+        previousStatusCondition = "{\"issue_statuses\":\"\",\"correlationId\":\"\"}"
+     else if (number == 8)
+        previousStatusCondition = "{\"issue_statuses\":\"\",\"not\":\"yes\",\"correlationId\":\"\"}"
+     else if (number == 9)
+        previousStatusCondition = "{\"issue_statuses\":\"\",\"mostRecentOnly\":\"yes\",\"correlationId\":\"\"}"
+     else if (number == 10)
+        previousStatusCondition = "{\"issue_statuses\":\"\",\"includeCurrent\":\"yes\",\"correlationId\":\"\"}"
+     else if (number == 11)
+        previousStatusCondition = "{\"issue_statuses\":\"\",\"ignoreLoopTransitions\":\"yes\",\"correlationId\":\"\"}"
+     else if (number == 12)
+        previousStatusCondition = "{\"issue_statuses\":\"\",\"not\":\"yes\",\"mostRecentOnly\":\"yes\",\"includeCurrent\":\"yes\",\"ignoreLoopTransitions\":\"yes\",\"correlationId\":\"\"}"
+
+gint.taskHelper.addSetUp(
+	action: 'addTransitionFunction', ext: 'ForPreviousStatusCondition'+number,
+        dependsOn: true,
+        end: true, // one at a time
+        parameters: [
+            workflow: workflow,
+            transition: transition + number,
+            functionKey: functionKey,
+            type: type,
+            step: startStep,
+            data: previousStatusCondition,
+        ],
+        data: [
+            "Transition function of type ${type} added to workflow '${workflow}'.",
+        ],
+    )
+}
+
+

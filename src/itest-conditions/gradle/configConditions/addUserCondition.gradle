@@ -1,0 +1,77 @@
+apply plugin: 'org.gint.atlassian'
+apply from: 'common/utils.gradle'
+
+def info =	gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def workflow =	project	//Name of the workflow will be same as project name
+def workflowScheme = project	//Name of the workflow scheme will be same as project name
+def startStep =	info ?.isCloud ? '1' : '11' // depends on workflow. '11' (To Do) works for custom jira workflow
+def functionKey = info ?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__UserCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition'	//function key for current status condition
+def type = 'condition'
+def transition = 'userCondition'
+def user = info.user
+
+(1..14).each { number ->
+    gint.taskHelper.addSetUp(
+        action: 'addTransition', ext: number,
+        end: true,
+        parameters: [
+            workflow: workflow,
+            name: transition + number,
+            description: 'Transition for userCondition' + number,
+            step: startStep,
+        ],
+        data: [
+            "Transition '${transition + number}' added to workflow '${workflow}' with id ",
+        ],
+    )
+}
+(1..14).each { number ->
+def userCondition
+    if (number == 1)
+    	userCondition = "{\"groupsToCheck\":\"\",\"fieldEmpty\":\"no\",\"isVoter\":\"no\",\"isReporter\":\"yes\",\"reverse\":\"\",\"rolesToCheck\":\"\",\"conditionMode\":\"all-user-condition\",\"isAssignee\":\"no\",\"userFieldsToCheck\":\"\",\"userField\":\"\",\"usersToCheck\":\"\",\"usersConditionScript\":\"\",\"fromUserType\":\"currentUser\",\"isWatcher\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 2)
+        userCondition = "{\"groupsToCheck\":\"\",\"fieldEmpty\":\"no\",\"isVoter\":\"no\",\"isReporter\":\"no\",\"reverse\":\"\",\"rolesToCheck\":\"\",\"conditionMode\":\"all-user-condition\",\"isAssignee\":\"yes\",\"userFieldsToCheck\":\"\",\"userField\":\"\",\"usersToCheck\":\"\",\"usersConditionScript\":\"\",\"fromUserType\":\"currentUser\",\"isWatcher\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 3)
+        userCondition = "{\"groupsToCheck\":\"\",\"fieldEmpty\":\"no\",\"isVoter\":\"no\",\"isReporter\":\"no\",\"reverse\":\"\",\"rolesToCheck\":\"\",\"conditionMode\":\"all-user-condition\",\"isAssignee\":\"no\",\"userFieldsToCheck\":\"\",\"userField\":\"\",\"usersToCheck\":\"\",\"usersConditionScript\":\"\",\"fromUserType\":\"currentUser\",\"isWatcher\":\"yes\",\"correlationId\":\"\"}"
+     else if (number == 4)
+        userCondition = "{\"groupsToCheck\":\"\",\"fieldEmpty\":\"no\",\"isVoter\":\"yes\",\"isReporter\":\"no\",\"reverse\":\"\",\"rolesToCheck\":\"\",\"conditionMode\":\"all-user-condition\",\"isAssignee\":\"no\",\"userFieldsToCheck\":\"\",\"userField\":\"\",\"usersToCheck\":\"\",\"usersConditionScript\":\"\",\"fromUserType\":\"currentUser\",\"isWatcher\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 5)
+        userCondition = "{\"groupsToCheck\":\"\",\"fieldEmpty\":\"no\",\"isVoter\":\"no\",\"isReporter\":\"no\",\"reverse\":\"yes\",\"rolesToCheck\":\"\",\"conditionMode\":\"any-user-condition\",\"isAssignee\":\"no\",\"userFieldsToCheck\":\"\",\"userField\":\"\",\"usersToCheck\":\"\",\"usersConditionScript\":\"\",\"fromUserType\":\"currentUser\",\"isWatcher\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 6)
+    	userCondition = "{\"groupsToCheck\":\"\",\"fieldEmpty\":\"no\",\"isVoter\":\"no\",\"isReporter\":\"yes\",\"reverse\":\"\",\"rolesToCheck\":\"10002\",\"conditionMode\":\"all-user-condition\",\"isAssignee\":\"no\",\"userFieldsToCheck\":\"\",\"userField\":\"\",\"usersToCheck\":\"\",\"usersConditionScript\":\"\",\"fromUserType\":\"currentUser\",\"isWatcher\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 7)
+        userCondition = "{\"groupsToCheck\":\"jira-administrators\",\"fieldEmpty\":\"no\",\"isVoter\":\"no\",\"isReporter\":\"yes\",\"reverse\":\"\",\"rolesToCheck\":\"\",\"conditionMode\":\"all-user-condition\",\"isAssignee\":\"no\",\"userFieldsToCheck\":\"\",\"userField\":\"\",\"usersToCheck\":\"\",\"usersConditionScript\":\"\",\"fromUserType\":\"currentUser\",\"isWatcher\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 8)
+        userCondition = "{\"groupsToCheck\":\"\",\"fieldEmpty\":\"no\",\"isVoter\":\"no\",\"isReporter\":\"yes\",\"reverse\":\"\",\"rolesToCheck\":\"\",\"conditionMode\":\"all-user-condition\",\"isAssignee\":\"no\",\"userFieldsToCheck\":\"\",\"userField\":\"\",\"usersToCheck\":\"${user}\",\"usersConditionScript\":\"\",\"fromUserType\":\"currentUser\",\"isWatcher\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 9)
+        userCondition = "{\"groupsToCheck\":\"\",\"fieldEmpty\":\"no\",\"isVoter\":\"no\",\"isReporter\":\"yes\",\"reverse\":\"\",\"rolesToCheck\":\"\",\"conditionMode\":\"all-user-condition\",\"isAssignee\":\"no\",\"userFieldsToCheck\":\"assignee\",\"userField\":\"\",\"usersToCheck\":\"\",\"usersConditionScript\":\"\",\"fromUserType\":\"currentUser\",\"isWatcher\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 10)
+        userCondition = "{\"groupsToCheck\":\"\",\"fieldEmpty\":\"no\",\"isVoter\":\"no\",\"isReporter\":\"yes\",\"reverse\":\"no\",\"rolesToCheck\":\"\",\"conditionMode\":\"any-user-condition\",\"isAssignee\":\"no\",\"userFieldsToCheck\":\"\",\"userField\":\"\",\"usersToCheck\":\"\",\"usersConditionScript\":\"issue.getAsString('assignee')=='${user}'\",\"fromUserType\":\"currentUser\",\"isWatcher\":\"no\",\"correlationId\":\"\"}"
+//-----------------------------------------------------//--------------------------------//-------------------------------------------------//----------------------------------//--------------------------------------------------//-------------------------------------------//-------------------------------------------//------------------------------------//----------------------------------------//---------------------------------//
+     else if (number == 11)
+        userCondition = "{\"groupsToCheck\":\"\",\"fieldEmpty\":\"\",\"isVoter\":\"\",\"isReporter\":\"\",\"reverse\":\"\",\"rolesToCheck\":\"\",\"conditionMode\":\"any-user-condition\",\"isAssignee\":\"\",\"userFieldsToCheck\":\"\",\"userField\":\"\",\"usersToCheck\":\"\",\"usersConditionScript\":\"\",\"fromUserType\":\"currentUser\",\"isWatcher\":\"\",\"correlationId\":\"\"}"
+     else if (number == 12)
+        userCondition = "{\"groupsToCheck\":\"\",\"fieldEmpty\":\"no\",\"isVoter\":\"no\",\"isReporter\":\"no\",\"reverse\":\"no\",\"rolesToCheck\":\"\",\"conditionMode\":\"all-user-condition\",\"isAssignee\":\"no\",\"userFieldsToCheck\":\"\",\"userField\":\"\",\"usersToCheck\":\"\",\"usersConditionScript\":\"\",\"fromUserType\":\"userInField\",\"isWatcher\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 13)
+        userCondition = "{\"groupsToCheck\":\"\",\"fieldEmpty\":\"yes\",\"isVoter\":\"no\",\"isReporter\":\"no\",\"reverse\":\"no\",\"rolesToCheck\":\"\",\"conditionMode\":\"any-user-condition\",\"isAssignee\":\"no\",\"userFieldsToCheck\":\"\",\"userField\":\"\",\"usersToCheck\":\"\",\"usersConditionScript\":\"\",\"fromUserType\":\"currentUser\",\"isWatcher\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 14)
+        userCondition = "{\"groupsToCheck\":\"\",\"fieldEmpty\":\"no\",\"isVoter\":\"no\",\"isReporter\":\"no\",\"reverse\":\"no\",\"rolesToCheck\":\"\",\"conditionMode\":\"\",\"isAssignee\":\"no\",\"userFieldsToCheck\":\"\",\"userField\":\"\",\"usersToCheck\":\"\",\"usersConditionScript\":\"\",\"fromUserType\":\"\",\"isWatcher\":\"no\",\"correlationId\":\"\"}"
+
+gint.taskHelper.addSetUp(
+	action: 'addTransitionFunction', ext: number,
+        dependsOn: true,
+        end: true, // one at a time
+        parameters: [
+            workflow: workflow,
+            transition: transition + number,
+            functionKey: functionKey,
+            type: type,
+            step: startStep,
+            data: userCondition,
+        ],
+        data: [
+            "Transition function of type ${type} added to workflow '${workflow}'.",
+        ],
+    )
+}

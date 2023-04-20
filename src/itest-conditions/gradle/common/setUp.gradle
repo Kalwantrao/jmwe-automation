@@ -1,0 +1,60 @@
+apply plugin: 'org.gint.atlassian'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def template = "Scrum software development"
+def workflow = project
+def workflowScheme = project
+def issueTypeScreenScheme = project
+def permissionScheme = project
+def user = info.user
+
+gint.taskHelper.addSetUp('createWorkflowScheme',[
+	[action: 'createWorkflowScheme' , ext: 'Validators',
+		parameters:[
+			workflowScheme: workflowScheme,
+			 workflow: workflow,
+			 ],
+		],
+])
+gint.taskHelper.addSetUp('createProject',[
+	[action: 'createProject' , ext: 'Validators',
+	dependsOn: true,
+		parameters:[
+			 project: project,
+			 template: template,
+			 lead: '@Self',
+			 workflowScheme: workflowScheme,
+			 issueTypeScreenScheme: issueTypeScreenScheme,
+			 permissionScheme: permissionScheme,
+//			 issueSecurityScheme: issueSecurityScheme,
+			 ],
+		],
+])
+(1..5).each{ versionNumber ->
+	gint.taskHelper.addSetUp(
+		action: 'addVersion',ext: versionNumber,
+			group:'add',
+			project: project,
+			parameters:[
+			version: versionNumber,
+			],
+		data:[
+			~/Version '${versionNumber}' with id \d+ added to project ${project} as the last version./
+		],
+)
+}
+(1..5).each{ componentNumber ->
+def component = 'component'
+	gint.taskHelper.addSetUp(
+		action: 'addComponent',ext: componentNumber,
+			group:'add',
+			project: project,
+			parameters:[
+			component: component + componentNumber,
+			],
+		data:[
+			~/Component '${component + componentNumber}' with id \d+ added to project ${project}./
+		],
+		)
+}

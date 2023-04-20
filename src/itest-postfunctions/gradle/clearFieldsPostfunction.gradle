@@ -1,0 +1,131 @@
+//To run  this using gradle open command line in root directory and run below command on windows
+//gradlew -b src/itest-postfunctions/gradle/clearFieldsPostfunction.gradle -Pcli="acli jira" -Dclean
+
+buildscript {
+    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
+    dependencies {
+        classpath 'org.gint:gint-atlassian:' + gintVersion
+    }
+    repositories {
+        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
+        mavenLocal()
+        mavenCentral()
+        maven { url 'https://plugins.gradle.org/m2/' }
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from:'common/tearDown.gradle'
+apply from:'configPostfunctions/addClearFieldsPostfunction.gradle'
+apply from: 'common/setUp.gradle'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def attachment = 'resources/attachment.png'
+def user = info.user
+def saved =	[:]
+def savedIssues = [:]
+gint.xmlReport = true	//xml report generates in projects root directory
+gint.verbose = true
+
+def transition = 'clearFields'
+
+
+(1..10).each { number ->
+def summary
+	if(number == 1)
+		summary = "clearAffectsVersions"
+	else if(number == 2)
+		summary = "clearComponents"
+	else if(number == 3)
+		summary = "clearLabels"
+	else if(number == 4)
+		summary = 'clearFixVersions'
+	else if(number == 5)
+		summary = 'clearAssignee' //original estimate
+	else if(number == 6)
+		summary = 'clearReporter'
+	else if(number == 7)
+		summary = 'clearVersionsIfAssigneeIsUser'
+	else if(number == 8)
+		summary = 'clearComponentsIfIssueIsAssigned'
+	else if(number == 9)
+		summary = 'clearLabelsIfIssueHasHighPriority'
+	else if(number == 10)
+		summary = 'clearFixVersionsIfReporterIsUser'
+    gint.taskHelper.add(
+        action: 'createIssue', ext: number,
+        dependsOn: true,
+        group: 'create',
+        project: project,
+        parameters: [
+            type: 'Bug',
+            summary: summary,
+            reporter: user,
+            assignee: user,
+            component: 'component1',
+            description: 'description' + number,
+            labels: 'label',
+			comment: 'commentIssue' + number,
+			affectsVersions: 1,
+			fixVersions: 2,
+			priority: 'High',
+        ],
+        stopOnFail: true,
+        finalClosure: { Task task ->
+            saved.issue = gint.searchForIssueKey(task.outData)
+            savedIssues[number] = saved.issue
+            gint.helper.logVarWithFormat('saved')
+        },
+    )
+}
+
+(1..10).each { number ->
+def data = ~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
+    gint.taskHelper.add('transitionIssueAll', [
+        [action: 'transitionIssue', ext: number,
+        expected:[ 0 ],
+            dependsOn: true,
+            parameters: [
+                issue: {-> savedIssues[number]  },
+                transition: transition + number,
+            ],
+            data:[data ],
+        ],
+    ])
+}
+(1..10).each{ number ->
+def data
+	if(number == 1)
+		data = 'Affects versions  . . . . . . : '
+	else if(number == 2)
+		data = 'Components  . . . . . . . . . : '
+	else if(number == 3)
+		data = 'Labels  . . . . . . . . . . . : '
+	else if(number == 4)
+		data = 'Fix versions  . . . . . . . . : '
+	else if(number == 5)
+		data = 'Assignee  . . . . . . . . . . : '
+	else if(number == 6)
+		data = 'Reporter  . . . . . . . . . . : '
+	else if(number == 7)
+		data = 'Affects versions  . . . . . . : '
+	else if(number == 8)
+		data = 'Components  . . . . . . . . . : '
+	else if(number == 9)
+		data = 'Labels  . . . . . . . . . . . : '
+	else if(number == 10)
+		data = 'Fix versions  . . . . . . . . : '
+
+def expected = [ 0 ]
+	gint.taskHelper.add(
+		[action: 'getIssue',ext:number,
+        expected:[ 0 ],
+            dependsOn: true,
+            parameters: [
+                issue: {-> savedIssues[number]  },
+            ],
+            data:[ data ],
+        ],
+)
+}

@@ -1,0 +1,96 @@
+buildscript {
+    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
+    dependencies {
+        classpath 'org.gint:gint-atlassian:' + gintVersion
+    }
+    repositories {
+        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
+        mavenLocal()
+        mavenCentral()
+        maven { url 'https://plugins.gradle.org/m2/' }
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from:'common/tearDown.gradle'
+apply from:'configConditions/addUserCondition.gradle'
+apply from: 'common/setUp.gradle'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def user = info.user
+def userqa1 = project.toLowerCase()+'qa1'
+def userqa2 = project.toLowerCase()+'qa2'
+def userdev1 = project.toLowerCase()+'dev1'
+def userdev2 = project.toLowerCase()+'dev2'
+
+def saved =	[:]
+def savedIssues = [:]
+def transition = 'userCondition'
+
+(1..10).each { number ->
+def summary
+	if (number == 1)
+		summary = 'checkCurrentUserIsReporter'
+	if(number == 2)
+		summary = 'checkCurrentUserIsAssignee'
+	if(number == 3)
+		summary = 'checkCurrentUserIsWatcher'
+	if(number == 4)
+		summary = 'checkCurrentUserIsVoter'
+	if(number == 5)
+		summary = 'checkCurrentUserIsNotAssignee'
+	if (number == 6)
+		summary = 'checkUserIsReporterInAdminRole'
+	if(number == 7)
+		summary = 'checkUserIsReporterInAdminGroup'
+	if(number == 8)
+		summary = 'checkUserIsReporterSpecificUser'
+	if(number == 9)
+		summary = 'checkUserIsReporterAndIsInFieldAssignee'
+	if(number == 10)
+		summary = 'checkUserIsReporterAndIsGroovyScriptTrue'
+def reporter
+	reporter = user
+
+    gint.taskHelper.add(
+        action: 'createIssue', ext: number,
+        dependsOn: true,
+        group: 'create',
+        project: project,
+        parameters: [
+            type: 'Bug',
+            summary: summary,
+            assignee: user,
+            description: 'description' + number,
+            reporter: reporter,
+        ],
+        stopOnFail: true,
+        finalClosure: { Task task ->
+            saved.issue = gint.searchForIssueKey(task.outData)
+            savedIssues[number] = saved.issue
+            gint.helper.logVarWithFormat('saved')
+        },
+    )
+}
+
+(1..10).each { number ->
+def expected
+	if(number == 4)
+		expected = [ -1 ]
+def data
+	if(number == 4)
+		data = ~/Client error: Workflow transition '${transition + number}' is not valid for issue ${project}-\d+./
+
+    gint.taskHelper.add('transitionIssueAll', [
+        [action: 'transitionIssue', ext: number,
+            dependsOn: true,
+            expected:expected,
+            parameters: [
+                issue: {-> savedIssues[number]  },
+                transition: transition + number,
+            ],
+            data:[ data ]
+        ],
+    ])
+}

@@ -1,0 +1,100 @@
+apply plugin: 'org.gint.atlassian'
+apply from: 'common/utils.gradle'
+
+def info =	gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def workflow =	project	//Name of the workflow will be same as project name
+def workflowScheme = project	//Name of the workflow scheme will be same as project name
+def startStep =	'11' // depends on workflow. '11' (To Do) works for custom jira workflow
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldrequired-validator'	//function key for current status condition
+def type = 'validator'
+def transition = 'fieldsRequiredValidator'
+def screen = project
+def user = info.user
+
+// Adding the transitions to workflow
+(1..24).each { number ->
+    gint.taskHelper.addSetUp(
+        action: 'addTransition', ext: number,
+        end: true,
+        parameters: [
+            workflow: workflow,
+            name: transition + number,
+            description: 'Transition for fieldsRequiredValidator' + number,
+            step: startStep,
+            screen: screen,
+        ],
+        data: [
+            "Transition '${transition + number}' added to workflow '${workflow}' with id ",
+        ],
+    )
+}
+//Adding the jmwe transitionFunctions (extensions) of specified type to each transition created before
+(1..24).each { number ->
+def fieldsRequiredValidator
+    if (number == 1)
+    	fieldsRequiredValidator = "{\"field\":\"versions\",\"conditionalValidation\":\"no\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 2)
+        fieldsRequiredValidator = "{\"field\":\"fixVersions\",\"conditionalValidation\":\"no\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 3)
+        fieldsRequiredValidator = "{\"field\":\"assignee\",\"conditionalValidation\":\"no\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 4)
+        fieldsRequiredValidator = "{\"field\":\"components\",\"conditionalValidation\":\"no\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 5)
+        fieldsRequiredValidator = "{\"field\":\"labels\",\"conditionalValidation\":\"no\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 6)
+    	fieldsRequiredValidator = "{\"field\":\"versions\",\"errorMessage\":\"fieldsRequired\",\"conditionalValidation\":\"no\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 7)
+        fieldsRequiredValidator = "{\"field\":\"fixVersions\",\"errorMessage\":\"fieldsRequired\",\"conditionalValidation\":\"no\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 8)
+        fieldsRequiredValidator = "{\"field\":\"assignee\",\"errorMessage\":\"fieldsRequired\",\"conditionalValidation\":\"no\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 9)
+        fieldsRequiredValidator = "{\"field\":\"components\",\"errorMessage\":\"fieldsRequired\",\"conditionalValidation\":\"no\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 10)
+        fieldsRequiredValidator = "{\"field\":\"labels\",\"errorMessage\":\"fieldsRequired\",\"conditionalValidation\":\"no\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 11)
+        fieldsRequiredValidator = "{\"field\":\"versions\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"issue.get('priority')?.name=='Medium'\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 12)
+        fieldsRequiredValidator = "{\"field\":\"fixVersions\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('assignee')\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 13)
+        fieldsRequiredValidator = "{\"field\":\"assignee\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('labels')\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 14)
+        fieldsRequiredValidator = "{\"field\":\"components\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('description')\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 15)
+        fieldsRequiredValidator = "{\"field\":\"labels\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('components')\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 16)
+        fieldsRequiredValidator = "{\"field\":\"versions\",\"errorMessage\":\"fieldsRequired\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"issue.get('priority')?.name=='Medium'\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 17)
+        fieldsRequiredValidator = "{\"field\":\"fixVersions\",\"errorMessage\":\"fieldsRequired\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('assignee')\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 18)
+        fieldsRequiredValidator = "{\"field\":\"assignee\",\"errorMessage\":\"fieldsRequired\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('labels')\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 19)
+        fieldsRequiredValidator = "{\"field\":\"components\",\"errorMessage\":\"fieldsRequired\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('description')\",\"correlationId\":\"\"}"
+     else if (number == 20)
+        fieldsRequiredValidator = "{\"field\":\"labels\",\"errorMessage\":\"fieldsRequired\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('components')\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 21)
+        fieldsRequiredValidator = "{\"field\":\"versions,assignee,fixVersions,labels,components\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 22)
+        fieldsRequiredValidator = "{\"field\":\"versions,assignee,fixVersions,labels,components\",\"errorMessage\":\"fieldsRequired\",\"conditionalValidation\":\"no\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+    else if (number == 23)
+        fieldsRequiredValidator = "{\"field\":\"versions,assignee,fixVersions,labels,components\",\"errorMessage\":\"\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('assignee')\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+    else if (number == 24)
+        fieldsRequiredValidator = "{\"field\":\"versions,assignee,fixVersions,labels,components\",\"errorMessage\":\"fieldsRequired\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('assignee')\",\"showAsterisk\":\"no\",\"correlationId\":\"\"}"
+gint.taskHelper.addSetUp(
+	action: 'addTransitionFunction', ext: 'forFieldsRequiredValidator'+number,
+        dependsOn: true,
+        end: true, // one at a time
+        parameters: [
+            workflow: workflow,
+            transition: transition + number,
+            functionKey: functionKey,
+            type: type,
+            step: startStep,
+            data: fieldsRequiredValidator,
+        ],
+        data: [
+            "Transition function of type ${type} added to workflow '${workflow}'.",
+        ],
+    )
+}
+

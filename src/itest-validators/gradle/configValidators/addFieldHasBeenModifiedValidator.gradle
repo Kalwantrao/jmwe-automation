@@ -1,0 +1,129 @@
+apply plugin: 'org.gint.atlassian'
+apply from: 'common/utils.gradle'
+
+def info =	gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def workflow =	project	//Name of the workflow will be same as project name
+def workflowScheme = project	//Name of the workflow scheme will be same as project name
+def startStep =	'11' // depends on workflow. '11' (To Do) works for custom jira workflow
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldchanged-validator'	//function key for current status condition
+def type = 'validator'
+def transition = 'fieldHasBeenModifiedValidator'
+def screen = project
+def user = info.user
+
+
+(1..39).each { number ->
+    gint.taskHelper.addSetUp(
+        action: 'addTransition', ext: number,
+        end: true,
+        parameters: [
+            workflow: workflow,
+            name: transition + number,
+            description: 'Transition for fieldHasBeenModifiedValidator' + number,
+            step: startStep,
+            screen: screen,
+        ],
+        data: [
+            "Transition '${transition + number}' added to workflow '${workflow}' with id ",
+        ],
+    )
+}
+(1..39).each { number ->
+def fieldHasBeenModifiedValidator
+    if (number == 1)
+    	fieldHasBeenModifiedValidator = "{\"field\":\"versions\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 2)
+        fieldHasBeenModifiedValidator = "{\"field\":\"fixVersions\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 3)
+        fieldHasBeenModifiedValidator = "{\"field\":\"assignee\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 4)
+        fieldHasBeenModifiedValidator = "{\"field\":\"components\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 5)
+        fieldHasBeenModifiedValidator = "{\"field\":\"labels\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 6)
+        fieldHasBeenModifiedValidator = "{\"field\":\"priority\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 7)
+    	fieldHasBeenModifiedValidator = "{\"field\":\"summary\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 8)
+        fieldHasBeenModifiedValidator = "{\"field\":\"description\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 9)
+        fieldHasBeenModifiedValidator = "{\"field\":\"environment\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 10)
+        fieldHasBeenModifiedValidator = "{\"field\":\"reporter\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 11)
+        fieldHasBeenModifiedValidator = "{\"field\":\"resolution\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 12)
+        fieldHasBeenModifiedValidator = "{\"field\":\"customfield_10108\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 13)
+        fieldHasBeenModifiedValidator = "{\"field\":\"customfield_10109\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 14)
+        fieldHasBeenModifiedValidator = "{\"field\":\"duedate\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 15)
+        fieldHasBeenModifiedValidator = "{\"field\":\"customfield_10104\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 16)
+        fieldHasBeenModifiedValidator = "{\"field\":\"customfield_10103\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 17)
+        fieldHasBeenModifiedValidator = "{\"field\":\"customfield_10102\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 18)
+        fieldHasBeenModifiedValidator = "{\"field\":\"issuekey\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 19)
+        fieldHasBeenModifiedValidator = "{\"field\":\"timeestimate\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 20)
+        fieldHasBeenModifiedValidator = "{\"field\":\"timeoriginalestimate\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 21)
+        fieldHasBeenModifiedValidator = "{\"field\":\"customfield_10110\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 22)
+        fieldHasBeenModifiedValidator = "{\"field\":\"customfield_10107\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 23)
+        fieldHasBeenModifiedValidator = "{\"field\":\"project\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 24)
+        fieldHasBeenModifiedValidator = "{\"field\":\"timespent\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 25)
+        fieldHasBeenModifiedValidator = "{\"field\":\"archiveddate\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 26)
+        fieldHasBeenModifiedValidator = "{\"field\":\"archivedby\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 27)
+        fieldHasBeenModifiedValidator = "{\"field\":\"customfield_10105\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 28)
+        fieldHasBeenModifiedValidator = "{\"field\":\"status\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 29)
+        fieldHasBeenModifiedValidator = "{\"field\":\"customfield_10106\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 30)
+        fieldHasBeenModifiedValidator = "{\"field\":\"issuetype\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 31)
+        fieldHasBeenModifiedValidator = "{\"field\":\"customfield_10111\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 32)
+        fieldHasBeenModifiedValidator = "{\"field\":\"attachment\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 33)
+        fieldHasBeenModifiedValidator = "{\"field\":\"customfield_10200\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+   	 else if (number == 34)
+    	fieldHasBeenModifiedValidator = "{\"field\":\"versions\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"issue.get('priority')?.name=='High'\",\"correlationId\":\"\"}"
+     else if (number == 35)
+        fieldHasBeenModifiedValidator = "{\"field\":\"fixVersions\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"issue.get('assignee')\",\"correlationId\":\"\"}"
+     else if (number == 36)
+        fieldHasBeenModifiedValidator = "{\"field\":\"assignee\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"issue.getAsString('assignee') == '${user}'\",\"correlationId\":\"\"}"
+     else if (number == 37)
+        fieldHasBeenModifiedValidator = "{\"field\":\"components\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"issue.get('description')\",\"correlationId\":\"\"}"
+     else if (number == 38)
+        fieldHasBeenModifiedValidator = "{\"field\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+     else if (number == 39)
+        fieldHasBeenModifiedValidator = "{\"field\":\"\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"\",\"correlationId\":\"\"}"
+gint.taskHelper.addSetUp(
+	action: 'addTransitionFunction', ext: 'onlyFields'+number,
+        dependsOn: true,
+        end: true, // one at a time
+        parameters: [
+            workflow: workflow,
+            transition: transition + number,
+            functionKey: functionKey,
+            type: type,
+            step: startStep,
+            data: fieldHasBeenModifiedValidator,
+        ],
+        data: [
+            "Transition function of type ${type} added to workflow '${workflow}'.",
+        ],
+    )
+}
+

@@ -1,0 +1,124 @@
+// gradle -b src/itest-validators/gradle/commentRequiredValidators.gradle -Pcli=acli jira
+buildscript {
+    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
+    dependencies {
+        classpath 'org.gint:gint-atlassian:' + gintVersion
+    }
+    repositories {
+        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
+        mavenLocal()
+        mavenCentral()
+        maven { url 'https://plugins.gradle.org/m2/' }
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: 'common/tearDown.gradle'
+apply from: 'configValidators/addCommentRequiredValidator.gradle'
+apply from: 'common/setUp.gradle'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def user = info.user
+def saved =	[:]
+def savedIssues = [:]
+def transition = 'commentRequiredValidator'
+def userqa1 = project.toLowerCase()+'qa1'
+def userqa2 = project.toLowerCase()+'qa2'
+def userdev1 = project.toLowerCase()+'dev1'
+def userdev2 = project.toLowerCase()+'dev2'
+
+// Create issues
+(1..7).each { number ->
+def type = 'Bug'
+def summary
+	if (number == 1)
+		summary = 'checkErrorMsgByUser'
+	else if(number == 2)
+		summary = 'checkErrorMsgByUserWhenConditionIsTrue'
+	else if(number == 3)
+		summary = 'checkErrorMsgByDefault'
+	else if(number == 4)
+		summary = 'checkErrorMsgByDefaultWhenConditionIsTrue'
+	else if(number == 5)
+		summary = 'checkGroupsAllowedToOmitComment'
+	else if(number == 6)
+		summary = 'checkCommentRequired'
+	else if(number == 7)
+		summary = 'checkCommentRequiredCustom'
+
+    gint.taskHelper.add(
+        action: 'createIssue', ext: number,
+        dependsOn: true,
+        group: 'create',
+        project: project,
+        parameters: [
+            type: type,
+            summary: summary ,
+            priority: 'Medium',
+        ],
+        stopOnFail: true,
+        finalClosure: { Task task ->
+            saved.issue = gint.searchForIssueKey(task.outData)
+            savedIssues[number] = saved.issue
+            gint.helper.logVarWithFormat('Create Issues to validate the comment required validator')
+        },
+    )
+}
+// Transition issues when comment provided during the transition
+(1..7).each{ number ->
+    gint.taskHelper.add('transitionIssueAll', [
+        [action: 'transitionIssue', ext: 'transitionWhenCommentProvided'+number,
+            dependsOn: true,
+            expected: [ 0 ] ,
+            parameters: [
+                issue: {-> savedIssues[number]  },
+                transition: transition + number,
+                resolution: "Done",
+                comment: 'testCommentRequiredValidator'
+				],
+           data:[
+            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
+            ],
+            finalClosure:{ Task task ->
+            	gint.helper.logVarWithFormat('Should not throw error as comment provided during transition ')
+
+            	},
+
+        	],
+    	]
+	)
+}
+
+(1..4).each{ number ->
+def expected = [ -3 ]
+def data
+	if(number == 1)
+		data = 'Remote error: comment: CommentRequired'
+	else if(number == 2)
+		data = 'Remote error: comment: CommentRequired'
+	else if(number == 3)
+		data = 'Remote error: comment: You must provide a Comment'
+	else if(number == 4)
+		data = 'Remote error: comment: You must provide a Comment'
+
+    gint.taskHelper.add('transitionIssueAll', [
+        [action: 'transitionIssue', ext: 'transitionWhenCommentNotProvided'+number,
+            dependsOn: true,
+            expected: expected,
+            parameters: [
+                issue: {-> savedIssues[number]  },
+                transition: transition + number,
+                resolution: "Done",
+				],
+           data:[
+
+           		],
+           finalClosure:{ Task task ->
+           		gint.helper.logVarWithFormat('Should throw error as comment not provided during transition: CommentRequired ')
+
+            }
+
+        ],
+    ])
+}

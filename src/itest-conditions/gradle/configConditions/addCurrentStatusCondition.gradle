@@ -1,0 +1,56 @@
+apply plugin: 'org.gint.atlassian'
+apply from: 'common/utils.gradle'
+
+def info =	 gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project =	 gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def workflow =	 project
+def workflowScheme =	 project
+def startStep = info?.isCloud ? '1' : '11' // depends on workflow. '11' (To Do) works for custom jira workflow
+def transition = 'currentStatusCondition'
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CurrentStatusCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:currentstatus-condition'	//function key for HideTransitionCondition
+def type = "condition"
+
+(1..4).each { number ->
+    gint.taskHelper.addSetUp(
+        action: 'addTransition', ext: number,
+        end: true,
+        parameters: [
+            workflow: workflow,
+            name: transition + number,
+            description: 'Transition for currentStatusCondition' + number,
+            step: startStep,
+        ],
+        data: [
+            "Transition '${transition + number}' added to workflow '${workflow}' with id ",
+        ],
+    )
+}
+(1..4).each { number ->
+def currentStatusCondition
+    if (number == 1)
+    	currentStatusCondition = info?.isCloud ? '{\"resolution\":\"\",\"issue_statuses\":\"10011\",\"options_not\":\"false\"}' : "{\"issue_statuses\":\"10000\",\"correlationId\":\"\"}"	//The issue must be in one of the following statuses: To Do //'{\"statusIds\":[10011],\"options\":{\"not\":false},\"expression\":\"config.statusIds.includes(issue.status.id)\"}'
+     else if (number == 2)
+        currentStatusCondition = info?.isCloud ? '{\"statusIds\":[10011],\"options\":{\"not\":false},\"expression\":\"config.statusIds.includes(issue.status.id)\"}' : "{\"issue_statuses\":\"10000\",\"not\":\"yes\",\"correlationId\":\"\"}"	//The issue must not be in one of the following statuses: To Do
+     else if (number == 3)
+        currentStatusCondition = info?.isCloud ? '{\"statusIds\":[10011],\"options\":{\"not\":false},\"expression\":\"config.statusIds.includes(issue.status.id)\"}' : "{\"issue_statuses\":\"\",\"correlationId\":\"\"}"	//The issue must not be in one of the following statuses: To Do
+     else if (number == 4)
+        currentStatusCondition = info?.isCloud ? '{\"statusIds\":[10011],\"options\":{\"not\":false},\"expression\":\"config.statusIds.includes(issue.status.id)\"}' : "{\"issue_statuses\":\"\",\"not\":\"yes\",\"correlationId\":\"\"}"	//The issue must not be in one of the following statuses: To Do
+
+gint.taskHelper.addSetUp(
+	action: 'addTransitionFunction', ext: 'ForCurrentStatusCondition'+number,
+        dependsOn: true,
+        end: true, // one at a time
+        parameters: [
+            workflow: workflow,
+            transition: transition + number,
+            functionKey: functionKey,
+            type: type,
+            step: startStep,
+            data: currentStatusCondition,
+        ],
+        data: [
+            "Transition function of type ${type} added to workflow '${workflow}'.",
+        ],
+    )
+}
+

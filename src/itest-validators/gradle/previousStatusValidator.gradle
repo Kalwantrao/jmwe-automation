@@ -1,0 +1,368 @@
+buildscript {
+    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
+    dependencies {
+        classpath 'org.gint:gint-atlassian:' + gintVersion
+    }
+    repositories {
+        flatDir { dirs 'libs' }
+        mavenLocal()
+        mavenCentral()
+        maven { url 'https://plugins.gradle.org/m2/' }
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: 'common/tearDown.gradle'
+apply from: 'configValidators/addPreviousStatusValidator.gradle' //RelatedIssuesStatusValidator.gradle
+apply from: 'common/setUp.gradle'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def saved =	[:]
+def savedIssues = [:]
+def transition = 'previousStatusValidator'
+def user = info.user
+def userqa1 = project.toLowerCase()+'qa1'
+def userqa2 = project.toLowerCase()+'qa2'
+def userdev1 = project.toLowerCase()+'dev1'
+def userdev2 = project.toLowerCase()+'dev2'
+
+(1..7).each { number ->
+def type = 'Bug'
+def summary
+	if (number == 1)
+		summary = 'previousStatusNotToDo'
+	else if(number == 2)
+		summary = 'previousStatusMostRecentStatusMustBeInToDo'
+	else if(number == 3)
+		summary = 'previousStatusMustBeToDo'
+	else if(number == 4)
+		summary = 'previousStatuMustBeToDoIfConditionIsTrue'
+	else if(number == 5)
+		summary = 'previousStatusMostRecentStatusMustBeInToDo'
+	else if (number == 6)
+		summary = 'previousStatusMostRecentStatusOnlyMustBeInToDoOnlyIfTheGroovyConditionReturnsTrueForIssue'
+	else if(number == 7)
+		summary = 'previousStatusMostRecentStatusOnlyMustBeInToDoOnlyIfTheGroovyConditionReturnsTrueForIssue'
+
+    gint.taskHelper.add(
+        action: 'createIssue', ext: number,
+        dependsOn: true,
+        group: 'create',
+        project: project,
+        parameters: [
+            type: type,
+            summary: summary ,
+        ],
+        stopOnFail: true,
+        finalClosure: { Task task ->
+            saved.issue = gint.searchForIssueKey(task.outData)
+            savedIssues[number] = saved.issue
+            gint.helper.logVarWithFormat('saved')
+            gint.helper.log('create issues',saved)
+        },
+    )
+}
+// Transition the issue to verify the error msg when issues previous status is not in selected status
+(1..4).each { number ->
+def data
+	if(number == 1)
+		data = 'Remote error: Transition is not authorized because current Issue has never been in status To Do before.' // Error when previous status not in To Do
+	else if(number == 2)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'In Progress'./ // Transition the isssue for issue to be in previous status
+	else if(number == 3)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'To Do'./  //Transition the issue for issue to be in previous status
+	else if(number == 4)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'previousStatusValidator1'./ //Should not display error when previous status is in To Do
+
+def transitionToDo1
+	if(number == 1)
+		transitionToDo1 = 'previousStatusValidator1'
+	else if(number === 2)
+		transitionToDo1 = 'In Progress'
+	else if(number === 3)
+		transitionToDo1 = 'To Do'
+	else if(number === 4)
+		transitionToDo1 = 'previousStatusValidator1'
+
+def expected
+	if(number == 1)
+		expected = [ -3 ]
+	else if(number === 2)
+		expected = [ 0 ]
+	else if(number === 3)
+		expected = [ 0 ]
+	else if(number === 4)
+		expected = [ 0 ]
+
+    gint.taskHelper.add('transitionIssueAll', [
+        [action: 'transitionIssue', ext: '--whenPreviousStatusOfIssueIsNotInSelectedStatus'+number,
+        dependsOn: true,
+            expected: expected,
+            parameters: [
+                issue: ~/${project}-1/ ,
+                transition: transitionToDo1,
+            ],
+           data:[ data ],
+         	finalClosure:{ Task task ->
+         		gint.helper.log('Transition the issue to verify the error msg when issues previous status is not in selected status',saved)
+         	},
+        ],
+    ])
+}
+// Transition the issue when Previous Status/Most RecentStatusMustBeInToDo
+(1..6).each { number ->
+def data
+	if(number == 1)
+		data = 'Remote error: Transition is not authorized because current Issue was not previously in status In Progress' // Error when previous status not in To Do
+	else if(number == 2)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'In Progress'./ // Transition the isssue for issue to be in previous status
+	else if(number == 3)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'To Do'./  //Transition the issue for issue to be in previous status
+	else if(number == 4)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'previousStatusValidator2'./ //Should not display error when previous status is in To Do
+	else if(number == 5)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'To Do'./
+	else if(number == 6)
+		data = 'Remote error: Transition is not authorized because current Issue was not previously in status In Progress' // Error when previous status not in To Do
+
+def transitionToDo2
+	if(number == 1)
+		transitionToDo2 = 'previousStatusValidator2'
+	else if(number === 2)
+		transitionToDo2 = 'In Progress'
+	else if(number === 3)
+		transitionToDo2 = 'To Do'
+	else if(number === 4)
+		transitionToDo2 = 'previousStatusValidator2'
+	else if(number === 5)
+		transitionToDo2 = 'To Do'
+	else if(number === 6)
+		transitionToDo2 = 'previousStatusValidator2'
+
+def expected
+	if(number == 1)
+		expected = [ -3 ]
+	else if(number === 2)
+		expected = [ 0 ]
+	else if(number === 3)
+		expected = [ 0 ]
+	else if(number === 4)
+		expected = [ 0 ]
+	else if(number === 5)
+		expected = [ 0 ]
+	else if(number === 6)
+		expected = [ -3 ]
+
+    gint.taskHelper.add('transitionIssueAll', [
+        [action: 'transitionIssue', ext: '--whenPreviousStatusMostRecentStatusOfIssueIsNotInSelectedStatus'+number,
+        dependsOn: true,
+            expected: expected,
+            parameters: [
+                issue: ~/${project}-2/ ,
+                transition: transitionToDo2,
+            ],
+           data:[ data ],
+         	finalClosure:{ Task task ->
+         		gint.helper.log('Transition the issue to verify the error msg when issues previous status(most recent status only) is not in selected status',saved)
+         	},
+        ],
+    ])
+}
+// Verify for the Custom error message when the issue's previous status is not in To Do
+(1..4).each { number ->
+def data
+	if(number == 1)
+		data = 'Remote error: previousStatuMustBeToDo' // Error when previous status not in To Do
+	else if(number == 2)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'In Progress'./ // Transition the isssue for issue to be in previous status
+	else if(number == 3)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'To Do'./  //Transition the issue for issue to be in previous status
+	else if(number == 4)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'previousStatusValidator3'./ //Should not display error when previous status is in To Do
+
+def transitionToDo3
+	if(number == 1)
+		transitionToDo3 = 'previousStatusValidator3'
+	else if(number === 2)
+		transitionToDo3 = 'In Progress'
+	else if(number === 3)
+		transitionToDo3 = 'To Do'
+	else if(number === 4)
+		transitionToDo3 = 'previousStatusValidator3'
+
+def expected
+	if(number == 1)
+		expected = [ -3 ]
+	else if(number === 2)
+		expected = [ 0 ]
+	else if(number === 3)
+		expected = [ 0 ]
+	else if(number === 4)
+		expected = [ 0 ]
+
+    gint.taskHelper.add('transitionIssueAll', [
+        [action: 'transitionIssue', ext: '--VerifyCustomErrorMessageByUser'+number,
+        dependsOn: true,
+            expected: expected,
+            parameters: [
+                issue: ~/${project}-3/ ,
+                transition: transitionToDo3,
+            ],
+           data:[ data ],
+         	finalClosure:{ Task task ->
+         		gint.helper.log('Transition the issue to verify the error msg when issues previous status is not in selected status',saved)
+         	},
+        ],
+    ])
+}
+// Validate that system should display error only if the groovy condition returns true for issue when the previous status of the issue not in To Do
+
+(1..1).each { number ->
+def transitionToDo4
+	if(number == 1)
+		transitionToDo4 = 'previousStatusValidator4'
+
+def issue
+	if(number == 1)
+		issue = ~/${project}-4/
+
+    gint.taskHelper.add('transitionIssueAll', [
+        [action: 'run', ext: '--whenGroovyConditionReturnFalse'+number,
+        dependsOn: true,
+        expected:[ 0 ],
+            parameters: [
+				input:[
+					/-a assignIssue --issue ${issue} --userId ${userqa1} /,
+					/-a transitionIssue --issue ${issue} --transition ${transitionToDo4}/, // transition issue when groovy condition returns false
+					],
+				],
+           	data:[
+				~/${userqa1} has been assigned issue ${project}-\d+./,
+				~/Successfully transitioned issue ${project}-\d+ with transition 'previousStatusValidator4'./ // Transition the isssue for issue to be in previous status
+				],
+         	finalClosure:{ Task task ->
+         		gint.helper.log('Transition the issue to verify when groovy condition returns false and issues previous status is not in selected status',saved)
+         	},
+        ],
+    ])
+}
+// Verify that system display the custom error message, if the previous status(Most recent status) of the issue is not in selected status
+(1..6).each { number ->
+def data
+	if(number == 1)
+		data = 'Remote error: previousStatusMostRecentStatusMustBeInProgress' // Error when previous status not in To Do
+	else if(number == 2)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'In Progress'./ // Transition the isssue for issue to be in previous status
+	else if(number == 3)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'To Do'./  //Transition the issue for issue to be in previous status
+	else if(number == 4)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'previousStatusValidator5'./ //Should not display error when previous status is in To Do
+	else if(number == 5)
+		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'To Do'./
+	else if(number == 6)
+		data = 'Remote error: previousStatusMostRecentStatusMustBeInProgress' // Error when previous status not in To Do
+
+def transitionToDo5
+	if(number == 1)
+		transitionToDo5 = 'previousStatusValidator5'
+	else if(number === 2)
+		transitionToDo5 = 'In Progress'
+	else if(number === 3)
+		transitionToDo5 = 'To Do'
+	else if(number === 4)
+		transitionToDo5 = 'previousStatusValidator5'
+	else if(number === 5)
+		transitionToDo5 = 'To Do'
+	else if(number === 6)
+		transitionToDo5 = 'previousStatusValidator5'
+
+def expected
+	if(number == 1)
+		expected = [ -3 ]
+	else if(number === 2)
+		expected = [ 0 ]
+	else if(number === 3)
+		expected = [ 0 ]
+	else if(number === 4)
+		expected = [ 0 ]
+	else if(number === 5)
+		expected = [ 0 ]
+	else if(number === 6)
+		expected = [ -3 ]
+
+    gint.taskHelper.add('transitionIssueAll', [
+        [action: 'transitionIssue', ext: '--whenPreviousStatusMostRecentStatusVerifyCustomErrorMessage	'+number,
+        dependsOn: true,
+            expected: expected,
+            parameters: [
+                issue: ~/${project}-5/ ,
+                transition: transitionToDo5,
+            ],
+           data:[ data ],
+         	finalClosure:{ Task task ->
+         		gint.helper.log('Transition the issue to verify the custom error msg when issues previous status(most recent status only) is not in selected status',saved)
+         	},
+        ],
+    ])
+}
+// Validate that system should not display error if the groovy condition returns false for issue when the previous status of the issue not in To Do
+(1..1).each { number ->
+def transitionToDo6
+	if(number == 1)
+		transitionToDo6 = 'previousStatusValidator6'
+
+def issue
+	if(number == 1)
+		issue = ~/${project}-6/
+
+    gint.taskHelper.add('transitionIssueAll', [
+        [action: 'run', ext: '--whenGroovyConditionReturnFalseAndMostRecentStatusNotInSelectedStatus'+number,
+        dependsOn: true,
+        expected:[ 0 ],
+            parameters: [
+				input:[
+					/-a updateIssue --issue ${issue} --affectsVersions '1' /,
+					/-a transitionIssue --issue ${issue} --transition ${transitionToDo6}/, // transition issue when groovy condition returns false
+					],
+				],
+           	data:[
+				~/Issue ${project}-\d+ updated../,
+				~/Successfully transitioned issue ${project}-\d+ with transition 'previousStatusValidator6'./ // Transition the isssue for issue to be in previous status
+				],
+         	finalClosure:{ Task task ->
+         		gint.helper.log('Transition the issue to verify when groovy condition returns false and issues previous status is not in selected status',saved)
+         	},
+        ],
+    ])
+}
+// Validate that system should not display custom error msg if the groovy condition returns false for issue when the previous status of the issue not in To Do
+(1..1).each { number ->
+def transitionToDo7
+	if(number == 1)
+		transitionToDo7 = 'previousStatusValidator7'
+
+def issue
+	if(number == 1)
+		issue = ~/${project}-7/
+
+    gint.taskHelper.add('transitionIssueAll', [
+        [action: 'run', ext: '--whenGroovyConditionReturnsFalseShouldNotDisplayCustomMsg'+number,
+        dependsOn: true,
+        expected:[ 0 ],
+            parameters: [
+				input:[
+					/-a updateIssue --issue ${issue} --fixVersions '1' /,
+					/-a transitionIssue --issue ${issue} --transition ${transitionToDo7}/, // transition issue when groovy condition returns false
+					],
+				],
+           	data:[
+				~/Issue ${project}-\d+ updated../,
+				~/Successfully transitioned issue ${project}-\d+ with transition 'previousStatusValidator7'./ // Transition the isssue for issue to be in previous status
+				],
+         	finalClosure:{ Task task ->
+         		gint.helper.log('Transition the issue to verify when groovy condition returns false and issues previous status is not in selected status',saved)
+         	},
+        ],
+    ])
+}

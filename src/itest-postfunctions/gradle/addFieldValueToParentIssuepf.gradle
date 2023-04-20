@@ -1,0 +1,129 @@
+//To run  this using gradle open command line in root directory and run below command on windows
+//gradlew -b src/itest-postfunctions/gradle/addFieldValueToParentIssuepf.gradle -Pcli="acli jira" -Dclean
+
+buildscript {
+    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
+    dependencies {
+        classpath 'org.gint:gint-atlassian:' + gintVersion
+    }
+    repositories {
+        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
+        mavenLocal()
+        mavenCentral()
+        maven { url 'https://plugins.gradle.org/m2/' }
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from:'common/tearDown.gradle'
+apply from:'configPostfunctions/addAddFieldValueToParentIssuePostfunction.gradle'
+apply from: 'common/setUp.gradle'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def user = info.user
+def saved =	[:]
+def savedIssues = [:]
+gint.xmlReport = true	//xml report generates in projects root directory
+gint.verbose = true
+def transition = 'addFieldValueToParentIssue'
+def attachment = 'resources/attachment.png'
+
+
+(1..2).each { number ->
+def summary
+	if(number == 1)
+		summary = "addFieldLabelsToParentIssue"
+	else if(number == 2)
+		summary = "addFieldLabelsToParentIssueIfConditionTrue"
+
+    gint.taskHelper.add(
+        action: 'createIssue', ext: 'Parent'+number,
+        dependsOn: true,
+        group: 'create',
+        project: project,
+        parameters: [
+            type: 'Bug',
+            summary: summary,
+        ],
+        stopOnFail: true,
+        finalClosure: { Task task ->
+            saved.issue = gint.searchForIssueKey(task.outData)
+            savedIssues[number] = saved.issue
+            gint.helper.logVarWithFormat('saved')
+        },
+    )
+}
+(3..4).each { number ->
+def summary
+	if(number == 3)
+		summary = "addFieldLabelsToParentIssue"
+	else if(number == 4)
+		summary = "addFieldLabelsToParentIssueIfConditionTrue"
+def issueType = "Sub-task"
+def parent
+	if(number == 3)
+		parent = ~/${project}-1/
+	if(number == 4)
+		parent = ~/${project}-2/
+    gint.taskHelper.add(
+        action: 'createIssue', ext: 'Sub-task'+number,
+        dependsOn: true,
+        group: 'create',
+        project: project,
+        parameters: [
+            issueType: issueType,
+            parent: parent,
+            summary: summary,
+            labels: 'label',
+            assignee: user,
+        ],
+        stopOnFail: true,
+        finalClosure: { Task task ->
+            saved.issue = gint.searchForIssueKey(task.outData)
+            savedIssues[number] = saved.issue
+            gint.helper.logVarWithFormat('saved')
+        },
+    )
+}
+
+
+(1..2).each { number ->
+def data = ~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
+def expected = [ 0 ]
+def issue
+	if(number == 1)
+		issue =  ~/${project}-3/
+	else if(number == 2)
+		issue = ~/${project}-4/
+    gint.taskHelper.add('transitionIssueAll', [
+        [action: 'transitionIssue', ext: number,
+        expected:expected,
+            dependsOn: true,
+            parameters: [
+            	issue: issue,
+                transition: transition + number,
+            ],
+            data:[data ],
+        ],
+    ])
+}
+
+(1..2).each{ number ->
+def data
+	if(number == 1)
+		data = 'Labels  . . . . . . . . . . . : label'
+	else if(number == 2)
+		data = 'Labels  . . . . . . . . . . . : label'
+def expected = [ 0 ]
+	gint.taskHelper.add(
+		[action: 'getIssue',ext:number,
+        expected:expected,
+            dependsOn: true,
+            parameters: [
+                issue: {-> savedIssues[number]  },
+            ],
+            data:[ data ],
+        ],
+)
+}
