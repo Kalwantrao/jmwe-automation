@@ -1,4 +1,4 @@
-//To run  this using gradle open command line in root directory and run below command on windows
+ //To run  this using gradle open command line in root directory and run below command on windows
 //gradlew -b src/itest-postfunctions/gradle/clearFieldsPostfunction.gradle -Pcli="acli jira" -Dclean
 
 buildscript {
@@ -15,9 +15,9 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from:'common/tearDown.gradle'
+apply from: gint.directories.resource + '/common/tearDown.gradle'
 apply from:'configPostfunctions/addClearFieldsPostfunction.gradle'
-apply from: 'common/setUp.gradle'
+apply from: gint.directories.resource + '/common/setUp.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
 def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions

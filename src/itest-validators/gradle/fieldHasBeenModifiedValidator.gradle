@@ -12,9 +12,9 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from:'common/tearDown.gradle'
-apply from:'configValidators/addFieldHasBeenModifiedValidator.gradle'
-apply from: 'common/setUp.gradle'
+apply from: gint.directories.resource + '/common/tearDown.gradle'
+apply from: 'configValidators/addFieldHasBeenModifiedValidator.gradle'
+apply from:  gint.directories.resource + '/common/setUp.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
 def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions

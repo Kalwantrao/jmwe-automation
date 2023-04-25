@@ -1,5 +1,5 @@
 apply plugin: 'org.gint.atlassian'
-apply from: 'common/utils.gradle'
+apply from: gint.directories.resource + '/common/utils.gradle'
 
 def info=	 gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
 def project=	 gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions

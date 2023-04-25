@@ -1,5 +1,5 @@
 apply plugin: 'org.gint.atlassian'
-apply from: 'common/utils.gradle'
+apply from: gint.directories.resource + '/common/utils.gradle'
 
 def info =	gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
 def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
@@ -13,7 +13,7 @@ def screen = project
 def user = info.user
 
 
-(1..6).each { number ->
+(13..18).each { number ->
     gint.taskHelper.addSetUp(
         action: 'addTransition', ext: number,
         dependsOn: true,
@@ -30,74 +30,74 @@ def user = info.user
         ],
     )
 }
-(1..6).each { number ->
+(13..18).each { number ->
 def relatedIssuesStatusValidator
     if (number == 1)
     	relatedIssuesStatusValidator = "{\"conditionMode\":\"all-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10100\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 2)
     	relatedIssuesStatusValidator = "{\"conditionMode\":\"all-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"inward:10100\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 3)
-    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10100\",\"issue_statuses\":\"10000\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10100\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 4)
-    	relatedIssuesStatusValidator = "{\"conditionMode\":\"none-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10100\",\"issue_statuses\":\"10000\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"none-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10100\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 5)
-    	relatedIssuesStatusValidator = "{\"conditionMode\":\"none-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"inward:10100\",\"issue_statuses\":\"10000\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"none-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"inward:10100\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 6)
-    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10100\",\"issue_statuses\":\"10000\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10100\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 7)
-    	relatedIssuesStatusValidator = "{\"conditionMode\":\"all-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10100\",\"issue_statuses\":\"10000\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"all-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 8)
-    	relatedIssuesStatusValidator = "{\"conditionMode\":\"all-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10100\",\"issue_statuses\":\"10000\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"all-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"inward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 9)
-    	relatedIssuesStatusValidator = "{\"conditionMode\":\"all-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10100\",\"issue_statuses\":\"10000\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 10)
-    	relatedIssuesStatusValidator = "{\"status\":\"In Progress\",\"errorMessage\":\"previousStatuMustBeInProgress\",\"conditionalValidation\":\"no\",\"conditionalValidationScript\":\"\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"none-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 11)
-    	relatedIssuesStatusValidator = "{\"status\":\"In Progress\",\"errorMessage\":\"\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('assignee')\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"none-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"inward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 12)
-    	relatedIssuesStatusValidator = "{\"status\":\"In Progress\",\"mostRecentOnly\":\"yes\",\"errorMessage\":\"previousStatusMostRecentStatusMustBeInInProgress\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 13)
-    	relatedIssuesStatusValidator = "{\"status\":\"In Progress\",\"mostRecentOnly\":\"yes\",\"errorMessage\":\"\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('versions')\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"all-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"*:*\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 14)
-    	relatedIssuesStatusValidator = "{\"status\":\"In Progress\",\"mostRecentOnly\":\"yes\",\"errorMessage\":\"previousStatusMostRecentStatusOnlyMustBeInInProgressOnlyIfTheGroovyConditionReturnsTrueForIssue\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('fixVersions')\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"all-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10000\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 15)
-    	relatedIssuesStatusValidator = "{\"status\":\"In Review\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"*:*\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 16)
-    	relatedIssuesStatusValidator = "{\"status\":\"In Review\",\"mostRecentOnly\":\"yes\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"none-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10000\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 17)
-    	relatedIssuesStatusValidator = "{\"status\":\"In Review\",\"errorMessage\":\"previousStatuMustBeInReview\",\"conditionalValidation\":\"no\",\"conditionalValidationScript\":\"\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"none-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"*:*\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 18)
-    	relatedIssuesStatusValidator = "{\"status\":\"In Review\",\"errorMessage\":\"\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('assignee')\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10000\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 19)
-    	relatedIssuesStatusValidator = "{\"status\":\"In Review\",\"mostRecentOnly\":\"yes\",\"errorMessage\":\"previousStatusMostRecentStatusMustBeInInReview\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 20)
-    	relatedIssuesStatusValidator = "{\"status\":\"In Review\",\"mostRecentOnly\":\"yes\",\"errorMessage\":\"\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('versions')\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 21)
-    	relatedIssuesStatusValidator = "{\"status\":\"In Review\",\"mostRecentOnly\":\"yes\",\"errorMessage\":\"previousStatusMostRecentStatusOnlyMustBeInInReviewOnlyIfTheGroovyConditionReturnsTrueForIssue\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('fixVersions')\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
 	// If issues previous status should be Done and all other conditions will remains same
      else if (number == 22)
-    	relatedIssuesStatusValidator = "{\"status\":\"Done\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 23)
-    	relatedIssuesStatusValidator = "{\"status\":\"Done\",\"mostRecentOnly\":\"yes\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 24)
-    	relatedIssuesStatusValidator = "{\"status\":\"Done\",\"errorMessage\":\"previousStatuMustBeDone\",\"conditionalValidation\":\"no\",\"conditionalValidationScript\":\"\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 25)
-    	relatedIssuesStatusValidator = "{\"status\":\"Done\",\"errorMessage\":\"\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('assignee')\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 26)
-    	relatedIssuesStatusValidator = "{\"status\":\"Done\",\"mostRecentOnly\":\"yes\",\"errorMessage\":\"previousStatusMostRecentStatusMustBeInDone\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 27)
-    	relatedIssuesStatusValidator = "{\"status\":\"Done\",\"mostRecentOnly\":\"yes\",\"errorMessage\":\"\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('versions')\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 28)
-    	relatedIssuesStatusValidator = "{\"status\":\"Done\",\"mostRecentOnly\":\"yes\",\"errorMessage\":\"previousStatusMostRecentStatusOnlyMustBeInDoneOnlyIfTheGroovyConditionReturnsTrueForIssue\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"!issue.get('fixVersions')\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
 	// Check if we don't select any status from dropdown then error should display
      else if (number == 29)
-    	relatedIssuesStatusValidator = "{\"status\":\"\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 30)
-    	relatedIssuesStatusValidator = "{\"status\":\"\",\"errorMessage\":\"previousStatusIsEmpty\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 31)
-    	relatedIssuesStatusValidator = "{\"status\":\"\",\"errorMessage\":\"\",\"conditionalValidation\":\"yes\",\"conditionalValidationScript\":\"'ABC'\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
      else if (number == 32)
-    	relatedIssuesStatusValidator = "{\"status\":\"\",\"mostRecentOnly\":\"yes\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
+    	relatedIssuesStatusValidator = "{\"conditionMode\":\"one-not-in-status\",\"selectedIssueType\":\"\",\"selectedLinkType\":\"outward:10200\",\"issue_statuses\":\"3\",\"errorMessage\":\"\",\"conditionalValidation\":\"no\",\"correlationId\":\"\"}"
 
 gint.taskHelper.addSetUp(
 	action: 'addTransitionFunction', ext: '--For Parent Status Validator'+number,
