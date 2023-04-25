@@ -1,0 +1,74 @@
+apply plugin: 'org.gint.atlassian'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def projectKey = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def workflow = projectKey
+def workflowScheme = projectKey
+def issueTypeScreenScheme = projectKey
+def permissionScheme = projectKey
+//def issueSecurityScheme = "ISSUESECURITY_SCHEME"
+def user = info.user
+
+def props = new Properties()
+        file(gint.directories.resource + '/resources/config.properties').withInputStream {
+            props.load(it)
+        }
+
+gint.taskHelper.addTearDown(
+	[action: 'importWorkflow',ext:'validators',
+		mustRunAfter: 'tearDown',
+		parameters:[
+			workflow: workflow,
+			file: gint.directories.resource + '/' + props.workflowFile,
+			],
+	]
+)
+gint.taskHelper.addSetUp('createWorkflowScheme',[
+	[action: 'createWorkflowScheme' , ext: 'Validators',
+	ignoreDependsResult: true,
+		parameters:[
+			workflowScheme: workflowScheme,
+			workflow: workflow,
+			 ],
+		],
+])
+gint.taskHelper.addSetUp('createprojectKey',[
+	[action: 'createProject' , ext: 'Validators',
+		parameters:[
+			 project: projectKey,
+			 template: props.template,
+			 lead: '@Self',
+			 workflowScheme: workflowScheme,
+			 issueTypeScreenScheme: issueTypeScreenScheme,
+			 permissionScheme: permissionScheme,
+//			 issueSecurityScheme: issueSecurityScheme,
+			 ],
+		],
+])
+(1..5).each{ versionNumber ->
+	gint.taskHelper.addSetUp(
+		action: 'addVersion',ext: versionNumber,
+			group:'add',
+			project: projectKey,
+			parameters:[
+			version: versionNumber,
+			],
+		data:[
+			~/Version '${versionNumber}' with id \d+ added to project ${projectKey} as the last version./
+		],
+)
+}
+(1..5).each{ componentNumber ->
+def component = 'component'
+	gint.taskHelper.addSetUp(
+		action: 'addComponent',ext: componentNumber,
+			group:'add',
+			project: projectKey,
+			parameters:[
+			component: component + componentNumber,
+			],
+		data:[
+			~/Component '${component + componentNumber}' with id \d+ added to project ${projectKey}./
+		],
+		)
+}

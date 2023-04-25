@@ -1,0 +1,120 @@
+apply plugin: 'org.gint.atlassian'
+
+def info =	gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def user = info.user
+def screen = project
+def permissionScheme = project
+def screenScheme = project
+def issueTypeScreenScheme = project
+
+def fieldList = ['Archiver','Archived','Assignee','Attachment','Comment','Component/s','Created','Creator','Development','Rank',"Epic Link", "Epic Status","Epic Name","Epic Colour",'Sprint',"Story Points","Parent Link","Target start","Target end","Original story points",'Team','Description',"Due Date",'Environment',"Fix Version/s","Linked Issues","Issue Type",'Labels',"Last Viewed",'Priority','Progress','Reporter','Project','Resolution',"Security Level",'Resolved','Status','Sub-Tasks','Summary',"Remaining Estimate","Original Estimate","Time Spent","Affects Version/s","Time Tracking",'Updated','Votes','Watchers',"Log Work","Work Ratio"]
+
+gint.taskHelper.addSetUp('addScreen',[
+	[action:'addScreen',ext: '--createScreen',
+	dependsOn: true,
+		parameters:[
+			screen: screen,
+			],
+	],
+	[action:'addScreenFields', ext: '--configureScreenWithFields',
+	dependsOn: true,
+		parameters:[
+			screen: screen,
+			field: fieldList,
+			],
+	],
+	[action:'addScreenScheme', ext: '--createScreenScheme',
+	dependsOn: true,
+		parameters:[
+			screen: screen,
+			screenScheme: screenScheme,
+			],
+	],
+	[action:'addIssueTypeScreenScheme', ext: '--createIssueTypeScreenScheme',
+	dependsOn: true,
+		parameters:[
+			screenScheme: screenScheme,
+			issueTypeScreenScheme: issueTypeScreenScheme,
+			],
+	],
+
+])
+
+gint.taskHelper.addSetUp('permission',[
+	[action:'createPermissionScheme',ext: '--createPermissionScheme',
+	dependsOn: true,
+		parameters:[
+			permissionScheme: permissionScheme,
+			],
+		],
+])
+(1..17).each{number ->
+def permission
+	if(number == 1)
+		permission = "SET_ISSUE_SECURITY"
+	else if(number == 2)
+		permission = "ADD_COMMENTS"
+	else if(number == 3)
+		permission = "VIEW_VOTERS_AND_WATCHERS"
+	else if(number == 4)
+		permission = "ADMINISTER_PROJECTS"
+	else if(number == 5)
+		permission = "EDIT_ISSUES"
+	else if(number == 6)
+		permission = "ASSIGNABLE_USER"
+	else if(number == 7)
+		permission = "CREATE_ISSUES"
+	else if(number == 8)
+		permission = "DELETE_ISSUES"
+	else if(number == 9)
+		permission = "LINK_ISSUES"
+	else if(number == 10)
+		permission = "TRANSITION_ISSUES"
+	else if(number == 11)
+		permission = "ARCHIVE_ISSUES"
+	else if(number == 12)
+		permission = "ASSIGN_ISSUES"
+	else if(number == 13)
+		permission = "CLOSE_ISSUES"
+	else if(number == 14)
+		permission = "WORK_ON_ISSUES"
+	else if(number == 15)
+		permission = "MODIFY_REPORTER"
+	else if(number == 16)
+		permission = "BROWSE_PROJECTS"
+	else if(number == 17)
+		permission = "RESOLVE_ISSUES"
+	gint.taskHelper.add('setPermissionsToUser',[
+		[action:'addPermission',ext: 'setPermissionsToUser'+number,
+		dependsOn: true,
+			parameters:[
+				permissionScheme: permissionScheme,
+				permission: permission,
+				group: 'jira-software-users',
+			],
+	],
+])
+}
+
+(1..4).each{ number ->
+def newUser
+	if(number == 1 )
+		newUser = project + 'qa1'
+	else if(number == 2 )
+		newUser = project + 'qa2'
+	else if(number == 3 )
+		newUser = project + 'dev1'
+	else if(number == 4 )
+		newUser = project + 'dev2'
+gint.taskHelper.addSetUp(
+	[action: 'addUser',ext: number,
+	dependsOn: true,
+    	parameters:[
+    		userId: newUser,
+    		userEmail: newUser + '@gmail.com'
+    		],
+    ],
+)
+}
+
