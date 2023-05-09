@@ -1,0 +1,397 @@
+import groovy.json.JsonOutput
+
+def importWorkflow(workflow, workflowFile) {
+    gint.taskHelper.addSetUp([
+            [
+                action: 'importWorkflow',
+                parameters: [
+                	  workflow: workflow,
+					  file: workflowFile
+                ]
+            ],
+    ])
+    gint.taskHelper.addTearDown('tearDownWorkflow', [
+            [
+                    action: 'deleteWorkflow',
+                    mustRunAfter: 'deleteWorkflowScheme',
+                    parameters: [
+                            workflow: workflow,
+                    ]
+            ],
+            [
+                    action: 'deleteWorkflow',
+                    mustRunAfter: 'deleteWorkflowScheme',
+                    ext: 'copy',
+                    parameters: [
+                            workflow: "Copy of ${workflow}",
+                    ]
+            ]
+    ])
+}
+
+def createTransitionsWithFunctions(transitionFunctions, transitionName, functionKey, type, startStep, workflow, screen, offset = 0)
+{
+    transitionFunctions.eachWithIndex { functionData, index, number = index + offset ->
+        def transition = transitionName + number
+        gint.taskHelper.addSetUp('setupTransitions', [
+                [
+                    action: 'addTransition',
+                    ext: number,
+                    dependsOn: ['importWorkflow', 'addScreen'],
+                    end: true,
+                    parameters: [
+                            workflow: workflow,
+                            name: transition,
+                            description: 'Transition for ' + transition,
+                            step: startStep,
+                            screen: screen,
+                    ],
+                    data: [
+                            "Transition '${transition}' added to workflow '${workflow}' with id ",
+                    ],
+                ],
+                [
+                        action: 'addTransitionFunction',
+                        ext: number,
+                        end: true,
+                        parameters: [
+                                workflow: workflow,
+                                transition: transition,
+                                functionKey: functionKey,
+                                type: type,
+                                step: startStep,
+                                data: JsonOutput.toJson(functionData),
+                        ],
+                        data: [
+                                "Transition function of type ${type} added to workflow '${workflow}'.",
+                        ],
+                ]
+        ])
+    }
+}
+
+
+
+def createWorkflowScheme(workflow, workflowScheme, ext) {
+    gint.taskHelper.addSetUp([
+            action: 'createWorkflowScheme',
+            ext: ext,
+            dependsOn: 'setupTransitions',
+            ignoreDependsResult: true,
+            parameters:[
+                    workflowScheme: workflowScheme,
+                    workflow: workflow,
+            ],
+    ])
+    gint.taskHelper.addTearDown(
+            action: 'deleteWorkflowScheme',
+            parameters: [
+                    workflowScheme: workflowScheme,
+            ]
+    )
+}
+
+def createScreen(screen, screenScheme, fieldList, issueTypeScreenScheme){
+    gint.taskHelper.addSetUp('addScreen',[
+            [
+                    action:'addScreen',
+                    ext: '--createScreen',
+                    parameters:[
+                            screen: screen,
+                    ],
+            ],
+            [
+                    action:'addScreenFields',
+                    ext: '--configureScreenWithFields',
+                    parameters:[
+                            screen: screen,
+                            field: fieldList,
+                    ],
+            ],
+            [
+                    action:'addScreenScheme',
+                    ext: '--createScreenScheme',
+                    parameters:[
+                        screen: screen,
+                        screenScheme: screenScheme,
+                    ],
+            ],
+            [
+                    action:'addIssueTypeScreenScheme',
+                    ext: '--createIssueTypeScreenScheme',
+                    parameters:[
+                        screenScheme: screenScheme,
+                        issueTypeScreenScheme: issueTypeScreenScheme,
+                    ],
+            ],
+
+    ])
+    gint.taskHelper.addTearDown('tearDownScreen', [
+            [
+                    action: 'deleteIssueTypeScreenScheme',
+                    ext: '--createIssueTypeScreenScheme',
+                    mustRunAfter: 'deleteProject',
+                    parameters:[
+                            issueTypeScreenScheme: issueTypeScreenScheme,
+                    ]
+            ],
+            [
+                    action: 'deleteIssueTypeScreenScheme',
+                    ext: '--createIssueTypeScreenScheme-Scrum',
+                    mustRunAfter: 'deleteProject',
+                    parameters:[
+                            issueTypeScreenScheme: "${issueTypeScreenScheme}: Scrum Issue Type Screen Scheme",
+                    ]
+            ],
+            [
+                    action: 'deleteIssueTypeScheme',
+                    ext: '--createIssueTypeScheme-Scrum',
+                    mustRunAfter: 'deleteProject',
+                    parameters:[
+                            issueTypeScheme: "${issueTypeScreenScheme}: Scrum Issue Type Scheme",
+                    ]
+            ],
+            [
+                    action: 'deleteScreenScheme',
+                    ext: '--createScreenScheme',
+                    parameters:[
+                            screenScheme: screenScheme,
+                    ]
+            ],
+            [
+                    action: 'deleteScreenScheme',
+                    ext: '--createScreenScheme-Bug',
+                    parameters:[
+                            screenScheme: "${screenScheme}: Scrum Bug Screen Scheme",
+                    ]
+            ],
+            [
+                    action: 'deleteScreenScheme',
+                    ext: '--createScreenScheme-Default-Issue',
+                    parameters:[
+                            screenScheme: "${screenScheme}: Scrum Default Screen Scheme",
+                    ]
+            ],
+            [
+                    action: 'removeScreen',
+                    ext: '--createScreen',
+                    parameters:[
+                            screen: screen,
+                    ]
+            ],
+            [
+                    action: 'removeScreen',
+                    ext: '--createScreen-Bug',
+                    parameters:[
+                            screen: "${screen}: Scrum Bug Screen",
+                    ]
+            ],
+            [
+                    action: 'removeScreen',
+                    ext: '--createScreen-Default-Issue',
+                    parameters:[
+                            screen: "${screen}: Scrum Default Issue Screen",
+                    ]
+            ],
+    ])
+}
+
+def createProject(project, template, workflowScheme, issueTypeScreenScheme, permissionScheme, ext) {
+    gint.taskHelper.addSetUp('createProject', [[
+            action: 'createProject' ,
+            ext: ext,
+            dependsOn: ['permission', 'addScreen'],
+            parameters:[
+                    project: project,
+                    template: template,
+                    lead: '@Self',
+                    workflowScheme: workflowScheme,
+                    issueTypeScreenScheme: issueTypeScreenScheme,
+//                    permissionScheme: permissionScheme,
+//			 issueSecurityScheme: issueSecurityScheme,
+            ],
+    ]])
+    gint.taskHelper.addTearDown('tearDownProject',
+            [[
+                     action: 'deleteProject',
+                     parameters:[
+                             project: project,
+                     ],
+             ]],
+    )
+}
+
+def createVersions(project, numberOfVersions) {
+    (1..numberOfVersions).each{ versionNumber ->
+        gint.taskHelper.addSetUp(
+                action: 'addVersion',
+                ext: versionNumber,
+                dependsOn: 'createProject',
+                group:'add',
+                project: project,
+                parameters:[
+                        version: versionNumber,
+                ],
+                data:[
+                        ~/Version '${versionNumber}' with id \d+ added to project ${project} as the last version./
+                ],
+        )
+    }
+}
+
+def createComponents(project, componentName, numberOfComponents) {
+    (1..numberOfComponents).each{ componentNumber ->
+        gint.taskHelper.addSetUp(
+                action: 'addComponent',
+                ext: componentNumber,
+                dependsOn: 'createProject',
+                group:'add',
+                project: project,
+                parameters:[
+                        component: componentName + componentNumber,
+                ],
+                data:[
+                        ~/Component '${componentName + componentNumber}' with id \d+ added to project ${project}./
+                ],
+        )
+    }
+}
+
+def createPermissionScheme(permissionScheme, permissions, ext) {
+    gint.taskHelper.addSetUp('permission',[
+            [
+                    action: 'createPermissionScheme',
+                    ext: ext,
+                    parameters:[
+                        permissionScheme: permissionScheme,
+                    ],
+            ],
+    ])
+    permissions.eachWithIndex { String permission, int number ->
+        gint.taskHelper.add('setPermissionsToUser',[
+                [
+                        action:'addPermission',
+                        ext: 'setPermissionsToUser'+number,
+                        dependsOn: 'permission',
+                        parameters:[
+                                permissionScheme: permissionScheme,
+                                permission: permission,
+                                group: 'jira-software-users',
+                        ],
+                ],
+        ])
+    }
+    gint.taskHelper.addTearDown('tearDownPermission',
+            [[
+                     action: 'deletePermissionScheme',
+                     parameters:[
+                             permissionScheme: permissionScheme,
+                     ],
+             ]],
+    )
+}
+
+def createUsers(users) {
+    users.eachWithIndex { String newUser, int number ->
+        gint.taskHelper.addSetUp([
+                action: 'addUser',
+                ext: number,
+                parameters:[
+                        userId: newUser,
+                        userEmail: newUser + '@gmail.com'
+                ],
+        ])
+
+        gint.taskHelper.addTearDown('deleteUsers',
+            [[
+                    action: 'removeUser',
+                    ext: number,
+                    parameters:[
+                            userId: newUser,
+                    ],
+            ]],
+        )
+    }
+}
+def createIssue(project, parametersList) {
+    def savedIssues = [:]
+    parametersList.eachWithIndex { parameters, number ->
+        gint.taskHelper.add([
+                action: 'createIssue', ext: parameters["type"] + number,
+                group: 'create',
+                project: project,
+                parameters: parameters,
+                stopOnFail: true,
+                finalClosure: { Task task ->
+                    def currentIssue = gint.searchForIssueKey(task.outData)
+                    savedIssues[number] = currentIssue
+                    gint.helper.logVarWithFormat('Create Issues to validate the comment required validator')
+                },
+              ]
+        )
+    }
+    return savedIssues
+}
+def transitionIssue(parametersList) {
+ parametersList.eachWithIndex { parameters, number ->
+        gint.taskHelper.add([
+                [action: 'transitionIssue', ext:  number,
+                group: 'transitioningIssues',
+                parameters: parameters,
+                stopOnFail: true,
+              ],
+
+        ])
+    }
+}
+def updateIssues(issues) {
+{ issue, number ->
+		gint.taskHelper.add([
+				[action: 'updateIssue',
+				group: 'update',
+				parameters: [
+					issue: issue
+					],
+				stopOnFail: true
+			  ],
+		 ])
+    }
+}
+def linkIssues(parametersList) {
+	parametersList.eachWithIndex { parameters, number ->
+		gint.taskHelper.add([
+				[action: 'linkIssue', ext: number,
+				group: 'link',
+				parameters: parameters,
+				stopOnFail: true
+			  ],
+		 ])
+    }
+}
+def getIssues(issues) {
+{ issue, number ->
+		gint.taskHelper.add([
+				[action: 'getIssue',
+				group: 'get',
+				parameters: issue,
+				stopOnFail: true
+			  ],
+		 ])
+    }
+}
+ext {
+    importWorkflow= this.&importWorkflow
+    createWorkflowScheme= this.&createWorkflowScheme
+    createProject= this.&createProject
+    createPermissionScheme= this.&createPermissionScheme
+    createUsers= this.&createUsers
+    createVersions= this.&createVersions
+    createComponents= this.&createComponents
+    createScreen= this.&createScreen
+    createTransitionsWithFunctions= this.&createTransitionsWithFunctions
+    createIssue= this.&createIssue
+    transitionIssue= this.&transitionIssue
+    updateIssue= this.&updateIssue
+    linkIssues= this.&linkIssues
+    getIssues= this.&getIssues
+  }

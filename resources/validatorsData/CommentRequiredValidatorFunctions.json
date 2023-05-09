@@ -1,0 +1,49 @@
+[
+  {
+    "errorMessage": "CommentRequired",
+    "showAsterisk": "no",
+    "conditionalValidation": "no",
+    "groups": "",
+    "correlationId": ""
+  },
+  {
+    "errorMessage": "CommentRequired",
+    "groups": "",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "!issue.get('assignee')",
+    "correlationId": ""
+  },
+  {
+    "errorMessage": "",
+    "showAsterisk": "no",
+    "conditionalValidation": "no",
+    "groups": "",
+    "correlationId": ""
+  },
+  {
+    "errorMessage": "",
+    "groups": "",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "issue.getAsString('priority') == 'Medium'",
+    "correlationId": ""
+  },
+  {
+    "errorMessage": "CommentRequired",
+    "groups": "jira-administrators",
+    "correlationId": ""
+  },
+  {
+    "errorMessage": "",
+    "groups": "",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "",
+    "correlationId": ""
+  },
+  {
+    "errorMessage": "CommentRequired",
+    "groups": "",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "",
+    "correlationId": ""
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "field": "versions",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "fixVersions",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "components",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "labels",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "subtasks",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "issuelinks",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "votes",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "watches",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "customfield_10105",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  }
+]

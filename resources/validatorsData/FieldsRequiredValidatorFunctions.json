@@ -1,0 +1,130 @@
+[
+  {
+    "field": "versions",
+    "conditionalValidation": "no",
+    "showAsterisk":"no",
+    "correlationId": ""
+  },
+  {
+    "field": "fixVersions",
+    "conditionalValidation": "no",
+    "showAsterisk":"no",
+    "correlationId": ""
+  },
+  {
+    "field": "assignee",
+    "conditionalValidation": "no",
+    "showAsterisk":"no",
+    "correlationId": ""
+  },
+  {
+    "field": "components",
+    "conditionalValidation": "no",
+    "showAsterisk":"no",
+    "correlationId": ""
+  },
+  {
+    "field": "labels",
+    "conditionalValidation": "no",
+    "showAsterisk":"no",
+    "correlationId": ""
+  },
+  {
+    "field": "versions",
+    "conditionalValidation": "no",
+    "showAsterisk":"no",
+    "errorMessage":"fieldsRequired",
+    "correlationId": ""
+  },
+  {
+    "field": "fixVersions",
+    "conditionalValidation": "no",
+    "showAsterisk":"no",
+    "errorMessage":"fieldsRequired",
+    "correlationId": ""
+  },
+  {
+    "field": "assignee",
+    "conditionalValidation": "no",
+    "showAsterisk":"no",
+    "errorMessage":"fieldsRequired",
+    "correlationId": ""
+  },
+  {
+    "field": "components",
+    "conditionalValidation": "no",
+    "showAsterisk":"no",
+    "errorMessage":"fieldsRequired",
+    "correlationId": ""
+  },
+  {
+    "field": "labels",
+    "conditionalValidation": "no",
+    "showAsterisk":"no",
+    "errorMessage":"fieldsRequired",
+    "correlationId": ""
+  },
+  {
+    "field": "versions",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript":"issue.get('priority')?.name=='Medium'",
+    "showAsterisk":"no",
+    "correlationId": ""
+  },
+  {
+    "field": "fixVersions",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "!issue.get('assignee')",
+    "showAsterisk":"no",
+    "correlationId": ""
+  },
+  {
+    "field": "assignee",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "!issue.get('labels')",
+    "showAsterisk":"no",
+    "correlationId": ""
+  },
+  {
+    "field": "components",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "!issue.get('description')",
+    "showAsterisk":"no",
+    "correlationId": ""
+  },
+  {
+    "field": "labels",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "!issue.get('components')",
+    "showAsterisk":"no",
+    "correlationId": ""
+  },
+  {
+    "field": "versions",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "!issue.get('components')",
+    "showAsterisk":"no",
+    "correlationId": ""
+  },
+  {
+    "field": "fixVersions",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "!issue.get('components')",
+    "showAsterisk":"no",
+    "correlationId": ""
+  },
+  {
+    "field": "assignee",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "!issue.get('components')",
+    "showAsterisk":"no",
+    "correlationId": ""
+  },
+  {
+    "field": "components",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "!issue.get('components')",
+    "showAsterisk":"no",
+    "correlationId": ""
+  }
+]

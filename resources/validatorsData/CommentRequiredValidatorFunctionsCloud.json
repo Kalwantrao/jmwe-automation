@@ -1,0 +1,30 @@
+[
+  {
+    "text":"",
+    "expression": "!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)"
+  },
+  {
+    "text":"",
+    "expression": "!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)"
+  },
+  {
+    "text":"",
+    "expression": "!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)"
+  },
+  {
+    "text":"",
+    "expression": "!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)"
+  },
+  {
+    "text":"",
+    "expression": "!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)"
+  },
+  {
+    "text":"",
+    "expression": "!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)"
+  },
+  {
+    "text":"",
+    "expression": "!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)"
+  }
+]

@@ -1,0 +1,288 @@
+[
+  {
+    "conditionMode": "all-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "outward:10100",
+    "issue_statuses": "3",
+    "errorMessage": "subtask of the issue must be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "0"
+  },
+  {
+    "conditionMode": "all-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "inward:10100",
+    "issue_statuses": "3",
+    "errorMessage": "parent issue must be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "1"
+  },
+  {
+    "conditionMode": "one-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "outward:10100",
+    "issue_statuses": "3",
+    "errorMessage": "atleast one subtask of the issue must be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "2"
+  },
+  {
+    "conditionMode": "none-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "outward:10100",
+    "issue_statuses": "10000",
+    "errorMessage": "all subtask of the issue must not be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "3"
+  },
+  {
+    "conditionMode": "none-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "inward:10100",
+    "issue_statuses": "10000",
+    "errorMessage": "parent issue of the subtask must not be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "4"
+ },
+ {
+    "conditionMode": "one-not-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "outward:10100",
+    "issue_statuses": "10000",
+    "errorMessage": "atleast one subtask of the issue must not be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "5"
+ },
+ {
+    "conditionMode": "all-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "outward:10200",
+    "issue_statuses": "3",
+    "errorMessage": "each issue belong to epic must be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "6"
+ },
+ {
+    "conditionMode": "all-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "inward:10200",
+    "issue_statuses": "3",
+    "errorMessage": "epic of the issue must be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "7"
+ },
+ {
+    "conditionMode": "one-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "outward:10200",
+    "issue_statuses": "3",
+    "errorMessage": "atleast one issue belong to epic must be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "8"
+ },
+ {
+    "conditionMode": "none-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "outward:10200",
+    "issue_statuses": "3",
+    "errorMessage": "all issue belong to epic must not be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "9"
+ },
+ {
+    "conditionMode": "none-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "inward:10200",
+    "issue_statuses": "3",
+    "errorMessage": "epic of the issue must not be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": ""
+ },
+  {
+    "conditionMode": "one-not-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "outward:10200",
+    "issue_statuses": "3",
+    "errorMessage": "atleast one issue belong to epic must not be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "10"
+ },
+ {
+    "conditionMode": "all-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "*:*",
+    "issue_statuses": "3",
+    "errorMessage": "all issues linked to the issue by any link type must be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "11"
+ },
+ {
+    "conditionMode": "all-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "outward:10000",
+    "issue_statuses": "3",
+    "errorMessage": "all issues linked to the issue by blocks link type must be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "12"
+ },
+ {
+    "conditionMode": "one-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "*:*",
+    "issue_statuses": "3",
+    "errorMessage": "atleast one issue linked to the issue by any link type must be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "13"
+ },
+ {
+    "conditionMode": "one-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "outward:10000",
+    "issue_statuses": "3",
+    "errorMessage": "at least one issue linked to the current issue by blocks link must be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": ""
+ },
+ {
+    "conditionMode": "none-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "*:*",
+    "issue_statuses": "3",
+    "errorMessage": "all issues link to the issue by any link type must not be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": ""
+ },
+ {
+    "conditionMode": "none-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "outward:10000",
+    "issue_statuses": "3",
+    "errorMessage": "all issue linked by blocks link type must not be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": ""
+ },
+ {
+    "conditionMode": "one-not-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "*:*",
+    "issue_statuses": "3",
+    "errorMessage": "at least one one issue linked by any link type must be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": ""
+ },
+ {
+    "conditionMode": "one-not-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "outward:10000",
+    "issue_statuses": "3",
+    "errorMessage": "at least one issue linked by blocks link type must not be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": ""
+ },
+ {
+    "conditionMode": "all-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "groovy:issue.getLinkedIssues()",
+    "issue_statuses": "3",
+    "errorMessage": "all issues returned by groovy condition must be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": ""
+ },
+ {
+    "conditionMode": "all-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "jql:project = ZRELATEDISSUESSTATUSVALIDATOR and assignee = zrelatedissuesstatusvalidatorqa1",
+    "issue_statuses": "3",
+    "errorMessage": "all the issues returned by jql search must be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": ""
+ },
+ {
+    "conditionMode": "one-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "groovy:issue.getLinkedIssues()",
+    "issue_statuses": "3",
+    "errorMessage": "at least one issue returned by groovy script must be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": ""
+ },
+ {
+    "conditionMode": "one-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "jql:project = ZRELATEDISSUESSTATUSVALIDATOR and assignee = zrelatedissuesstatusvalidatorqa1",
+    "issue_statuses": "3",
+    "errorMessage": "at least one issue returned by groovy condition must be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": ""
+ },
+ {
+    "conditionMode": "none-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "groovy:issue.getLinkedIssues()",
+    "issue_statuses": "3",
+    "errorMessage": "issue returned by groovy condition must not be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": ""
+ },
+ {
+    "conditionMode": "none-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "jql:project = ZRELATEDISSUESSTATUSVALIDATOR and assignee = zrelatedissuesstatusvalidatorqa1",
+    "issue_statuses": "3",
+    "errorMessage": "issue return by jql search must not be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": ""
+ },
+ {
+    "conditionMode": "one-not-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "groovy:issue.getLinkedIssues()",
+    "issue_statuses": "3",
+    "errorMessage": "at least one issue return by groovy script must not be in selected status",
+    "conditionalValidation": "no",
+    "correlationId": ""
+ },
+ {
+    "conditionMode": "one-not-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "jql:project = ZRELATEDISSUESSTATUSVALIDATOR and assignee = zrelatedissuesstatusvalidatorqa1",
+    "issue_statuses": "3",
+    "errorMessage": "at least one issue return by jql search must not be in seleted status",
+    "conditionalValidation": "no",
+    "correlationId": ""
+ },
+  {
+    "conditionMode": "all-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "outward:10100",
+    "issue_statuses": "3",
+    "errorMessage": "groovy condition returns true for the issue",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "!issue.get('assignee')",
+    "correlationId": ""
+  },
+  {
+    "conditionMode": "all-in-status",
+    "selectedIssueType": "",
+    "selectedLinkType": "outward:10100",
+    "issue_statuses": "3",
+    "errorMessage": "groovy condition returns false for the issue",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "!!issue.get('assignee')",
+    "correlationId": ""
+  }
+]

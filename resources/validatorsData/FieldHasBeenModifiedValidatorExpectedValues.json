@@ -1,0 +1,202 @@
+[
+  {
+    "field": "versions",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "fixVersions",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "assignee",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "components",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "labels",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "priority",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "summary",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "description",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "environment",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "reporter",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "resolution",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "customfield_10108",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "customfield_10109",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "duedate",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "customfield_10104",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "customfield_10103",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "customfield_10102",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "issuekey",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "timeestimate",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "timeoriginalestimate",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "customfield_10110",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "customfield_10107",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "project",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "timespent",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "archiveddate",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "archivedby",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "customfield_10105",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "status",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "customfield_10106",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "issuetype",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "customfield_10111",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "attachment",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "customfield_10200",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "versions",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "issue.get('priority')?.name=='High'",
+    "correlationId": ""
+  },
+  {
+    "field": "fixVersions",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "issue.get('assignee')",
+    "correlationId": ""
+  },
+  {
+    "field": "assignee",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "issue.getAsString('assignee') == '${user}'",
+    "correlationId": ""
+  },
+  {
+    "field": "components",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "issue.get('description')",
+    "correlationId": ""
+  },
+  {
+    "field": "",
+    "conditionalValidation": "no",
+    "correlationId": ""
+  },
+  {
+    "field": "",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "",
+    "correlationId": ""
+  }
+]
