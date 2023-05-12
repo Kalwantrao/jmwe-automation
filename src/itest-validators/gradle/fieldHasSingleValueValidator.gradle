@@ -1,3 +1,6 @@
+import groovy.json.JsonSlurper
+import java.nio.file.Paths
+
 buildscript {
     def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
     dependencies {
@@ -11,13 +14,15 @@ buildscript {
     }
 }
 
-apply from:'configValidators/addFieldHasSingleValueValidator.gradle'
-apply from: gint.directories.resource + '/common/tearDown.gradle'
 apply plugin: 'org.gint.atlassian'
-apply from:  gint.directories.resource + '/common/setUp.gradle'
+apply from: 'common/setUp.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
 def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def workflow = project
+def screen = project
+gint.xmlReport =	true	//xml report generates in projects root directory
+gint.verbose =	true
 def user = info.user
 def userqa1 = project.toLowerCase()+'qa1'
 def userqa2 = project.toLowerCase()+'qa2'
@@ -26,56 +31,35 @@ def userdev2 = project.toLowerCase()+'dev2'
 def saved =	[:]
 def savedIssues = [:]
 def transition = 'fieldHasSingleValueValidator'
+def jsonSlurper = new JsonSlurper();
+def path = Paths.get(gint.directories.resource + "/resources/validatorsData/FieldHasSingleValueValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
+def transitionFunctions = jsonSlurper.parse(path)
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CommentRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldhassinglevalue-validator'
+def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
 
-// Create issues
-(1..9).each { number ->
-def type = 'Bug'
-def summary
-	if (number == 1)
-		summary = 'fieldVersionsShouldHaveSingleValue'
-	else if(number == 2)
-		summary = 'fieldFixVersionsShouldHaveSingleValue'
-	else if(number == 3)
-		summary = 'FieldComponentsShouldHaveSingleValue'
-	else if(number == 4)
-		summary = 'fieldLabelsShouldHaveSingleValue'
-	else if(number == 5)
-		summary = 'FieldSubtaskShouldHaveSingleValue'
-	else if (number == 6)
-		summary = 'fieldIssueLinksShouldHaveSingleValue'
-	else if(number == 7)
-		summary = 'fieldVotesShouldHaveSingleValue'
-	else if(number == 8)
-		summary = 'fieldWatchesShouldHaveSingleValue'
-	else if(number == 9)
-		summary = 'fieldSprintShouldHaveSingleValue'
+createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
 
-    gint.taskHelper.add(
-        action: 'createIssue', ext: number,
-        dependsOn: true,
-        group: 'create',
-        project: project,
-        parameters: [
-            type: type,
-            summary: summary ,
-            description: 'fieldHasSingleValue' + number,
-        ],
-        stopOnFail: true,
-        finalClosure: { Task task ->
-            saved.issue = gint.searchForIssueKey(task.outData)
-            savedIssues[number] = saved.issue
-            gint.helper.logVarWithFormat('saved')
-        },
-    )
-}
-// Transition issues when field values are not more than one
-(1..9).each{ number ->
-    gint.taskHelper.add('transitionIssueAll', [
+def summaries = [
+		'fieldVersionsShouldHaveSingleValue',
+		'fieldFixVersionsShouldHaveSingleValue',
+		'FieldComponentsShouldHaveSingleValue',
+		'excludingSubtaskValuesVersions',
+		'excludingSubtaskValuesFixVersions',
+		'excludingSubtaskValuesComponents'
+]
+def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it, assignee: userqa1, description: 'Test_description_Automation', affectsVersions: '1', fixVersions: '1', component: 'component1'] } )
+def subTask = createIssue(project, [ 3, 4, 5 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }, affectsVersions: '1', fixVersions: '1', component: 'component1']} )
+def story = createIssue(project, summaries.collect{[type: 'Story', summary: it] } )
+linkIssues({[ issue: { -> bug[0] }, toIssue: { -> bug[1] }, link: 'blocks'] } )
+
+// Transition issues when fields having single values excluding the values in subtask
+(0..2).each{ number ->
+    gint.taskHelper.add('when fields having sigle values', [
         [action: 'transitionIssue', ext: 'fieldsHavingSingleValue'+number,
             dependsOn: true,
             expected: [ 0 ],
             parameters: [
-                issue: {-> savedIssues[number]  },
+                issue: {-> bug[number]  },
                 transition: transition + number,
                 resolution: "Done",
 				],
@@ -85,20 +69,34 @@ def summary
         ],
     ])
 }
-
-(1..3).each{ number ->
+(1..2).each{ number ->
 def affectsVersions = number
 def fixVersions = number
 def component = 'component'+ number
+def issueStory0 = {-> story[0]}
+def issueStory1 = {-> story[1]}
+def issueStory2 = {-> story[2]}
+def issueBug0 = {-> bug[0]}
+def issueBug1 = {-> bug[1]}
+def issueBug2 = {-> bug[2]}
+def issueBug3 = {-> bug[3]}
+def issueBug4 = {-> bug[4]}
+def issueBug5 = {-> bug[5]}
 
     gint.taskHelper.add('updateIssuesWithFieldValue', [
         [action: 'run', ext: 'addFieldValuesToCheckErrors'+number,
             dependsOn: true,
             parameters: [
             	input:[
-            		/-a updateIssue  --issue ${project}-1 --affectsVersions ${affectsVersions} --append /,
-            		/-a updateIssue  --issue ${project}-2 --fixVersions ${fixVersions} --append /,
-            		/-a updateIssue  --issue ${project}-3 --components ${component} --append /,
+            		/-a updateIssue  --issue ${issueBug0} --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
+            		/-a updateIssue  --issue ${issueBug1} --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
+            		/-a updateIssue  --issue ${issueBug2} --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
+            		/-a updateIssue  --issue ${issueBug3} --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
+            		/-a updateIssue  --issue ${issueBug4} --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
+            		/-a updateIssue  --issue ${issueBug5} --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
+            		/-a updateIssue  --issue ${issueStory0}  --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
+            		/-a updateIssue  --issue ${issueStory1}  --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
+            		/-a updateIssue  --issue ${issueStory2}  --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
             		 ],
 				],
            data:[
@@ -107,29 +105,103 @@ def component = 'component'+ number
         ],
     ])
 }
-
-// transition the issue after fields having multiple values to validate the errors
-
-(1..3).each{ number ->
-def expected = [ -3 ]
-def data
-	if(number == 1)
-		data = 'Remote error: versions: Affects Version/s should not have more than one value.'
-	if(number == 2)
-		data = 'Remote error: fixVersions: Fix Version/s should not have more than one value.'
-	if(number == 3)
-		data = 'Remote error: components: Component/s should not have more than one value.'
-
-    gint.taskHelper.add('transitionIssueAll', [
+// transition the issue after fields having multiple values to validate
+[
+		'Remote error: versions: Affects Version/s should not have more than one value.',
+		'Remote error: fixVersions: Fix Version/s should not have more than one value.',
+		'Remote error: components: Component/s should not have more than one value.'
+].eachWithIndex { data, number ->
+    gint.taskHelper.add('check when fields having multiple values', [
         [action: 'transitionIssue', ext: 'fieldsHavingMultipleValues'+number,
             dependsOn: true,
-            expected: expected,
+            expected: [ -3 ],
             parameters: [
-                issue: {-> savedIssues[number]  },
+                issue: {-> bug[number]  },
                 transition: transition + number,
                 resolution: "Done",
 				],
-           data:[ data ],
+           data:[],
+        ],
+    ])
+}
+// check excluding values of subtasks
+def issueList3 = [
+		3:{-> bug[0]  },
+		4:{-> bug[1]  },
+		5:{-> bug[2]  },
+]
+def expectedData1 = [
+		3:'Remote error: versions: Affects Version/s should not have more than one value.',
+		4:'Remote error: fixVersions: Fix Version/s should not have more than one value.',
+		5:'Remote error: components: Component/s should not have more than one value.'
+]
+(3..5).each { number ->
+    gint.taskHelper.add('check when fields having multiple values', [
+        [action: 'transitionIssue', ext: 'NotExcludingValuesInSubtask'+number,
+            dependsOn: true,
+            expected: [ -3 ],
+            parameters: [
+                issue: issueList3[ number],
+                transition: transition + number,
+                resolution: "Done",
+				],
+           data:[expectedData1],
+        ],
+    ])
+    gint.taskHelper.add('check when fields having multiple values in subtask', [
+        [action: 'transitionIssue', ext: 'excludingValuesInSubtask'+number,
+            dependsOn: true,
+            expected: [ 0 ],
+            parameters: [
+                issue: {-> bug[number]  },
+                transition: transition + number,
+                resolution: "Done"
+				],
+           data:[
+            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
+            ],
+        ],
+    ])
+}
+// Check Conditional validation
+def issueList1 = [
+		6:{-> bug[0]  },
+		7:{-> bug[1]  },
+		8:{-> bug[2]  },
+]
+def issueList2 = [
+		6:{-> story[0]  },
+		7:{-> story[1]  },
+		8:{-> story[2]  },
+]
+def expectedData2 = [
+		6:'Remote error: versions: Affects Version/s should not have more than one value.',
+		7:'Remote error: fixVersions: Fix Version/s should not have more than one value.',
+		8:'Remote error: components: Component/s should not have more than one value.'
+]
+(6..8).each { number ->
+    gint.taskHelper.add('Check Conditional validation', [
+        [action: 'transitionIssue', ext: 'whenGroovyConditionTrueForIssue'+number,
+            dependsOn: true,
+            expected: [ -3 ],
+            parameters: [
+                issue: issueList1[number],
+                transition: transition + number,
+                resolution: "Done",
+				],
+           data:[ expectedData2 ],
+        ],
+        [action: 'transitionIssue', ext: 'whenGroovyConditionFalseForIssue'+number,
+            dependsOn: true,
+            expected: [ 0 ],
+            parameters: [
+                issue: issueList2[number],
+                transition: transition + number,
+                resolution: "Done",
+				],
+           data:[
+            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
+            ],
         ],
     ])
 }

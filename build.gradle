@@ -15,6 +15,7 @@ buildscript {
     dependencies {
         classpath 'org.gint:gint:' + gintVersion
     }
+
     repositories {
         flatDir { dirs 'libs' }
         mavenLocal()
@@ -22,17 +23,80 @@ buildscript {
         maven { url 'https://plugins.gradle.org/m2/' }
     }
 }
+
+plugins {
+    id "net.saliman.properties" version "1.5.2"
+    id "idea"
+}
 apply plugin: 'org.gint'
 
+configurations {
+    localDeps
+    localDeps.transitive = false
+}
+
+def appVersion = "8.3.0-SNAPSHOT"
+dependencies {
+    localDeps "com.innovalog.jmwe:jira-misc-workflow-extensions:$appVersion"
+}
+repositories {
+    maven {
+        url "$nexusSnapshotsUrl"
+        credentials {
+            username "$nexusUser"
+            password "$nexusPassword"
+        }
+    }
+    maven {
+        url "$nexusReleasesUrl"
+        credentials {
+            username "$nexusUser"
+            password "$nexusPassword"
+        }
+    }
+}
 
 gint.verbose = true
 
-defaultTasks 'validators'
+defaultTasks 'installAppGroup','validators'
 
-gint.taskHelper.add(
-    name: 'installApp', description: 'jmwe app installed',
-    cmd: /acli jira -a installApp --app 'com.innovalog.jmwe.jira-misc-workflow-extensions' --file "jmwe-build\com_innovalog_jmwe_jira-misc-workflow-extensions_8.3.0-SNAPSHOT_jira-misc-workflow-extensions-8.3.0-20230327.063850-28.jar" /
+def appLibPath = "$buildDir/output/lib"
+def appLibName = "JMWE.jar"
+def appPath = "$appLibPath/$appLibName"
+
+tasks.register('copyToLib', Copy) {
+    project.delete(files(appLibPath))
+    from configurations.localDeps
+    into appLibPath
+    rename "(.*).jar", appLibName
+}
+
+gint.taskHelper.addTaskToGroup(copyToLib, "installAppGroup")
+gint.taskHelper.addSetUp("installAppGroup",
+    [[name: 'installApp', description: 'jmwe app installed',
+    cmd:[  /acli $jira -a installApp --app @default/,
+           /acli $jira -a addLicense --app $cliAppKey --file "${gint.directories.source + '/resources/timeBombLicenses.txt'}"/,
+           /acli $jira -a installApp --app $jmweAppKey --file "$appPath" /,
+           /acli $jira -a addLicense --app $jmweAppKey --file "${gint.directories.source + '/resources/timeBombLicenses.txt'}"/,
+		]
+    ]]
 )
+/*
+gint.taskHelper.addSetUp("addLicense",
+    [[name: 'addLicense_jmwe',ext: 'cli', description: 'cli app license',
+    cmd: /acli $jira -a addLicense --app $cliAppKey --file "${gint.directories.source + '/resources/timeBombLicenses.txt'}"/,
+    ]]
+)
+gint.taskHelper.addSetUp("installAppCli",
+    [[name: 'installApp_cli',ext: 'cli', description: 'cli app installed',
+    cmd: /acli $jira -a installApp --app @default/ ]]
+)
+gint.taskHelper.addSetUp("addLicense",
+    [[name: 'addLicense_cli',ext: 'cli', description: 'cli app license',
+    cmd: /acli $jira -a addLicense --app $cliAppKey --file "${gint.directories.source + '/resources/timeBombLicenses.txt'}"/,
+    ]]
+)
+*/
 
 def itestDir = 'src'
 def jmweConditions = 'src/itest-conditions/gradle'
@@ -49,7 +113,7 @@ def jmweAutomation = 'src/itest-automation/gradle'
           '-Dclean',
           '--continue',
           '-DsourceDirectory=src/itest-conditions',
-          "-Dcli=acli jira" ,
+          "-Dcli=acli $jira" ,
       ]
       gint.scriptRunner.add(
           taskNamePrefix: 'conditions',
@@ -68,7 +132,7 @@ def jmweAutomation = 'src/itest-automation/gradle'
           '-Dclean',
           '--continue',
           '-DsourceDirectory=src/itest-validators',
-          "-Dcli=acli jira" ,
+          "-Dcli=acli $jira" ,
       ]
       gint.scriptRunner.add(
           taskNamePrefix: 'validators',
@@ -87,7 +151,7 @@ def jmweAutomation = 'src/itest-automation/gradle'
           '-Dclean',
           '--continue',
           '-DsourceDirectory=src/itest-postfunctions',
-          "-Dcli=acli jira" ,
+          "-Dcli=acli $jira" ,
       ]
       gint.scriptRunner.add(
           taskNamePrefix: 'postfunctions',
@@ -105,7 +169,7 @@ def jmweAutomation = 'src/itest-automation/gradle'
           '-Dclean',
           '--continue',
           '-DsourceDirectory=src/itest-automation',
-          "-Dcli=acli jira" ,
+          "-Dcli=acli $jira" ,
       ]
       gint.scriptRunner.add(
           taskNamePrefix: 'automation',

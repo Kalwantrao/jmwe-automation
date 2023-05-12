@@ -1,0 +1,244 @@
+import groovy.json.JsonSlurper
+import java.nio.file.Paths
+
+buildscript {
+    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
+    dependencies {
+        classpath 'org.gint:gint-atlassian:' + gintVersion
+    }
+    repositories {
+        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
+        mavenLocal()
+        mavenCentral()
+        maven { url 'https://plugins.gradle.org/m2/' }
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: 'common/setUp.gradle'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def transition = 'relatedIssuesValidator'
+def workflow = project
+def screen = project
+def user = info.user
+def userqa1 = project.toLowerCase()+'qa1'
+gint.xmlReport =	true	//xml report generates in projects root directory
+gint.verbose =	true
+
+def jsonSlurper = new JsonSlurper();
+def path = Paths.get(gint.directories.resource + "/resources/validatorsData/RelatedIssuesValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
+def transitionFunctions = jsonSlurper.parse(path)
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CommentRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:issue-linking-validator'	//function key for HideTransitionCondition
+def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+
+createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
+
+// Create issues
+def summaries = [
+		'mustHaveMinOneSubtask',
+		'checkParentIssueMustRespectGivenCondition',
+		'issueLinkByAnyLinkType',
+		'issueLinkByBlockLinkType',
+		'issueNotReturnedByGroovy',
+		'issueNotReturnedByJql',
+		'issueReturnedByGroovy',
+		'issueReturnedByJqlSearch',
+		'issueLinkByclones',
+		'issueLinkByRelatesTo',
+		'issueLinkByDuplicates'
+]
+def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it] } )
+def subTask = createIssue(project, [1, 1 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }]} )
+def epic = createIssue(project, summaries.collect{[type: 'Epic', summary: it, field: "Epic Name", value: "Epic"]} )
+def story = createIssue(project, [1, 1 ].collect{[type: 'story', summary: 'summary',field: "Epic Link", value: { -> epic[it] }]} )
+linkIssues({[ issue: { -> bug[3] }, toIssue: { -> bug[2] }, link: 'blocks'] } )
+def summaryJql = [ 'jqlSearch1', 'jqlSearch2' ]
+def IssueReturnByJqlSearch = createIssue(project, summaryJql.collect{[type: 'Task', summary: it, assignee: userqa1] } )
+
+def issueList1 = [
+	0: { -> bug[0] },
+    1: { -> subTask[0] },
+    2: { -> bug[1] },
+    3: { -> subTask[1] },
+    4: { -> bug[1] },
+    5: { -> subTask[0] },
+	6: { -> epic[0] },
+    7: { -> story[0] },
+    8: { -> epic[1] },
+    9: { -> story[1] },
+    10: { -> epic[1] },
+    11: { -> story[0] },
+	12: { -> bug[0] },
+    13: { -> bug[0] },
+    14: { -> bug[2] },
+    15: { -> bug[3] },
+    16: { -> bug[2] },
+    17: { -> bug[3] },
+	18: { -> bug[0] },
+    19: { -> bug[0] },
+    20: { -> bug[2] },
+    21: { -> bug[3] },
+    22: { -> bug[2] },
+    23: { -> bug[3] }
+]
+[
+	0:'Remote error: issuelinks: currentIssueNotHavingSubtask',
+	1:'Remote error: issuelinks: parentIssueNotRespectingGivenCondition',
+	2:'Remote error: issuelinks: currentIssueNotHavingSubtaskRespectingGivenCondition',
+	3:'Remote error: issuelinks: subtaskNotHavingParentIssusWhichRespectingCondition',
+	4:'Remote error: issuelinks: checkIssueHavingSubtask',
+	5:'Remote error: issuelinks: subtaskHavingParentIssueWhichRespectingGivenCondition',
+	6:'Remote error: issuelinks: currentEpicNotHavingStory',
+	7:'Remote error: issuelinks: storyNotBelongsToEpic',
+	8:'Remote error: issuelinks: currentEpicNotHavingStoryRespectingGivenCondition',
+	9:'Remote error: issuelinks: storyNotHavingEpicWhichRespectingCondition',
+	10:'Remote error: issuelinks: epicHavingStoriesWhichRespectingGivenCondition',
+	11:'Remote error: issuelinks: storyHavingEpicWhichRespectingGivenCondition',
+	12:'Remote error: issuelinks: currentIssueNotHavingIssueLinkedToItThroughAnyLinkType',
+	13:'Remote error: issuelinks: currentIssueNotHavingIssueLinkedToItThroughBlockLinkType',
+	14:'Remote error: issuelinks: currentIssueNotHavingIssueLinkedToItThroughAnyLinkTypeRespectingGivenCondition',
+	15:'Remote error: issuelinks: currentIssueNotHavingIssueLinkedToItThroughBlockLinkTypeRespectingGivenCondition',
+	16:'Remote error: issuelinks: checkCurrentIssueHavingIssueLinkedToItThroughAnyLinkType',
+	17:'Remote error: issuelinks: checkCurrentIssueHavingIssueLinkedToItThroughBlockLinkType',
+	18:'Remote error: issuelinks: currentIssueIsNotReturnedByGroovyScript',
+	19:'Remote error: issuelinks: currentIssueIsNotReturnedByJqlSearch',
+	20:'Remote error: issuelinks: currentIssueReturnedByGroovyScriptNotRespectingGivenCondition',
+	21:'Remote error: issuelinks: currentIssueReturnedByJqlSearchNotRespectingGivenCondition',
+	22:'Remote error: issuelinks: currentIssueReturnedByGroovyScriptRespectingGivenCondition',
+	23:'Remote error: issuelinks: currentIssueReturnedByJqlSearchRespectingGivenCondition',
+].eachWithIndex { data, number ->
+    def transitionIssue1 = gint.taskHelper.add(
+        [
+            action: 'transitionIssue',
+            ext: 'validateTheErrorsWhenIssueNotRespectingValidators' + number,
+            dependsOn: true,
+            expected: [ -3 ],
+            parameters: [
+                issue: issueList1[number],
+                transition: transition + number
+            ],
+            data: [],
+        ]
+    )
+}
+// Validate that when issue is having issue(s) linked to it satisfying desired condition
+def issueList2 = [
+	24: { -> bug[1] },
+    25: { -> subTask[0] },
+    26: { -> bug[1] },
+    27: { -> subTask[1] },
+    28: { -> bug[0] },
+    29: { -> subTask[0] },
+	30: { -> epic[1] },
+    31: { -> story[1] },
+    32: { -> epic[1] },
+    33: { -> story[1] },
+    34: { -> epic[1] },
+    35: { -> story[0] },
+	36: { -> bug[2] },
+    37: { -> bug[3] },
+    38: { -> bug[2] },
+    39: { -> bug[3] },
+    40: { -> bug[2] },
+    41: { -> bug[3] },
+	42: { -> bug[2] },
+    43: { -> bug[1] },
+    44: { -> bug[2] },
+    45: { -> bug[3] },
+    46: { -> bug[2] },
+    47: { -> bug[3] }
+]
+(24..47).each { number ->
+    def transitionIssue2 = gint.taskHelper.add(
+        [
+            action: 'transitionIssue',
+            ext: 'validateWhenIssueRespectingValidatorsCriteria' + number,
+            dependsOn: true,
+            expected: [ 0 ],
+            parameters: [
+                issue: issueList2[number],
+                transition: transition + number
+            ],
+		])
+}
+
+// Validate the validator scope, if the groovy condition returns true for current issue then only error msg should display
+def issueList3 =
+[
+		48:{ -> bug[1] },
+		49:{ -> bug[1] },
+		50:{ -> bug[2] },
+		51:{ -> bug[2] },
+		52:{ -> bug[2] },
+		53:{ -> bug[2] },
+		54:{ -> bug[1] },
+		55:{ -> bug[1] },
+		56:{ -> bug[3] },
+		57:{ -> bug[3] },
+		58:{ -> bug[3] },
+		59:{ -> bug[3] }
+]
+def expected2 = [
+		48:[ 0 ],
+		49:[ -3 ],
+		50:[ 0 ],
+		51:[ -3 ],
+		52:[ 0 ],
+		53:[ -3 ],
+		54:[ 0 ],
+		55:[ -3 ],
+		56:[ 0 ],
+		57:[ -3 ],
+		58:[ 0 ],
+		59:[ -3 ]
+]
+(48..59).each { number ->
+	gint.taskHelper.add(
+        [
+            action: 'transitionIssue',
+            ext: 'validateWhenGroovyConditionReturnsTrueAndFalseForIssue' + number,
+            dependsOn: true,
+            expected: expected2[number],
+            parameters: [
+                issue: issueList3[number],
+                transition: transition + number
+            ],
+		])
+}
+// Validate the issue constraints, issue should have min and max number of issues link to it
+def issueList4 =
+[
+		60:{ -> bug[2] },
+		61:{ -> bug[2] },
+		62:{ -> bug[2] },
+		63:{ -> bug[2] },
+		64:{ -> bug[3] },
+		65:{ -> bug[3] },
+		66:{ -> bug[3] },
+		67:{ -> bug[3] }
+]
+def expected3 = [
+		60:[ -3 ],
+		61:[ 0 ],
+		62:[ -3 ],
+		63:[ 0 ],
+		64:[ -3 ],
+		65:[ 0 ],
+		66:[ -3 ],
+		67:[ 0 ]
+]
+(60..67).each { number ->
+	gint.taskHelper.add(
+        [
+            action: 'transitionIssue',
+            ext: 'validateWhenToCheckIssueConstraints' + number,
+            dependsOn: true,
+            expected: expected3[number],
+            parameters: [
+                issue: issueList4[number],
+                transition: transition + number
+            ],
+		])
+}

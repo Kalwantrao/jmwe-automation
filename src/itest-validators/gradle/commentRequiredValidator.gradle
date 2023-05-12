@@ -39,127 +39,36 @@ def summaries = [
 		'checkErrorMsgByUserWhenConditionIsTrue',
 		'checkErrorMsgByDefault',
 		'checkErrorMsgByDefaultWhenConditionIsTrue',
-		'checkGroupsAllowedToOmitComment',
-		'checkCommentRequired',
-		'checkCommentRequiredCustom',
 ]
-def savedIssues = createIssue(project, summaries.collect{[ type: 'Bug', summary: it]} )
-/* Modified by Diego but, Not able to run all  tasks
-// Transition issues when comment provided during the transition
-savedIssues.eachWithIndex{ issue, number ->
-    gint.taskHelper.add('transitionIssueAll', [
-        [action: 'transitionIssue', ext: 'transitionWhenCommentProvided'+number,
-            dependsOn: true,
-            expected: [ 0 ] ,
-            parameters: [
-                issue: {-> issue  },
-                transition: transition + number,
-                resolution: "Done",
-                comment: 'testCommentRequiredValidator'
-				],
-           data:[
-            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
-            ],
-            finalClosure:{ Task task ->
-            	gint.helper.logVarWithFormat('Should not throw error as comment provided during transition ')
-			},
-		],
-	])
-}
+def bug = createIssue(project, summaries.collect{[ type: 'Bug', summary: it]} )
+def Task = createIssue(project, summaries.collect{[ type: 'Task', summary: it]} )
 [
-		'Remote error: comment: CommentRequired',
 		'Remote error: comment: CommentRequired',
 		'Remote error: comment: You must provide a Comment',
 		'Remote error: comment: You must provide a Comment',
-].eachWithIndex{ data, number ->
-    gint.taskHelper.add('transitionIssueAll', [
-        [action: 'transitionIssue', ext: 'transitionWhenCommentNotProvided'+number,
-            dependsOn: true,
-            expected: [ -3 ],
-            parameters: [
-                issue: {-> savedIssues[number]  },
-                transition: transition + number,
-                resolution: "Done",
-				],
-           data:[],
-           finalClosure:{ Task task ->
-           		gint.helper.logVarWithFormat('Should throw error as comment not provided during transition: CommentRequired ')
-            }
-        ],
-    ])
-}
-*/
-/*
-def expectedData = [
-		0:'Remote error: comment: CommentRequired',
-		1:'Remote error: comment: CommentRequired',
-		2:'Remote error: comment: You must provide a Comment',
-		3:'Remote error: comment: You must provide a Comment',
-]
-[
-	{-> savedIssues[0]  },
-	{-> savedIssues[1]  },
-	{-> savedIssues[2]  },
-	{-> savedIssues[3]  },
-].eachWithIndex { issue, number ->
+].eachWithIndex {  data, number ->
 	def transitionIssue = gint.taskHelper.add([
         	[action: 'transitionIssue', ext: 'transitionWhenCommentNotProvided'+number,
             	dependsOn: true,
             	expected: [ -3 ],
             	parameters: [
-                	issue: {-> savedIssues[number]  },
+                	issue: {-> bug[number]  },
                 	transition: transition + number,
                 	resolution: "Done",
 					],
-           	data:[ expectedData ],
-           	finalClosure:{ Task task ->
-           		gint.helper.logVarWithFormat('Should throw error as comment not provided during transition: CommentRequired ')
-            	},
+           	data:[  ],
         	],
         	[action: 'transitionIssue', ext: 'transitionWhenCommentProvided'+number,
             	dependsOn: true,
             	expected: [ 0 ],
             	parameters: [
-                	issue: {-> savedIssues[number]  },
+                	issue: {-> Task[number]  },
                 	transition: transition + number,
                 	resolution: "Done",
                 	comment: "testCommentRequiredValidator"
 					],
-           	data:[
-            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
-            	],
+           	data:[ ~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./ ],
         	],
 ])
 }
-*/
 
-def expectedData = [
-		0:'Remote error: comment: CommentRequired',
-		1:'Remote error: comment: CommentRequired',
-		2:'Remote error: comment: You must provide a Comment',
-		3:'Remote error: comment: You must provide a Comment',
-]
-[
-	{-> savedIssues[0]  },
-	{-> savedIssues[1]  },
-	{-> savedIssues[2]  },
-	{-> savedIssues[3]  },
-].eachWithIndex { issue, number ->
-	def transitionIssue = gint.taskHelper.add([
-        	[action: 'transitionIssue', ext: 'transitionWhenCommentNotProvided'+number,
-            	dependsOn: true,
-            	expected: [ -3 ],
-            	parameters: [
-                	issue: {-> savedIssues[number]  },
-                	transition: transition + number,
-                	resolution: "Done",
-					],
-           	startClosure:{ parameters ->
-            		resolution = "Done"
-            	},
-            data:[
-            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
-            	],
-			],
-])
-}

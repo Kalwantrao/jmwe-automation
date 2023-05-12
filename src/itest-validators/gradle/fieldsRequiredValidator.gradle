@@ -1,3 +1,6 @@
+import groovy.json.JsonSlurper
+import java.nio.file.Paths
+
 buildscript {
     def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
     dependencies {
@@ -12,228 +15,108 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.directories.resource + '/common/tearDown.gradle'
-apply from:'configValidators/addFieldsRequiredValidator.gradle'
-apply from:  gint.directories.resource + '/common/setUp.gradle'
+apply from: 'common/setUp.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
 def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def workflow = project
+def screen = project
+gint.xmlReport =	true	//xml report generates in projects root directory
+gint.verbose =	true
+def user = info.user
 def userqa1 = project.toLowerCase()+'qa1'
 def userqa2 = project.toLowerCase()+'qa2'
 def userdev1 = project.toLowerCase()+'dev1'
 def userdev2 = project.toLowerCase()+'dev2'
-def user = info.user
 def saved =	[:]
 def savedIssues = [:]
 def transition = 'fieldsRequiredValidator'
+def jsonSlurper = new JsonSlurper();
+def path = Paths.get(gint.directories.resource + "/resources/validatorsData/FieldsRequiredValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
+def transitionFunctions = jsonSlurper.parse(path)
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CommentRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldrequired-validator'
+def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
 
-(1..24).each { number ->
-def type = 'Bug'
-def summary
-	if (number == 1)
-		summary = 'affectsVersionsShouldRequired'
-	else if(number == 2)
-		summary = 'fixVersionsShouldRequired'
-	else if(number == 3)
-		summary = 'assigneeShouldRequired'
-	else if(number == 4)
-		summary = 'componentsShouldRequired'
-	else if(number == 5)
-		summary = 'labelsShouldRequired'
-	else if(number == 6)
-		summary = 'affectsVersionsShouldRequired'
-	else if(number == 7)
-		summary = 'fixVersionsShouldRequired'
-	else if(number == 8)
-		summary = 'assigneeShouldRequired'
-	else if(number == 9)
-		summary = 'componentsShouldRequired'
-	else if(number == 10)
-		summary = 'labelsShouldRequired'
-	else if(number == 11)
-		summary = 'affectsVersionsShouldRequiredIfPriorityIsMedium'
-	else if(number == 12)
-		summary = 'fixVersionsShouldRequiredIfIssueNotHasAssignee'
-	else if(number == 13)
-		summary = 'assigneeShouldRequiredIfIssueNotHasLabel'
-	else if(number == 14)
-		summary = 'componentsShouldRequiredIfIssueNotHasDescription'
-	else if(number == 15)
-		summary = 'labelsShouldRequiredIfIssueNotHasComponents'
-	else if(number == 16)
-		summary = 'affectsVersionsShouldRequiredIfPriorityIsMedium'
-	else if(number == 17)
-		summary = 'fixVersionsShouldRequiredIfIssueNotHasAssignee'
-	else if(number == 18)
-		summary = 'assigneeShouldRequiredIfIssueNotHasLabel'
-	else if(number == 19)
-		summary = 'componentsShouldRequiredIfIssueNotHasDescription'
-	else if(number == 20)
-		summary = 'labelsShouldRequiredIfIssueNotHasComponents'
-	else if(number == 21)
-		summary = 'multipleFieldsShouldRequiredValue'
-	else if(number == 22)
-		summary = 'multipleFieldsShouldRequiredValue'
-	else if(number == 23)
-		summary = 'multipleFieldsShouldRequiredValueIfIssueNotHasAssignee'
-	else if(number == 24)
-		summary = 'multipleFieldsShouldRequiredValueIfIssueNotHasAssignee'
+createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
 
-    gint.taskHelper.add(
-        action: 'createIssue', ext: number,
-        dependsOn: true,
-        group: 'create',
-        project: project,
-        parameters: [
-            type: type,
-            summary: summary ,
-        ],
-        stopOnFail: true,
-        finalClosure: { Task task ->
-            saved.issue = gint.searchForIssueKey(task.outData)
-            savedIssues[number] = saved.issue
-            gint.helper.logVarWithFormat('saved')
-            gint.helper.log('create issues that not having required fields',saved)
-        },
-    )
+def summaries = [
+		'affectsVersionsFieldRequired',
+		'fixVersionsFieldRequired',
+		'assigneeFieldRequired',
+		'componentsShouldRequired',
+		'labelsShouldRequired'
+]
+def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it] } )
+def subTask = createIssue(project, [ 0, 0 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] } ]} )
+def story = createIssue(project, summaries.collect{[type: 'Story', summary: it] } )
+def Task = createIssue(project, summaries.collect{[type: 'Task', summary: it, description: 'Test_Description_Automation', priority: 'Low'] } )
+linkIssues({[ issue: { -> Task[0] }, toIssue: { -> Task[1] }, link: 'blocks'] } )
+
+// check when issue not having required fields and having fields
+[
+		'Remote error: versions: Field Affects Version/s is required.',
+		'Remote error: thisIsCustomMsgForFixVersionFieldsRequired',
+		'Remote error: assignee: Field Assignee is required.',
+		'Remote error: components: Field Component/s is required.',
+		'Remote error: labels: Field Labels is required.'
+].eachWithIndex { data, number ->
+	gint.taskHelper.add([
+		[action: 'transitionIssue', ext: 'WhenIssueNotHavingFieldValues' + number,
+		dependsOn: true,
+		expected: [ -3 ],
+		parameters:[
+			issue: {-> bug[number] },
+			transition: transition + number
+			],
+		data: [ ]
+		],
+		[action: 'transitionIssue', ext: 'WhenIssueHavingFieldValues' + number,
+		dependsOn: true,
+		expected: [ 0 ],
+		parameters:[
+			issue: { -> bug[number]},
+			transition: transition + number,
+			fixVersions: '2',
+			affectsVersions: '1',
+			assignee: userqa1,
+			component: 'component1',
+			labels: 'Test_Label_Automation'
+			],
+        data:[ 	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./ ],
+		]
+])
 }
-
-//Check if the value is provided otherwise error comes
-(1..24).each { number ->
-def expected = [ -3 ]
-def data
-	if(number == 1)
-		data = 'Remote error: versions: Field Affects Version/s is required.'
-	else if (number == 2)
-		data = 'Remote error: fixVersions: Field Fix Version/s is required.'
-	else if (number == 3)
-		data = 'Remote error: assignee: Field Assignee is required.'
-	else if (number == 4)
-		data = 'Remote error: components: Field Component/s is required.'
-	else if (number == 5)
-		data = 'Remote error: labels: Field Labels is required.'
-	else if (number == 6)
-		data = 'Remote error: versions: fieldsRequired'
-	else if (number == 7)
-		data = 'Remote error: fixVersions: fieldsRequired'
-	else if (number == 8)
-		data = 'Remote error: assignee: fieldsRequired'
-	else if (number == 9)
-		data = 'Remote error: components: fieldsRequired'
-	else if (number == 10)
-		data = 'Remote error: labels: fieldsRequired'
-	else if(number == 11)
-		data = 'Remote error: versions: Field Affects Version/s is required.'
-	else if (number == 12)
-		data = 'Remote error: fixVersions: Field Fix Version/s is required.'
-	else if (number == 13)
-		data = 'Remote error: assignee: Field Assignee is required.'
-	else if (number == 14)
-		data = 'Remote error: components: Field Component/s is required.'
-	else if (number == 15)
-		data = 'Remote error: labels: Field Labels is required.'
-	else if (number == 16)
-		data = 'Remote error: versions: fieldsRequired'
-	else if (number == 17)
-		data = 'Remote error: fixVersions: fieldsRequired'
-	else if (number == 18)
-		data = 'Remote error: assignee: fieldsRequired'
-	else if (number == 19)
-		data = 'Remote error: components: fieldsRequired'
-	else if (number == 20)
-		data = 'Remote error: labels: fieldsRequired'
-	else if(number == 21)
-		data = 'Remote message: components: Field Component/s is required.'
-	else if(number == 22)
-		data = 'Remote message: components: fieldsRequired'
-	else if(number == 23)
-		data = 'Remote message: components: Field Component/s is required.'
-	else if(number == 24)
-		data = 'Remote message: components: fieldsRequired'
-
-    gint.taskHelper.add('transitionIssueAll', [
-        [action: 'transitionIssue', ext: '--ToValidateErrorsIfValuesAreNotProvidedCustomAndDefaultErrorMsg'+number,
-            dependsOn: true,
-            expected:expected,
-            parameters: [
-                issue: {-> savedIssues[number]  },
-                transition: transition + number,
-            ],
-            data:[ data ],
-         	finalClosure:{ Task task ->
-         		gint.helper.log('Verify the Default error msg should be display when the required field values are not provided',saved)
-         		gint.helper.log('Verify the Custom error msg should be display when the required field values are not provided',saved)
-         	}
-
-        ],
-    ])
-}
-//Transition the issue by providing the required field values
-(1..24).each{ number ->
-    gint.taskHelper.add('transitionIssueAll', [
-        [action: 'transitionIssue', ext: '--ToCheckSuccessfullTransitionTheIssueAfterProvidingRequiredFields'+number,
-            dependsOn: true,
-            expected: [ 0 ],
-            parameters: [
-                issue: {-> savedIssues[number]  },
-                transition: transition + number,
-                affectsVersions : "1",
-                fixVersions: "2",
-                assignee: user,
-                components: 'component1',
-                labels: 'label',
-				],
-           data:[
-            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
-            ],
-           finalClosure:{ Task task ->
-         		gint.helper.log('Verify the issue is transitioned successfully when the required field values are provided',saved)
-         	}
-
-        ],
-    ])
-}
-(1..1).each{ number ->
-    gint.taskHelper.add('updateIssue', [
-        [action: 'updateIssue', ext: '--ForTheGroovyConditionBecomeFalse'+number,
-            dependsOn: true,
-            expected: [ 0 ],
-            parameters: [
-                issue: ~/${project}-1/, // Issue does not have required fields
-                priority: 'High',
-                assignee: user,
-                labels: 'label2',
-                description: 'description1',
-                components: 'component2',
-                issueType: 'Story',
-				],
-           data:[
-            	~/Issue ${project}-\d+ updated./
-            ],
-           finalClosure:{ Task task ->
-         		gint.helper.log('Verify the issue is updated successfully for the Groovy condition becomes returns false for the issue',saved)
-         	}
-
-        ],
-    ])
-}
-// Groovy condition returns false for the issues
-(11..20).each{ number ->
-    gint.taskHelper.add('transitionIssueAll', [
-        [action: 'transitionIssue', ext: '--ToCheckTheGroovyConditionReturnsFalseSkipValidatorAndSuccessfullyTransitionTheIssue'+number,
-            dependsOn: true,
-            expected: [ 0 ],
-            parameters: [
-                issue: ~/${project}-1/, // Issue does not have required fields
-                transition: transition + number,
-				],
-           data:[
-            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
-            ],
-           finalClosure:{ Task task ->
-         		gint.helper.log('Verify the issue is transitioned successfully when the Groovy condition returns false for the issues,SKIP the validator',saved)
-         	}
-
-        ],
-    ])
+// Conditional validation
+def issueList1 = [
+		5:{-> Task[0] },
+		6:{-> Task[1] },
+		7:{-> Task[2] },
+		8:{-> Task[3] }
+]
+def issueList2 = [
+		5:{-> story[0] },
+		6:{-> story[1] },
+		7:{-> story[2] },
+		8:{-> story[3] }
+]
+(5..8).each { number ->
+	gint.taskHelper.add([
+		[action: 'transitionIssue', ext: 'When Groovy Condition Returns True For Issue' + number,
+		dependsOn: true,
+		expected: [ -3 ],
+		parameters:[
+			issue: issueList1[number],
+			transition: transition + number
+			],
+		],
+		[action: 'transitionIssue', ext: 'When Groovy Condition Returns False For Issue' + number,
+		dependsOn: true,
+		expected: [ 0 ],
+		parameters:[
+			issue: issueList2[number],
+			transition: transition + number,
+			],
+        data:[ ~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./ ],
+		]
+])
 }

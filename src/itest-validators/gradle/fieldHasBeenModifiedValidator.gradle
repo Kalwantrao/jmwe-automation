@@ -1,3 +1,6 @@
+import groovy.json.JsonSlurper
+import java.nio.file.Paths
+
 buildscript {
     def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
     dependencies {
@@ -12,9 +15,7 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.directories.resource + '/common/tearDown.gradle'
-apply from: 'configValidators/addFieldHasBeenModifiedValidator.gradle'
-apply from:  gint.directories.resource + '/common/setUp.gradle'
+apply from: 'common/setUp.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
 def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
@@ -27,323 +28,134 @@ def userdev1 = project.toLowerCase()+'dev1'
 def userdev2 = project.toLowerCase()+'dev2'
 def saved =	[:]
 def savedIssues = [:]
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldchanged-validator'	//function key for current status condition
 def transition = 'fieldHasBeenModifiedValidator'
+def startStep =	'11' // depends on workflow. '11' (To Do) works for custom jira workflow
+def screen = project
 
-(1..14).each { number ->
-def type = 'Bug'
-def summary
-	if (number == 1)
-		summary = 'versionsShouldBeModified'
-	else if(number == 2)
-		summary = 'fixVersionsShouldBeModified'
-	else if(number == 3)
-		summary = 'assigneeShouldBeModified'
-	else if(number == 4)
-		summary = 'componentsShouldBeModified'
-	else if(number == 5)
-		summary = 'labelsShouldBeModified'
-	else if (number == 6)
-		summary = 'priorityShouldBeModified'
-	else if(number == 7)
-		summary = 'summaryShouldBeModified'
-	else if(number == 8)
-		summary = 'descriptionShouldBeModified'
-	else if(number == 9)
-		summary = 'environmentShouldBeModified'
-	else if(number == 10)
-		summary = 'reporterShouldBeModified'
-	else if(number == 11)
-		summary = 'resolutionShouldBeModified'
-	else if(number == 12)
-		summary = 'targetStartShouldBeModified'
-	else if(number == 13)
-		summary = 'targetEndShouldBeModified'
-	else if(number == 14)
-		summary = 'dueDateShouldBeModified'
+def jsonSlurper = new JsonSlurper();
+def path = Paths.get(gint.directories.resource + "/resources/validatorsData/FieldHasBeenModifiedValidator.json")
+def transitionFunctions = jsonSlurper.parse(path)
 
-    gint.taskHelper.add(
-        action: 'createIssue', ext: number,
-        dependsOn: true,
-        group: 'create',
-        project: project,
-        parameters: [
-            type: type,
-            summary: summary ,
-            description: 'fieldsShouldBeModified' + number,
-        ],
-        stopOnFail: true,
-        finalClosure: { Task task ->
-            saved.issue = gint.searchForIssueKey(task.outData)
-            savedIssues[number] = saved.issue
-            gint.helper.logVarWithFormat('saved')
-        },
-    )
-}
-(15..37).each { number ->
-def summary
-	if(number == 15)
-		summary = 'epicColorShouldBeModified'
-	else if(number == 16)
-		summary = 'epicNameShouldBeModified'
-	else if(number == 17)
-		summary = 'epicStatusShouldBeModified'
-	else if(number == 18)
-		summary = 'remainingEstimateShouldBeModified'
-	else if(number == 19)
-		summary = 'keyShouldBeModified'
-	else if(number == 20)
-		summary = 'originalEstimateShouldBeModified'
-	else if(number == 21)
-		summary = 'originalStoryPointShouldBeModified'
-	else if(number == 22)
-		summary = 'parentLinkShouldBeModified'
-	else if(number == 23)
-		summary = 'projectShouldBeModified'
-	else if(number == 24)
-		summary = 'timeSpentShouldBeModified'
-	else if(number == 25)
-		summary = 'archivedShouldBeModified'
-	else if(number == 26)
-		summary = 'archiverShouldBeModified'
-	else if(number == 27)
-		summary = 'sprintShouldBeModified'
-	else if(number == 28)
-		summary = 'statusShouldBeModified'
-	else if(number == 29)
-		summary = 'storyPointsShouldBeModified'
-	else if(number == 30)
-		summary = 'issueTypeShouldBeModified'
-	else if(number == 31)
-		summary = 'teamShouldBeModified'
-	else if(number == 32)
-		summary = 'attachmentShouldBeModified'
-	else if(number == 33)
-		summary = 'jmwe_01ShouldBeModified'
-	else if(number == 34)
-		summary = 'priorityShouldBeHigh'
-	else if(number == 35)
-		summary = 'issueShouldBeAssigned'
-	else if(number == 36)
-		summary = 'assigneeShouldBeCurrentUser'
-	else if(number == 37)
-		summary = 'issueShouldHaveDescription'
+createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
 
-def type
-	if(number == 22)
-		type = 'Story'
-	else
-		type = 'Epic'
+def summaries = [
+		 'fieldsShouldBeModified',
+		 'groovyConditionReturnsTrue',
+		 'groovyConditionReturnsFalse',
+		 'issueLinkedByBlocksLink',
+		 'groovyConditionFalse'
+		 ]
+def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it] } )
+def subTask = createIssue(project, [1, 1 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }]} )
+def epic = createIssue(project, summaries.collect{[type: 'Epic', summary: it, field: "Epic Name", value: "Epic"]} )
+def story = createIssue(project, [1, 1, 1, 1 ].collect{[type: 'story', summary: 'summary',field: "Epic Link", value: { -> epic[it] }, assignee: userqa1, description: 'TEST_DESCRIPTION_AUTOMATION']} )
+linkIssues({[ issue: { -> story[0] }, toIssue: { -> story[1] }, link: 'blocks'] } )
 
-def field
-	if(number == 22)
-		field = "Assignee"
-	else
-		field = "Epic Name"
-def value
-	if(number == 22)
-		value = user
-	else
-		value = "Epic Name"
-
-    gint.taskHelper.add(
-        action: 'createIssue', ext: number,
-        dependsOn: true,
-        group: 'create',
-        project: project,
-        parameters: [
-            type: type,
-	        assignee: user,
-            summary: summary ,
-            description: 'fieldsShouldBeModified' + number,
-            priority: 'High',
-            field: field,
-            value: value,
-        ],
-        stopOnFail: true,
-        finalClosure: { Task task ->
-            saved.issue = gint.searchForIssueKey(task.outData)
-            savedIssues[number] = saved.issue
-            gint.helper.logVarWithFormat('saved')
-        },
-    )
-}
-
-(1..32).each { number ->
-def expected = [ -3 ]
-def data
-	if(number == 1)
-		data = 'Remote error: versions: Affects Version/s should be modified during this transition.'
-	else if (number == 2)
-		data = 'Remote error: fixVersions: Fix Version/s should be modified during this transition.'
-	else if (number == 3)
-		data = 'Remote error: assignee: Assignee should be modified during this transition.'
-	else if (number == 4)
-		data = 'Remote error: components: Component/s should be modified during this transition.'
-	else if (number == 5)
-		data = 'Remote error: labels: Labels should be modified during this transition.'
-	else if (number == 6)
-		data = 'Remote error: priority: Priority should be modified during this transition.'
-	else if (number == 7)
-		data = 'Remote error: summary: Summary should be modified during this transition.'
-	else if (number == 8)
-		data = 'Remote error: description: Description should be modified during this transition.'
-	else if (number == 9)
-		data = 'Remote error: environment: Environment should be modified during this transition.'
-	else if (number == 10)
-		data = 'Remote error: reporter: Reporter should be modified during this transition.'
-	else if (number == 11)
-		data = 'Remote error: resolution: Resolution should be modified during this transition.'
-	else if (number == 12)
-		data = 'Remote error: customfield_10108: Target start should be modified during this transition.'
-	else if (number == 13)
-		data = 'Remote error: customfield_10109: Target end should be modified during this transition'
-	else if (number == 14)
-		data = 'Remote error: duedate: Due Date should be modified during this transition.'
-	else if (number == 15)
-		data = 'Remote error: customfield_10104: Epic Colour should be modified during this transition.'
-	else if (number == 16)
-		data = 'Remote error: customfield_10103: Epic Name should be modified during this transition.'
-	else if (number == 17)
-		data = 'Remote error: customfield_10102: Epic Status should be modified during this transition.'
-	else if (number == 18)
-		data = 'Remote error: Field Key should be modified during this transition, but it is not present on the transition screen.'
-	else if (number == 19)
-		data = 'Remote error: timetracking_remainingestimate: Remaining Estimate should be modified during this transition.'
-	else if (number == 20)
-		data = 'Remote error: timetracking_originalestimate: Original Estimate should be modified during this transition.'
-	else if (number == 21)
-		data = 'Remote error: customfield_10110: Original story points should be modified during this transition.'
-	else if (number == 22)
-		data = 'Remote error: customfield_10107: Parent Link should be modified during this transition.'
-	else if (number == 23)
-		data = 'Remote error: project: Project should be modified during this transition.'
-	else if (number == 24)
-		data = 'Remote error: Time Spent should be modified during this transition.'
-	else if (number == 25)
-		data = 'Remote error: archiveddate: Archived should be modified during this transition.'
-	else if (number == 26)
-		data = 'Remote error: archivedby: Archiver should be modified during this transition.'
-	else if (number == 27)
-		data = 'Remote error: customfield_10105: Sprint should be modified during this transition.'
-	else if (number == 28)
-		data = 'Remote error: status: Status should be modified during this transition.'
-	else if (number == 29)
-		data = 'Remote error: customfield_10106: Story Points should be modified during this transition.'
-	else if (number == 30)
-		data = 'Remote error: issuetype: Issue Type should be modified during this transition.'
-	else if (number == 31)
-		data = 'Remote error: customfield_10111: Team should be modified during this transition.'
-	else if (number == 32)
-		data = 'Remote error: attachment: Attachment should be modified during this transition.'
-
-    gint.taskHelper.add('transitionIssueAll', [
-        [action: 'transitionIssue', ext: 'beforeModifiedDefaultAndCustomFields'+number,
+def issueList1 = [
+	0: { -> bug[0] },
+    1: { -> bug[1] },
+    2: { -> bug[2] },
+    3: { -> bug[3] },
+    4: { -> story[0] },
+    5: { -> story[1] },
+	6: { -> epic[1] },
+]
+[
+	0:'Remote error: versions: Affects Version/s should be modified during this transition.',
+	1:'Remote error: fixVersions: Fix Version/s should be modified during this transition.',
+	2:'Remote error: assignee: Assignee should be modified during this transition.',
+	3:'Remote error: components: Component/s should be modified during this transition.',
+	4:'Remote error: labels: Labels should be modified during this transition.',
+	5:'Remote error: priority: Priority should be modified during this transition.',
+	6:'Remote error: description: Description should be modified during this transition.'
+].eachWithIndex { data, number ->
+    gint.taskHelper.add([
+            [action: 'transitionIssue',
+            ext: 'whenFieldsNotModified' + number,
             dependsOn: true,
-            expected:expected,
+            expected: [ -3 ],
             parameters: [
-                issue: {-> savedIssues[number]  },
-                transition: transition + number,
+                issue: issueList1[number],
+                transition: transition + number
             ],
-            data:[ data ]
+            data: [],
         ],
-    ])
-}
-(34..37).each { number ->
-def expected = [ -3 ]
-def data
-	if(number == 34)
-		data = 'Remote error: versions: Affects Version/s should be modified during this transition.'
-	else if (number == 35)
-		data = 'Remote error: fixVersions: Fix Version/s should be modified during this transition.'
-	else if (number == 36)
-		data = 'Remote error: assignee: Assignee should be modified during this transition.'
-	else if (number == 37)
-		data = 'Remote error: components: Component/s should be modified during this transition.'
-
-    gint.taskHelper.add('transitionIssueAll', [
-        [action: 'transitionIssue', ext: 'beforeModifiedConditionalValidationFields'+number,
-            dependsOn: true,
-            expected:expected,
-            parameters: [
-                issue: {-> savedIssues[number]  },
-                transition: transition + number,
-            ],
-            data:[ data ]
-        ],
-    ])
-}
-(1..10).each{ number ->
-    gint.taskHelper.add('transitionIssueAll', [
-        [action: 'transitionIssue', ext: 'afterModifiedDefaultFields'+number,
+            [action: 'transitionIssue',
+            ext: 'whenFieldsAreModified' + number,
             dependsOn: true,
             expected: [ 0 ],
             parameters: [
-                issue: {-> savedIssues[number]  },
+                issue: issueList1[number],
                 transition: transition + number,
-                affectsVersions : "1",
-                fixVersions: "2",
-                assignee: user,
+                affectsVersions: '1',
+                fixVersions: '2',
+                assignee: userqa1,
                 components: 'component1',
-                labels: 'labelModified',
-                priority: 'High',
-                summary: 'summaryModified',
-                description: 'descriptionModified',
-                environment: 'DEV',
-                reporter: userqa1,
-                resolution: "Done",
-				],
-           data:[
-            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
+                labels: 'Test_label_Automation',
+                priority: 'Low',
+                description: 'Test_description_Automation'
             ],
-        ],
+            data: [
+            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
+            	],
+        ]
     ])
 }
-(15..16).each{ number ->
-def field
-	if(number == 15)
-		field = "Epic Colour"
-	else if(number == 16)
-		field = "Epic Name"
-def value
-	if(number == 15)
-		value = "epicColourModified"
-	else if(number == 16)
-		value = "epicNameModified"
+// When groovy condition returns true and false for the issue
 
-    gint.taskHelper.add('transitionIssueAll', [
-        [action: 'transitionIssue', ext: 'afterModifiedCustomFields'+number,
+def issueList2 = [
+	7: { -> story[0] },
+    8: { -> story[2] },
+    9: { -> story[1] },
+    10: { -> story[3] },
+]
+
+def expectedData2 = [
+	7:'Remote error: versions: Affects Version/s should be modified during this transition.',
+	8:'Remote error: fixVersions: Fix Version/s should be modified during this transition.',
+	9:'Remote error: assignee: Assignee should be modified during this transition.',
+	10:'Remote error: components: Component/s should be modified during this transition.',
+]
+(7..10).each { number ->
+    gint.taskHelper.add([
+            [action: 'transitionIssue',
+            ext: 'whenGroovyConditionReturnsTrueAndFieldsNotModified' + number,
             dependsOn: true,
-            expected: [ 0 ],
+            expected: [ -3 ],
             parameters: [
-                issue: {-> savedIssues[number]  },
-                transition: transition + number,
-	            field: field,
-    	        value: value,
-                resolution: "Done",
-				],
-           data:[
-            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
+                issue: issueList2[number],
+                transition: transition + number
             ],
-        ],
-    ])
-}
-(35..37).each{ number ->
-    gint.taskHelper.add('transitionIssueAll', [
-        [action: 'transitionIssue', ext: 'afterModifiedFieldsForConditionalValidation'+number,
+            data: [expectedData2[number]],
+        	],
+            [action: 'transitionIssue',
+            ext: 'whenGroovyConditionReturnsTrueAndFieldsModified' + number,
             dependsOn: true,
             expected: [ 0 ],
             parameters: [
-                issue: {-> savedIssues[number]  },
+                issue: issueList2[number],
                 transition: transition + number,
-                affectsVersions : "1",
-                fixVersions: "2",
-                assignee: userqa1 ,
+                affectsVersions: '3',
+                fixVersions: '2',
+                assignee: userqa2,
                 components: 'component1',
-                resolution: "Done",
-				],
-           data:[
-            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
             ],
-        ],
+            data: [
+            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
+            	],
+        	],
+            [action: 'transitionIssue',
+            ext: 'whenGroovyConditionReturnsFalseAndFieldsNotModified' + number,
+            dependsOn: true,
+            expected: [ 0 ],
+            parameters: [
+                issue: { -> bug[4] },
+                transition: transition + number
+            ],
+            data: [
+            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
+            	],
+        	]
     ])
 }

@@ -30,7 +30,6 @@ createPermissionScheme(permissionScheme, [
         "BROWSE_PROJECTS",
         "RESOLVE_ISSUES",
 ], 'Validators')
-
 importWorkflow(workflow, 'resources/workflow.xml')
 createWorkflowScheme(workflow, workflowScheme, 'Validators')
 createProject(project, template, workflowScheme, issueTypeScreenScheme, permissionScheme, 'Validators')

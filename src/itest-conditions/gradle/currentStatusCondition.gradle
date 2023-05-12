@@ -42,7 +42,18 @@ def summary
 		summary = 'checkWhenNoStatusSelected'
 	else if(number == 4)
 		summary = 'checkWhenNoStatusSelectedAndReverseSelected'
-
+/* 
+1. select all status checkbox
+2. multiple conditions with To Do and In Progress
+3. Add extension multiple times and check first should apply first FIFO
+4. check the behaviour on custom statuses
+5. check adding multiple custom statuses 
+6. check behaviour on all issuetypes
+7. check status should not be visible when status itself is selected as current status -> transition: Done ,Current status: In Progress , issueTransition:Done 
+8. transition: Done , Current status : Done
+9. transition: Done, current status: To Do, again add condition on transition: Done, current Status :Done
+10. Check behaviour by adding postfunctions on same status also check fields
+*/ 
     gint.taskHelper.add(
         action: 'createIssue', ext: number,
 		dependsOn: true,
