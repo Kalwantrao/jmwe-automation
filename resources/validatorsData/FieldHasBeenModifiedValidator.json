@@ -2,201 +2,71 @@
   {
     "field": "versions",
     "conditionalValidation": "no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "0"
   },
   {
     "field": "fixVersions",
     "conditionalValidation": "no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "1"
   },
   {
     "field": "assignee",
     "conditionalValidation": "no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "2"
   },
   {
     "field": "components",
     "conditionalValidation": "no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "3"
   },
   {
     "field": "labels",
     "conditionalValidation": "no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "4"
   },
   {
     "field": "priority",
     "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "summary",
-    "conditionalValidation": "no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "5"
   },
   {
     "field": "description",
     "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "environment",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "reporter",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "resolution",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "customfield_10108",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "customfield_10109",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "duedate",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "customfield_10104",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "customfield_10103",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "customfield_10102",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "issuekey",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "timeestimate",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "timeoriginalestimate",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "customfield_10110",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "customfield_10107",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "project",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "timespent",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "archiveddate",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "archivedby",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "customfield_10105",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "status",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "customfield_10106",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "issuetype",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "customfield_10111",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "attachment",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "customfield_10200",
-    "conditionalValidation": "no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "6"
   },
   {
     "field": "versions",
     "conditionalValidation": "yes",
-    "conditionalValidationScript": "issue.get('priority')?.name=='High'",
-    "correlationId": ""
+    "conditionalValidationScript": "issue.getAsString('assignee') == 'zfieldhasbeenmodifiedvalidatorqa1'",
+    "correlationId": "",
+    "number": "7"
   },
   {
     "field": "fixVersions",
     "conditionalValidation": "yes",
-    "conditionalValidationScript": "issue.get('assignee')",
-    "correlationId": ""
+    "conditionalValidationScript": "issue.get('issuetype')?.name == 'Story'",
+    "correlationId": "",
+    "number": "8"
   },
   {
     "field": "assignee",
     "conditionalValidation": "yes",
-    "conditionalValidationScript": "issue.getAsString('assignee') == ${user}",
-    "correlationId": ""
+    "conditionalValidationScript": "issue.get('issuelinks')",
+    "correlationId": "",
+    "number": "9"
   },
   {
     "field": "components",
     "conditionalValidation": "yes",
     "conditionalValidationScript": "issue.get('description')",
-    "correlationId": ""
-  },
-  {
-    "field": "",
-    "conditionalValidation": "no",
-    "correlationId": ""
-  },
-  {
-    "field": "",
-    "conditionalValidation": "yes",
-    "conditionalValidationScript": "",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "10"
   }
 ]

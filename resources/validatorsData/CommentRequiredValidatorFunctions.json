@@ -7,43 +7,22 @@
     "correlationId": ""
   },
   {
-    "errorMessage": "CommentRequired",
-    "groups": "",
-    "conditionalValidation": "yes",
-    "conditionalValidationScript": "!issue.get('assignee')",
-    "correlationId": ""
-  },
-  {
     "errorMessage": "",
-    "showAsterisk": "no",
+    "groups": "",
     "conditionalValidation": "no",
-    "groups": "",
+    "conditionalValidationScript": "",
     "correlationId": ""
   },
   {
     "errorMessage": "",
     "groups": "",
     "conditionalValidation": "yes",
-    "conditionalValidationScript": "issue.getAsString('priority') == 'Medium'",
+    "conditionalValidationScript": "issue.get('issuetype')?.name == 'Bug'",
     "correlationId": ""
   },
   {
     "errorMessage": "CommentRequired",
     "groups": "jira-administrators",
-    "correlationId": ""
-  },
-  {
-    "errorMessage": "",
-    "groups": "",
-    "conditionalValidation": "yes",
-    "conditionalValidationScript": "",
-    "correlationId": ""
-  },
-  {
-    "errorMessage": "CommentRequired",
-    "groups": "",
-    "conditionalValidation": "yes",
-    "conditionalValidationScript": "",
     "correlationId": ""
   }
 ]

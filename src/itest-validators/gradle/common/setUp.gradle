@@ -4,13 +4,15 @@ apply from: '../../common/commonMethod.gradle'
 def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
 def screen = project
+def baseWorkflow = info?.isCloud ? 'classic default workflow' : 'jira'
 def permissionScheme = project
 def screenScheme = project
 def issueTypeScreenScheme = project
 def workflowScheme = project
-def template = info?.isCloud ? "Kanban" : "Scrum software development"
+def template = info?.isCloud ? "Scrum-classic" : "Scrum software development"
 
-def fieldList = ['Archiver','Archived','Assignee','Attachment','Comment','Component/s','Created','Creator','Development','Rank',"Epic Link", "Epic Status","Epic Name","Epic Colour",'Sprint',"Story Points","Parent Link","Target start","Target end","Original story points",'Team','Description',"Due Date",'Environment',"Fix Version/s","Linked Issues","Issue Type",'Labels',"Last Viewed",'Priority','Progress','Reporter','Project','Resolution',"Security Level",'Resolved','Status','Sub-Tasks','Summary',"Remaining Estimate","Original Estimate","Time Spent","Affects Version/s","Time Tracking",'Updated','Votes','Watchers',"Log Work","Work Ratio"]
+//def fieldList = ['Archiver','Archived','Assignee','Attachment','Comment','Component/s','Created','Creator','Development','Rank',"Epic Link", "Epic Status","Epic Name","Epic Colour",'Sprint',"Story Points","Parent Link","Target start","Target end","Original story points",'Team','Description',"Due Date",'Environment',"Fix Version/s","Linked Issues","Issue Type",'Labels',"Last Viewed",'Priority','Progress','Reporter','Project','Resolution',"Security Level",'Resolved','Status','Sub-Tasks','Summary',"Remaining Estimate","Original Estimate","Time Spent","Affects Version/s","Time Tracking",'Updated','Votes','Watchers',"Log Work","Work Ratio"]
+def fieldList = ['Assignee','Attachment']
 def workflow = project
 createPermissionScheme(permissionScheme, [
         "SET_ISSUE_SECURITY",
@@ -30,15 +32,17 @@ createPermissionScheme(permissionScheme, [
         "BROWSE_PROJECTS",
         "RESOLVE_ISSUES",
 ], 'Validators')
-importWorkflow(workflow, 'resources/workflow.xml')
+importWorkflow(baseWorkflow, workflow)
 createWorkflowScheme(workflow, workflowScheme, 'Validators')
 createProject(project, template, workflowScheme, issueTypeScreenScheme, permissionScheme, 'Validators')
 createVersions(project, 5)
 createComponents(project, 'component', 5)
+/*
 createUsers([
         project + 'qa1',
         project + 'qa2',
         project + 'dev1',
         project + 'dev2',
 ])
+*/
 createScreen(screen, screenScheme, fieldList, issueTypeScreenScheme)

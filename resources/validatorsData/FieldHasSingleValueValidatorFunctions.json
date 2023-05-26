@@ -2,46 +2,61 @@
   {
     "field": "versions",
     "conditionalValidation": "no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "0"
   },
   {
     "field": "fixVersions",
     "conditionalValidation": "no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "1"
   },
   {
     "field": "components",
     "conditionalValidation": "no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "2"
   },
   {
-    "field": "labels",
+    "field": "versions",
     "conditionalValidation": "no",
-    "correlationId": ""
+ 	"excludingSubtasks": "yes",
+    "correlationId": "",
+    "number": "3"
   },
   {
-    "field": "subtasks",
+    "field": "fixVersions",
     "conditionalValidation": "no",
-    "correlationId": ""
+ 	"excludingSubtasks": "yes",
+    "correlationId": "",
+    "number": "4"
   },
   {
-    "field": "issuelinks",
+    "field": "components",
     "conditionalValidation": "no",
-    "correlationId": ""
+ 	"excludingSubtasks": "yes",
+    "correlationId": "",
+    "number": "5"
   },
   {
-    "field": "votes",
-    "conditionalValidation": "no",
-    "correlationId": ""
+    "field": "versions",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "issue.getAsString('assignee') == 'zfieldhassinglevaluevalidatorqa1'",
+    "correlationId": "",
+    "number": "6"
   },
   {
-    "field": "watches",
-    "conditionalValidation": "no",
-    "correlationId": ""
+    "field": "fixVersions",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "issue.get('issuelinks')",
+    "correlationId": "",
+    "number": "7"
   },
   {
-    "field": "customfield_10105",
-    "conditionalValidation": "no",
-    "correlationId": ""
+    "field": "components",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "issue.get('issuetype')?.name == 'Bug'",
+    "correlationId": "",
+    "number": "8"
   }
-]
+ ]

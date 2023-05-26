@@ -1,0 +1,71 @@
+[
+   {
+    "issue_statuses": "In Progress",
+    "errorMessage": "",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "0"
+   },
+   {
+    "issue_statuses": "In Progress",
+    "errorMessage": "parentIssueMustBeInSelectedStatus",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "1"
+   },
+   {
+    "issue_statuses": "In Progress@@In Review@@Done@@",
+    "errorMessage": "",
+    "conditionalValidation": "no",
+    "correlationId": "",
+    "number": "2"
+   },
+   {
+    "issue_statuses": "In Progress",
+    "errorMessage": "",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "issue.get('priority')?.name == 'Low'",
+    "correlationId": "",
+    "number": "3"
+   },
+   {
+    "issue_statuses": "In Progress",
+    "errorMessage": "parentIssueMustBeInSelectedStatus",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "issue.get('issuelinks')",
+    "correlationId": "",
+    "number": "4"
+   },
+   {
+    "issue_statuses": "In Progress@@In Review@@Done@@",
+    "errorMessage": "",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "!issue.get('assignee')",
+    "correlationId": "",
+    "number": "5"
+   },
+   {
+    "issue_statuses": "In Progress",
+    "errorMessage": "",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "!issue.get('priority')?.name == 'Low'",
+    "correlationId": "",
+    "number": "6"
+   },
+   {
+    "issue_statuses": "In Progress",
+    "errorMessage": "parentIssueMustBeInSelectedStatus",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "!issue.get('issuelinks')",
+    "correlationId": "",
+    "number": "7"
+   },
+   {
+    "issue_statuses": "In Progress@@In Review@@Done@@",
+    "errorMessage": "",
+    "conditionalValidation": "yes",
+    "conditionalValidationScript": "!!issue.get('assignee')",
+    "correlationId": "",
+    "number": "8"
+   }
+]

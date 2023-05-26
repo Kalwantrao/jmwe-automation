@@ -1,10 +1,13 @@
+import groovy.json.JsonSlurper
+import java.nio.file.Paths
+
 buildscript {
     def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
     dependencies {
         classpath 'org.gint:gint-atlassian:' + gintVersion
     }
     repositories {
-        flatDir { dirs 'libs' }
+        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
         mavenLocal()
         mavenCentral()
         maven { url 'https://plugins.gradle.org/m2/' }
@@ -12,20 +15,184 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.directories.resource + '/common/tearDown.gradle'
-apply from: 'configValidators/addPreviousStatusValidator.gradle' //RelatedIssuesStatusValidator.gradle
-apply from: gint.directories.resource + '/common/setUp.gradle'
+apply from: 'common/setUp.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
 def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def saved =	[:]
-def savedIssues = [:]
-def transition = 'previousStatusValidator'
+def workflow = project
+def screen = project
+gint.xmlReport =	true	//xml report generates in projects root directory
+gint.verbose =	true
 def user = info.user
 def userqa1 = project.toLowerCase()+'qa1'
 def userqa2 = project.toLowerCase()+'qa2'
 def userdev1 = project.toLowerCase()+'dev1'
 def userdev2 = project.toLowerCase()+'dev2'
+
+def transition = 'previousStatusValidator'
+def jsonSlurper = new JsonSlurper();
+def path = Paths.get(gint.directories.resource + "/resources/validatorsData/PreviousStatusValidatorFunctions.json")
+def transitionFunctions = jsonSlurper.parse(path)
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:previousstatus-validator'
+def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+
+createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
+def summaries = [
+		'previousStatusToDo',
+		'previousStatusInProgress',
+		'previousStatusInReview',
+		'previousStatusDone',
+		'mostRecentStatusInProgress',
+		'previousStatusToDoIfGroovyConditionTrue',
+		'mostRecentStatusToDoIfGroovyConditionTrue'
+]
+def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it] } )
+def subTask = createIssue(project, [1, 1 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }]} )
+def epic = createIssue(project, summaries.collect{[type: 'Epic', summary: it, field: "Epic Name", value: "Epic"]} )
+def story = createIssue(project, [0, 1, 2, 3, 4, 5, 6 ].collect{[type: 'story', summary: 'summary',field: "Epic Link", value: { -> epic[it] }]} )
+linkIssues({[ issue: { -> story[5] }, toIssue: { -> story[6] }, link: 'blocks'] } )
+def summaryJql = [ 'jqlSearch1', 'jqlSearch2' ]
+def IssueReturnByJqlSearch = createIssue(project, summaryJql.collect{[type: 'Task', summary: it, assignee: userqa1] } )
+
+// Check when issue is not been previously in selected status
+[
+		'Remote error: Transition is not authorized because current Issue has never been in status To Do before.',
+		'Remote error: Transition is not authorized because current Issue has never been in status In Progress before.',
+		'Remote error: Transition is not authorized because current Issue has never been in status In Review before.',
+		'Remote error: Transition is not authorized because current Issue has never been in status Done before.',
+		'Remote error: Transition is not authorized because current Issue was not previously in status In Progress',
+].eachWithIndex { data, number ->
+   gint.taskHelper.add(
+            [action: 'transitionIssue',
+            ext: 'validateTheErrorsWhenIssueNotRespectingValidators' + number,
+            dependsOn: true,
+            expected: [ -3 ],
+            parameters: [
+                issue:{ -> bug[number] },
+                transition: transition + number
+            ],
+            data: [data],
+        ]
+    )
+}
+
+def selectedPreviousStatus = [
+		0:'To Do',
+		1:'In Progress',
+		2:'In Review',
+		3:'Done'
+]
+(0..3).each { number ->
+	gint.taskHelper.add([
+		[action: 'transitionIssue', ext: 'SetPreviousStatusToSelected' + number,
+		dependsOn: true,
+		expected: [ 0 ],
+		parameters:[
+			issue:  {-> bug[number] },
+			transition: selectedPreviousStatus[number],
+			],
+		],
+		[action: 'transitionIssue', ext: 'TobBaseStatusToDoToCheckPreviousStatusOfIssue' + number,
+		dependsOn: true,
+		expected: [ 0 ],
+		parameters:[
+			issue:  {-> bug[number] },
+			transition: 'To Do',
+			],
+		],
+		[action: 'transitionIssue', ext: 'CheckWhenIssuesPreviousStatusIsInSelected' + number,
+		dependsOn: true,
+		expected: [ 0 ],
+		parameters:[
+			issue:  {-> bug[number] },
+			transition: transition + number,
+			],
+		]
+])
+}
+
+
+def mostRecentStatus = [
+		0:'In Progress',
+		1:'In Review'
+]
+def expected = [
+		0:[ 0 ],
+		1:[ -3 ]
+]
+(0..1).each { number ->
+	gint.taskHelper.add([
+		[action: 'transitionIssue', ext: 'MostRecentStatus' + number,
+		dependsOn: true,
+		expected: [ 0 ],
+		parameters:[
+			issue:  {-> bug[4] },
+			transition: mostRecentStatus[number],
+			],
+		],
+		[action: 'transitionIssue', ext: 'toBaseStatusToDoToCheckMostRecentStatusOfTheIssue' + number,
+		dependsOn: true,
+		expected: [ 0 ],
+		parameters:[
+			issue:  {-> bug[4] },
+			transition: 'To Do',
+			],
+		],
+		[action: 'transitionIssue', ext: 'CheckWhenIssuesMostRecentStatusIsInSelectedStatus' + number,
+		dependsOn: true,
+		expected: expected[number],
+		parameters:[
+			issue:  {-> bug[4] },
+			transition: transition + 4,
+			],
+		]
+])
+}
+// Check conditional validation
+(5..6).each{ number ->
+gint.taskHelper.add([
+	[action: 'transitionIssue', ext: 'When groovy condition returns false' + number,
+    dependsOn: true,
+    expected: [ 0 ],
+    	parameters: [
+        	issue:{ -> bug[number] },
+            transition: transition + number
+            ],
+        data:[ ~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./ ],
+	],
+	[action: 'transitionIssue', ext: 'When groovy condition returns True' + number,
+    dependsOn: true,
+    expected: [ -3 ],
+    	parameters: [
+        	issue:{ -> story[number] },
+            transition: transition + number
+            ],
+	],
+])
+}
+/*
+// Using groovy functions
+def transitionToSetPreviousStatusOfIssue (issues, selectedPreviousStatus, expectedData )
+		gint.taskHelper.add([
+				[action: 'transitionIssue', ext: transition,
+				parameters:[
+					issue: issues,
+					transition: selectedPreviousStatus
+					],
+				data: [ expectedData ],
+				],
+				[action: 'transitionIssue', ext: transition,
+				parameters:[
+					issue: issues,
+					transition: 'To Do'
+					],
+				data: [ expectedData ],
+				]
+			]
+)
+
+transitionToCheckPreviousStatusOfIssue( issueList1[it], transition[number], [ -3 ], expectedData,)
+
 
 (1..7).each { number ->
 def type = 'Bug'
@@ -63,6 +230,7 @@ def summary
         },
     )
 }
+
 // Transition the issue to verify the error msg when issues previous status is not in selected status
 (1..4).each { number ->
 def data
@@ -77,13 +245,13 @@ def data
 
 def transitionToDo1
 	if(number == 1)
-		transitionToDo1 = 'previousStatusValidator1'
+		transitionToDo1 = 'previousStatusValidator0'
 	else if(number === 2)
 		transitionToDo1 = 'In Progress'
 	else if(number === 3)
 		transitionToDo1 = 'To Do'
 	else if(number === 4)
-		transitionToDo1 = 'previousStatusValidator1'
+		transitionToDo1 = 'previousStatusValidator0'
 
 def expected
 	if(number == 1)
@@ -366,3 +534,4 @@ def issue
         ],
     ])
 }
+*/

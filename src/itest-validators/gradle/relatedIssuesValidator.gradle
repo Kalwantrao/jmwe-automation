@@ -149,8 +149,7 @@ def issueList2 = [
     45: { -> bug[3] },
     46: { -> bug[2] },
     47: { -> bug[3] }
-]
-(24..47).each { number ->
+].each { issueList2 ->
     def transitionIssue2 = gint.taskHelper.add(
         [
             action: 'transitionIssue',
@@ -158,8 +157,10 @@ def issueList2 = [
             dependsOn: true,
             expected: [ 0 ],
             parameters: [
-                issue: issueList2[number],
-                transition: transition + number
+                issue: issueList2.value,
+                transition: transition + issueList2.key ,
+				linkedIssue: { -> bug[2]},
+				link: 'block'
             ],
 		])
 }

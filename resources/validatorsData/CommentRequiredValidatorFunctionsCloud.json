@@ -1,18 +1,18 @@
 [
   {
-    "text":"",
+    "problems": "",
     "expression": "!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)"
   },
   {
-    "text":"",
+    "problems": "",
     "expression": "!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)"
   },
   {
-    "text":"",
+    "problems": "",
     "expression": "!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)"
   },
   {
-    "text":"",
+    "problems": "",
     "expression": "!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)"
   },
   {

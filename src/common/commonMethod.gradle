@@ -1,12 +1,12 @@
 import groovy.json.JsonOutput
 
-def importWorkflow(workflow, workflowFile) {
+def importWorkflow(baseWorkflow, workflow) {
     gint.taskHelper.addSetUp([
             [
-                action: 'importWorkflow',
+                action: 'copyWorkflow',
                 parameters: [
-                	  workflow: workflow,
-					  file: workflowFile
+                	  workflow: baseWorkflow,
+					  name: workflow
                 ]
             ],
     ])
@@ -28,7 +28,6 @@ def importWorkflow(workflow, workflowFile) {
             ]
     ])
 }
-
 def createTransitionsWithFunctions(transitionFunctions, transitionName, functionKey, type, startStep, workflow, screen, offset = 0)
 {
     transitionFunctions.eachWithIndex { functionData, index, number = index + offset ->
@@ -37,7 +36,7 @@ def createTransitionsWithFunctions(transitionFunctions, transitionName, function
                 [
                     action: 'addTransition',
                     ext: number,
-                    dependsOn: ['importWorkflow', 'addScreen'],
+                    dependsOn: ['copyWorkflow', 'addScreen'],
                     end: true,
                     parameters: [
                             workflow: workflow,
@@ -69,9 +68,6 @@ def createTransitionsWithFunctions(transitionFunctions, transitionName, function
         ])
     }
 }
-
-
-
 def createWorkflowScheme(workflow, workflowScheme, ext) {
     gint.taskHelper.addSetUp([
             action: 'createWorkflowScheme',
@@ -90,7 +86,6 @@ def createWorkflowScheme(workflow, workflowScheme, ext) {
             ]
     )
 }
-
 def createScreen(screen, screenScheme, fieldList, issueTypeScreenScheme){
     gint.taskHelper.addSetUp('addScreen',[
             [
@@ -195,7 +190,6 @@ def createScreen(screen, screenScheme, fieldList, issueTypeScreenScheme){
             ],
     ])
 }
-
 def createProject(project, template, workflowScheme, issueTypeScreenScheme, permissionScheme, ext) {
     gint.taskHelper.addSetUp('createProject', [[
             action: 'createProject' ,
@@ -207,7 +201,7 @@ def createProject(project, template, workflowScheme, issueTypeScreenScheme, perm
                     lead: '@Self',
                     workflowScheme: workflowScheme,
                     issueTypeScreenScheme: issueTypeScreenScheme,
-//                    permissionScheme: permissionScheme,
+                    permissionScheme: permissionScheme,
 //			 issueSecurityScheme: issueSecurityScheme,
             ],
     ]])
@@ -256,7 +250,6 @@ def createComponents(project, componentName, numberOfComponents) {
         )
     }
 }
-
 def createPermissionScheme(permissionScheme, permissions, ext) {
     gint.taskHelper.addSetUp('permission',[
             [
@@ -290,7 +283,6 @@ def createPermissionScheme(permissionScheme, permissions, ext) {
              ]],
     )
 }
-
 def createUsers(users) {
     users.eachWithIndex { String newUser, int number ->
         gint.taskHelper.addSetUp([
@@ -332,50 +324,24 @@ def createIssue(project, parametersList) {
     }
     return savedIssues
 }
-def transitionIssue(parametersList) {
- parametersList.eachWithIndex { parameters, number ->
-        gint.taskHelper.add([
-                [action: 'transitionIssue', ext:  number,
-                group: 'transitioningIssues',
-                parameters: parameters,
-                stopOnFail: true,
-              ],
-
-        ])
-    }
-}
-def updateIssues(issues) {
-{ issue, number ->
-		gint.taskHelper.add([
-				[action: 'updateIssue',
-				group: 'update',
-				parameters: [
-					issue: issue
-					],
-				stopOnFail: true
-			  ],
-		 ])
-    }
-}
 def linkIssues(parametersList) {
 	parametersList.eachWithIndex { parameters, number ->
 		gint.taskHelper.add([
-				[action: 'linkIssue', ext: number,
-				group: 'link',
-				parameters: parameters,
-				stopOnFail: true
-			  ],
+				action: 'linkIssue', ext: number,
+					group: 'link',
+					parameters: parameters,
+					stopOnFail: true
 		 ])
     }
 }
 def getIssues(issues) {
-{ issue, number ->
+issues.eachWithIndex { number ->
 		gint.taskHelper.add([
 				[action: 'getIssue',
-				group: 'get',
-				parameters: issue,
-				stopOnFail: true
-			  ],
+					group: 'get',
+					parameters: issue,
+					stopOnFail: true
+			  	],
 		 ])
     }
 }
@@ -390,8 +356,6 @@ ext {
     createScreen= this.&createScreen
     createTransitionsWithFunctions= this.&createTransitionsWithFunctions
     createIssue= this.&createIssue
-    transitionIssue= this.&transitionIssue
-    updateIssue= this.&updateIssue
     linkIssues= this.&linkIssues
     getIssues= this.&getIssues
   }

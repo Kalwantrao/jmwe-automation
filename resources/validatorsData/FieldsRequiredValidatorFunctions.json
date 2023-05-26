@@ -9,6 +9,7 @@
     "field": "fixVersions",
     "conditionalValidation": "no",
     "showAsterisk":"no",
+    "errorMessage":"thisIsCustomMsgForFixVersionFieldsRequired",
     "correlationId": ""
   },
   {
@@ -31,99 +32,29 @@
   },
   {
     "field": "versions",
-    "conditionalValidation": "no",
-    "showAsterisk":"no",
-    "errorMessage":"fieldsRequired",
-    "correlationId": ""
-  },
-  {
-    "field": "fixVersions",
-    "conditionalValidation": "no",
-    "showAsterisk":"no",
-    "errorMessage":"fieldsRequired",
-    "correlationId": ""
-  },
-  {
-    "field": "assignee",
-    "conditionalValidation": "no",
-    "showAsterisk":"no",
-    "errorMessage":"fieldsRequired",
-    "correlationId": ""
-  },
-  {
-    "field": "components",
-    "conditionalValidation": "no",
-    "showAsterisk":"no",
-    "errorMessage":"fieldsRequired",
-    "correlationId": ""
-  },
-  {
-    "field": "labels",
-    "conditionalValidation": "no",
-    "showAsterisk":"no",
-    "errorMessage":"fieldsRequired",
-    "correlationId": ""
-  },
-  {
-    "field": "versions",
     "conditionalValidation": "yes",
-    "conditionalValidationScript":"issue.get('priority')?.name=='Medium'",
+    "conditionalValidationScript": "issue.get('priority')?.name == 'Low'",
     "showAsterisk":"no",
     "correlationId": ""
   },
   {
     "field": "fixVersions",
     "conditionalValidation": "yes",
-    "conditionalValidationScript": "!issue.get('assignee')",
+    "conditionalValidationScript": "issue.get('issuelinks')",
     "showAsterisk":"no",
     "correlationId": ""
   },
   {
     "field": "assignee",
     "conditionalValidation": "yes",
-    "conditionalValidationScript": "!issue.get('labels')",
+    "conditionalValidationScript": "issue.get('issuetype')?.name == 'Task'",
     "showAsterisk":"no",
     "correlationId": ""
   },
   {
     "field": "components",
     "conditionalValidation": "yes",
-    "conditionalValidationScript": "!issue.get('description')",
-    "showAsterisk":"no",
-    "correlationId": ""
-  },
-  {
-    "field": "labels",
-    "conditionalValidation": "yes",
-    "conditionalValidationScript": "!issue.get('components')",
-    "showAsterisk":"no",
-    "correlationId": ""
-  },
-  {
-    "field": "versions",
-    "conditionalValidation": "yes",
-    "conditionalValidationScript": "!issue.get('components')",
-    "showAsterisk":"no",
-    "correlationId": ""
-  },
-  {
-    "field": "fixVersions",
-    "conditionalValidation": "yes",
-    "conditionalValidationScript": "!issue.get('components')",
-    "showAsterisk":"no",
-    "correlationId": ""
-  },
-  {
-    "field": "assignee",
-    "conditionalValidation": "yes",
-    "conditionalValidationScript": "!issue.get('components')",
-    "showAsterisk":"no",
-    "correlationId": ""
-  },
-  {
-    "field": "components",
-    "conditionalValidation": "yes",
-    "conditionalValidationScript": "!issue.get('components')",
+    "conditionalValidationScript": "!!issue.get('description')",
     "showAsterisk":"no",
     "correlationId": ""
   }

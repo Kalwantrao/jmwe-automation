@@ -1,0 +1,55 @@
+[
+   {
+     "status": "To Do",
+     "errorMessage": "",
+     "conditionalValidation": "no",
+     "correlationId": "",
+     "number": "0"
+    },
+   {
+     "status": "In Progress",
+     "errorMessage": "",
+     "conditionalValidation": "no",
+     "correlationId": "",
+     "number": "1"
+    },
+   {
+     "status": "In Review",
+     "errorMessage": "",
+     "conditionalValidation": "no",
+     "correlationId": "",
+     "number": "2"
+    },
+   {
+     "status": "Done",
+     "errorMessage": "",
+     "conditionalValidation": "no",
+     "correlationId": "",
+     "number": "3"
+    },
+   {
+     "status": "In Progress",
+     "mostRecentOnly": "yes",
+     "errorMessage": "",
+     "conditionalValidation": "no",
+     "correlationId": "",
+     "number": "4"
+    },
+   {
+     "status": "To Do",
+     "errorMessage": "",
+     "conditionalValidation": "yes",
+     "conditionalValidationScript": "issue.get('issuetype')?.name == 'Story'",
+     "correlationId": "",
+     "number": "5"
+    },
+   {
+     "status": "To Do",
+     "mostRecentOnly": "yes",
+     "errorMessage": "",
+     "conditionalValidation": "yes",
+    "conditionalValidationScript": "issue.getLinkedIssues()",
+     "correlationId": "",
+     "number": "6"
+    }
+]

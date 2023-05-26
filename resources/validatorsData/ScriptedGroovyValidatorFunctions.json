@@ -1,0 +1,39 @@
+[
+{
+	"groovyExpression": "!!issue.get('assignee')",
+	"scriptDescription": "",
+	"field": "",
+	"errorMessage": "groovy condition must return true for issue",
+	"correlationId": ""
+},
+{
+	"groovyExpression": "!!issue.getLinkedIssues()",
+	"scriptDescription": "",
+	"field": "",
+	"errorMessage": "groovy condition must return true for issue",
+	"correlationId": ""
+},
+{
+	"groovyExpression": "issue.get('fixVersions')?.any{it.name == '1'}",
+	"scriptDescription": "",
+	"field": "",
+	"errorMessage": "groovy condition must return true for issue",
+	"correlationId": ""
+},
+{
+	"groovyExpression": "issue.get('issuetype')?.name == 'Story'",
+	"scriptDescription": "",
+	"field": "",
+	"errorMessage": "groovy condition must return true for issue",
+	"correlationId": ""
+}
+]
+
+
+
+
+
+
+
+
+

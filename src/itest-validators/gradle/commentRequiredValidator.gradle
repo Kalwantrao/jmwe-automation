@@ -28,7 +28,7 @@ gint.verbose =	true
 def jsonSlurper = new JsonSlurper();
 def path = Paths.get(gint.directories.resource + "/resources/validatorsData/CommentRequiredValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
 def transitionFunctions = jsonSlurper.parse(path)
-def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CommentRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentrequired-validator'	//function key for HideTransitionCondition
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CommentRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentrequired-validator'	//function key for HideTransitionCondition
 def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
@@ -50,6 +50,7 @@ def Task = createIssue(project, summaries.collect{[ type: 'Task', summary: it]} 
 	def transitionIssue = gint.taskHelper.add([
         	[action: 'transitionIssue', ext: 'transitionWhenCommentNotProvided'+number,
             	dependsOn: true,
+            	retry: true,
             	expected: [ -3 ],
             	parameters: [
                 	issue: {-> bug[number]  },
