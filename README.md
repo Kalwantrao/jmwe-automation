@@ -31,13 +31,19 @@ As ACLI does not provides support for some Jira features so we need to configure
 
 - Project Key lenght Setting: Set `Project Key length` to 40 characters (In Jira instance,go to `system → Edit Settings → Maximum project key size = 40`).
 
+- Add user `jmwe_qa` in your instance with username `jmwe_qa` and password `jmwe-qa`
 
-## acli.properties file for server and cloud instance should be similar to
+## acli.properties file should be in ACLI directory or gradle local directory,
+- for server and cloud instance it should be similar to
+```
+jiraServer = --server http://localhost:9090/ --user yourUsername --password yourPassword`
+jiraCloud = --server https://automationgint.atlassian.net/ --user yourUsername --token APItoken
+```
+- Add this property for user in acli.properties file
+```
+jmwe_qa = --server http://localhost:9090/ --user jmwe_qa --password jmwe_qa
+```
 
-```
-jira = --server http://localhost:9090/ --user yourUsername --password yourPassword`
-jira10 = --server https://automationgint.atlassian.net/ --user yourUsername --token APItoken
-```
 ## Steps to run Integration test framework:
 
 - Clone the project  from bitbucket- [jmwe-automation-tests-gint](https://bitbucket.org/appfire/jmwe-automation-tests-gint/src/master/) repository.
@@ -45,7 +51,15 @@ jira10 = --server https://automationgint.atlassian.net/ --user yourUsername --to
 
 - Open the command prompt in project’s root directory.
 
-- Use command to run the scripts of jmwe-extensions using gradle: `gradlew conditions validators postfunctions`
+
+- Update the gradle.properties file as per your setting values provided in acli.properties file for jira instance.
+
+
+- Use command to run the scripts of jmwe-extensions using gradle: `./gradlew conditions validators postfunctions`
+- Use command to run the single extension using gradle:
+   `./gradlew conditions-currentStatusCondition` ,
+   `./gradlew conditions-commentRequiredValidator` ,
+   `./gradlew conditions-addFieldValueToParentIssuePostfunction`
 
 ## Gint framework documentation
 Check the documentation for getting started with gint-acli
@@ -61,8 +75,8 @@ Check the documentation for getting started with gint-acli
 
 Ask help at slack channel
 
-- `#Help-gint`
+- `#help-gint`
 
-- `#Help-acli`
+- `#help-acli`
 
 
