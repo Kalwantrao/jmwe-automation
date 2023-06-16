@@ -1,0 +1,145 @@
+import groovy.json.JsonSlurper
+import java.nio.file.Paths
+
+buildscript {
+    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
+    dependencies {
+        classpath 'org.gint:gint-atlassian:' + gintVersion
+    }
+    repositories {
+        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
+        mavenLocal()
+        mavenCentral()
+        maven { url 'https://plugins.gradle.org/m2/' }
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: 'common/setUp.gradle'
+apply from: '../../common/commonMethod.gradle'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def transition = 'copyIssueFieldspf'
+def workflow = project
+def screen = project
+def user = info.user
+def userId = 'jmwe_qa'
+def projectRole = 'jmwe_role'
+def userGroup = 'jmwe_group'
+gint.xmlReport =	true	//xml report generates in projects root directory
+gint.verbose =	true
+
+def jsonSlurper = new JsonSlurper();
+def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/CopyIssueFieldsPostfunction${info?.isCloud ? "Cloud" : ""}.json")
+def transitionFunctions = jsonSlurper.parse(path)
+def functionKey =	info ?.isCloud ? 'com.innovalog.jmwe.jira-misc-workflow-extensions:copy-fields-function' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:copy-fields-function'
+def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+
+createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
+
+// check current issue
+def currentIssue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createCurrentIssue')
+transitionIssue(transition+0, {-> currentIssue[0]}, 0, 'addFieldCurrentIssue')
+getIssueInformation({-> currentIssue[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'addFieldCurrentIssue')
+
+// check the subtask of the parent issue
+def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue')
+def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]}]}, 'createSubtask')
+transitionIssue(transition+1, {-> parent[0]}, 0, 'addFieldToSubtask')
+getIssueInformation({-> subTask[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'addFieldToSubtask')
+
+// check the parent issue of the current subtask
+transitionIssue(transition+2, {-> subTask[0]}, 0, 'checkParentIssue')
+getIssueInformation({-> parent[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'addFieldToParentIssue')
+
+// check the issue belongs to current epic
+def epic = createIssue(project,{[ type: 'epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Epic"]}, 'createEpic')
+def story = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[0]}]}, 'createStory')
+transitionIssue(transition+3, {-> epic[0]}, 0, 'copyToStoryOfEpic')
+getIssueInformation({-> story[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'copyToStoryOfEpic')
+
+// check the epic of the current issue
+transitionIssue(transition+4, {-> story[0]}, 0, 'commentAddedToEpicOfStory')
+getIssueInformation({-> epic[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'copyToEpicOfStory')
+
+def linkIssue1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType1')
+def linkIssue2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType2')
+linkIssues([issue: { -> linkIssue1[0] }, toIssue: { -> linkIssue2[0] }, link: 'duplicates'], 'linkByAnyLinkType' )
+
+//check the issue link by any link type to current issue
+transitionIssue(transition+5, {-> linkIssue1[0]}, 0, 'checkLinkIssueByAnyLinkType')
+getIssueInformation({-> linkIssue2[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'checkLinkIssueByAnyLinkType')
+
+def linkIssue3 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueBlocksType1')
+def linkIssue4 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueBlocksType2')
+linkIssues([issue: { -> linkIssue3[0] }, toIssue: { -> linkIssue4[0] }, link: 'blocks'], 'linkByBlocksLinkType' )
+
+//check the issue link by blocks link type to current issue
+transitionIssue(transition+6, {-> linkIssue3[0]}, 0, 'checkLinkIssueBySpecificLinkType')
+getIssueInformation({-> linkIssue4[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'checkLinkIssueBySpecificLinkType')
+
+// check the issue return by groovy expression[issue.getLinkedIssues()]
+transitionIssue(transition+7, {-> linkIssue3[0]}, 0, 'checkIssueReturnFromGroovyScript')
+getIssueInformation({-> linkIssue4[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'checkIssueReturnFromGroovyScript')
+
+//check the issue return by groovy expression
+def IssueReturnByJqlSearch = createIssue(project, {[type: 'Task', summary: 'JMWE_Task', assignee: userId]}, 'jqlSearch' )
+transitionIssue(transition+8, {-> linkIssue4[0]}, 0, 'checkIssueReturnByJqlSearch')
+getIssueInformation({-> IssueReturnByJqlSearch[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'checkIssueReturnByJqlSearch')
+
+// check conditional execution - issueType = story
+def condExecTrue = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue']}, 'condExecTrue')
+transitionIssue(transition+9, {-> condExecTrue[0]}, 0, 'condExecTrue')
+getIssueInformation({-> condExecTrue[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'condExecTrue')
+
+def condExecFalse = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'condExecFalse')
+transitionIssue(transition+9, {-> condExecFalse[0]}, 0, 'condExecFalse')
+getIssueInformation({-> condExecFalse[0]}, "Assignee  . . . . . . . . . . : ", 'condExecFalse')
+
+//check copyOnlyIfNotSet
+def fieldSet = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: 'component1', labels: 'test_label']}, 'WhenFieldSet')
+transitionIssue(transition+10, {-> fieldSet[0]}, 0, 'WhenFieldSet')
+getIssueInformation({-> fieldSet[0]}, "Labels  . . . . . . . . . . . : test_label", 'WhenFieldSet')
+
+def fieldNotSet = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: 'component1']}, 'WhenFieldNotSet')
+transitionIssue(transition+10, {-> fieldNotSet[0]}, 0, 'WhenFieldNotSet')
+getIssueInformation({-> fieldNotSet[0]}, "Labels  . . . . . . . . . . . : component1", 'WhenFieldNotSet')
+
+// check ignoreEmptyValue
+def ignoreEmptyValue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: '', labels: 'test_label']}, 'ignoreEmptyValue')
+transitionIssue(transition+11, {-> ignoreEmptyValue[0]}, 0, 'ignoreEmptyValue')
+getIssueInformation({-> ignoreEmptyValue[0]}, "Labels  . . . . . . . . . . . : test_label", 'ignoreEmptyValue')
+
+def notIgnoreEmptyValue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: '', labels: 'test_label']}, 'notIgnoreEmptyValue')
+transitionIssue(transition+12, {-> notIgnoreEmptyValue[0]}, 0, 'notIgnoreEmptyValue')
+getIssueInformation({-> notIgnoreEmptyValue[0]}, 'Labels  . . . . . . . . . . . :', 'notIgnoreEmptyValue')
+
+//createMissingValues
+def createMissingValues = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: 'component1']}, 'createMissingValues')
+transitionIssue(transition+13, {-> createMissingValues[0]}, 0, 'createMissingValues')
+getIssueInformation({-> createMissingValues[0]}, ~/Labels  . . . . . . . . . . . : component1/, 'createMissingValues')
+
+def doNotCreateMissingValues = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'doNotCreateMissingValue']}, 'doNotCreateMissingValues')
+transitionIssue(transition+14, {-> doNotCreateMissingValues[0]}, [0], 'doNotCreateMissingValues')
+getIssueInformation({-> doNotCreateMissingValues[0]}, ~/Labels  . . . . . . . . . . . : /, 'doNotCreateMissingValues')
+
+// appendValues
+def appendValues = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue',components: 'component1', labels: 'component2']}, 'appendValues')
+transitionIssue(transition+15, {-> appendValues[0]}, 0, 'appendValues')
+getIssueInformation({-> appendValues[0]}, ~/Labels  . . . . . . . . . . . : component1 component2/, 'appendValues')
+
+// doNotAppendValues
+def doNotAppendValues = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue',components: 'component1', labels: 'component2']}, 'doNotAppendValues')
+transitionIssue(transition+16, {-> doNotAppendValues[0]}, 0, 'doNotAppendValues')
+getIssueInformation({-> doNotAppendValues[0]}, ~/Labels  . . . . . . . . . . . : component1/, 'doNotAppendValues')
+
+// useOldValue
+def useOldValue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue',components: 'component1', labels: 'component2']}, 'useOldValue')
+transitionIssue(transition+17, {-> useOldValue[0]}, 0, 'useOldValue')
+getIssueInformation({-> useOldValue[0]}, ~/Labels  . . . . . . . . . . . : component1/, 'useOldValue')
+
+// doNotUseOldValue
+def doNotUseOldValue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue',components: 'component1', labels: 'component2']}, 'doNotUseOldValue')
+transitionIssue(transition+18, {-> doNotUseOldValue[0]}, 0, 'doNotUseOldValue')
+getIssueInformation({-> doNotUseOldValue[0]}, ~/Labels  . . . . . . . . . . . : component1/, 'doNotUseOldValue')

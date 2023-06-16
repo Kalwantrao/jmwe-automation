@@ -3,10 +3,10 @@ import groovy.json.JsonOutput
 def importWorkflow(baseWorkflow, workflow) {
     gint.taskHelper.addSetUp([
             [
-                action: 'copyWorkflow',
+                action: 'importWorkflow',
                 parameters: [
-                	  workflow: baseWorkflow,
-					  name: workflow
+                	  workflow: workflow,
+					  file: baseWorkflow
                 ]
             ],
     ])
@@ -36,7 +36,7 @@ def createTransitionsWithFunctions(transitionFunctions, transitionName, function
                 [
                     action: 'addTransition',
                     ext: number,
-                    dependsOn: ['copyWorkflow', 'addScreen'],
+                    dependsOn: ['importWorkflow', 'addScreen'],
                     end: true,
                     parameters: [
                             workflow: workflow,
@@ -195,6 +195,7 @@ def createProject(project, template, workflowScheme, issueTypeScreenScheme, perm
             action: 'createProject' ,
             ext: ext,
             dependsOn: ['permission', 'addScreen'],
+            ignoreDependsResult: true,
             parameters:[
                     project: project,
                     template: template,
@@ -213,6 +214,15 @@ def createProject(project, template, workflowScheme, issueTypeScreenScheme, perm
                      ],
              ]],
     )
+    gint.taskHelper.addTearDown('deleteIssues', [
+            [ name: "Delete issues For Users",
+              action: 'runFromIssueList',
+              parameters: [
+                      jql: 'summary ~ JMWE_Issue_User',
+                      common: "-a deleteIssue --issue @issue@ --outputFormat 999",
+              ],
+            ]
+    ])
 }
 
 def createVersions(project, numberOfVersions) {
@@ -283,33 +293,90 @@ def createPermissionScheme(permissionScheme, permissions, ext) {
              ]],
     )
 }
-def createUsers(users) {
-    users.eachWithIndex { String newUser, int number ->
-        gint.taskHelper.addSetUp([
-                action: 'addUser',
-                ext: number,
+def createUsers(userId, userEmail, projectRole, project, groupName) {
+    {
+        gint.taskHelper.addSetUp('addUsersSetUp',[
+                [action: 'addUser',
+                dependsOn: "createProject",
                 parameters:[
-                        userId: newUser,
-                        userEmail: newUser + '@gmail.com'
-                ],
-        ])
-
-        gint.taskHelper.addTearDown('deleteUsers',
-            [[
-                    action: 'removeUser',
-                    ext: number,
-                    parameters:[
-                            userId: newUser,
+                        userId: userId,
+                        userEmail: userEmail,
+                        userPassword: userId
                     ],
-            ]],
-        )
+                ],
+                [action: 'addProjectRole',
+                 dependsOn: "addUser",
+                 level: 1,
+                 parameters:[
+                         name:  projectRole
+                    ]
+                ],
+                [action: 'addProjectRoleActors',
+                 dependsOn: "addProjectRole",
+                 parameters:[
+                         project: project,
+                         role: projectRole,
+                         userId: userId
+                    ]
+                ],
+                [action: 'addGroup',
+                 dependsOn: "addProjectRoleActors",
+                 parameters:[
+                         group: groupName
+                     ]
+                ],
+                [action: 'addUserToGroup',
+                 dependsOn: "addGroup",
+                 parameters:[
+                         userId: userId,
+                         group: groupName
+                      ]
+                ]
+        ]
+)
+        gint.taskHelper.addTearDown('addUsersTearDown', [
+                [action: 'removeUser',
+                 dependsOn: "deleteProject",
+                     parameters:[
+                     userId: userId,
+                     ],
+                ],
+                [action: 'removeProjectRole',
+                 dependsOn: "deleteProject",
+                 parameters:[
+                    name:  projectRole
+                    ]
+                ],
+                [action: 'removeProjectRoleActors',
+                 dependsOn: "deleteProject",
+                 parameters:[
+                    project: project,
+                    role: projectRole,
+                    userId: userId
+                    ]
+                ],
+                [action: 'removeGroup',
+                 dependsOn: "deleteProject",
+                 parameters:[
+                    group: groupName
+                ]
+                ],
+                [action: 'removeUserFromGroup',
+                 dependsOn: "deleteProject",
+                   parameters:[
+                   userId: userId,
+                   group: groupName
+                   ]
+                ]
+             ]
+      )
     }
 }
-def createIssue(project, parametersList) {
+def createIssue(project, parametersList,ext) {
     def savedIssues = [:]
     parametersList.eachWithIndex { parameters, number ->
-        gint.taskHelper.add([
-                action: 'createIssue', ext: parameters["type"] + number,
+        gint.taskHelper.add('createIssues',[
+                [action: 'createIssue', ext: ext + number,//parameters["type"] + number,
                 group: 'create',
                 project: project,
                 parameters: parameters,
@@ -319,31 +386,84 @@ def createIssue(project, parametersList) {
                     savedIssues[number] = currentIssue
                     gint.helper.logVarWithFormat('Create Issues to validate the comment required validator')
                 },
-              ]
-        )
+              ],
+        ])
     }
     return savedIssues
 }
-def linkIssues(parametersList) {
-	parametersList.eachWithIndex { parameters, number ->
-		gint.taskHelper.add([
-				action: 'linkIssue', ext: number,
+def linkIssues(parameters, ext) {
+		gint.taskHelper.add('linkIssues',[
+				[action: 'linkIssue', ext: ext,
 					group: 'link',
 					parameters: parameters,
 					stopOnFail: true
+                ]
 		 ])
-    }
 }
-def getIssues(issues) {
-issues.eachWithIndex { number ->
-		gint.taskHelper.add([
-				[action: 'getIssue',
-					group: 'get',
-					parameters: issue,
-					stopOnFail: true
-			  	],
-		 ])
+def transitionIssue(transition, issueToTransition, expected, ext) {
+    gint.taskHelper.add('transitionIssues', [
+            [action    : 'transitionIssue', ext: ext,
+             dependsOn : 'createIssues',
+             expected: expected,
+             parameters: [
+                     issue  : issueToTransition,
+                     transition: transition,
+             ],
+            ],
+    ]
+    )
+}
+def getIssueInformation(issueToCheck, data, ext) {
+    gint.taskHelper.add('getIssueInformation',[
+            [action: 'getIssue', ext: ext ,
+             dependsOn: 'transitionIssues',
+             parameters: [
+                     issue: issueToCheck,
+             ],
+             data: [ data ],
+            ],
+    ])
+}
+def getComments(issueToCheckComments, expected, user, ext){
+    gint.taskHelper.add('checkComments',[
+            [action: 'getComments', ext: ext,
+             expected: expected,
+             dependsOn: 'transitionIssues',
+             parameters: [
+                     issue: issueToCheckComments,
+             ],
+             data: [~/$user added a comment/],
+            ],
+    ])
+}
+def checkCommentVisibleToUser(issue, userId, user, ext) {
+        gint.taskHelper.add('checkCommentVisibleToUser', [
+                [action: 'getComments',ext: ext + 'checkCurrentUser',
+                 dependsOn: 'transitionIssues',
+                 parameters:[
+                         issue: issue
+                 ],
+                 data: [~/$user added a comment/],
+                ],
+                [dependsOn: 'transitionIssues', cmd : /acli $userId -a getComments --issue $issue /,
+                 failData: [~/$user added a comment/]]
+        ]
+        )
     }
+def transitionByUserTask(userId, issue, transition) {
+    gint.taskHelper.add('transitionByUser', [
+            [name: 'transitionTriggerByOtherUser', cmd : /acli $userId -a transitionIsue --issue $issue --transition $transition/,]
+    ]
+    )
+}
+def checkRunAsUser(transition, issue, userId) {
+    gint.taskHelper.add('checkRunAsUser', [
+            [name:'checkRunAsUser',dependsOn:'transitionIssues', cmd : /acli $userId -a transitionIsue --issue $issue --transition $transition/,],
+            [cmd: /acli ${userId} getIssueHistoryList --issue ${issue} /,
+             data:[$/'userId'/$],
+           ],
+    ],
+    )
 }
 ext {
     importWorkflow= this.&importWorkflow
@@ -357,5 +477,10 @@ ext {
     createTransitionsWithFunctions= this.&createTransitionsWithFunctions
     createIssue= this.&createIssue
     linkIssues= this.&linkIssues
-    getIssues= this.&getIssues
+    transitionIssue= this.&transitionIssue
+    getIssueInformation= this.&getIssueInformation
+    getComments= this.&getComments
+    checkCommentVisibleToUser= this.&checkCommentVisibleToUser
+    transitionByUserTask= this.&transitionByUserTask
+    checkRunAsUser= this.&checkRunAsUser
   }

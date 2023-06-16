@@ -1,17 +1,8 @@
 import groovy.json.JsonSlurper
 import java.nio.file.Paths
 
-buildscript {
-    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
-    dependencies {
-        classpath 'org.gint:gint-atlassian:' + gintVersion
-    }
-    repositories {
-        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
-        mavenLocal()
-        mavenCentral()
-        maven { url 'https://plugins.gradle.org/m2/' }
-    }
+plugins {
+    id "org.gint.atlassian" version "3.8.4"
 }
 
 apply plugin: 'org.gint.atlassian'
@@ -29,13 +20,78 @@ gint.xmlReport =	true	//xml report generates in projects root directory
 gint.verbose =	true
 
 def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/validatorsData/UserValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
+def path = Paths.get(gint.directories.resource + "/resources/validatorsData/Test${info?.isCloud ? "Cloud" : ""}.json")
 def transitionFunctions = jsonSlurper.parse(path)
 def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CommentRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-validator'	//function key for HideTransitionCondition
 def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
 
+def summaries = [
+		'currentUserMustBeReporter',
+		'currentUserMustBeAssignee',
+		'currentUserMustBeProjectLead',
+		'currentUserMustBeOfAdministratorsRole',
+		'currentUserMustBeFromJiraAdministratorsGroups',
+		'currentUserMustBeInAssigneeField',
+		'currentUserMustBeInAssigneeField',
+		'userReturnedByGroovyScript',
+		'userIsAssigneeCheckReverse',
+		'checkConditionValidationIfIssueIslinkedThenExecuteTransition',
+]
+def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it, assignee: user, labels: user] } )
+def subTask = createIssue(project, [1, 1 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }]} )
+def epic = createIssue(project, summaries.collect{[type: 'Epic', summary: it, field: "Epic Name", value: "Epic"]} )
+def story = createIssue(project, [0, 1, 2, 3, 4, 5, 6, 7, 8 ].collect{[type: 'story', summary: 'summary',field: "Epic Link", value: { -> epic[it] }, assignee: userqa2, reporter: userqa1]} )
+linkIssues({[ issue: { -> bug[9] }, toIssue: { -> bug[8] }, link: 'blocks'] } )
+def summaryJql = [ 'jqlSearch1', 'jqlSearch2' ]
+def IssueReturnByJqlSearch = createIssue(project, summaryJql.collect{[type: 'Task', summary: it, assignee: userqa1] } )
+
+
+def whenFieldsAreModifiedParams = [
+		reporter: userqa1
+]
+
+def issuecane = [
+[
+        bug: { -> bug[0] }, transition: "${transition}0",
+        transitions: [
+                [
+                        ext: 'whenCurrentUserSatisfiesAllCriteriaConfigured', expected: [ 0 ],
+                        data: { currentTransition -> ~/Successfully transitioned issue ${project}-\d+ with transition '${currentTransition}'./ }
+                ],
+                [
+                        ext: 'whenCurrentUserInFieldAssigneeSatisfiesAllCriteriaConfigured', expected: [ -3 ], additionalParams: whenFieldsAreModifiedParams,
+                        data: { String _ -> "Remote error: Error(s):" }
+                ]
+        ]
+],
+
+]
+gint.taskHelper.add('test',
+    issuecane.collect {
+        def currentIssue= it['bug']
+        def currentTransition= it['transition']
+        it['transitions'].collect {trans ->
+            [
+                    action: 'transitionIssue',
+                    ext: "${trans['ext']}-${currentTransition}",
+                    expected: trans['expected'],
+                  //  dependsOn: [':createComponents', 'createVersions', ':addIssues', ':setupLinks'],
+                    parameters: [
+                            issue: currentIssue,
+                            transition: currentTransition
+                    ] + (trans['additionalParams'] != null ? trans['additionalParams'] : [:]),
+                    data: trans['data'](currentTransition)
+            ]
+        }
+    }.flatten()
+)
+
+
+
+
+/*
 // Create issues
 def summaries = [
 		'currentUserMustBeReporter',
@@ -81,10 +137,6 @@ def errorMsgWhenCurrentUserNotSatisfiesCriteria = [
     	14:"    The configured groovy expression is not true for user $user",
     	15:"    The configured groovy expression is true for user $user",
     	16:"    User '$user' is not the assignee of the current issue",
-/*
-    	Remote error: Error(s):
-        User '$user' is not the reporter of the current issue.
-*/
 ]
 [
 		9:{ -> story[0] },
@@ -143,10 +195,6 @@ def errorMsgWhenUserInFieldAssigneeNotSatisfiesCriteria = [
     	31:"    The configured groovy expression is not true for user $userqa2",
     	32:"    The configured groovy expression is true for user $userqa2",
     	33:"    User '$userqa2' is not the watcher of the current issue",
-/*
-    	Remote error: Error(s):
-        User '$user' is not the reporter of the current issue.
-*/
 ]
 [
 		26:{ -> story[0] },
@@ -229,3 +277,4 @@ def errorMsgWhenUserInFieldReporterNotSatisfiesCriteria = [
         ]
     )
 }
+*/

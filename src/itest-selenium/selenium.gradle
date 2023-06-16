@@ -46,7 +46,7 @@ gint.taskHelper.add(
     dependsOn: true,
     name: 'navigateToIssue',
     inline: {
-        gint.seleniumHelper.gotoUrl(url: info?.url + '/projects/DEMOCLI/issues/DEMOCLI-10')
+        gint.seleniumHelper.gotoUrl(url: info?.url + '/projects/MYPROJECT/issues/MYPROJECT-1')
         gint.seleniumHelper.delay()
         def title = gint.seleniumHelper.driver.getTitle()
         gint.helper.log 'title', title

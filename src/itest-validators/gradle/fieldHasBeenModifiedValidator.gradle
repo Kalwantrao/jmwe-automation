@@ -46,11 +46,11 @@ def summaries = [
 		 'issueLinkedByBlocksLink',
 		 'groovyConditionFalse'
 		 ]
-def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it] } )
-def subTask = createIssue(project, [1, 1 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }]} )
-def epic = createIssue(project, summaries.collect{[type: 'Epic', summary: it, field: "Epic Name", value: "Epic"]} )
-def story = createIssue(project, [1, 1, 1, 1 ].collect{[type: 'story', summary: 'summary',field: "Epic Link", value: { -> epic[it] }, assignee: userqa1, description: 'TEST_DESCRIPTION_AUTOMATION']} )
-linkIssues({[ issue: { -> story[0] }, toIssue: { -> story[1] }, link: 'blocks'] } )
+def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it] }, 'createBug')
+def subTask = createIssue(project, [1, 1 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }]}, 'createSubtask' )
+def epic = createIssue(project, summaries.collect{[type: 'Epic', summary: it, field: "Epic Name", value: "Epic"]}, 'createEpic' )
+def story = createIssue(project, [1, 1, 1, 1 ].collect{[type: 'story', summary: 'summary',field: "Epic Link", value: { -> epic[it] }, assignee: userqa1, description: 'TEST_DESCRIPTION_AUTOMATION']}, 'createStory' )
+linkIssues({[ issue: { -> story[0] }, toIssue: { -> story[1] }, link: 'blocks'] })
 
 def issueList1 = [
 	0: { -> bug[0] },

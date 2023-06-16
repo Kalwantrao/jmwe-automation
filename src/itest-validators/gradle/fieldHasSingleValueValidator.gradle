@@ -47,10 +47,10 @@ def summaries = [
 		'excludingSubtaskValuesFixVersions',
 		'excludingSubtaskValuesComponents'
 ]
-def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it, assignee: userqa1, description: 'Test_description_Automation', affectsVersions: '1', fixVersions: '1', component: 'component1'] } )
-def subTask = createIssue(project, [ 3, 4, 5 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }, affectsVersions: '1', fixVersions: '1', component: 'component1']} )
-def story = createIssue(project, summaries.collect{[type: 'Story', summary: it] } )
-linkIssues({[ issue: { -> bug[0] }, toIssue: { -> bug[1] }, link: 'blocks'] } )
+def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it, assignee: userqa1, description: 'Test_description_Automation', affectsVersions: '1', fixVersions: '1', component: 'component1'] }, 'createIssue1' )
+def subTask = createIssue(project, [ 3, 4, 5 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }, affectsVersions: '1', fixVersions: '1', component: 'component1']}, 'createIssue2' )
+def story = createIssue(project, summaries.collect{[type: 'Story', summary: it] }, 'createIssue3')
+linkIssues({[ issue: { -> bug[0] }, toIssue: { -> bug[1] }, link: 'blocks'] })
 
 // Transition issues when fields having single values excluding the values in subtask
 (0..2).each{ number ->

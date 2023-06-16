@@ -1,0 +1,96 @@
+apply plugin: 'org.gint.atlassian'
+apply from: '../../common/commonMethod.gradle'
+
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def screen = project
+def baseWorkflow = 'resources/workflow.xml'
+def permissionScheme = project
+def screenScheme = project
+def issueTypeScreenScheme = project
+def workflowScheme = project
+def template = info?.isCloud ? "Bug tracking" : "Scrum software development"
+def fieldList = info?.isCloud ? ['Assignee','Attachment','Resolution'] : ['Archiver','Archived','Assignee','Attachment','Comment','Component/s','Created','Creator','Development','Rank',"Epic Link", "Epic Status","Epic Name","Epic Colour",'Sprint',"Story Points","Parent Link","Target start","Target end","Original story points",'Team','Description',"Due Date",'Environment',"Fix Version/s","Linked Issues","Issue Type",'Labels',"Last Viewed",'Priority','Progress','Reporter','Project','Resolution',"Security Level",'Resolved','Status','Sub-Tasks','Summary',"Remaining Estimate","Original Estimate","Time Spent","Affects Version/s","Time Tracking",'Updated','Votes','Watchers',"Log Work","Work Ratio"]
+def workflow = project
+def userId = 'jmwe_qa'
+def projectRole = 'jmwe_role'
+def userGroup = 'jmwe_group'
+createPermissionScheme(permissionScheme, [
+        "SET_ISSUE_SECURITY",
+        "ADD_COMMENTS",
+        "VIEW_VOTERS_AND_WATCHERS",
+        "ADMINISTER_PROJECTS",
+        "EDIT_ISSUES",
+        "ASSIGNABLE_USER",
+        "CREATE_ISSUES",
+        "DELETE_ISSUES",
+        "LINK_ISSUES",
+        "TRANSITION_ISSUES",
+        "ASSIGN_ISSUES",
+        "CLOSE_ISSUES",
+        "WORK_ON_ISSUES",
+        "MODIFY_REPORTER",
+        "BROWSE_PROJECTS",
+        "RESOLVE_ISSUES",
+], 'Postfunction')
+importWorkflow(baseWorkflow, workflow)
+createWorkflowScheme(workflow, workflowScheme, 'Postfunction')
+createProject(project, template, workflowScheme, issueTypeScreenScheme, permissionScheme, 'Postfunction')
+createVersions(project, 5)
+createComponents(project, 'component', 5)
+createScreen(screen, screenScheme, fieldList, issueTypeScreenScheme)
+//createUsers(userId, userId + '@gmail.com', projectRole, project, userGroup)
+
+
+
+
+
+
+
+
+
+/*
+apply plugin: 'org.gint.atlassian'
+apply from: '../../common/commonMethod.gradle'
+
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def screen = project
+def baseWorkflow = info?.isCloud ? 'classic default workflow' : 'jira'
+def permissionScheme = project
+def screenScheme = project
+def issueTypeScreenScheme = project
+def workflowScheme = project
+def template = info?.isCloud ? "Bug tracking" : "Scrum software development"
+def userId = 'jmwe_qa'
+def projectRole = 'jmwe_role'
+def userGroup = 'jmwe_group'
+
+def fieldList = info?.isCloud ? ['Assignee','Attachment','Resolution'] : ['Archiver','Archived','Assignee','Attachment','Comment','Component/s','Created','Creator','Development','Rank',"Epic Link", "Epic Status","Epic Name","Epic Colour",'Sprint',"Story Points","Parent Link","Target start","Target end","Original story points",'Team','Description',"Due Date",'Environment',"Fix Version/s","Linked Issues","Issue Type",'Labels',"Last Viewed",'Priority','Progress','Reporter','Project','Resolution',"Security Level",'Resolved','Status','Sub-Tasks','Summary',"Remaining Estimate","Original Estimate","Time Spent","Affects Version/s","Time Tracking",'Updated','Votes','Watchers',"Log Work","Work Ratio"]
+def workflow = project
+createPermissionScheme(permissionScheme, [
+        "SET_ISSUE_SECURITY",
+        "ADD_COMMENTS",
+        "VIEW_VOTERS_AND_WATCHERS",
+        "ADMINISTER_PROJECTS",
+        "EDIT_ISSUES",
+        "ASSIGNABLE_USER",
+        "CREATE_ISSUES",
+        "DELETE_ISSUES",
+        "LINK_ISSUES",
+        "TRANSITION_ISSUES",
+        "ASSIGN_ISSUES",
+        "CLOSE_ISSUES",
+        "WORK_ON_ISSUES",
+        "MODIFY_REPORTER",
+        "BROWSE_PROJECTS",
+        "RESOLVE_ISSUES",
+], 'Postfunction')
+importWorkflow(baseWorkflow, workflow)
+createWorkflowScheme(workflow, workflowScheme, 'Postfunction')
+createProject(project, template, workflowScheme, issueTypeScreenScheme, permissionScheme, 'Postfunction')
+createVersions(project, 5)
+createComponents(project, 'component', 5)
+createUsers(userId, userId + '@gmail.com', projectRole, project, userGroup)
+createScreen(screen, screenScheme, fieldList, issueTypeScreenScheme)
+*/

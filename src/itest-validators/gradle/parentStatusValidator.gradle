@@ -44,10 +44,10 @@ def summaries = [
 		'parentIssueMustBeInSelectedStatus',
 		'parentIssueMustBeInOneOfTheSelectedStatus',
 ]
-def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it, priority: 'Low', ] } )
-def subTask = createIssue(project, [ 0, 1, 2 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }, priority: 'Low' ]} )
-def story = createIssue(project, summaries.collect{[type: 'Story', summary: it] } )
-def Task = createIssue(project, summaries.collect{[type: 'Task', summary: it] } )
+def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it, priority: 'Low', ] }, 'createIssue1' )
+def subTask = createIssue(project, [ 0, 1, 2 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }, priority: 'Low' ]}, 'createIssue2' )
+def story = createIssue(project, summaries.collect{[type: 'Story', summary: it] }, 'createIssue3' )
+def Task = createIssue(project, summaries.collect{[type: 'Task', summary: it] }, 'createIssue4' )
 linkIssues({[ issue: { -> subTask[0] }, toIssue: { -> subTask[1] }, link: 'blocks'] } )
 
 // check when parent issue of current issue is not in selected status

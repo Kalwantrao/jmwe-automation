@@ -24,7 +24,6 @@ def screen = project
 
 gint.xmlReport =	true	//xml report generates in projects root directory
 gint.verbose =	true
-
 def jsonSlurper = new JsonSlurper();
 def path = Paths.get(gint.directories.resource + "/resources/validatorsData/CommentRequiredValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
 def transitionFunctions = jsonSlurper.parse(path)
@@ -40,8 +39,8 @@ def summaries = [
 		'checkErrorMsgByDefault',
 		'checkErrorMsgByDefaultWhenConditionIsTrue',
 ]
-def bug = createIssue(project, summaries.collect{[ type: 'Bug', summary: it]} )
-def Task = createIssue(project, summaries.collect{[ type: 'Task', summary: it]} )
+def bug = createIssue(project, summaries.collect{[ type: 'Bug', summary: it]}, 'createBug' )
+def Task = createIssue(project, summaries.collect{[ type: 'Task', summary: it]}, 'createTask')
 [
 		'Remote error: comment: CommentRequired',
 		'Remote error: comment: You must provide a Comment',
@@ -50,6 +49,7 @@ def Task = createIssue(project, summaries.collect{[ type: 'Task', summary: it]} 
 	def transitionIssue = gint.taskHelper.add([
         	[action: 'transitionIssue', ext: 'transitionWhenCommentNotProvided'+number,
             	dependsOn: true,
+            	sleep: 1000,
             	retry: true,
             	expected: [ -3 ],
             	parameters: [
@@ -61,6 +61,7 @@ def Task = createIssue(project, summaries.collect{[ type: 'Task', summary: it]} 
         	],
         	[action: 'transitionIssue', ext: 'transitionWhenCommentProvided'+number,
             	dependsOn: true,
+            	sleep: 1000 ,
             	expected: [ 0 ],
             	parameters: [
                 	issue: {-> Task[number]  },

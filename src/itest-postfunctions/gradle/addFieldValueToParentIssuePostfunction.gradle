@@ -1,0 +1,68 @@
+import groovy.json.JsonSlurper
+import java.nio.file.Paths
+
+buildscript {
+    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
+    dependencies {
+        classpath 'org.gint:gint-atlassian:' + gintVersion
+    }
+    repositories {
+        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
+        mavenLocal()
+        mavenCentral()
+        maven { url 'https://plugins.gradle.org/m2/' }
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: 'common/setUp.gradle'
+apply from: '../../common/commonMethod.gradle'
+
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def transition = 'addFieldValueToParentIssue'
+def workflow = project
+def screen = project
+def user = info.user
+def userId = 'jmwe_qa'
+def projectRole = 'jmwe_role'
+def userGroup = 'jmwe_group'
+def userqa1 = project.toLowerCase()+'qa1'
+gint.xmlReport =	true	//xml report generates in projects root directory
+gint.verbose =	true
+
+def jsonSlurper = new JsonSlurper();
+def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/AddFieldValueToParentIssuePostfunction${info?.isCloud ? "Cloud" : ""}.json")
+def transitionFunctions = jsonSlurper.parse(path)
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:AddFieldValueToParent-function'	//function key for current status condition
+def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+
+createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
+
+// check the subtask of the parent issue
+def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue')
+def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]}, labels: 'test_label']}, 'createSubtask')
+transitionIssue(transition+0, {-> subTask[0]}, 0, 'transitionSubtask')
+getIssueInformation({-> subTask[0]}, "Labels  . . . . . . . . . . . : ", 'checkSubtask')
+getIssueInformation({-> parent[0]}, "Labels  . . . . . . . . . . . : test_label", 'checkParentIssue')
+
+// check when the selected field is empty and parent issue having value
+def parent1 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', labels: 'test_label']}, 'createParentIssueWithFieldValue')
+def subTask1 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent1[0]}, labels: '']}, 'checkSubtaskHavingEmptyValue')
+transitionIssue(transition+0, {-> subTask1[0]}, 0, 'checkEmptyValueOfSubtask')
+getIssueInformation({-> parent1[0]}, "Labels  . . . . . . . . . . . : test_label", 'checkSubtaskHavingEmptyValue')
+
+// check conditional execution true
+def parent3 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentForConditionalExecutionTrue')
+def subtask3 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent3[0]}, assignee: user, labels: 'conditionalExecution']}, 'createSubtaskForConditionalExecutionTrue')
+transitionIssue(transition+1, {-> subtask3[0]}, 0, 'transitionToCheckConditionalExecTrue')
+getIssueInformation({-> parent3[0]}, "Labels  . . . . . . . . . . . : conditionalExecution", 'checkParentIssueCondExecTrue')
+
+// check conditional execution false
+def parent4 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentForConditionalExecutionFalse')
+def subtask4 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent4[0]}, labels: 'conditionalExecution']}, 'createSubtaskForConditionalExecutionFalse')
+transitionIssue(transition+1, {-> subtask4[0]}, 0, 'transitionToCheckConditionalExecFalse')
+getIssueInformation({-> parent4[0]}, "Labels  . . . . . . . . . . . : ", 'checkParentIssueCondExecFalse')
+
+

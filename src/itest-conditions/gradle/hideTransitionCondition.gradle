@@ -26,10 +26,6 @@ def transition = 'hideTransitionFromUser'
 def saved =	[:]
 def savedIssues = [:]
 def user = info.user
-def userqa1 = project.toLowerCase()+'qa1'
-def userqa2 = project.toLowerCase()+'qa2'
-def userdev1 = project.toLowerCase()+'dev1'
-def userdev2 = project.toLowerCase()+'dev2'
 
 // Create issues
 (1..1).each { number ->
@@ -68,7 +64,7 @@ def data = ~/Client error: Workflow transition '${transition + number}' is not v
 				],
            data:[ data  ],
             finalClosure:{ Task task ->
-            	gint.helper.logVarWithFormat('Should throw error as transition should be hidden from user ')
+            	gint.helper.logVarWithFormat('Should throw error as transition should be hidden from user')
 
             }
 

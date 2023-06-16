@@ -46,10 +46,10 @@ def summaries = [
 		'componentsShouldRequired',
 		'labelsShouldRequired'
 ]
-def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it] } )
-def subTask = createIssue(project, [ 0, 0 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] } ]} )
-def story = createIssue(project, summaries.collect{[type: 'Story', summary: it] } )
-def Task = createIssue(project, summaries.collect{[type: 'Task', summary: it, description: 'Test_Description_Automation', priority: 'Low'] } )
+def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it] }, 'createIssue1')
+def subTask = createIssue(project, [ 0, 0 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] } ]}, 'createIssue2' )
+def story = createIssue(project, summaries.collect{[type: 'Story', summary: it] }, 'createIssue3' )
+def Task = createIssue(project, summaries.collect{[type: 'Task', summary: it, description: 'Test_Description_Automation', priority: 'Low'] }, 'createIssue4' )
 linkIssues({[ issue: { -> Task[0] }, toIssue: { -> Task[1] }, link: 'blocks'] } )
 
 // check when issue not having required fields and having fields
@@ -63,6 +63,7 @@ linkIssues({[ issue: { -> Task[0] }, toIssue: { -> Task[1] }, link: 'blocks'] } 
 	gint.taskHelper.add([
 		[action: 'transitionIssue', ext: 'WhenIssueNotHavingFieldValues' + number,
 		dependsOn: true,
+		sleep: 1000,
 		expected: [ -3 ],
 		parameters:[
 			issue: {-> bug[number] },
@@ -72,6 +73,7 @@ linkIssues({[ issue: { -> Task[0] }, toIssue: { -> Task[1] }, link: 'blocks'] } 
 		],
 		[action: 'transitionIssue', ext: 'WhenIssueHavingFieldValues' + number,
 		dependsOn: true,
+		sleep: 1000,
 		expected: [ 0 ],
 		parameters:[
 			issue: { -> bug[number]},
@@ -104,6 +106,7 @@ def issueList2 = [
 		[action: 'transitionIssue', ext: 'When Groovy Condition Returns True For Issue' + number,
 		dependsOn: true,
 		expected: [ -3 ],
+		sleep: 1000,
 		parameters:[
 			issue: issueList1[number],
 			transition: transition + number
@@ -111,6 +114,7 @@ def issueList2 = [
 		],
 		[action: 'transitionIssue', ext: 'When Groovy Condition Returns False For Issue' + number,
 		dependsOn: true,
+		sleep: 1000,
 		expected: [ 0 ],
 		parameters:[
 			issue: issueList2[number],
