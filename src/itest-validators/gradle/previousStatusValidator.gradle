@@ -2,16 +2,14 @@ import groovy.json.JsonSlurper
 import java.nio.file.Paths
 
 buildscript {
-    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
-    dependencies {
-        classpath 'org.gint:gint-atlassian:' + gintVersion
-    }
-    repositories {
-        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
-        mavenLocal()
-        mavenCentral()
-        maven { url 'https://plugins.gradle.org/m2/' }
-    }
+	repositories {
+		maven {
+			url "https://plugins.gradle.org/m2/"
+		}
+	}
+	dependencies {
+		classpath "org.gint:gint-atlassian:3.8.4"
+	}
 }
 
 apply plugin: 'org.gint.atlassian'
@@ -37,6 +35,50 @@ def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:previousstat
 def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
+
+// check the previous status of the issue
+def issue1 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue')
+transitionIssue(transition+0, {-> issue1[0]}, [-3], 'transitionWhenPreviousStatuNotInSelectedStatus', null, ["Remote error: Transition is not authorized because current Issue has never been in status To Do before."])
+
+
+def issue2 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue1')
+transitionToStatus({-> issue2[0]}, "In Progress", "To Do", 'setPreviousStatusOfIssueInSelected1')
+transitionIssue(transition+0, {-> issue2[0]}, 0, 'checkWhenIssuesPreviousStatusInSelected', null, null)
+
+//check mostRecentStatusOnly
+def checkMostRecentStatus = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'checkMostRecentStatus')
+transitionToStatus({-> checkMostRecentStatus[0]}, "In Progress", "To Do", 'setMostRecentStatus1')
+transitionIssue(transition+4, {-> checkMostRecentStatus[0]}, 0, 'checkMostRecentStatusInSelectedStatus', null, null)
+
+def mostRecentStatus = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'checkMostRecentStatus1')
+transitionToStatus({-> mostRecentStatus[0]}, "To Do", "To Do", 'setMostRecentStatus2')
+transitionIssue(transition+4, {-> mostRecentStatus[0]}, [-3], 'checkMostRecentStatusNotInSelectedStatus', null, ["Remote error: previousStatusMostRecentStatusMustBeInProgress"])
+
+// check conditional execution true
+def issue4 = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue']}, 'createParentForConditionalExecutionTrue')
+transitionIssue(transition+5, {-> issue4[0]}, [-3], 'transitionToCheckConditionalExecTrue', null, ["Remote error: Transition is not authorized because current Issue has never been in status To Do before."])
+
+def issue5 = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue']}, 'createParentForConditionalExecutionTrue1')
+transitionToStatus({-> issue5[0]}, "In Progress", "To Do", 'setPreviousStatusOfIssueInSelected2')
+transitionIssue(transition+5, {-> issue5[0]}, [0], 'transitionToCheckConditionalExecTruePreviousStatusInSelected', null, null)
+
+// check conditional execution false
+def issue6 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentForConditionalExecutionFalse')
+transitionIssue(transition+5, {-> issue6[0]}, 0, 'transitionToCheckConditionalExecFalse', null, null)
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 def summaries = [
 		'previousStatusToDo',
 		'previousStatusInProgress',
@@ -46,13 +88,13 @@ def summaries = [
 		'previousStatusToDoIfGroovyConditionTrue',
 		'mostRecentStatusToDoIfGroovyConditionTrue'
 ]
-def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it] } )
-def subTask = createIssue(project, [1, 1 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }]} )
-def epic = createIssue(project, summaries.collect{[type: 'Epic', summary: it, field: "Epic Name", value: "Epic"]} )
-def story = createIssue(project, [0, 1, 2, 3, 4, 5, 6 ].collect{[type: 'story', summary: 'summary',field: "Epic Link", value: { -> epic[it] }]} )
+def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it] }, 'createParentIssue' )
+def subTask = createIssue(project, [1, 1 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }]}, 'createSubtask' )
+def epic = createIssue(project, summaries.collect{[type: 'Epic', summary: it, field: "Epic Name", value: "Epic"]}, 'createEpic' )
+def story = createIssue(project, [0, 1, 2, 3, 4, 5, 6 ].collect{[type: 'story', summary: 'summary',field: "Epic Link", value: { -> epic[it] }]}, 'createStory' )
 linkIssues({[ issue: { -> story[5] }, toIssue: { -> story[6] }, link: 'blocks'] } )
 def summaryJql = [ 'jqlSearch1', 'jqlSearch2' ]
-def IssueReturnByJqlSearch = createIssue(project, summaryJql.collect{[type: 'Task', summary: it, assignee: userqa1] } )
+def IssueReturnByJqlSearch = createIssue(project, summaryJql.collect{[type: 'Task', summary: it, assignee: userqa1] }, 'IssueReturnByJqlSearch' )
 
 // Check when issue is not been previously in selected status
 [
@@ -170,6 +212,7 @@ gint.taskHelper.add([
 	],
 ])
 }
+ */
 /*
 // Using groovy functions
 def transitionToSetPreviousStatusOfIssue (issues, selectedPreviousStatus, expectedData )

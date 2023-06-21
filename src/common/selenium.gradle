@@ -1,0 +1,72 @@
+//gradle -b src/common/selenium.gradle -Dbrowser=firefox -Ddelay=3
+
+buildscript {
+    repositories {
+        flatDir { dirs '../../libs' }
+        mavenLocal()
+        maven { url 'https://plugins.gradle.org/m2/' }
+    }
+    dependencies { classpath 'org.gint:gint-atlassian:' + (findProperty('gintVersion') ?: '+') }
+    project.ext.seleniumVersion = findProperty('seleniumVersion') ?: System.getenv('SELENIUM_VERSION') ?: '3.14.+'
+    dependencies { // needed here for selenium testing :(
+        ['java', 'support', 'firefox-driver', 'chrome-driver', 'safari-driver', 'edge-driver'].each { entry ->
+            classpath 'org.seleniumhq.selenium:selenium-' + entry + ':' + seleniumVersion
+        }
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+gint.verbose = true
+def info = gint.getJiraHelper().getServerInfoWithVerify()
+def project = gint.getJiraHelper().getProjectKey()
+def permissionScheme = project
+def screen = project
+def fieldList = ['Archiver','Archived','Assignee','Attachment','Comment','Component/s','Created','Creator','Development','Rank',"Epic Link", "Epic Status","Epic Name","Epic Colour",'Sprint',"Story Points","Parent Link","Target start","Target end","Original story points",'Team','Description',"Due Date",'Environment',"Fix Version/s","Linked Issues","Issue Type",'Labels',"Last Viewed",'Priority','Progress','Reporter','Project','Resolution',"Security Level",'Resolved','Status','Sub-Tasks','Summary',"Remaining Estimate","Original Estimate","Time Spent","Affects Version/s","Time Tracking",'Updated','Votes','Watchers',"Log Work","Work Ratio"]
+def saved=[:]
+
+gint.getJiraHelper().getSeleniumHelper()
+//project.ext.info = gint.getJiraHelper().getServerInfoWithVerify()
+gint.helper.log("info", info)
+gint.seleniumHelper.addInitializeTask()
+
+gint.helper.log 'selenium helper', gint.seleniumHelper.class.name
+
+gint.seleniumHelper.addLoginTask(
+        serverInfo: info,
+        user: testUserNameServer,
+        password: testUserPasswordServer,
+        titleText: ~/((System Dashboard.*)|(.*Service.*)|(.*Categories.*))/,
+        adminLogin: true,
+)
+gint.taskHelper.add(
+        dependsOn: true,
+        inline: {
+            gint.seleniumHelper.gotoUrl(url: info?.url)
+            def title = gint.seleniumHelper.driver.getTitle()
+            gint.seleniumHelper.delay()
+            gint.helper.log 'title', title
+            assert title ==~ /((System Dashboard.*)|(.*Service.*))/
+        }
+)
+
+gint.taskHelper.add(
+        dependsOn: true,
+        name: 'navigateToIssue',
+        inline: {
+            gint.seleniumHelper.gotoUrl(url: info?.url + '/projects/MYPROJECT/issues/MYPROJECT-1')
+            gint.seleniumHelper.delay()
+            def title = gint.seleniumHelper.driver.getTitle()
+            gint.helper.log 'title', title
+        }
+)
+gint.taskHelper.add(
+        dependsOn: true,
+        name: 'logout',
+        inline: {
+            gint.seleniumHelper.gotoUrl(url: info?.url + '/logout')
+            gint.seleniumHelper.delay()
+            def title = gint.seleniumHelper.driver.getTitle()
+            gint.helper.log 'title', title
+            assert title ==~ /((Confirm logout)|(Forbidden)).*/
+        }
+)

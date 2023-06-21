@@ -2,16 +2,14 @@ import groovy.json.JsonSlurper
 import java.nio.file.Paths
 
 buildscript {
-    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
-    dependencies {
-        classpath 'org.gint:gint-atlassian:' + gintVersion
-    }
-    repositories {
-        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
-        mavenLocal()
-        mavenCentral()
-        maven { url 'https://plugins.gradle.org/m2/' }
-    }
+	repositories {
+		maven {
+			url "https://plugins.gradle.org/m2/"
+		}
+	}
+	dependencies {
+		classpath "org.gint:gint-atlassian:3.8.4"
+	}
 }
 
 apply plugin: 'org.gint.atlassian'
@@ -24,12 +22,6 @@ def screen = project
 gint.xmlReport =	true	//xml report generates in projects root directory
 gint.verbose =	true
 def user = info.user
-def userqa1 = project.toLowerCase()+'qa1'
-def userqa2 = project.toLowerCase()+'qa2'
-def userdev1 = project.toLowerCase()+'dev1'
-def userdev2 = project.toLowerCase()+'dev2'
-def saved =	[:]
-def savedIssues = [:]
 def transition = 'fieldHasSingleValueValidator'
 def jsonSlurper = new JsonSlurper();
 def path = Paths.get(gint.directories.resource + "/resources/validatorsData/FieldHasSingleValueValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
@@ -39,6 +31,40 @@ def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud a
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
 
+// check affectsVersions
+def singleValue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: 'component1']}, 'singleValue')
+transitionIssue(transition+0, {-> singleValue[0]}, [0], 'whenComponentsHasSingleValues', null, null)
+
+def multipleValues = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: 'component1']}, 'multipleValues')
+updateIssues({-> multipleValues[0]}, [components: 'component2', append: null], 'setValue1')
+transitionIssue(transition+0, {-> multipleValues[0]}, [-3], 'whenComponentsHasMultipleValues', null, ['Remote error: components: Component/s should not have more than one value.'])
+
+// check excluding subtasks
+def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', components: 'component1']}, 'createParentIssue')
+def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]}, components: 'component1' ]}, 'createSubtask')
+updateIssues({-> parent[0]}, [components: 'component2', append: null], 'setValue2')
+transitionIssue(transition+5, {-> parent[0]}, [0], 'whenExcludingSubtasksValues', null, null)
+
+
+// check conditional execution - issueType = story
+def condExecTrue = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', components: 'component1']}, 'condExecTrue')
+updateIssues({-> condExecTrue[0]}, [components: 'component2', append: null], 'setValue3')
+transitionIssue(transition+6, {-> condExecTrue[0]}, [-3], 'condExecTrueFieldHasMutipleValues', null, ['Remote error: components: Component/s should not have more than one value.'])
+
+def condExecFalse = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: 'component1']}, 'condExecFalse')
+updateIssues({-> condExecFalse[0]}, [components: 'component2', append: null], 'setValue4')
+transitionIssue(transition+6, {-> condExecFalse[0]}, 0, 'condExeeFalseFieldHasMutipleValues', null, null)
+
+
+
+
+
+
+
+
+
+
+/*
 def summaries = [
 		'fieldVersionsShouldHaveSingleValue',
 		'fieldFixVersionsShouldHaveSingleValue',
@@ -205,3 +231,4 @@ def expectedData2 = [
         ],
     ])
 }
+ */

@@ -2,16 +2,14 @@ import groovy.json.JsonSlurper
 import java.nio.file.Paths
 
 buildscript {
-    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
-    dependencies {
-        classpath 'org.gint:gint-atlassian:' + gintVersion
-    }
-    repositories {
-        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
-        mavenLocal()
-        mavenCentral()
-        maven { url 'https://plugins.gradle.org/m2/' }
-    }
+	repositories {
+		maven {
+			url "https://plugins.gradle.org/m2/"
+		}
+	}
+	dependencies {
+		classpath "org.gint:gint-atlassian:3.8.4"
+	}
 }
 
 apply plugin: 'org.gint.atlassian'
@@ -25,11 +23,6 @@ gint.xmlReport =	true	//xml report generates in projects root directory
 gint.verbose =	true
 def user = info.user
 def userqa1 = project.toLowerCase()+'qa1'
-def userqa2 = project.toLowerCase()+'qa2'
-def userdev1 = project.toLowerCase()+'dev1'
-def userdev2 = project.toLowerCase()+'dev2'
-def saved =	[:]
-def savedIssues = [:]
 def transition = 'fieldsRequiredValidator'
 def jsonSlurper = new JsonSlurper();
 def path = Paths.get(gint.directories.resource + "/resources/validatorsData/FieldsRequiredValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
@@ -39,6 +32,38 @@ def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud a
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
 
+// check fieldsRequired
+def currentIssue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', affectsVersions: '1']}, 'fieldsRequired')
+transitionIssue(transition+0, {-> currentIssue[0]}, [0], 'whenAffectsVersionHasValue', null, null)
+transitionIssue(transition+1, {-> currentIssue[0]}, [-3], 'whenFixVersionNotHavingValues', null, ['Remote error: thisIsCustomMsgForFixVersionFieldsRequired'])
+transitionIssue(transition+2, {-> currentIssue[0]}, [0], 'whenAssigneeHavingValuesFromTransitionScreen', [assignee: user], null)
+
+
+// check conditional execution - issueType = story
+def condExecTrue = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue']}, 'condExecTrue')
+transitionIssue(transition+7, {-> condExecTrue[0]}, [-3], 'condExecTrueFieldRequired', null, ['Remote error: assignee: Field Assignee is required.'])
+transitionIssue(transition+7, {-> condExecTrue[0]}, [0], 'condExecTrueFieldRequiredProvided', [assignee: user], null)
+
+def condExecFalse = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'condExecFalse')
+transitionIssue(transition+7, {-> condExecFalse[0]}, 0, 'condExecFalseFieldNotRequired', null, null)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 def summaries = [
 		'affectsVersionsFieldRequired',
 		'fixVersionsFieldRequired',
@@ -124,3 +149,4 @@ def issueList2 = [
 		]
 ])
 }
+*/

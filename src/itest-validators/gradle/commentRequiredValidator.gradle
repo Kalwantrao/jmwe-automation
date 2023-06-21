@@ -2,15 +2,13 @@ import groovy.json.JsonSlurper
 import java.nio.file.Paths
 
 buildscript {
-    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
-    dependencies {
-        classpath 'org.gint:gint-atlassian:' + gintVersion
-    }
     repositories {
-        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
-        mavenLocal()
-        mavenCentral()
-        maven { url 'https://plugins.gradle.org/m2/' }
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
     }
 }
 apply plugin: 'org.gint.atlassian'
@@ -24,6 +22,7 @@ def screen = project
 
 gint.xmlReport =	true	//xml report generates in projects root directory
 gint.verbose =	true
+def userId = 'jmwe_qa'
 def jsonSlurper = new JsonSlurper();
 def path = Paths.get(gint.directories.resource + "/resources/validatorsData/CommentRequiredValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
 def transitionFunctions = jsonSlurper.parse(path)
@@ -32,45 +31,27 @@ def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud a
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
 
-// Create issues
-def summaries = [
-		'checkErrorMsgByUser',
-		'checkErrorMsgByUserWhenConditionIsTrue',
-		'checkErrorMsgByDefault',
-		'checkErrorMsgByDefaultWhenConditionIsTrue',
-]
-def bug = createIssue(project, summaries.collect{[ type: 'Bug', summary: it]}, 'createBug' )
-def Task = createIssue(project, summaries.collect{[ type: 'Task', summary: it]}, 'createTask')
-[
-		'Remote error: comment: CommentRequired',
-		'Remote error: comment: You must provide a Comment',
-		'Remote error: comment: You must provide a Comment',
-].eachWithIndex {  data, number ->
-	def transitionIssue = gint.taskHelper.add([
-        	[action: 'transitionIssue', ext: 'transitionWhenCommentNotProvided'+number,
-            	dependsOn: true,
-            	sleep: 1000,
-            	retry: true,
-            	expected: [ -3 ],
-            	parameters: [
-                	issue: {-> bug[number]  },
-                	transition: transition + number,
-                	resolution: "Done",
-					],
-           	data:[  ],
-        	],
-        	[action: 'transitionIssue', ext: 'transitionWhenCommentProvided'+number,
-            	dependsOn: true,
-            	sleep: 1000 ,
-            	expected: [ 0 ],
-            	parameters: [
-                	issue: {-> Task[number]  },
-                	transition: transition + number,
-                	resolution: "Done",
-                	comment: "testCommentRequiredValidator"
-					],
-           	data:[ ~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./ ],
-        	],
-])
-}
+
+// check when comment not provided
+def currentIssue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createCurrentIssue')
+transitionIssue(transition+0, {-> currentIssue[0]}, [-3], 'commentNotProvided-Custom error msg', null, ['Remote error: comment: CommentRequired'])
+transitionIssue(transition+0, {-> currentIssue[0]}, 0, 'commentProvided', [comment: 'test'], null)
+
+// check when comment provided
+def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue')
+transitionIssue(transition+1, {-> parent[0]}, [-3], 'commentNotProvidedSystemErrorMsg', null, ['Remote error: comment: You must provide a Comment'])
+transitionIssue(transition+1, {-> parent[0]}, 0, 'commentProvided-SystemErrorMsg', [comment: 'test'], null)
+
+// check conditional validation
+def condExecFalse = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'condExecFalse')
+def condExecTrue = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue']}, 'condExecTrue')
+transitionIssue(transition+2, {-> condExecFalse[0]}, [0], 'conditionalValidationFalseCommentNotProvided', null, null)
+transitionIssue(transition+2, {-> condExecTrue[0]}, [-3], 'conditionalValidationTrueCommentNotProvided', null, ['Remote error: comment: You must provide a Comment'])
+transitionIssue(transition+2, {-> condExecTrue[0]}, [0], 'conditionalValidationTrueCommentProvided', [comment: 'test'], null)
+
+//check comment omitted to only jira administrators users
+transitionIssue(transition+3, {-> currentIssue[0]}, 0, 'commentOmittedToJiraAdminUsers', null, null)
+
+// check other user comment required
+transitionByUserTask(transition+3, userId, {-> currentIssue[0]}, ['Remote error: comment: You must provide a Comment'], [-3])
 

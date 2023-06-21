@@ -3,59 +3,60 @@
     "field": "versions",
     "conditionalValidation": "no",
     "showAsterisk":"no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "0"
   },
   {
     "field": "fixVersions",
     "conditionalValidation": "no",
     "showAsterisk":"no",
     "errorMessage":"thisIsCustomMsgForFixVersionFieldsRequired",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "1"
   },
   {
     "field": "assignee",
     "conditionalValidation": "no",
     "showAsterisk":"no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "2"
   },
   {
     "field": "components",
     "conditionalValidation": "no",
     "showAsterisk":"no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "3"
   },
   {
     "field": "labels",
     "conditionalValidation": "no",
     "showAsterisk":"no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "4"
   },
   {
     "field": "versions",
     "conditionalValidation": "yes",
     "conditionalValidationScript": "issue.get('priority')?.name == 'Low'",
     "showAsterisk":"no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "5"
   },
   {
     "field": "fixVersions",
     "conditionalValidation": "yes",
     "conditionalValidationScript": "issue.get('issuelinks')",
     "showAsterisk":"no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "6"
   },
   {
     "field": "assignee",
     "conditionalValidation": "yes",
-    "conditionalValidationScript": "issue.get('issuetype')?.name == 'Task'",
+    "conditionalValidationScript": "issue.get('issuetype')?.name == 'Story'",
     "showAsterisk":"no",
-    "correlationId": ""
-  },
-  {
-    "field": "components",
-    "conditionalValidation": "yes",
-    "conditionalValidationScript": "!!issue.get('description')",
-    "showAsterisk":"no",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "7"
   }
 ]

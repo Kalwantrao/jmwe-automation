@@ -7,7 +7,7 @@
     "number": "0"
    },
    {
-    "issue_statuses": "In Progress",
+    "issue_statuses": "To Do",
     "errorMessage": "parentIssueMustBeInSelectedStatus",
     "conditionalValidation": "no",
     "correlationId": "",

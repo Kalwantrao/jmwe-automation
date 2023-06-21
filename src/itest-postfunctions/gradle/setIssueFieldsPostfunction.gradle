@@ -2,15 +2,13 @@ import groovy.json.JsonSlurper
 import java.nio.file.Paths
 
 buildscript {
-    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
-    dependencies {
-        classpath 'org.gint:gint-atlassian:' + gintVersion
-    }
     repositories {
-        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
-        mavenLocal()
-        mavenCentral()
-        maven { url 'https://plugins.gradle.org/m2/' }
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
     }
 }
 
@@ -24,6 +22,7 @@ def transition = 'setIssueFields'
 def workflow = project
 def screen = project
 def user = info.user
+def userId = 'jmwe_qa'
 def userqa1 = project.toLowerCase()+'qa1'
 gint.xmlReport =	true	//xml report generates in projects root directory
 gint.verbose =	true
@@ -38,27 +37,27 @@ def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud a
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
 // check current issue
 def currentIssue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createCurrentIssue')
-transitionIssue(transition+0, {-> currentIssue[0]}, 0, 'addFieldCurrentIssue')
+transitionIssue(transition+0, {-> currentIssue[0]}, 0, 'addFieldCurrentIssue', null, null)
 getIssueInformation({-> currentIssue[0]}, "Labels  . . . . . . . . . . . : setLabel", 'addFieldCurrentIssue')
 
 // check the subtask of the parent issue
 def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue')
 def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]}]}, 'createSubtask')
-transitionIssue(transition+1, {-> parent[0]}, 0, 'addFieldToSubtask')
+transitionIssue(transition+1, {-> parent[0]}, 0, 'addFieldToSubtask', null, null)
 getIssueInformation({-> subTask[0]}, "Labels  . . . . . . . . . . . : setLabel", 'addFieldToSubtask')
 
 // check the parent issue of the current subtask
-transitionIssue(transition+2, {-> subTask[0]}, 0, 'checkParentIssue')
+transitionIssue(transition+2, {-> subTask[0]}, 0, 'checkParentIssue', null, null)
 getIssueInformation({-> parent[0]}, "Labels  . . . . . . . . . . . : setLabel", 'addFieldToParentIssue')
 
 // check the issue belongs to current epic
 def epic = createIssue(project,{[ type: 'epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Epic"]}, 'createEpic')
 def story = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[0]}]}, 'createStory')
-transitionIssue(transition+3, {-> epic[0]}, 0, 'copyToStoryOfEpic')
+transitionIssue(transition+3, {-> epic[0]}, 0, 'copyToStoryOfEpic', null, null)
 getIssueInformation({-> story[0]}, "Labels  . . . . . . . . . . . : setLabel", 'copyToStoryOfEpic')
 
 // check the epic of the current issue
-transitionIssue(transition+4, {-> story[0]}, 0, 'commentAddedToEpicOfStory')
+transitionIssue(transition+4, {-> story[0]}, 0, 'commentAddedToEpicOfStory', null, null)
 getIssueInformation({-> epic[0]}, "Labels  . . . . . . . . . . . : setLabel", 'copyToEpicOfStory')
 
 def linkIssue1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType1')
@@ -66,7 +65,7 @@ def linkIssue2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'l
 linkIssues([issue: { -> linkIssue1[0] }, toIssue: { -> linkIssue2[0] }, link: 'duplicates'], 'linkByAnyLinkType' )
 
 //check the issue link by any link type to current issue
-transitionIssue(transition+5, {-> linkIssue1[0]}, 0, 'checkLinkIssueByAnyLinkType')
+transitionIssue(transition+5, {-> linkIssue1[0]}, 0, 'checkLinkIssueByAnyLinkType', null, null)
 getIssueInformation({-> linkIssue2[0]}, "Labels  . . . . . . . . . . . : setLabel", 'checkLinkIssueByAnyLinkType')
 
 def linkIssue3 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueBlocksType1')
@@ -74,60 +73,60 @@ def linkIssue4 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'l
 linkIssues([issue: { -> linkIssue3[0] }, toIssue: { -> linkIssue4[0] }, link: 'blocks'], 'linkByBlocksLinkType' )
 
 //check the issue link by blocks link type to current issue
-transitionIssue(transition+6, {-> linkIssue3[0]}, 0, 'checkLinkIssueBySpecificLinkType')
+transitionIssue(transition+6, {-> linkIssue3[0]}, 0, 'checkLinkIssueBySpecificLinkType', null, null)
 getIssueInformation({-> linkIssue4[0]}, "Labels  . . . . . . . . . . . : setLabel", 'checkLinkIssueBySpecificLinkType')
 
 // check the issue return by groovy expression[issue.getLinkedIssues()]
-transitionIssue(transition+7, {-> linkIssue3[0]}, 0, 'checkIssueReturnFromGroovyScript')
+transitionIssue(transition+7, {-> linkIssue3[0]}, 0, 'checkIssueReturnFromGroovyScript', null, null)
 getIssueInformation({-> linkIssue4[0]}, "Labels  . . . . . . . . . . . : setLabel", 'checkIssueReturnFromGroovyScript')
 
 //check the issue return by jql search
 def IssueReturnByJqlSearch = createIssue(project, {[type: 'Task', summary: 'JMWE_Task']}, 'jqlSearch' )
-transitionIssue(transition+8, {-> linkIssue4[0]}, 0, 'checkIssueReturnByJqlSearch')
+transitionIssue(transition+8, {-> linkIssue4[0]}, 0, 'checkIssueReturnByJqlSearch', null, null)
 getIssueInformation({-> IssueReturnByJqlSearch[0]}, "Labels  . . . . . . . . . . . : setLabel", 'checkIssueReturnByJqlSearch')
 
 // check conditional execution - issueType = story
 def condExecTrue = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue']}, 'condExecTrue')
-transitionIssue(transition+9, {-> condExecTrue[0]}, 0, 'condExecTrue')
+transitionIssue(transition+9, {-> condExecTrue[0]}, 0, 'condExecTrue', null, null)
 getIssueInformation({-> condExecTrue[0]}, "Labels  . . . . . . . . . . . : setLabel", 'condExecTrue')
 
 def condExecFalse = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'condExecFalse')
-transitionIssue(transition+9, {-> condExecFalse[0]}, 0, 'condExecFalse')
+transitionIssue(transition+9, {-> condExecFalse[0]}, 0, 'condExecFalse', null, null)
 getIssueInformation({-> condExecFalse[0]}, "Labels  . . . . . . . . . . . : ", 'condExecFalse')
 
 //check copyOnlyIfNotSet
 def fieldSet = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: 'component1', labels: 'test_label']}, 'WhenFieldSet')
-transitionIssue(transition+10, {-> fieldSet[0]}, 0, 'WhenFieldSet')
+transitionIssue(transition+10, {-> fieldSet[0]}, 0, 'WhenFieldSet', null, null)
 getIssueInformation({-> fieldSet[0]}, "Labels  . . . . . . . . . . . : test_label", 'WhenFieldSet')
 
 def fieldNotSet = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'WhenFieldNotSet')
-transitionIssue(transition+10, {-> fieldNotSet[0]}, 0, 'WhenFieldNotSet')
+transitionIssue(transition+10, {-> fieldNotSet[0]}, 0, 'WhenFieldNotSet', null, null)
 getIssueInformation({-> fieldNotSet[0]}, "Labels  . . . . . . . . . . . : setLabel", 'WhenFieldNotSet')
 
 // check ignoreEmptyValue
 def ignoreEmptyValue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'testLabel']}, 'ignoreEmptyValue')
-transitionIssue(transition+11, {-> ignoreEmptyValue[0]}, 0, 'ignoreEmptyValue')
+transitionIssue(transition+11, {-> ignoreEmptyValue[0]}, 0, 'ignoreEmptyValue', null, null)
 getIssueInformation({-> ignoreEmptyValue[0]}, "Labels  . . . . . . . . . . . : testLabel", 'ignoreEmptyValue')
 
 def notIgnoreEmptyValue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'testLabel']}, 'notIgnoreEmptyValue')
-transitionIssue(transition+12, {-> notIgnoreEmptyValue[0]}, 0, 'notIgnoreEmptyValue')
+transitionIssue(transition+12, {-> notIgnoreEmptyValue[0]}, 0, 'notIgnoreEmptyValue', null, null)
 getIssueInformation({-> notIgnoreEmptyValue[0]}, 'Labels  . . . . . . . . . . . : ', 'notIgnoreEmptyValue')
 
 //createMissingValues
 def createMissingValues = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createMissingValues')
-transitionIssue(transition+13, {-> createMissingValues[0]}, 0, 'createMissingValues')
+transitionIssue(transition+13, {-> createMissingValues[0]}, 0, 'createMissingValues', null, null)
 getIssueInformation({-> createMissingValues[0]}, "Labels  . . . . . . . . . . . : setLabel", 'createMissingValues')
 
 def doNotCreateMissingValues = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'doNotCreateMissingValue']}, 'doNotCreateMissingValues')
-transitionIssue(transition+14, {-> doNotCreateMissingValues[0]}, [0], 'doNotCreateMissingValues')
+transitionIssue(transition+14, {-> doNotCreateMissingValues[0]}, [0], 'doNotCreateMissingValues', null, null)
 getIssueInformation({-> doNotCreateMissingValues[0]}, "Labels  . . . . . . . . . . . : setLabel", 'doNotCreateMissingValues')
 
 // appendValues
 def appendValues = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'testLabel']}, 'appendValues')
-transitionIssue(transition+15, {-> appendValues[0]}, 0, 'appendValues')
+transitionIssue(transition+15, {-> appendValues[0]}, 0, 'appendValues',  null, null)
 getIssueInformation({-> appendValues[0]}, "Labels  . . . . . . . . . . . : setLabel testLabel", 'appendValues')
 
 // doNotAppendValues
 def doNotAppendValues = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'setLabel']}, 'doNotAppendValues')
-transitionIssue(transition+16, {-> doNotAppendValues[0]}, 0, 'doNotAppendValues')
+transitionIssue(transition+16, {-> doNotAppendValues[0]}, 0, 'doNotAppendValues', null, null)
 getIssueInformation({-> doNotAppendValues[0]}, "Labels  . . . . . . . . . . . : ", 'doNotAppendValues')

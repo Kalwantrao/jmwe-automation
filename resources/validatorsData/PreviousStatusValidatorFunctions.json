@@ -30,7 +30,7 @@
    {
      "status": "In Progress",
      "mostRecentOnly": "yes",
-     "errorMessage": "",
+     "errorMessage": "previousStatusMostRecentStatusMustBeInProgress",
      "conditionalValidation": "no",
      "correlationId": "",
      "number": "4"

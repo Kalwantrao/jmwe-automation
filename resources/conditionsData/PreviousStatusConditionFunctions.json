@@ -1,0 +1,37 @@
+[
+  {
+    "issue_statuses": "10000",
+    "correlationId": "",
+    "number": "0"
+  },
+  {
+    "issue_statuses": "10000",
+    "not": "yes",
+    "correlationId": "",
+    "number": "1"
+  },
+  {
+  "issue_statuses": "10000",
+  "mostRecentOnly": "yes",
+  "correlationId": "",
+  "number": "2"
+  },
+  {
+    "issue_statuses": "10000",
+    "includeCurrent": "yes",
+    "correlationId": "",
+    "number": "3"
+  },
+  {
+    "issue_statuses": "3",
+    "ignoreLoopTransitions": "yes",
+    "correlationId": "",
+    "number": "4"
+  },
+  {
+    "issue_statuses": "3,10001",
+    "ignoreLoopTransitions": "yes",
+    "correlationId": "",
+    "number": "5"
+  }
+]

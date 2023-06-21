@@ -1,0 +1,370 @@
+[
+    {
+        "fields": [
+        	{
+            "fieldId": "labels",
+            "value": "setLabel",
+            "options": [],
+            "isTemplate": true
+        	}
+        ],
+        "selectedLinkType": "currentIssue:*",
+        "useGroovyCondition": false,
+        "groovyExpression": "",
+        "runAsUser": "",
+        "correlationId": "",
+        "number": "0"
+    },
+    {
+    "fields": [
+    	{
+          "fieldId": "labels",
+          "value": "setLabel",
+    	"options":[],
+    	"isTemplate":true
+    	}
+    ],
+    "selectedLinkType": "outward:10100",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "1"
+    },
+    {
+    "fields": [
+    	{
+        "fieldId": "labels",
+        "value": "setLabel",
+    	"options":[],
+    	"isTemplate":true
+    	}
+    ],
+    "selectedLinkType": "inward:10100",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "2"
+    },
+    {
+    "fields": [
+    	{
+          "fieldId": "labels",
+          "value": "setLabel",
+    	"options":[],
+    	"isTemplate":true
+    	}
+    ],
+    "selectedLinkType": "outward:10200",
+    "useGroovyCondition": "false",
+    "runAsUser": "",
+    "groovyExpression": "",
+    "correlationId": "",
+    "number": "3"
+    },
+    {
+    "fields": [
+    	{
+        "fieldId": "labels",
+        "value": "setLabel",
+    	"options":[],
+    	"isTemplate":true
+    	}
+    ],
+    "selectedLinkType": "inward:10200",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "4"
+    },
+    {
+    "fields": [
+      {
+        "fieldId": "labels",
+        "value": "setLabel",
+    	"options":[],
+    	"isTemplate":true
+    	}
+    ],
+    "selectedLinkType": "*:*",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "5"
+    },
+    {
+    "fields": [
+    	{
+    	"fieldId":"labels",
+    	"value":"setLabel",
+    	"options":[],
+    	"isTemplate":true
+    	}
+    ],
+    "selectedLinkType": "outward:10000",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "6"
+    },
+    {
+    "fields": [
+    	{
+        "fieldId": "labels",
+        "value": "setLabel",
+    	"options":[],
+    	"isTemplate":true
+    	}
+    ],
+    "selectedLinkType": "groovy:issue.getLinkedIssues()",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "7"
+    },
+    {
+    "fields": [
+    	{
+        "fieldId": "labels",
+        "value": "setLabel",
+    	"options":[],
+    	"isTemplate":true
+    	}
+    ],
+    "selectedLinkType": "jql:issueType = Task and summary ~ JMWE_Task",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "8"
+    },
+    {
+    "fields": [
+    	{
+        "fieldId": "labels",
+        "value": "setLabel",
+    	"options":[],
+    	"isTemplate":true
+    	}
+    ],
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "yes",
+    "groovyExpression": "issue.get('issuetype')?.name == 'Story'",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "9"
+    },
+    {
+    "fields": [
+    	{
+    	"fieldId":"labels",
+    	"value":"setLabel",
+    	"options":["copyOnlyIfNotSet"],
+    	"isTemplate":true
+    	}
+    ],
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "10"
+    },
+    {
+    "fields": [
+    	{
+        "fieldId": "labels",
+        "value": "",
+    	"options":["ignoreEmptyValue"],
+    	"isTemplate":true
+    	}
+    ],
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "11"
+    },
+  {
+    "fields": [
+      {
+        "fieldId": "labels",
+        "value": "",
+        "options":[],
+        "isTemplate":true
+      }
+    ],
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "12"
+  },
+    {
+    "fields": [
+    	{
+    	"fieldId":"labels",
+    	"value":"setLabel",
+    	"options":["createMissingValues"],
+    	"isTemplate":true
+    	}
+    ],
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "13"
+    },
+  {
+    "fields": [
+      {
+        "fieldId":"labels",
+        "value":"setLabel",
+        "options":["createMissingValues"],
+        "isTemplate":true
+      }
+    ],
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "14"
+  },
+    {
+    "fields": [
+    	{
+    	"fieldId":"labels",
+    	"value":"setLabel",
+    	"options":["appendValues"],
+    	"isTemplate":true
+    	}
+    ],
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "15"
+    },
+    {
+    "fields": [
+    	{
+    	"fieldId":"labels",
+    	"value":"setLabel",
+    	"options":["removeValues"],
+    	"isTemplate":true
+    	}
+    ],
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "16"
+    },
+    {
+    "fields": [
+    	{
+    	"fieldId":"labels",
+    	"value":"setLabels",
+    	"options":["removeValues"],
+    	"isTemplate":true
+    	}
+    ],
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "17"
+    },
+    {
+    "fields": [
+    	{
+    	"fieldId":"labels",
+    	"value":"setLabel",
+    	"options":["copyOnlyIfNotSet","createMissingValues","ignoreEmptyValue","appendValues"],
+    	"isTemplate":true
+    	 }
+    ],
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "18"
+    },
+  {
+    "fields": [
+      {
+        "fieldId":"labels",
+        "value":"setLabel",
+        "options":["copyOnlyIfNotSet","createMissingValues","ignoreEmptyValue","appendValues"],
+        "isTemplate":true
+      }
+    ],
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "19"
+  },
+    {
+    "fields": [
+    	{
+    	"fieldId":"labels",
+    	"value":"setLabel",
+    	"options":["createMissingValues","removeValues"],
+    	"isTemplate":true
+    	 }
+    ],
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "20"
+    },
+    {
+    "fields": [
+    	{
+    	"fieldId":"labels",
+    	"value":"setLabels",
+    	"options":["copyOnlyIfNotSet","createMissingValues"],
+    	"isTemplate":true
+    	 }
+    ],
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "21"
+    },
+  {
+    "fields": [
+      {
+        "fieldId":"labels",
+        "value":"setLabels",
+        "options":[],
+        "isTemplate":true
+      }
+    ],
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "",
+    "groovyExpression": "",
+    "runAsUser": "jmwe_qa",
+    "correlationId": "",
+    "number": "22"
+  }
+]

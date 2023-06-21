@@ -2,16 +2,14 @@ import groovy.json.JsonSlurper
 import java.nio.file.Paths
 
 buildscript {
-    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
-    dependencies {
-        classpath 'org.gint:gint-atlassian:' + gintVersion
-    }
-    repositories {
-        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
-        mavenLocal()
-        mavenCentral()
-        maven { url 'https://plugins.gradle.org/m2/' }
-    }
+	repositories {
+		maven {
+			url "https://plugins.gradle.org/m2/"
+		}
+	}
+	dependencies {
+		classpath "org.gint:gint-atlassian:3.8.4"
+	}
 }
 
 apply plugin: 'org.gint.atlassian'
@@ -39,6 +37,29 @@ def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud a
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
 
+// check the subtask of the parent issue
+def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue')
+def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]}, labels: 'test_label']}, 'createSubtask')
+transitionIssue(transition+0, {-> subTask[0]}, [-3], 'transitionSubtaskWhenParentStatuNotInSelectedStatus', null, ["Remote error: Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [In Progress]"])
+
+// check when the selected field is empty and parent issue having value
+def parent1 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssueWithSelectedStatus')
+def subTask1 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent1[0]}]}, 'checkSubtaskParentStatus')
+transitionIssue(transition+1, {-> subTask1[0]}, 0, 'checkWhenParentIssueInSelectedStatus', null, null)
+
+// check conditional execution true
+def parent3 = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue']}, 'createParentForConditionalExecutionTrue')
+def subtask3 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent3[0]}, priority: 'Low' ]}, 'createSubtaskForConditionalExecutionTrue')
+transitionIssue(transition+3, {-> subtask3[0]}, [-3], 'transitionToCheckConditionalExecTrue', null, ["Remote error: Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [In Progress]"])
+
+// check conditional execution false
+def parent4 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentForConditionalExecutionFalse')
+def subtask4 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent4[0]}, priority: 'Medium', labels: 'conditionalExecution']}, 'createSubtaskForConditionalExecutionFalse')
+transitionIssue(transition+3, {-> subtask4[0]}, 0, 'transitionToCheckConditionalExecFalse', null, null)
+
+
+
+/*
 def summaries = [
 		'parentIssueMustBeSelectedStatus',
 		'parentIssueMustBeInSelectedStatus',
@@ -112,3 +133,5 @@ def issueList2 = [
 		]
 ])
 }
+
+ */

@@ -1,0 +1,101 @@
+[
+    {
+    "fields": "versions",
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "0"
+    },
+    {
+    "fields": "components",
+    "selectedLinkType": "inward:10100",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "1"
+    },
+    {
+    "fields": "labels",
+    "selectedLinkType": "outward:10100",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "2"
+    },
+    {
+    "fields": "fixVersions",
+    "selectedLinkType": "outward:10200",
+    "useGroovyCondition": "false",
+    "runAsUser": "",
+    "groovyExpression": "",
+    "correlationId": "",
+    "number": "3"
+    },
+    {
+    "fields": "assignee",
+    "selectedLinkType": "inward:10200",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "4"
+    },
+    {
+    "fields": "description",
+    "selectedLinkType": "*:*",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "5"
+    },
+    {
+    "fields": "versions",
+    "selectedLinkType": "outward:10000",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "6"
+    },
+    {
+    "fields": "components",
+    "selectedLinkType": "groovy:issue.getLinkedIssues()",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "7"
+    },
+    {
+    "fields": "labels",
+    "selectedLinkType": "jql:project = ZCLEARFIELDSPOSTFUNCTION and assignee = zclearfieldspostfunctionqa1",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "8"
+    },
+    {
+    "fields": "labels",
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "yes",
+    "groovyExpression": "issue.get('issuetype')?.name == 'Story'",
+    "runAsUser": "",
+    "correlationId": "",
+    "number": "9"
+    },
+    {
+    "fields": "labels",
+    "selectedLinkType": "currentIssue:*",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "jmwe_qa",
+    "correlationId": "",
+    "number": "10"
+    }
+]

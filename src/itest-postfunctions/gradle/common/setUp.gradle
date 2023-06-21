@@ -39,6 +39,6 @@ createProject(project, template, workflowScheme, issueTypeScreenScheme, permissi
 createVersions(project, 5)
 createComponents(project, 'component', 5)
 createScreen(screen, screenScheme, fieldList, issueTypeScreenScheme)
-//createUsers(userId, userId + '@gmail.com', projectRole, project, userGroup)
+createUsers(userId, userId + '@gmail.com', projectRole, project, userGroup)
 
 

@@ -4,25 +4,29 @@
     "showAsterisk": "no",
     "conditionalValidation": "no",
     "groups": "",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "0"
   },
   {
     "errorMessage": "",
     "groups": "",
     "conditionalValidation": "no",
     "conditionalValidationScript": "",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "1"
   },
   {
     "errorMessage": "",
     "groups": "",
     "conditionalValidation": "yes",
-    "conditionalValidationScript": "issue.get('issuetype')?.name == 'Bug'",
-    "correlationId": ""
+    "conditionalValidationScript": "issue.get('issuetype')?.name == 'Story'",
+    "correlationId": "",
+    "number": "2"
   },
   {
     "errorMessage": "CommentRequired",
     "groups": "jira-administrators",
-    "correlationId": ""
+    "correlationId": "",
+    "number": "3"
   }
 ]
