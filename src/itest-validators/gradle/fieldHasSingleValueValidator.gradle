@@ -13,10 +13,11 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: 'common/setUp.gradle'
+//apply from: 'common/setUp.gradle'
+apply from: gint.resourceDirectory +'/src/common/testValidators.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
 def workflow = project
 def screen = project
 gint.xmlReport =	true	//xml report generates in projects root directory
@@ -33,23 +34,23 @@ createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'va
 
 // check affectsVersions
 def singleValue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: 'component1']}, 'singleValue')
-transitionIssue(transition+0, {-> singleValue[0]}, [0], 'whenComponentsHasSingleValues', null, null)
+transitionIssue(transition+0, {-> singleValue[0]}, 0, 'whenComponentsHasSingleValues', null, null)
 
 def multipleValues = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: 'component1']}, 'multipleValues')
 updateIssues({-> multipleValues[0]}, [components: 'component2', append: null], 'setValue1')
-transitionIssue(transition+0, {-> multipleValues[0]}, [-3], 'whenComponentsHasMultipleValues', null, ['Remote error: components: Component/s should not have more than one value.'])
+transitionIssue(transition+0, {-> multipleValues[0]}, -3, 'whenComponentsHasMultipleValues', null, ['Remote error: components: Component/s should not have more than one value.'])
 
 // check excluding subtasks
 def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', components: 'component1']}, 'createParentIssue')
 def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]}, components: 'component1' ]}, 'createSubtask')
 updateIssues({-> parent[0]}, [components: 'component2', append: null], 'setValue2')
-transitionIssue(transition+5, {-> parent[0]}, [0], 'whenExcludingSubtasksValues', null, null)
+transitionIssue(transition+5, {-> parent[0]}, 0, 'whenExcludingSubtasksValues', null, null)
 
 
 // check conditional execution - issueType = story
 def condExecTrue = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', components: 'component1']}, 'condExecTrue')
 updateIssues({-> condExecTrue[0]}, [components: 'component2', append: null], 'setValue3')
-transitionIssue(transition+6, {-> condExecTrue[0]}, [-3], 'condExecTrueFieldHasMutipleValues', null, ['Remote error: components: Component/s should not have more than one value.'])
+transitionIssue(transition+6, {-> condExecTrue[0]}, -3, 'condExecTrueFieldHasMutipleValues', null, ['Remote error: components: Component/s should not have more than one value.'])
 
 def condExecFalse = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: 'component1']}, 'condExecFalse')
 updateIssues({-> condExecFalse[0]}, [components: 'component2', append: null], 'setValue4')
@@ -58,177 +59,3 @@ transitionIssue(transition+6, {-> condExecFalse[0]}, 0, 'condExeeFalseFieldHasMu
 
 
 
-
-
-
-
-
-
-/*
-def summaries = [
-		'fieldVersionsShouldHaveSingleValue',
-		'fieldFixVersionsShouldHaveSingleValue',
-		'FieldComponentsShouldHaveSingleValue',
-		'excludingSubtaskValuesVersions',
-		'excludingSubtaskValuesFixVersions',
-		'excludingSubtaskValuesComponents'
-]
-def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it, assignee: userqa1, description: 'Test_description_Automation', affectsVersions: '1', fixVersions: '1', component: 'component1'] }, 'createIssue1' )
-def subTask = createIssue(project, [ 3, 4, 5 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }, affectsVersions: '1', fixVersions: '1', component: 'component1']}, 'createIssue2' )
-def story = createIssue(project, summaries.collect{[type: 'Story', summary: it] }, 'createIssue3')
-linkIssues({[ issue: { -> bug[0] }, toIssue: { -> bug[1] }, link: 'blocks'] })
-
-// Transition issues when fields having single values excluding the values in subtask
-(0..2).each{ number ->
-    gint.taskHelper.add('when fields having sigle values', [
-        [action: 'transitionIssue', ext: 'fieldsHavingSingleValue'+number,
-            dependsOn: true,
-            expected: [ 0 ],
-            parameters: [
-                issue: {-> bug[number]  },
-                transition: transition + number,
-                resolution: "Done",
-				],
-           data:[
-            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
-            ],
-        ],
-    ])
-}
-(1..2).each{ number ->
-def affectsVersions = number
-def fixVersions = number
-def component = 'component'+ number
-def issueStory0 = {-> story[0]}
-def issueStory1 = {-> story[1]}
-def issueStory2 = {-> story[2]}
-def issueBug0 = {-> bug[0]}
-def issueBug1 = {-> bug[1]}
-def issueBug2 = {-> bug[2]}
-def issueBug3 = {-> bug[3]}
-def issueBug4 = {-> bug[4]}
-def issueBug5 = {-> bug[5]}
-
-    gint.taskHelper.add('updateIssuesWithFieldValue', [
-        [action: 'run', ext: 'addFieldValuesToCheckErrors'+number,
-            dependsOn: true,
-            parameters: [
-            	input:[
-            		/-a updateIssue  --issue ${issueBug0} --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
-            		/-a updateIssue  --issue ${issueBug1} --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
-            		/-a updateIssue  --issue ${issueBug2} --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
-            		/-a updateIssue  --issue ${issueBug3} --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
-            		/-a updateIssue  --issue ${issueBug4} --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
-            		/-a updateIssue  --issue ${issueBug5} --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
-            		/-a updateIssue  --issue ${issueStory0}  --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
-            		/-a updateIssue  --issue ${issueStory1}  --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
-            		/-a updateIssue  --issue ${issueStory2}  --affectsVersions ${affectsVersions} --fixVersions ${fixVersions} --components ${component} --append /,
-            		 ],
-				],
-           data:[
-            	~/Issue ${project}-\d+ updated./
-            ],
-        ],
-    ])
-}
-// transition the issue after fields having multiple values to validate
-[
-		'Remote error: versions: Affects Version/s should not have more than one value.',
-		'Remote error: fixVersions: Fix Version/s should not have more than one value.',
-		'Remote error: components: Component/s should not have more than one value.'
-].eachWithIndex { data, number ->
-    gint.taskHelper.add('check when fields having multiple values', [
-        [action: 'transitionIssue', ext: 'fieldsHavingMultipleValues'+number,
-            dependsOn: true,
-            expected: [ -3 ],
-            parameters: [
-                issue: {-> bug[number]  },
-                transition: transition + number,
-                resolution: "Done",
-				],
-           data:[],
-        ],
-    ])
-}
-// check excluding values of subtasks
-def issueList3 = [
-		3:{-> bug[0]  },
-		4:{-> bug[1]  },
-		5:{-> bug[2]  },
-]
-def expectedData1 = [
-		3:'Remote error: versions: Affects Version/s should not have more than one value.',
-		4:'Remote error: fixVersions: Fix Version/s should not have more than one value.',
-		5:'Remote error: components: Component/s should not have more than one value.'
-]
-(3..5).each { number ->
-    gint.taskHelper.add('check when fields having multiple values', [
-        [action: 'transitionIssue', ext: 'NotExcludingValuesInSubtask'+number,
-            dependsOn: true,
-            expected: [ -3 ],
-            parameters: [
-                issue: issueList3[ number],
-                transition: transition + number,
-                resolution: "Done",
-				],
-           data:[expectedData1],
-        ],
-    ])
-    gint.taskHelper.add('check when fields having multiple values in subtask', [
-        [action: 'transitionIssue', ext: 'excludingValuesInSubtask'+number,
-            dependsOn: true,
-            expected: [ 0 ],
-            parameters: [
-                issue: {-> bug[number]  },
-                transition: transition + number,
-                resolution: "Done"
-				],
-           data:[
-            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
-            ],
-        ],
-    ])
-}
-// Check Conditional validation
-def issueList1 = [
-		6:{-> bug[0]  },
-		7:{-> bug[1]  },
-		8:{-> bug[2]  },
-]
-def issueList2 = [
-		6:{-> story[0]  },
-		7:{-> story[1]  },
-		8:{-> story[2]  },
-]
-def expectedData2 = [
-		6:'Remote error: versions: Affects Version/s should not have more than one value.',
-		7:'Remote error: fixVersions: Fix Version/s should not have more than one value.',
-		8:'Remote error: components: Component/s should not have more than one value.'
-]
-(6..8).each { number ->
-    gint.taskHelper.add('Check Conditional validation', [
-        [action: 'transitionIssue', ext: 'whenGroovyConditionTrueForIssue'+number,
-            dependsOn: true,
-            expected: [ -3 ],
-            parameters: [
-                issue: issueList1[number],
-                transition: transition + number,
-                resolution: "Done",
-				],
-           data:[ expectedData2 ],
-        ],
-        [action: 'transitionIssue', ext: 'whenGroovyConditionFalseForIssue'+number,
-            dependsOn: true,
-            expected: [ 0 ],
-            parameters: [
-                issue: issueList2[number],
-                transition: transition + number,
-                resolution: "Done",
-				],
-           data:[
-            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
-            ],
-        ],
-    ])
-}
- */

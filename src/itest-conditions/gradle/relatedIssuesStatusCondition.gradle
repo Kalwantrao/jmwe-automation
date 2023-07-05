@@ -1,152 +1,239 @@
-//To run  this using gradle open command line in project's root directory and run below command on windows
-//gradlew -b src/itest-conditions/gradle/relatedIssuesStatusCondition.gradle -Pcli="acli jira" -Dclean
+import groovy.json.JsonSlurper
+import java.nio.file.Paths
 
 buildscript {
-    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
-    dependencies {
-        classpath 'org.gint:gint-atlassian:' + gintVersion
-    }
     repositories {
-        flatDir { dirs 'libs' }
-        mavenLocal()
-        mavenCentral()
-        maven { url 'https://plugins.gradle.org/m2/' }
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
     }
 }
-
 apply plugin: 'org.gint.atlassian'
-apply from: gint.directories.resource + '/common/tearDown.gradle'
-apply from: 'configConditions/addRelatedIssuesStatusCondition.gradle'
-apply from: gint.directories.resource + '/common/setUp.gradle'
+apply from: gint.resourceDirectory +'/src/common/testConditions.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def workflow = project
+def screen = project
+
+gint.xmlReport =	true	//xml report generates in projects root directory
+gint.verbose =	true
+def userId = 'jmwe_qa'
 def user = info.user
-def userqa1 = project.toLowerCase()+'qa1'
-def userqa2 = project.toLowerCase()+'qa2'
-def userdev1 = project.toLowerCase()+'dev1'
-def userdev2 = project.toLowerCase()+'dev2'
-
+def jsonSlurper = new JsonSlurper();
+def path = Paths.get(gint.directories.resource + "/resources/conditionsData/RelatesIssuesStatusConditionFunctions${info?.isCloud ? "Cloud" : ""}.json")
+def transitionFunctions = jsonSlurper.parse(path)
+def functionKey = info ?.isCloud ? 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-condition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-condition'	//function key for RelatedIssue condition
 def transition = 'relatedIssuesStatusCondition'
+def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
 
-def saved =	[:]
-def savedIssues = [:]
-gint.xmlReport = true	//xml report generates in projects root directory
-gint.verbose = true
+createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'condition', startStep, workflow, screen, 0)
 
-// Create issues
-(1..8).each { number ->
-def type
-	if(number == 1)
-		type = 'Bug'
-	else if(number == 2)
-		type = 'Bug'
-	else if(number == 3)
-		type = 'Story'
-	else if(number == 4)
-		type = 'Story'
-	else if(number == 5)
-		type = 'Bug'
-	else if(number == 6)
-		type = 'Bug'
-	else if(number == 7)
-		type = 'Bug'
-	else if(number == 8)
-		type = 'Bug'
+// TC_10-Verify Sub-task of the current issue
+//Case1: When not in selected Status
+def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent')
+def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]} ]}, 'subTask')
+transitionIssue(transition+0, {-> parent[0]}, -1, 'subtaskOfCurrentIssueNotInSelectedStatus', null, null)
 
-def summary
-	if (number == 1)
-		summary = 'subtaskOfCurrentIssueMustBeInToDo'
-	else if(number == 2)
-		summary = 'parentIssueOfCurrentSubtaskMustBeInToDo'
-	else if(number == 3)
-		summary = 'storyBelongToCurrentEpicMustBeInToDo'
-	else if(number == 4)
-		summary = 'epicOfCurrentStoryMustBeInToDo'
-	else if(number == 5)
-		summary = 'issueLinkedByAnyLinkTypeMustBeInToDo'
-	else if(number == 6)
-		summary = 'issueLinkByBlocksLinkTypeMustBeInToDo'
-	else if(number == 7)
-		summary = 'issuesReturnByGroovyScriptMustBeInToDo'
-	else if(number == 8)
-		summary = 'issuesReturnByJqlSearchMustBeInToDo'
+//Case2: When in selected Status
+def parent1 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent1')
+def subTask1 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent1[0]} ]}, 'subtask1')
+transitionToStatus({-> subTask1[0]}, "To Do", "In Progress", 'setPreviousStatusOfIssueInSelected1')
+transitionIssue(transition+0, {-> parent1[0]}, 0, 'subtaskOfCurrentIssueInSelectedStatus', null, null)
 
-def parent
-	if(number == 2)
-		parent = ~/${project}-1/
-	else
-		parent = null
+// TC_11-Verify Parent issue of the current sub-task
+//Case1: When not in selected Status
+transitionIssue(transition+1, {-> subTask[0]}, -1, 'parentIssueOfSubtaskNotInSelectedStatus', null, null)
 
-def field
-	if(number == 3)
-		field = "Epic Name"
-	else if(number == 4)
-		field = "Epic Link"
-	else
-		field = null
-def value
-	if(number == 3)
-		value = "Epic Name"
-	else if(number == 4)
-		value = ~/${project}-3/
-	else
-		value = null
+//Case2: When in selected Status
+def parent2 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent2')
+def subTask2 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent2[0]} ]}, 'subtask2')
+transitionToStatus({-> parent2[0]}, "To Do", "In Progress", 'parentIssueOfSubtaskInSelectedStatus')
+transitionIssue(transition+1, {-> subTask2[0]}, 0, 'parentIssueOfSubtaskInSelectedStatus', null, null)
 
-	    gint.taskHelper.add(
-        [action: 'createIssue', ext: number,
-        dependsOn: true,
-        group: 'create',
-        project: project,
-    	field: field,
-        value: value,
-        parameters: [
-        	type: type,
-            summary: summary ,
-            description: 'relatedIssuesStatusCondition' + number,
-        ],
-        stopOnFail: true,
-        finalClosure: { Task task ->
-            saved.issue = gint.searchForIssueKey(task.outData)
-            savedIssues[number] = saved.issue
-            gint.helper.logVarWithFormat('Create Issues to validate the related issues status condition')
-        },
-    ],
-)
-}
-// link the issue to any link type and blocks type
-gint.taskHelper.add(
-	[action: 'run',ext:'linkIssues',
-	dependsOn: true,
-		parameters:[
-			input:[
-				/-a linkIssue --issue ${project}-5 --toIssue ${project}-6 --link "Relates"/,
-				/-a linkIssue --issue ${project}-6 --toIssue ${project}-5 --link "Blocks"/,
-				 ],
-			],
-	],
-)
+// TC_12- Verify Issues that belong to the current Epic
+//Case1: When not in selected Status
+def epic = createIssue(project,{[ type: 'epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Epic"]}, 'epic')
+def story = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[0]} ]}, 'story')
+transitionIssue(transition+2, {-> epic[0]}, -1, 'issueBelongsToCurrentEpicNotInSelectedStatus', null, null)
 
-(1..8).each{ number ->
-def data = ~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
-def expected = [ 0 ]
+// Case2: When in selected Status
+def epic1 = createIssue(project,{[ type: 'epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Epic"]}, 'epic1')
+def story1 = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic1[0]} ]}, 'story1')
+transitionToStatus({-> story1[0]}, "To Do", "In Progress", 'issueBelongsToCurrentEpicInSelectedStatus')
+transitionIssue(transition+2, {-> epic1[0]}, 0, 'issueBelongsToCurrentEpicInSelectedStatus', null, null)
 
-    gint.taskHelper.add('transitionIssueAll', [
-        [action: 'transitionIssue', ext: 'requireRelatedIssuesInGivenStatus'+number,
-            dependsOn: true,
-            expected: expected,
-            parameters: [
-                issue: {-> savedIssues[number]  },
-                transition: transition + number,
-				],
-			data:[ data ],
-            finalClosure:{ Task task ->
-            	gint.helper.logVarWithFormat('Should not throw error as related issues Status should be  in To Do ')
+// TC_13- Verify Epic of the current issue
+//Case1: When not in selectes Status
+transitionIssue(transition+3, {-> story[0]}, -1, 'epicOfTheCurrentIssueNotInSelectedStatus', null, null)
 
-            },
+// Case2: When in selected Status
+def epic2 = createIssue(project,{[ type: 'epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Epic"]}, 'epic2')
+def story2 = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic2[0]} ]}, 'story2')
+transitionToStatus({-> epic2[0]}, "To Do", "In Progress", 'epicOfTheCurrentIssueInSelectedStatus')
+transitionIssue(transition+3, {-> story2[0]}, 0, 'epicOfTheCurrentIssueInSelectedStatus', null, null)
 
-        ],
-    ])
-}
+// TC_14- Verify Issue link to the current issue through any link type
+// Case1: When not in selected status
+def linkIssue1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssue1')
+def linkIssue2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssue2')
+linkIssues([issue: { -> linkIssue1[0] }, toIssue: { -> linkIssue2[0] }, link: 'duplicates'], 'AnyLinkType1' )
+transitionIssue(transition+4, {-> linkIssue1[0]}, -1, 'issuesLinkedByAnyLinkNotInSelectedStatus', null, null)
 
+// Case2: When in selected status
+def linkIssue3 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssue3')
+def linkIssue4 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssue4')
+linkIssues([issue: { -> linkIssue3[0] }, toIssue: { -> linkIssue4[0] }, link: 'relates to'], 'AnyLinkType2' )
+transitionToStatus({-> linkIssue3[0]}, "To Do", "In Progress", 'linkIssue3')
+transitionIssue(transition+4, {-> linkIssue4[0]}, 0, 'issuesLinkedByAnyLinkInSelectedStatus', null, null)
 
+//TC_15- Verify Issue link to the current issue through following link type
+// Case1: When not in selected status
+def linkIssue5 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssue5')
+def linkIssue6 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssue6')
+linkIssues([issue: { -> linkIssue5[0] }, toIssue: { -> linkIssue6[0] }, link: 'blocks'], 'linkByBlocksLinkType1' )
+transitionIssue(transition+5, {-> linkIssue5[0]}, -1, 'issuesLinkedByBlocksLinkNotInSelectedStatus', null, null)
+
+// Case1: When in selected status
+//check the issue return by groovy expression[issue.getLinkedIssues()] should be assigned to current user
+def linkIssue7 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssue7')
+def linkIssue8 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssue8')
+linkIssues([issue: { -> linkIssue7[0] }, toIssue: { -> linkIssue8[0] }, link: 'blocks'], 'linkByBlocksLinkType2' )
+transitionToStatus({-> linkIssue8[0]}, "To Do", "In Progress", 'linkIssuesByBlocksLink')
+transitionIssue(transition+5, {-> linkIssue7[0]}, 0, 'issuesLinkedByBlocksLinkInSelectedStatus', null, null)
+
+// TC_18- Verify Issues returned by a Groovy script
+// Case1: When not in selected status
+def linkIssue9 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssue9')
+def linkIssue10 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssue10')
+linkIssues([issue: { -> linkIssue9[0] }, toIssue: { -> linkIssue10[0] }, link: 'duplicates'], 'issueReturnedByGroovyScript1' )
+
+transitionIssue(transition+6, {-> linkIssue9[0]}, -1, 'issueReturnedByGroovyScriptNotInSelectedStatus', null, null)
+// Case2: When in selected status
+def linkIssue11 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssue11')
+def linkIssue12 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssue12')
+linkIssues([issue: { -> linkIssue11[0] }, toIssue: { -> linkIssue12[0] }, link: 'relates to'], 'issueReturnedByGroovyScript2' )
+transitionToStatus({-> linkIssue12[0]}, "To Do", "In Progress", 'issueReturnedByGroovyScript')
+transitionIssue(transition+6, {-> linkIssue11[0]}, 0, 'issueReturnedByGroovyScriptInSelectedStatus', null, null)
+
+//TC_19- Verify Issues returned by a JQL search
+def IssueReturnByJqlSearch = createIssue(project, {[type: 'Task', summary: 'jmwe_Task']}, 'jqlSearch' )
+//Case1: when not in selected status
+transitionIssue(transition+7, {-> IssueReturnByJqlSearch[0]}, -1, 'issuesReturnedbyJqlSearchNotInSelectedStatus', null, null)
+//Case2: when in selected status
+transitionIssue(transition+8, {-> IssueReturnByJqlSearch[0]}, 0, 'issuesReturnedbyJqlSearchInSelectedStatus', null, null)
+
+/*
+// TC_22 - Verify the Issue Type dropdwn
+// TC_22-Verify Parent issue if it is story type of the current sub-task
+//Case1: When not in selected Status
+def parent3 = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue']}, 'parent3')
+def subTask3 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent3[0]} ]}, 'subtask3')
+//transitionIssue(transition+9, {-> subTask3[0]}, 0, 'checkIfIssueTypeIsNotAsSelected1', null, null)
+
+//Case2: When in selected Status
+def parent4 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent4')
+def subTask4 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent4[0]} ]}, 'subtask4')
+//transitionIssue(transition+9, {-> subTask4[0]}, -1, 'checkIfIssueTypeIsAsSelected1', null, null)
+
+// TC_22- Verify Issues that belong to the current Epic if it of Task type
+//Case1: When not in selected Status
+def epic3 = createIssue(project,{[ type: 'epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Epic"]}, 'epic3')
+def story3 = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic3[0]} ]}, 'story3')
+transitionIssue(transition+10, {-> epic3[0]}, 0, 'checkIfIssueTypeIsNotAsSelected2', null, null)
+
+// Case2: When in selected Status
+def epic4 = createIssue(project,{[ type: 'epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Epic"]}, 'epic4')
+def Task = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic4[0]} ]}, 'Task')
+transitionIssue(transition+10, {-> epic4[0]}, -3, 'checkIfIssueTypeIsAsSelected2', null, null)
+*/
+// TC_25-Verify All Sub-task of the current issue
+//Case1: When all the subtaks not in selected Status
+def parent5 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent5')
+def subTask5A = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent5[0]} ]}, 'subTask5A')
+def subTask5B = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent5[0]} ]}, 'subTask5B')
+transitionIssue(transition+0, {-> parent5[0]}, -1, 'TC_25-When all the subtaks not in selected Status', null, null)
+
+//Case2: When one subtask in selected Status
+def parent6 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent6')
+def subTask6A = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent6[0]} ]}, 'subtask6A')
+def subTask6B = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent6[0]} ]}, 'subtask6B')
+transitionToStatus({-> subTask6A[0]}, "To Do", "In Progress", 'TC_25-setOneSubtaskStatusInSelected')
+transitionIssue(transition+0, {-> parent6[0]}, -1, 'TC_25-When one subtask in selected Status', null, null)
+
+//Case3: When all subtask in selected Status
+def parent7 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent7')
+def subTask7A = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent7[0]} ]}, 'subTask7A')
+def subTask7B = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent7[0]} ]}, 'subTask7B')
+transitionToStatus({-> subTask7A[0]}, "To Do", "In Progress", 'TC_25-setAllSubtaskStatusInSelected1')
+transitionToStatus({-> subTask7B[0]}, "To Do", "In Progress", 'TC_25-setAllSubtaskStatusInSelected2')
+transitionIssue(transition+0, {-> parent7[0]}, 0, 'TC_25-When all subtask in selected Status', null, null)
+
+//TC_26- Verify "At least one issue must be in one of the selected statuses below" Mode
+//Case1: When all subtask not in selected Status
+def parent8 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent8')
+def subTask8A = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent8[0]} ]}, 'subTask8A')
+def subTask8B = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent8[0]} ]}, 'subTask8B')
+transitionIssue(transition+9, {-> parent8[0]}, -1, 'TC_26-When all subtasks not in selected Status', null, null)
+
+//Case2: When one subtask in selected Status
+def parent9 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent9')
+def subTask9A = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent9[0]} ]}, 'subTask9A')
+def subTask9B = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent9[0]} ]}, 'subTask9B')
+transitionToStatus({-> subTask9A[0]}, "To Do", "In Progress", 'TC_26-setOneSubtaskStatusInSelected')
+transitionIssue(transition+9, {-> parent9[0]}, 0, 'TC_26-When one subtask in selected Status', null, null)
+
+//Case3: When all subtask in selected Status
+def parent10 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent10')
+def subTask10A = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent10[0]} ]}, 'subTask10A')
+def subTask10B = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent10[0]} ]}, 'subTask10B')
+transitionToStatus({-> subTask10A[0]}, "To Do", "In Progress", 'TC_26-setAllSubtaskStatusInSelected1')
+transitionToStatus({-> subTask10B[0]}, "To Do", "In Progress", 'TC_26-setAllSubtaskStatusInSelected2')
+transitionIssue(transition+9, {-> parent10[0]}, 0, 'TC_26-When all subtask in selected Status', null, null)
+
+// TC_27- Verify "No issue must be in one of the selected statuses below" Mode
+//Case1: When all subtask not in selected Status
+def parent11 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent11')
+def subTask11A = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent11[0]} ]}, 'subTask11A')
+def subTask11B = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent11[0]} ]}, 'subTask11B')
+transitionIssue(transition+14, {-> parent11[0]}, 0, 'TC_27-When all subtasks not in selected Status', null, null)
+
+//Case2: When one subtask in selected Status
+def parent12 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent12')
+def subTask12A = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent12[0]} ]}, 'subTask12A')
+def subTask12B = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent12[0]} ]}, 'subTask12B')
+transitionToStatus({-> subTask12A[0]}, "To Do", "In Progress", 'TC_27-setOneSubtaskStatusInSelected')
+transitionIssue(transition+14, {-> parent12[0]}, -1, 'TC_27-When one subtask in selected Status', null, null)
+
+//Case3: When all subtask in selected Status
+def parent13 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent13')
+def subTask13A = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent13[0]} ]}, 'subTask13A')
+def subTask13B = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent13[0]} ]}, 'subTask13B')
+transitionToStatus({-> subTask13A[0]}, "To Do", "In Progress", 'TC_27-setAllSubtaskStatusInSelected1')
+transitionToStatus({-> subTask13B[0]}, "To Do", "In Progress", 'TC_27-setAllSubtaskStatusInSelected2')
+transitionIssue(transition+14, {-> parent13[0]}, -1, 'TC_27-When all subtask in selected Status', null, null)
+
+//TC_28- Verify "At least one issue must not be in one of the selected statuses below" Mode
+//Case1: When all subtask not in selected Status
+def parent14 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent14')
+def subTask14A = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent14[0]} ]}, 'subTask14A')
+def subTask14B = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent14[0]} ]}, 'subTask14B')
+transitionIssue(transition+22, {-> parent14[0]}, 0, 'TC_28-When all subtasks not in selected Status', null, null)
+
+//Case2: When one subtask in selected Status
+def parent15 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent15')
+def subTask15A = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent15[0]} ]}, 'subTask15A')
+def subTask15B = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent15[0]} ]}, 'subTask15B')
+transitionToStatus({-> subTask15A[0]}, "To Do", "In Progress", 'TC_28-setOneSubtaskStatusInSelected')
+transitionIssue(transition+22, {-> parent15[0]}, 0, 'TC_28-When one subtask in selected Status', null, null)
+
+//Case3: When all subtask in selected Status
+def parent16 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent16')
+def subTask16A = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent16[0]} ]}, 'subTask16A')
+def subTask16B = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent16[0]} ]}, 'subTask16B')
+transitionToStatus({-> subTask16A[0]}, "To Do", "In Progress", 'TC_28-setAllSubtaskStatusInSelected1')
+transitionToStatus({-> subTask16B[0]}, "To Do", "In Progress", 'TC_28-setAllSubtaskStatusInSelected2')
+transitionIssue(transition+22, {-> parent16[0]}, -1, 'TC_28-When all subtask in selected Status', null, null)

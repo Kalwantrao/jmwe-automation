@@ -1,96 +1,75 @@
-buildscript {
-    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
-    dependencies {
-        classpath 'org.gint:gint-atlassian:' + gintVersion
-    }
-    repositories {
-        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
-        mavenLocal()
-        mavenCentral()
-        maven { url 'https://plugins.gradle.org/m2/' }
-    }
-}
+import groovy.json.JsonSlurper
+import java.nio.file.Paths
 
+buildscript {
+	repositories {
+		maven {
+			url "https://plugins.gradle.org/m2/"
+		}
+	}
+	dependencies {
+		classpath "org.gint:gint-atlassian:3.8.4"
+	}
+}
 apply plugin: 'org.gint.atlassian'
-apply from: gint.directories.resource + '/common/tearDown.gradle'
-apply from:'configConditions/addUserCondition.gradle'
-apply from: gint.directories.resource + '/common/setUp.gradle'
+apply from: gint.resourceDirectory +'/src/common/testConditions.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def user = info.user
-def userqa1 = project.toLowerCase()+'qa1'
-def userqa2 = project.toLowerCase()+'qa2'
-def userdev1 = project.toLowerCase()+'dev1'
-def userdev2 = project.toLowerCase()+'dev2'
-
-def saved =	[:]
-def savedIssues = [:]
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
 def transition = 'userCondition'
+def workflow = project
+def screen = project
+def user = info.user
+def userId = 'jmwe_qa'
+gint.xmlReport =	true	//xml report generates in projects root directory
+gint.verbose =	true
 
-(1..10).each { number ->
-def summary
-	if (number == 1)
-		summary = 'checkCurrentUserIsReporter'
-	if(number == 2)
-		summary = 'checkCurrentUserIsAssignee'
-	if(number == 3)
-		summary = 'checkCurrentUserIsWatcher'
-	if(number == 4)
-		summary = 'checkCurrentUserIsVoter'
-	if(number == 5)
-		summary = 'checkCurrentUserIsNotAssignee'
-	if (number == 6)
-		summary = 'checkUserIsReporterInAdminRole'
-	if(number == 7)
-		summary = 'checkUserIsReporterInAdminGroup'
-	if(number == 8)
-		summary = 'checkUserIsReporterSpecificUser'
-	if(number == 9)
-		summary = 'checkUserIsReporterAndIsInFieldAssignee'
-	if(number == 10)
-		summary = 'checkUserIsReporterAndIsGroovyScriptTrue'
-def reporter
-	reporter = user
+def jsonSlurper = new JsonSlurper();
+def path = Paths.get(gint.directories.resource + "/resources/conditionsData/userConditionFunctions${info?.isCloud ? "Cloud" : ""}.json")
+def transitionFunctions = jsonSlurper.parse(path)
+def functionKey = info ?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__UserCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition'	//function key for current status condition
+def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
 
-    gint.taskHelper.add(
-        action: 'createIssue', ext: number,
-        dependsOn: true,
-        group: 'create',
-        project: project,
-        parameters: [
-            type: 'Bug',
-            summary: summary,
-            assignee: user,
-            description: 'description' + number,
-            reporter: reporter,
-        ],
-        stopOnFail: true,
-        finalClosure: { Task task ->
-            saved.issue = gint.searchForIssueKey(task.outData)
-            savedIssues[number] = saved.issue
-            gint.helper.logVarWithFormat('saved')
-        },
-    )
-}
+createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'condition', startStep, workflow, screen, 0)
 
-(1..10).each { number ->
-def expected
-	if(number == 4)
-		expected = [ -1 ]
-def data
-	if(number == 4)
-		data = ~/Client error: Workflow transition '${transition + number}' is not valid for issue ${project}-\d+./
+// TC_01-check when currrent user is not reporter - criteria fails
+def currentIssue = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', reporter: userId]}, 'currentIssue')
+transitionIssue(transition+0, {-> currentIssue[0]}, -1, 'TC_01- current user not satisfies the criteria', null, null)
 
-    gint.taskHelper.add('transitionIssueAll', [
-        [action: 'transitionIssue', ext: number,
-            dependsOn: true,
-            expected:expected,
-            parameters: [
-                issue: {-> savedIssues[number]  },
-                transition: transition + number,
-            ],
-            data:[ data ]
-        ],
-    ])
-}
+// TC_02-check when currrent user is reporter - condition true
+def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', reporter: user, assignee: user]}, 'currentUserReporter')
+transitionIssue(transition+0, {-> parent[0]}, 0, 'TC_02-current user satisfies the criteria', null, null)
+
+// TC_03-check when currrent user is not assignee - criteria fails
+transitionIssue(transition+1, {-> currentIssue[0]}, -1, 'TC_03- current user not satisfies the criteria', null, null)
+
+// TC_04-check when currrent user is assignee - condition true
+transitionIssue(transition+1, {-> parent[0]}, 0, 'TC_04-current user satisfies the criteria', null, null)
+
+// TC_05-check when currrent user is project lead - condition true
+transitionIssue(transition+2, {-> parent[0]}, 0, 'TC_05-current user satisfies the criteria', null, null)
+
+// TC_06-check when currrent user is not project lead - condition false
+transitionByUserTask(transition+2, userId, {-> parent[0]}, null, -1, 'TC_06-check when currrent user is not project lead - condition false')
+
+// TC-07-check when currrent user is in selected group - condition true
+transitionIssue(transition+4, {-> parent[0]}, 0, "TC_07-When condition true", null, null)
+
+// TC_08-check when currrent user is not in selected group - condition false
+transitionByUserTask(transition+4, userId, {-> parent[0]}, null, -1, 'TC_08-user not in selected group' )
+
+// TC_09-check when currrent user is in selected field - condition true
+def parent2 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', assignee: user]}, 'currentUserIsAssignee')
+transitionIssue(transition+5, {-> parent2[0]}, 0, "TC_09-When condition true", null, null)
+
+// TC_10-check when currrent user is not in selected field - condition false
+transitionByUserTask(transition+5, userId, {-> parent2[0]}, null, -1, 'TC_10-user not satisfies the criteria' )
+
+// TC_11-check when currrent user is return from the script - condition true
+transitionIssue(transition+6, {-> parent2[0]}, 0, "TC_11-When condition true", null, null)
+
+// TC_12-check when currrent user is not return from the script- condition false
+transitionByUserTask(transition+6, userId, {-> parent2[0]}, null, -1, 'TC_12-user not satisfies the criteria' )
+
+
+

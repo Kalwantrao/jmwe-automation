@@ -13,11 +13,11 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: 'common/setUp.gradle'
-apply from: '../../common/commonMethod.gradle'
+apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
+
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
 def transition = 'addFieldValueToParentIssue'
 def workflow = project
 def screen = project
@@ -40,7 +40,7 @@ createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'po
 def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue')
 def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]}, labels: 'test_label']}, 'createSubtask')
 transitionIssue(transition+0, {-> subTask[0]}, 0, 'transitionSubtask', null, null)
-getIssueInformation({-> subTask[0]}, "Labels  . . . . . . . . . . . : ", 'checkSubtask')
+getIssueInformation({-> subTask[0]}, "Labels  . . . . . . . . . . . : test_label", 'checkSubtask')
 getIssueInformation({-> parent[0]}, "Labels  . . . . . . . . . . . : test_label", 'checkParentIssue')
 
 // check when the selected field is empty and parent issue having value
@@ -60,6 +60,7 @@ def parent4 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'cre
 def subtask4 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent4[0]}, labels: 'conditionalExecution']}, 'createSubtaskForConditionalExecutionFalse')
 transitionIssue(transition+1, {-> subtask4[0]}, 0, 'transitionToCheckConditionalExecFalse', null, null)
 getIssueInformation({-> parent4[0]}, "Labels  . . . . . . . . . . . : ", 'checkParentIssueCondExecFalse')
+
 
 
 

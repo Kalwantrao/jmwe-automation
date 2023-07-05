@@ -1,137 +1,60 @@
-
-//To run  this using gradle open command line in project's root directory and run below command on windows
-//gradlew -b src/itest-conditions/gradle/separationOfDutiesCondition.gradle -Pcli="acli jira" -Dclean
+import groovy.json.JsonSlurper
+import java.nio.file.Paths
 
 buildscript {
-    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
-    dependencies {
-        classpath 'org.gint:gint-atlassian:' + gintVersion
-    }
-    repositories {
-        flatDir { dirs 'libs' }
-        mavenLocal()
-        mavenCentral()
-        maven { url 'https://plugins.gradle.org/m2/' }
-    }
+	repositories {
+		maven {
+			url "https://plugins.gradle.org/m2/"
+		}
+	}
+	dependencies {
+		classpath "org.gint:gint-atlassian:3.8.4"
+	}
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.directories.resource + '/common/tearDown.gradle'
-apply from: 'configConditions/addSeparationOfDutiesCondition.gradle'
-apply from: gint.directories.resource + '/common/setUp.gradle'
+//apply from: 'common/setUp.gradle'
+apply from: gint.resourceDirectory +'/src/common/testConditions.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def user = info.user
-def userqa1 = project.toLowerCase()+'qa1'
-def userqa2 = project.toLowerCase()+'qa2'
-def userdev1 = project.toLowerCase()+'dev1'
-def userdev2 = project.toLowerCase()+'dev2'
-
-def savedIssues = [:]
-def saved =	[:]
+def project = 'AUTOMATION' //gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
 def transition = 'separationOfDutiesCondition'
+def workflow = project
+def screen = project
+def user = info.user
+gint.xmlReport =	true	//xml report generates in projects root directory
+gint.verbose =	true
 
-(1..3).each { number ->
-def summary
-	if (number == 1)
-		summary = 'checkAnyToToDoStatus'
-	else if(number == 2)
-		summary = 'checkInProgressToDoneStatus'
-	else if(number == 3)
-		summary = 'checkDoneToInProgressStatus'
+def jsonSlurper = new JsonSlurper();
+def path = Paths.get(gint.directories.resource + "/resources/conditionsData/SeparationOfDutiesConditionFunctions${info?.isCloud ? "Cloud" : ""}.json")
+def transitionFunctions = jsonSlurper.parse(path)
+def functionKey = info?.isCloud ? 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-condition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:separationofduties-condition'	//function key for HideTransitionCondition
+def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
 
-    gint.taskHelper.add(
-        action: 'createIssue', ext: number,
-        dependsOn: true,
-        group: 'create',
-        project: project,
-        parameters: [
-            type: 'Bug',
-            summary: summary,
-            assignee: user,
-            description: 'description' + number,
-        ],
-        stopOnFail: true,
-        finalClosure: { Task task ->
-            saved.issue = gint.searchForIssueKey(task.outData)
-            savedIssues[number] = saved.issue
-            gint.helper.logVarWithFormat('saved')
-        },
-    )
-}
+createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'condition', startStep, workflow, screen, 0)
 
-(1..3).each { number ->
-def fromStatus
-	if(number == 1)
-		fromStatus = "In Progress" //any status to To Do status
-	else if(number == 2)
-		fromStatus = "In Progress" //
-	else if(number == 3)
-		fromStatus = "Done"
-def expected
-	expected = [ 0 ]
-def data
-	if (number == 1)
-		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'In Progress'./
-	if (number == 2)
-		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'In Progress'./
-	if (number == 3)
-		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'Done'./
-    gint.taskHelper.add('transitionIssueAll', [
-        [action: 'transitionIssue', ext: 'fromStatus'+number,
-            dependsOn: true,
-            expected:expected,
-            parameters: [
-                issue: {-> savedIssues[number]  },
-                transition: fromStatus,
-            ],
-            data:[ data ]
-        ],
-    ])
-}
-(1..3).each { number ->
-def toStatus
-	if(number == 1)
-		toStatus = "To Do"
-	else if(number == 2)
-		toStatus = "Done"
-	else if(number == 3)
-		toStatus = "In Progress"
-def data
-	if (number == 1)
-		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'To Do'./
-	if (number == 2)
-		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'Done'./
-	if (number == 3)
-		data = ~/Successfully transitioned issue ${project}-\d+ with transition 'In Progress'./
-    gint.taskHelper.add('transitionIssueAll', [
-        [action: 'transitionIssue', ext: 'toStatus'+number,
-            dependsOn: true,
-            parameters: [
-                issue: {-> savedIssues[number]  },
-                transition: toStatus,
-            ],
-            data:[ data ]
-        ],
-    ])
-}
-(1..3).each { number ->
-def expected
-	expected = [ -1 ]
-def  data
-	data = 	~/Client error: Workflow transition '${transition + number}' is not valid for issue ${project}-\d+./
+// TC_01- When issue transitioned fromStatus_any to toStatus_ToDo
+def currentIssue = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'currentIssue')
+transitionIssue(transition+0, {-> currentIssue[0]}, -1, 'TC_01- When issue transitioned fromStatus_any to toStatus_ToDo', null, null)
+transitionToStatus({-> currentIssue[0]}, "To Do", "In Progress", 'TC_01- When issue transitioned fromStatus_any to toStatus_InProgress')
 
-    gint.taskHelper.add('transitionIssueAll', [
-        [action: 'transitionIssue', ext: number,
-            dependsOn: true,
-            expected:expected,
-            parameters: [
-                issue: {-> savedIssues[number]  },
-                transition: transition + number,
-            ],
-            data:[ data ]
-        ],
-    ])
-}
+// TC_02- When issue not transitioned fromStatus_any to toStatus_ToDo
+def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', assignee: user]}, 'currentIssueWithAssignee')
+transitionIssue(transition+0, {-> parent[0]}, 0, 'TC_02- When issue not transitioned fromStatus_any to toStatus_ToDo', null, null)
+
+// TC_03- When issue transitioned from status_In Progress to toStatus_Done
+def currentIssue1 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'currentIssue1')
+transitionIssue(transition+1, {-> currentIssue[0]}, -1, 'TC_03- When issue transitioned from status_In Progress to toStatus_Done', null, null)
+transitionToStatus({-> currentIssue[0]}, "In Progress", "Done", 'TC_03- When issue transitioned from status_In Progress to toStatus_Done')
+
+// TC_04- When issue not transitioned from status_In Progress to toStatus_Done
+transitionIssue(transition+1, {-> parent[0]}, 0, 'TC_04- When issue not transitioned from status_In Progress to toStatus_Done', null, null)
+
+// TC_05- When issue transitioned fromStatus_Done to toStatus_InProgress
+def currentIssue2 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'currentIssue2')
+transitionIssue(transition+2, {-> currentIssue[0]}, -1, 'TC_05- When issue transitioned fromStatus_Done to toStatus_InProgress', null, null)
+transitionToStatus({-> currentIssue[0]}, "Done", "In Progress", 'TC_05- When issue transitioned fromStatus_Done to toStatus_InProgress')
+
+// TC_06- When issue not transitioned from status_Done to toStatus_InProgress
+transitionIssue(transition+2, {-> parent[0]}, 0, 'TC_06- When issue not transitioned fromStatus_Done to toStatus_InProgress', null, null)
 

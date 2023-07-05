@@ -1,0 +1,67 @@
+import groovy.json.JsonSlurper
+import java.nio.file.Paths
+
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
+
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def transition = 'increaseValueOfFieldsPf'
+def workflow = project
+def screen = project
+def user = info.user
+def userId = 'jmwe_qa'
+def projectRole = 'jmwe_role'
+def userGroup = 'jmwe_group'
+gint.xmlReport =	true	//xml report generates in projects root directory
+gint.verbose =	true
+
+def jsonSlurper = new JsonSlurper();
+def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/IncreaseValueOfFieldPostfunction${info?.isCloud ? "Cloud" : ""}.json")
+def transitionFunctions = jsonSlurper.parse(path)
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:IncreaseFieldValue-function'	//function key for current status condition
+def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+
+createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
+
+// check increase field values without condition
+def originalStoryPoints = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue']}, 'originalStoryPoints')
+transitionIssue(transition+0, {-> originalStoryPoints[0]}, 0, 'originalStoryPoints', null, null)
+getIssueInformation({-> originalStoryPoints[0]}, "Original story points . . . . : 1.0", 'originalStoryPoints')
+
+def storyPoints = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue']}, 'storyPoints')
+transitionIssue(transition+1, {-> storyPoints[0]}, 0, 'storyPoints', null, null)
+getIssueInformation({-> storyPoints[0]}, "Story Points  . . . . . . . . : 1.0", 'storyPoints')
+
+// check conditional execution true
+def condExecTrue_originalStoryPoints = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue', priority: 'High']}, 'condExecTrue_originalStoryPoints')
+transitionIssue(transition+2, {-> condExecTrue_originalStoryPoints[0]}, 0, 'condExecTrue_originalStoryPoints', null, null)
+getIssueInformation({-> condExecTrue_originalStoryPoints[0]}, "Original story points . . . . : 1.0", 'condExecTrue_originalStoryPoints')
+
+def condExecTrue_storyPoints = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue', priority: 'High']}, 'condExecTrue_storyPoints')
+transitionIssue(transition+3, {-> condExecTrue_storyPoints[0]}, 0, 'condExecTrue_storyPoints', null, null)
+getIssueInformation({-> condExecTrue_storyPoints[0]}, "Story Points  . . . . . . . . : 1.0", 'condExecTrue_storyPoints')
+
+
+// check conditional execution false
+def condExecFalse_originalStoryPoints = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'condExecFalse_originalStoryPoints')
+transitionIssue(transition+2, {-> condExecFalse_originalStoryPoints[0]}, 0, 'condExecFalse_originalStoryPoints', null, null)
+getIssueInformation({-> condExecFalse_originalStoryPoints[0]}, " ", 'condExecFalse_originalStoryPoints')
+
+def condExecFalse_storyPoints = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'condExecFalse_storyPoints')
+transitionIssue(transition+3, {-> condExecFalse_originalStoryPoints[0]}, 0, 'condExecFalse_storyPoints', null, null)
+getIssueInformation({-> condExecFalse_originalStoryPoints[0]}, " ", 'condExecFalse_storyPoints')
+
+

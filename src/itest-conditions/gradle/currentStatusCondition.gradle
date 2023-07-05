@@ -1,198 +1,45 @@
-
-//To run  this using gradle open command line in root directory and run below command on windows
-//gradlew -b src/itest-conditions/gradle/currentStatusCondition.gradle -Pcli="acli jira" -Dclean
-
-buildscript {
-	def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
-	dependencies {
-		classpath 'org.gint:gint-atlassian:' + gintVersion
-	}
-	repositories {
-		flatDir { dirs 'libs' }
-		mavenLocal()
-		mavenCentral()
-		maven { url 'https://plugins.gradle.org/m2/' }
-	}
-}
-apply plugin: 'org.gint.atlassian'
-apply from: gint.directories.resource + '/common/tearDown.gradle'
-apply from: 'configConditions/addCurrentStatusCondition.gradle'
-apply from: gint.directories.resource + '/common/setUp.gradle'
-
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def user = info.user
-def userqa1 = project.toLowerCase()+'qa1'
-def userqa2 = project.toLowerCase()+'qa2'
-def userdev1 = project.toLowerCase()+'dev1'
-def userdev2 = project.toLowerCase()+'dev2'
-
-def saved =	[:]
-def savedIssues = [:]
-def transition = 'currentStatusCondition'
-
-// Create issues
-(1..4).each { number ->
-	def type = 'Bug'
-	def summary
-	if (number == 1)
-		summary = 'currentStatusMustBeToDo'
-	else if(number == 2)
-		summary = 'currentStatusMustNotBeToDo'
-	else if (number == 3)
-		summary = 'checkWhenNoStatusSelected'
-	else if(number == 4)
-		summary = 'checkWhenNoStatusSelectedAndReverseSelected'
-
-	gint.taskHelper.add(
-			action: 'createIssue', ext: number,
-			dependsOn: true,
-			group: 'create',
-			project: project,
-			parameters: [
-					type: type,
-					summary: summary ,
-					description: 'currentStatusCondition' + number,
-			],
-			stopOnFail: true,
-			finalClosure: { Task task ->
-				saved.issue = gint.searchForIssueKey(task.outData)
-				savedIssues[number] = saved.issue
-				gint.helper.log('Create Issues to validate the current status condition',saved)
-			},
-	)
-}
-// Transition issues when current status should be To Do
-(1..4).each{ number ->
-	def expected
-	if(number == 1)
-		expected = [ 0 ]
-	else if(number == 2)
-		expected = [ -1 ]
-	else if(number == 3)
-		expected = [ -1 ]
-	else if(number == 4)
-		expected = [ 0 ]
-	def data
-	if(number == 1)
-		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
-	else if(number == 2)
-		data = ~/Client error: Workflow transition '${transition + number}' is not valid for issue ${project}-\d+./
-	else if(number == 3)
-		data = ~/Client error: Workflow transition '${transition + number}' is not valid for issue ${project}-\d+./
-	else if(number == 4)
-		data = ~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
-
-	gint.taskHelper.add('transitionIssueToVerifyIfCurrentStatusToDo', [
-			[action: 'transitionIssue', ext: '--WhenCurrentStatusIsToDo'+number,
-			 dependsOn: true,
-			 expected: expected ,
-			 parameters: [
-					 issue: {-> savedIssues[number]  },
-					 transition: transition + number,
-			 ],
-			 data:[ data ],
-			 finalClosure:{ Task task ->
-				 gint.helper.log('Verify if the current status is in selected status or not',saved)
-
-			 }
-
-			],
-	])
-}
-
-
-
-
-
-/*
 import groovy.json.JsonSlurper
 import java.nio.file.Paths
 
 buildscript {
-    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
-    dependencies {
-        classpath 'org.gint:gint-atlassian:' + gintVersion
-    }
-    repositories {
-        flatDir { dirs 'libs' } // for testing SNAPSHOT versions
-        mavenLocal()
-        mavenCentral()
-        maven { url 'https://plugins.gradle.org/m2/' }
-    }
+	repositories {
+		maven {
+			url "https://plugins.gradle.org/m2/"
+		}
+	}
+	dependencies {
+		classpath "org.gint:gint-atlassian:3.8.4"
+	}
 }
-
 apply plugin: 'org.gint.atlassian'
-apply from: 'common/setUp.gradle'
+//apply from: 'common/setUp.gradle'
+apply from: gint.resourceDirectory +'/src/common/testConditions.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def transition = 'currentStatusCondition'
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
 def workflow = project
 def screen = project
 
 gint.xmlReport =	true	//xml report generates in projects root directory
 gint.verbose =	true
-
+def userId = 'jmwe_qa'
 def jsonSlurper = new JsonSlurper();
 def path = Paths.get(gint.directories.resource + "/resources/conditionsData/CurrentStatusConditionFunctions${info?.isCloud ? "Cloud" : ""}.json")
 def transitionFunctions = jsonSlurper.parse(path)
+def transition = 'currentStatusCondition'
 def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CurrentStatusCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:currentstatus-condition'	//function key for HideTransitionCondition
 def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'condition', startStep, workflow, screen, 0)
 
-// Create issues
-def summaries = [
-		'currentStatusInSelected',
-		'currentStatusMustNotBeToDo'
-]
-def bug = createIssue(project, summaries.collect{[ type: 'Bug', summary: it]} )
+// TC_01-check issues current status should be in selected and is in selected
+def currentIssue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createCurrentIssue')
+transitionIssue(transition+0, {-> currentIssue[0]}, 0, 'TC_01-check issues current status should be in selected and is in selected', null, null)
 
-def currentStatusConditionTestData = [
-		// Check when current status must be To Do
-		[
-				currentIssue: { -> bug[0] }, issueToCheck: { bug[0] }, transition: "${transition}0",
-				transitions: [
-						[
-								ext: 'currentStatusInToDo', expected: [ 0 ],
-								data: { String _ -> "Successfully transitioned issue ${bug[0]} with transition '${transition}0'" }()
-						]
-				]
-		],
-		//Check current status must not be To Do
-		[
-				currentIssue: { -> bug[0] }, issueToCheck: { bug[0] }, transition: "${transition}1",
-				transitions: [
-						[
-								ext: 'currentStatusInToDo', expected: [ -1 ],
-								data: { String _ -> "Client error: Workflow transition '${transition}1' is not valid for issue ${bug[0]}" }()
-						]
-				]
-		],
-]
-// TransitionIssues to check the expected result
-gint.taskHelper.add('test',
-		currentStatusConditionTestData.collect {
-			def currentIssue= it['currentIssue']
-			def currentTransition= it['transition']
-			it['transitions'].collect {trans ->
-				[
-						action: 'transitionIssue',
-						ext: "${trans['ext']}-${currentTransition}",
-						expected: trans['expected'],
-						dependsOn: true,
-						parameters: [
-								issue: currentIssue,
-								transition: currentTransition
-						] + (trans['additionalParams'] != null ? trans['additionalParams'] : [:]),
-						data: ( trans['data'] == null ? trans['data'] : [:])
-				]
-			}
-		}.flatten()
-)
+// TC_02-check issues current status should not be in selected status but in selected status
+def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue')
+transitionIssue(transition+1, {-> parent[0]}, -1, 'TC_02-check issues current status should not be in selected status but in selected status', null, null)
 
- */
 
 /*
 1. select all status checkbox
@@ -206,4 +53,6 @@ gint.taskHelper.add('test',
 9. transition: Done, current status: To Do, again add condition on transition: Done, current Status :Done
 10. Check behaviour by adding postfunctions on same status also check fields
 */
+
+
 

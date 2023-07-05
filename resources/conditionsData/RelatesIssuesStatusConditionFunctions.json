@@ -1,0 +1,226 @@
+[
+  {
+    "conditionMode": "all-in-status",
+    "selectedLinkType": "outward:10100",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "0"
+  },
+  {
+    "conditionMode": "all-in-status",
+    "selectedLinkType": "inward:10100",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "1"
+  },
+  {
+    "conditionMode": "all-in-status",
+    "selectedLinkType": "outward:10200",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "2"
+  },
+  {
+    "conditionMode": "all-in-status",
+    "selectedLinkType": "inward:10200",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "3"
+  },
+  {
+    "conditionMode": "all-in-status",
+    "selectedLinkType": "*:*",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "4"
+  },
+  {
+    "conditionMode": "all-in-status",
+    "selectedLinkType": "outward:10000",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "5"
+  },
+  {
+    "conditionMode": "all-in-status",
+    "selectedLinkType": "groovy:issue.getLinkedIssues()",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "6"
+  },
+  {
+    "conditionMode": "all-in-status",
+    "selectedLinkType": "jql:issuetype = Task and summary~JMWE_Task",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "7"
+  },
+  {
+    "conditionMode": "all-in-status",
+    "selectedLinkType": "jql:issuetype = Task and summary~JMWE_Task",
+    "issue_statuses": "10000",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "8"
+  },
+  {
+    "conditionMode": "one-in-status",
+    "selectedLinkType": "outward:10100",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "9"
+  },
+  {
+    "conditionMode": "one-in-status",
+    "selectedLinkType": "*:*",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "10"
+  },
+  {
+    "conditionMode": "one-in-status",
+    "selectedLinkType": "outward:10000",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "11"
+  },
+  {
+    "conditionMode": "one-in-status",
+    "selectedLinkType": "groovy:issue.getLinkedIssues()",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "12"
+  },
+  {
+    "conditionMode": "one-in-status",
+    "selectedLinkType": "jql:issuetype = Task and summary~JMWE_Task",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "13"
+  },
+  {
+    "conditionMode": "none-in-status",
+    "selectedLinkType": "outward:10100",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "14"
+  },
+  {
+    "conditionMode": "none-in-status",
+    "selectedLinkType": "inward:10100",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "15"
+  },
+  {
+    "conditionMode": "none-in-status",
+    "selectedLinkType": "outward:10200",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "16"
+  },
+  {
+    "conditionMode": "none-in-status",
+    "selectedLinkType": "inward:10200",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "17"
+  },
+  {
+    "conditionMode": "none-in-status",
+    "selectedLinkType": "*:*",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "18"
+  },
+  {
+    "conditionMode": "none-in-status",
+    "selectedLinkType": "outward:10000",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "19"
+  },
+  {
+    "conditionMode": "none-in-status",
+    "selectedLinkType": "groovy:issue.getLinkedIssues()",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "20"
+  },
+  {
+    "conditionMode": "none-in-status",
+    "selectedLinkType": "jql:issuetype = Task and summary~JMWE_Task",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "21"
+  },
+  {
+    "conditionMode": "one-not-in-status",
+    "selectedLinkType": "outward:10100",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "22"
+  },
+  {
+    "conditionMode": "one-not-in-status",
+    "selectedLinkType": "outward:10200",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "23"
+  },
+  {
+    "conditionMode": "one-not-in-status",
+    "selectedLinkType": "*:*",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "24"
+  },
+  {
+    "conditionMode": "one-not-in-status",
+    "selectedLinkType": "outward:10000",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "25"
+  },
+  {
+    "conditionMode": "one-not-in-status",
+    "selectedLinkType": "groovy:issue.getLinkedIssues()",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "26"
+  },
+  {
+    "conditionMode": "one-not-in-status",
+    "selectedLinkType": "jql:issuetype = Task and summary~JMWE_Task",
+    "issue_statuses": "3",
+    "selectedIssueType": "",
+    "correlationId": "",
+    "number": "27"
+  }
+]

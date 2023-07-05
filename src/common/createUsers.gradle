@@ -1,0 +1,23 @@
+apply from: gint.resourceDirectory + '/src/common/createProject.gradle'
+
+def addUsers(userId) {
+    gint.taskHelper.add('createUsers', [
+            [
+                    action    : 'addUser',
+                    parameters: [
+                            userId      : userId,
+                            userEmail   : userId + '@gmail.com',
+                            userPassword: userId
+                    ],
+                    finalClosure: {Task task ->
+                        if(!task.result == 0 ){
+                            gint.helper.log("This is setUp task for adding users, ignore if fails since you already have users : ", userId)
+                        }
+                    }
+            ],
+    ])
+}
+ext {
+    addUsers=this.&addUsers
+
+}

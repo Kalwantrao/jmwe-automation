@@ -1,0 +1,22 @@
+apply from: gint.resourceDirectory + '/src/common/createProject.gradle'
+
+def createComponents(project, componentName, numberOfComponents) {
+    (1..numberOfComponents).each{ componentNumber ->
+        gint.taskHelper.addSetUp(
+                action: 'addComponent',
+                ext: componentNumber,
+                dependsOn: 'createProject',
+                group:'add',
+                project: project,
+                parameters:[
+                        component: componentName + componentNumber,
+                ],
+                data:[
+                        ~/Component '${componentName + componentNumber}' with id \d+ added to project ${project}./
+                ],
+        )
+    }
+}
+ext {
+    createComponents=this.&createComponents
+}

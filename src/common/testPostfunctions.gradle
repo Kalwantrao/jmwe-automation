@@ -1,0 +1,139 @@
+//apply from: 'common/setUp.gradle'
+apply from: gint.resourceDirectory + '/src/common/createIssues.gradle'
+apply from: gint.resourceDirectory + '/src/common/linkIssues.gradle'
+apply from: gint.resourceDirectory + '/src/common/setUp.gradle'
+
+
+def transitionIssue(transition, issueToTransition, expected, ext, fields, data) {
+    gint.taskHelper.add('transitionIssues', [
+            [action    : 'transitionIssue', ext: ext,
+             dependsOn : 'createIssues',
+             ignoreDependsResult: true,
+             ignoreFailure: true,
+             ignore: true,
+             cmdLog: true,
+             expected: expected,
+             parameters: [
+                     issue  : issueToTransition,
+                     transition: transition,
+             ]+ (fields != null ? fields : [:]),
+             data: ( data == null ? data : [:]),
+             finalClosure: { Task task ->
+                 assert task.result == expected // : gint.helper.log("Transition failed check either issue: $issueToTransition , Or configuration on transition: ", transition)
+                 gint.helper.log("transition issue:$issueToTransition by transition $transition", ext)
+
+             },
+            ],
+    ]
+    )
+}
+def getIssueInformation(issueToCheck, data, ext) {
+    gint.taskHelper.add('getIssueInformation',[
+            [action: 'getIssue', ext: ext ,
+             dependsOn: 'transitionIssues',
+             ignoreFailure: true,
+             ignore: true,
+             group:'test',
+             cmdLog: true,
+             parameters: [
+                     issue: issueToCheck,
+             ],
+             data: [ data ],
+             finalClosure: { Task task ->
+                 assert task.found == true
+                 gint.helper.log("Check $data in issue $issueToCheck", ext)
+             }
+            ],
+    ])
+}
+def getLinkedIssueList(currentIssue, numberOfLinkedIssues, ext, linkType, link){
+    gint.taskHelper.add('getLinkIssues',[
+            [action: 'getLinkList', ext: ext,
+             dependsOn: 'transitionIssues',
+             ignore: true,
+             parameters: [
+                     issue: currentIssue,
+             ],
+             data: [/$numberOfLinkedIssues links for issue: $currentIssue/,
+                    "$currentIssue","$linkType","$link"]
+
+            ]
+    ]
+    )
+}
+def checkIssueList(jql, field, number, issueType, ext){
+    gint.taskHelper.add('getIssueList',[
+            [action: 'getIssueList', ext: ext,
+             dependsOn: 'transitionIssues',
+             parameters: [
+                     jql: jql
+             ],
+             data: [ "$number issues in list",
+                     "$field","$issueType"
+             ],
+             finalClosure: { Task task ->
+                 assert task.found == true
+                 gint.helper.log("Issues found for the given search: $number", ext)
+             }
+            ]]
+    )
+}
+def getIssueHistoryList(issue, userId, ext){
+    gint.taskHelper.add('getIssueHistoryList',[
+            [action: 'getIssueHistoryList', ext: ext,
+             mustRunAfter: 'transitionIssues',
+             ignore: true,
+             parameters: [
+                     issue: issue,
+             ],
+             data: [ "$userId" ]
+            ]
+    ])
+}
+def getComments(issueToCheckComments, expected, user, ext){
+    gint.taskHelper.add('checkComments',[
+            [action: 'getComments', ext: ext,
+             expected: expected,
+             dependsOn: 'transitionIssues',
+             //mustRunAfter: 'setFields',
+             parameters: [
+                     issue: issueToCheckComments,
+             ],
+             data: [~/$user added a comment/],
+            ],
+    ])
+}
+def checkRunAsUser(transition, issue, userId) {
+    gint.taskHelper.add('checkRunAsUser', [
+            [name:'checkRunAsUser',dependsOn:'transitionIssues', cmd : /acli $userId -a transitionIsue --issue $issue --transition $transition/,],
+            [cmd: /acli ${userId} getIssueHistoryList --issue ${issue} /,
+             data:[$/'userId'/$],
+            ],
+    ],
+    )
+}
+def checkCommentVisibleToUser(issue, userId, user, ext) {
+    gint.taskHelper.add('checkCommentVisibleToUser', [
+            [action: 'getComments',ext: ext + 'checkCurrentUser',
+             dependsOn: 'transitionIssues',
+             parameters:[
+                     issue: issue
+             ],
+             data: [~/$user added a comment/],
+            ],
+            [dependsOn: 'transitionIssues', cmd : /acli $userId -a getComments --issue $issue /,
+             failData: [~/$user added a comment/]]
+    ]
+    )
+}
+
+ext {
+    transitionIssue=this.&transitionIssue
+    getIssueInformation=this.&getIssueInformation
+    getLinkedIssueList=this.&getLinkedIssueList
+    checkIssueList=this.&checkIssueList
+    getIssueHistoryList= this.&getIssueHistoryList
+    checkRunAsUser= this.&checkRunAsUser
+    checkCommentVisibleToUser= this.&checkCommentVisibleToUser
+    getComments=this.&getComments
+}

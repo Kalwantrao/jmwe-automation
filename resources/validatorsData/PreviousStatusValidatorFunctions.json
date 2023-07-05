@@ -48,7 +48,7 @@
      "mostRecentOnly": "yes",
      "errorMessage": "",
      "conditionalValidation": "yes",
-    "conditionalValidationScript": "issue.getLinkedIssues()",
+     "conditionalValidationScript": "issue.getLinkedIssues()",
      "correlationId": "",
      "number": "6"
     }

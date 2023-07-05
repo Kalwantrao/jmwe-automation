@@ -1,280 +1,70 @@
 import groovy.json.JsonSlurper
 import java.nio.file.Paths
 
-plugins {
-    id "org.gint.atlassian" version "3.8.4"
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
 }
-
 apply plugin: 'org.gint.atlassian'
-apply from: 'common/setUp.gradle'
+apply from: gint.resourceDirectory +'/src/common/testValidators.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
 def transition = 'userValidator'
 def workflow = project
 def screen = project
 def user = info.user
-def userqa1 = project.toLowerCase()+'qa1'
-def userqa2 = project.toLowerCase()+'qa2'
+def userId = 'jmwe_qa'
 gint.xmlReport =	true	//xml report generates in projects root directory
 gint.verbose =	true
 
 def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/validatorsData/Test${info?.isCloud ? "Cloud" : ""}.json")
+def path = Paths.get(gint.directories.resource + "/resources/validatorsData/userValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
 def transitionFunctions = jsonSlurper.parse(path)
 def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CommentRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-validator'	//function key for HideTransitionCondition
 def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
 
-def summaries = [
-		'currentUserMustBeReporter',
-		'currentUserMustBeAssignee',
-		'currentUserMustBeProjectLead',
-		'currentUserMustBeOfAdministratorsRole',
-		'currentUserMustBeFromJiraAdministratorsGroups',
-		'currentUserMustBeInAssigneeField',
-		'currentUserMustBeInAssigneeField',
-		'userReturnedByGroovyScript',
-		'userIsAssigneeCheckReverse',
-		'checkConditionValidationIfIssueIslinkedThenExecuteTransition',
-]
-def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it, assignee: user, labels: user] } )
-def subTask = createIssue(project, [1, 1 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }]} )
-def epic = createIssue(project, summaries.collect{[type: 'Epic', summary: it, field: "Epic Name", value: "Epic"]} )
-def story = createIssue(project, [0, 1, 2, 3, 4, 5, 6, 7, 8 ].collect{[type: 'story', summary: 'summary',field: "Epic Link", value: { -> epic[it] }, assignee: userqa2, reporter: userqa1]} )
-linkIssues({[ issue: { -> bug[9] }, toIssue: { -> bug[8] }, link: 'blocks'] } )
-def summaryJql = [ 'jqlSearch1', 'jqlSearch2' ]
-def IssueReturnByJqlSearch = createIssue(project, summaryJql.collect{[type: 'Task', summary: it, assignee: userqa1] } )
+// check when currrent user is not reporter - criteria fails
+def currentIssue = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', reporter: userId]}, 'currentIssue')
+transitionIssue(transition+0, {-> currentIssue[0]}, -3, 'TC_01- current user not satisfies the criteria', null, null)
 
+// check when currrent user is reporter - condition true
+def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', reporter: user, assignee: user]}, 'currentUserReporter')
+transitionIssue(transition+0, {-> parent[0]}, 0, 'TC_02-current user satisfies the criteria', null, null)
 
-def whenFieldsAreModifiedParams = [
-		reporter: userqa1
-]
+// check when currrent user is not assignee - criteria fails
+transitionIssue(transition+1, {-> currentIssue[0]}, -3, 'TC_03- current user not satisfies the criteria', null, null)
 
-def issuecane = [
-[
-        bug: { -> bug[0] }, transition: "${transition}0",
-        transitions: [
-                [
-                        ext: 'whenCurrentUserSatisfiesAllCriteriaConfigured', expected: [ 0 ],
-                        data: { currentTransition -> ~/Successfully transitioned issue ${project}-\d+ with transition '${currentTransition}'./ }
-                ],
-                [
-                        ext: 'whenCurrentUserInFieldAssigneeSatisfiesAllCriteriaConfigured', expected: [ -3 ], additionalParams: whenFieldsAreModifiedParams,
-                        data: { String _ -> "Remote error: Error(s):" }
-                ]
-        ]
-],
+// check when currrent user is assignee - condition true
+transitionIssue(transition+1, {-> parent[0]}, 0, 'TC_04-current user satisfies the criteria', null, null)
 
-]
-gint.taskHelper.add('test',
-    issuecane.collect {
-        def currentIssue= it['bug']
-        def currentTransition= it['transition']
-        it['transitions'].collect {trans ->
-            [
-                    action: 'transitionIssue',
-                    ext: "${trans['ext']}-${currentTransition}",
-                    expected: trans['expected'],
-                  //  dependsOn: [':createComponents', 'createVersions', ':addIssues', ':setupLinks'],
-                    parameters: [
-                            issue: currentIssue,
-                            transition: currentTransition
-                    ] + (trans['additionalParams'] != null ? trans['additionalParams'] : [:]),
-                    data: trans['data'](currentTransition)
-            ]
-        }
-    }.flatten()
-)
+// check when currrent user is project lead - condition true
+transitionIssue(transition+2, {-> parent[0]}, 0, 'TC_05-current user satisfies the criteria', null, null)
 
+// check when currrent user is not project lead - condition false
+transitionByUserTask(transition+2, userId, {-> parent[0]}, null, -3)
 
+// check when currrent user is in selected group - condition true
+transitionIssue(transition+4, {-> parent[0]}, 0, "TC_07-When condition true", null, null)
 
+// check when currrent user is not in selected group - condition false
+transitionByUserTask(transition+4, userId, {-> parent[0]}, null, -3 )
 
-/*
-// Create issues
-def summaries = [
-		'currentUserMustBeReporter',
-		'currentUserMustBeAssignee',
-		'currentUserMustBeProjectLead',
-		'currentUserMustBeOfAdministratorsRole',
-		'currentUserMustBeFromJiraAdministratorsGroups',
-		'currentUserMustBeInAssigneeField',
-		'currentUserMustBeInAssigneeField',
-		'userReturnedByGroovyScript',
-		'userIsAssigneeCheckReverse',
-		'checkConditionValidationIfIssueIslinkedThenExecuteTransition',
-]
-def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it, assignee: user, labels: user] } )
-def subTask = createIssue(project, [1, 1 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }]} )
-def epic = createIssue(project, summaries.collect{[type: 'Epic', summary: it, field: "Epic Name", value: "Epic"]} )
-def story = createIssue(project, [0, 1, 2, 3, 4, 5, 6, 7, 8 ].collect{[type: 'story', summary: 'summary',field: "Epic Link", value: { -> epic[it] }, assignee: userqa2, reporter: userqa1]} )
-linkIssues({[ issue: { -> bug[9] }, toIssue: { -> bug[8] }, link: 'blocks'] } )
-def summaryJql = [ 'jqlSearch1', 'jqlSearch2' ]
-def IssueReturnByJqlSearch = createIssue(project, summaryJql.collect{[type: 'Task', summary: it, assignee: userqa1] } )
+// check when currrent user is in selected field - condition true
+def parent2 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', assignee: user]}, 'currentUserIsAssignee')
+transitionIssue(transition+5, {-> parent2[0]}, 0, "TC_09-When condition true", null, null)
 
-// When current user satisfies all the criteria configured
-(0..8).each { number ->
-	gint.taskHelper.add(
-           [action: 'transitionIssue',
-            ext: 'currentUserSatisfiesSpecificCriteria' + number,
-            dependsOn: true,
-            expected: [ 0 ],
-            parameters: [
-                issue:  {-> bug[number]},
-                transition: transition + number
-            ],
-        ]
-    )
-}
-// Check when the current user not satisfies all the criteria configured system should display the error
-def errorMsgWhenCurrentUserNotSatisfiesCriteria = [
-        9:"    User '$user' is not the reporter of the current issue.",
-    	10:"    User '$user' is not the assignee of the current issue",
-    	11:"    User '$user' is not a member of any of the required project roles: DEV.",
-    	12:"    User '$user' is not a member of any of the required groups: DEV.",
-    	13:"    User '$user is not in one of the configured user fields",
-    	14:"    The configured groovy expression is not true for user $user",
-    	15:"    The configured groovy expression is true for user $user",
-    	16:"    User '$user' is not the assignee of the current issue",
-]
-[
-		9:{ -> story[0] },
-		10:{ -> story[1] },
-		11:{ -> story[2] },
-		12:{ -> story[3] },
-		13:{ -> story[4] },
-		14:{ -> story[5] },
-		15:{ -> story[6] },
-		16:{ -> story[7] }
-].eachWithIndex { entry, i ->
-	gint.taskHelper.add(
-           [action: 'transitionIssue',
-            ext: 'currentUserNotSatisfiesSpecificCriteria' + i,
-            dependsOn: true,
-            expected: [ -3 ],
-            parameters: [
-                issue:  entry.value,
-                transition: transition + entry.key
-            ],
-            data : [ errorMsgWhenCurrentUserNotSatisfiesCriteria ]
-        ]
-    )
-}
-// When user in field assignee satisfies all the criteria configured
-[
-		17:{ -> bug[0] },
-		18:{ -> bug[1] },
-		19:{ -> bug[2] },
-		20:{ -> bug[3] },
-		21:{ -> bug[4] },
-		22:{ -> bug[5] },
-		23:{ -> bug[6] },
-		24:{ -> bug[7] },
-		25:{ -> bug[8] }
-].eachWithIndex { entry, i ->
-	gint.taskHelper.add(
-           [action: 'transitionIssue',
-            ext: 'userInFieldAssigneeSatisfiesSpecificCriteria' + i,
-            dependsOn: true,
-            expected: [ 0 ],
-            parameters: [
-                issue:  entry.value,
-                transition: transition + entry.key
-            ],
-        ]
-    )
-}
-// Check when the user in field assignee not satisfies all the criteria configured system should display the error
-def errorMsgWhenUserInFieldAssigneeNotSatisfiesCriteria = [
-        26:"    User '$userqa2' is not the reporter of the current issue.",
-    	27:"    User '$userqa2' is not the watcher of the current issue",
-    	28:"    User '$userqa2' is not a member of any of the required project roles: DEV.",
-    	29:"    User '$userqa2' is not a member of any of the required groups: DEV.",
-    	30:"    User '$userqa2 is not in one of the configured user fields",
-    	31:"    The configured groovy expression is not true for user $userqa2",
-    	32:"    The configured groovy expression is true for user $userqa2",
-    	33:"    User '$userqa2' is not the watcher of the current issue",
-]
-[
-		26:{ -> story[0] },
-		27:{ -> story[1] },
-		28:{ -> story[2] },
-		29:{ -> story[3] },
-		30:{ -> story[4] },
-		31:{ -> story[5] },
-		32:{ -> story[6] },
-		33:{ -> story[7] },
-].eachWithIndex { entry, i ->
-	gint.taskHelper.add(
-           [action: 'transitionIssue',
-            ext: 'userInFieldAssigneeNotSatisfiesSpecificCriteria' + i,
-            dependsOn: true,
-            expected: [ -3 ],
-            parameters: [
-                issue:  entry.value,
-                transition: transition + entry.key
-            ],
-            data : [ errorMsgWhenUserInFieldAssigneeNotSatisfiesCriteria ]
-        ]
-    )
-}
-//When user in field reporter satisfies the criteria configured
-[
-		34:{ -> bug[0] },
-		35:{ -> bug[1] },
-		36:{ -> bug[2] },
-		37:{ -> bug[3] },
-		38:{ -> bug[4] },
-		39:{ -> bug[5] },
-		40:{ -> bug[6] },
-		41:{ -> bug[7] },
-		42:{ -> bug[8] }
-].eachWithIndex { entry, i ->
-	gint.taskHelper.add(
-           [action: 'transitionIssue',
-            ext: 'userInFieldReporterSatisfiesSpecificCriteria' + i,
-            dependsOn: true,
-            expected: [ 0 ],
-            parameters: [
-                issue:  entry.value,
-                transition: transition + entry.key
-            ],
-        ]
-    )
-}
-// Check when user in field reporter not satisfies all the criterion configured
-def errorMsgWhenUserInFieldReporterNotSatisfiesCriteria = [
-        43:"    User '$userqa2' is not the assignee of the current issue.",
-    	44:"    User '$userqa2' is not the watcher of the current issue",
-    	45:"    User '$userqa2' is not a member of any of the required project roles: DEV.",
-    	46:"    User '$userqa2' is not a member of any of the required groups: DEV.",
-    	47:"    User '$userqa2 is not in one of the configured user fields",
-    	48:"    The configured groovy expression is not true for user $userqa2",
-    	49:"    The configured groovy expression is true for user $userqa2",
-    	50:"    User '$userqa2' is not the watcher of the current issue",
-]
-[
-		43:{ -> story[0] },
-		44:{ -> story[1] },
-		45:{ -> story[2] },
-		46:{ -> story[3] },
-		47:{ -> story[4] },
-		48:{ -> story[5] },
-		49:{ -> story[6] },
-		50:{ -> story[7] },
-].eachWithIndex { entry, i ->
-	gint.taskHelper.add(
-           [action: 'transitionIssue',
-            ext: 'userInFieldReporterNotSatisfiesSpecificCriteria' + i,
-            dependsOn: true,
-            expected: [ -3 ],
-            parameters: [
-                issue:  entry.value,
-                transition: transition + entry.key
-            ],
-            data : [ errorMsgWhenUserInFieldReporterNotSatisfiesCriteria ]
-        ]
-    )
-}
-*/
+// check when currrent user is not in selected field - condition false
+transitionByUserTask(transition+5, userId, {-> parent2[0]}, null, -3)
+
+// check when currrent user is return from the script - condition true
+transitionIssue(transition+6, {-> parent2[0]}, 0, "TC_11-When condition true", null, null)
+

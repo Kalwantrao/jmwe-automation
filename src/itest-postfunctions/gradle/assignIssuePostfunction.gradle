@@ -13,11 +13,10 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: 'common/setUp.gradle'
-apply from: '../../common/commonMethod.gradle'
+apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
 def transition = 'assignIssuePostfunction'
 def workflow = project
 def screen = project
@@ -79,8 +78,8 @@ transitionIssue(transition+6, {-> linkIssue3[0]}, 0, 'issuesLinkedToCurrentIssue
 getIssueInformation({-> linkIssue4[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'issuesLinkedToCurrentIssueBySpecificLinkTypeAssignedToCurrentUser')
 
 //check the issue return by groovy expression[issue.getLinkedIssues()] should be assigned to current user
-transitionIssue(transition+7, {-> linkIssue3[0]}, 0, 'issuesRetunredByGroovyScriptShouldBeAssignedToCurrentUser', null, null)
-getIssueInformation({-> linkIssue4[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'issuesRetunredByGroovyScriptAssignedToCurrentUser')
+transitionIssue(transition+7, {-> linkIssue4[0]}, 0, 'issuesRetunredByGroovyScriptShouldBeAssignedToCurrentUser', null, null)
+getIssueInformation({-> linkIssue3[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'issuesRetunredByGroovyScriptAssignedToCurrentUser')
 
 //check the issue return by groovy expression should be assigned to current user
 def IssueReturnByJqlSearch = createIssue(project, {[type: 'Task', summary: 'JMWE_Task']}, 'jqlSearch' )
@@ -100,10 +99,4 @@ getIssueInformation({-> condExecFalse[0]}, /Assignee  . . . . . . . . . . : /, '
 def issueWithReporter = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', reporter: userId]}, 'issueWithReporter')
 transitionIssue(transition+10, {-> issueWithReporter[0]}, 0, 'issueAssignedToReporter', null, null)
 getIssueInformation({-> issueWithReporter[0]}, "Assignee  . . . . . . . . . . : $userId", 'issueAssignedToReporter')
-
-// check the current user assigned to username (jmwe_qa) - JIRAUSER11602
-//def assignToUsername = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createIssueForUsername')
-//transitionIssue(transition+11, {-> assignToUsername[0]}, 0, 'issueAssignedToUsername', null, null)
-//getIssueInformation({-> assignToUsername[0]}, "Assignee  . . . . . . . . . . : $userId", 'issueAssignedToUsername')
-
 

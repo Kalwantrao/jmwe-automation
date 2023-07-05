@@ -13,16 +13,16 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: 'common/setUp.gradle'
+//apply from: 'common/setUp.gradle'
+apply from: gint.resourceDirectory +'/src/common/testValidators.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
 def workflow = project
 def screen = project
 gint.xmlReport =	true	//xml report generates in projects root directory
 gint.verbose =	true
 def user = info.user
-def userqa1 = project.toLowerCase()+'qa1'
 def transition = 'fieldsRequiredValidator'
 def jsonSlurper = new JsonSlurper();
 def path = Paths.get(gint.directories.resource + "/resources/validatorsData/FieldsRequiredValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
@@ -34,15 +34,15 @@ createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'va
 
 // check fieldsRequired
 def currentIssue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', affectsVersions: '1']}, 'fieldsRequired')
-transitionIssue(transition+0, {-> currentIssue[0]}, [0], 'whenAffectsVersionHasValue', null, null)
-transitionIssue(transition+1, {-> currentIssue[0]}, [-3], 'whenFixVersionNotHavingValues', null, ['Remote error: thisIsCustomMsgForFixVersionFieldsRequired'])
-transitionIssue(transition+2, {-> currentIssue[0]}, [0], 'whenAssigneeHavingValuesFromTransitionScreen', [assignee: user], null)
+transitionIssue(transition+0, {-> currentIssue[0]}, 0, 'whenAffectsVersionHasValue', null, null)
+transitionIssue(transition+1, {-> currentIssue[0]}, -3, 'whenFixVersionNotHavingValues', null, ['Remote error: thisIsCustomMsgForFixVersionFieldsRequired'])
+transitionIssue(transition+2, {-> currentIssue[0]}, 0, 'whenAssigneeHavingValuesFromTransitionScreen', [assignee: user], null)
 
 
 // check conditional execution - issueType = story
 def condExecTrue = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue']}, 'condExecTrue')
-transitionIssue(transition+7, {-> condExecTrue[0]}, [-3], 'condExecTrueFieldRequired', null, ['Remote error: assignee: Field Assignee is required.'])
-transitionIssue(transition+7, {-> condExecTrue[0]}, [0], 'condExecTrueFieldRequiredProvided', [assignee: user], null)
+transitionIssue(transition+7, {-> condExecTrue[0]}, -3, 'condExecTrueFieldRequired', null, ['Remote error: assignee: Field Assignee is required.'])
+transitionIssue(transition+7, {-> condExecTrue[0]}, 0, 'condExecTrueFieldRequiredProvided', [assignee: user], null)
 
 def condExecFalse = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'condExecFalse')
 transitionIssue(transition+7, {-> condExecFalse[0]}, 0, 'condExecFalseFieldNotRequired', null, null)
@@ -54,99 +54,3 @@ transitionIssue(transition+7, {-> condExecFalse[0]}, 0, 'condExecFalseFieldNotRe
 
 
 
-
-
-
-
-
-
-
-
-
-/*
-def summaries = [
-		'affectsVersionsFieldRequired',
-		'fixVersionsFieldRequired',
-		'assigneeFieldRequired',
-		'componentsShouldRequired',
-		'labelsShouldRequired'
-]
-def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it] }, 'createIssue1')
-def subTask = createIssue(project, [ 0, 0 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] } ]}, 'createIssue2' )
-def story = createIssue(project, summaries.collect{[type: 'Story', summary: it] }, 'createIssue3' )
-def Task = createIssue(project, summaries.collect{[type: 'Task', summary: it, description: 'Test_Description_Automation', priority: 'Low'] }, 'createIssue4' )
-linkIssues({[ issue: { -> Task[0] }, toIssue: { -> Task[1] }, link: 'blocks'] } )
-
-// check when issue not having required fields and having fields
-[
-		'Remote error: versions: Field Affects Version/s is required.',
-		'Remote error: thisIsCustomMsgForFixVersionFieldsRequired',
-		'Remote error: assignee: Field Assignee is required.',
-		'Remote error: components: Field Component/s is required.',
-		'Remote error: labels: Field Labels is required.'
-].eachWithIndex { data, number ->
-	gint.taskHelper.add([
-		[action: 'transitionIssue', ext: 'WhenIssueNotHavingFieldValues' + number,
-		dependsOn: true,
-		sleep: 1000,
-		expected: [ -3 ],
-		parameters:[
-			issue: {-> bug[number] },
-			transition: transition + number
-			],
-		data: [ ]
-		],
-		[action: 'transitionIssue', ext: 'WhenIssueHavingFieldValues' + number,
-		dependsOn: true,
-		sleep: 1000,
-		expected: [ 0 ],
-		parameters:[
-			issue: { -> bug[number]},
-			transition: transition + number,
-			fixVersions: '2',
-			affectsVersions: '1',
-			assignee: userqa1,
-			component: 'component1',
-			labels: 'Test_Label_Automation'
-			],
-        data:[ 	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./ ],
-		]
-])
-}
-// Conditional validation
-def issueList1 = [
-		5:{-> Task[0] },
-		6:{-> Task[1] },
-		7:{-> Task[2] },
-		8:{-> Task[3] }
-]
-def issueList2 = [
-		5:{-> story[0] },
-		6:{-> story[1] },
-		7:{-> story[2] },
-		8:{-> story[3] }
-]
-(5..8).each { number ->
-	gint.taskHelper.add([
-		[action: 'transitionIssue', ext: 'When Groovy Condition Returns True For Issue' + number,
-		dependsOn: true,
-		expected: [ -3 ],
-		sleep: 1000,
-		parameters:[
-			issue: issueList1[number],
-			transition: transition + number
-			],
-		],
-		[action: 'transitionIssue', ext: 'When Groovy Condition Returns False For Issue' + number,
-		dependsOn: true,
-		sleep: 1000,
-		expected: [ 0 ],
-		parameters:[
-			issue: issueList2[number],
-			transition: transition + number,
-			],
-        data:[ ~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./ ],
-		]
-])
-}
-*/

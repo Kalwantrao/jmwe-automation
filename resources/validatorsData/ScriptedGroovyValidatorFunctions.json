@@ -1,39 +1,34 @@
 [
-{
+	{
 	"groovyExpression": "!!issue.get('assignee')",
 	"scriptDescription": "",
 	"field": "",
 	"errorMessage": "groovy condition must return true for issue",
-	"correlationId": ""
-},
-{
+	"correlationId": "",
+	"number": "0"
+	},
+	{
 	"groovyExpression": "!!issue.getLinkedIssues()",
 	"scriptDescription": "",
 	"field": "",
 	"errorMessage": "groovy condition must return true for issue",
-	"correlationId": ""
-},
-{
+	"correlationId": "",
+	"number": "1"
+	},
+	{
 	"groovyExpression": "issue.get('fixVersions')?.any{it.name == '1'}",
 	"scriptDescription": "",
 	"field": "",
 	"errorMessage": "groovy condition must return true for issue",
-	"correlationId": ""
-},
-{
+	"correlationId": "",
+	"number": "2"
+	},
+	{
 	"groovyExpression": "issue.get('issuetype')?.name == 'Story'",
 	"scriptDescription": "",
 	"field": "",
 	"errorMessage": "groovy condition must return true for issue",
-	"correlationId": ""
-}
+	"correlationId": "",
+	"number": "3"
+	}
 ]
-
-
-
-
-
-
-
-
-

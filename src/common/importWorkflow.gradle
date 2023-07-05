@@ -1,0 +1,45 @@
+def importWorkflow(baseWorkflow, workflow) {
+    gint.taskHelper.addSetUp([
+            [
+                    action: 'importWorkflow',
+                    parameters: [
+                            workflow: workflow,
+                            file: baseWorkflow
+                    ]
+            ],
+    ])
+    gint.taskHelper.addTearDown('tearDownWorkflow', [
+            [
+                    action: 'deleteWorkflow',
+                    mustRunAfter: 'deleteWorkflowScheme',
+                    parameters: [
+                            workflow: workflow,
+                    ],
+                    finalClosure: { Task task ->
+                        if(task.result == 0) {
+                            gint.helper.log("workflow is deleted :", workflow)
+                        } else {
+                            gint.helper.log("workflow with name is not found with name : ", workflow)
+                        }
+                    }
+            ],
+            [
+                    action: 'deleteWorkflow',
+                    mustRunAfter: 'deleteWorkflowScheme',
+                    ext: 'copy',
+                    parameters: [
+                            workflow: "Copy of ${workflow}",
+                    ],
+                    finalClosure: { Task task ->
+                        if(task.result == 0) {
+                            gint.helper.log("workflow Copy of ${workflow} is deleted", workflow)
+                        } else {
+                            gint.helper.log("workflow with name Copy of ${workflow} is not found....ignore this task as it is tearDown task for clean-data", workflow)
+                        }
+                    }
+            ]
+    ])
+}
+ext {
+    importWorkflow =this.&importWorkflow
+}

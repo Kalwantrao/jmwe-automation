@@ -13,10 +13,11 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: 'common/setUp.gradle'
+//apply from: 'common/setUp.gradle'
+apply from: gint.resourceDirectory +'/src/common/testValidators.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
 def workflow = project
 def workflowScheme = project
 def user = info.user
@@ -36,159 +37,37 @@ createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'va
 
 // check affectsVersions
 def currentIssue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'CurrentIssue')
-transitionIssue(transition+0, {-> currentIssue[0]}, [-3], 'fieldVersionsNotModified', null, ['Remote error: versions: Affects Version/s should be modified during this transition.'])
-transitionIssue(transition+0, {-> currentIssue[0]}, [0], 'fieldVersionsModified', [affectsVersions: '1'], null)
+transitionIssue(transition+0, {-> currentIssue[0]}, -3, 'fieldVersionsNotModified', null, ['Remote error: versions: Affects Version/s should be modified during this transition.'])
+transitionIssue(transition+0, {-> currentIssue[0]}, 0, 'fieldVersionsModified', [affectsVersions: '1'], null)
 
 // check fixVersions
-transitionIssue(transition+1, {-> currentIssue[0]}, [-3], 'fieldFixVersionsNotModified', null, ['Remote error: fixVersions: Fix Version/s should be modified during this transition.'])
-transitionIssue(transition+1, {-> currentIssue[0]}, [0], 'fieldFixVersionsModified', [fixVersions: '2'], null)
+transitionIssue(transition+1, {-> currentIssue[0]}, -3, 'fieldFixVersionsNotModified', null, ['Remote error: fixVersions: Fix Version/s should be modified during this transition.'])
+transitionIssue(transition+1, {-> currentIssue[0]}, 0, 'fieldFixVersionsModified', [fixVersions: '2'], null)
 
 // check assignee
-transitionIssue(transition+2, {-> currentIssue[0]}, [-3], 'fieldAssigneeNotModified', null, ['Remote error: assignee: Assignee should be modified during this transition.'])
-transitionIssue(transition+2, {-> currentIssue[0]}, [0], 'fieldAssigneeModified', [assignee: user], null)
+transitionIssue(transition+2, {-> currentIssue[0]}, -3, 'fieldAssigneeNotModified', null, ['Remote error: assignee: Assignee should be modified during this transition.'])
+transitionIssue(transition+2, {-> currentIssue[0]}, 0, 'fieldAssigneeModified', [assignee: user], null)
 
 //check components
-transitionIssue(transition+3, {-> currentIssue[0]}, [-3], 'fieldComponentsNotModified', null, ['Remote error: components: Component/s should be modified during this transition.'])
-transitionIssue(transition+3, {-> currentIssue[0]}, [0], 'fieldComponentsModified', [components: 'component1'], null)
+transitionIssue(transition+3, {-> currentIssue[0]}, -3, 'fieldComponentsNotModified', null, ['Remote error: components: Component/s should be modified during this transition.'])
+transitionIssue(transition+3, {-> currentIssue[0]}, 0, 'fieldComponentsModified', [components: 'component1'], null)
 
 //check labels
-transitionIssue(transition+4, {-> currentIssue[0]}, [-3], 'fieldLabelsNotModified', null, ['Remote error: labels: Labels should be modified during this transition.'])
-transitionIssue(transition+4, {-> currentIssue[0]}, [0], 'fieldLabelsModified', [labels: 'modifiedLabel'], null)
+transitionIssue(transition+4, {-> currentIssue[0]}, -3, 'fieldLabelsNotModified', null, ['Remote error: labels: Labels should be modified during this transition.'])
+transitionIssue(transition+4, {-> currentIssue[0]}, 0, 'fieldLabelsModified', [labels: 'modifiedLabel'], null)
 
 //check priority
-transitionIssue(transition+5, {-> currentIssue[0]}, [-3], 'fieldPriorityNotModified', null, ['Remote error: priority: Priority should be modified during this transition.'])
-transitionIssue(transition+5, {-> currentIssue[0]}, [0], 'fieldPriorityModified', [priority: 'Highest'], null)
+transitionIssue(transition+5, {-> currentIssue[0]}, -3, 'fieldPriorityNotModified', null, ['Remote error: priority: Priority should be modified during this transition.'])
+transitionIssue(transition+5, {-> currentIssue[0]}, 0, 'fieldPriorityModified', [priority: 'Highest'], null)
 
 // check conditional execution - issueType = story
 def condExecTrue = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue']}, 'condExecTrue')
-transitionIssue(transition+6, {-> condExecTrue[0]}, [-3], 'condExecTrueFieldNotModified', null, ['Remote error: fixVersions: Fix Version/s should be modified during this transition.'])
-transitionIssue(transition+6, {-> condExecTrue[0]}, [0], 'condExecTrueFieldModified', [fixVersions: '3'], null)
+transitionIssue(transition+6, {-> condExecTrue[0]}, -3, 'condExecTrueFieldNotModified', null, ['Remote error: fixVersions: Fix Version/s should be modified during this transition.'])
+transitionIssue(transition+6, {-> condExecTrue[0]}, 0, 'condExecTrueFieldModified', [fixVersions: '3'], null)
 
 def condExecFalse = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'clearLabel']}, 'condExecFalse')
 transitionIssue(transition+6, {-> condExecFalse[0]}, 0, 'condExecFalseFieldNotModified', null, null)
 
 
-/*
-def summaries = [
-		 'fieldsShouldBeModified',
-		 'groovyConditionReturnsTrue',
-		 'groovyConditionReturnsFalse',
-		 'issueLinkedByBlocksLink',
-		 'groovyConditionFalse'
-		 ]
-def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it] }, 'createBug')
-def subTask = createIssue(project, [1, 1 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }]}, 'createSubtask' )
-def epic = createIssue(project, summaries.collect{[type: 'Epic', summary: it, field: "Epic Name", value: "Epic"]}, 'createEpic' )
-def story = createIssue(project, [1, 1, 1, 1 ].collect{[type: 'story', summary: 'summary',field: "Epic Link", value: { -> epic[it] }, assignee: userqa1, description: 'TEST_DESCRIPTION_AUTOMATION']}, 'createStory' )
-linkIssues({[ issue: { -> story[0] }, toIssue: { -> story[1] }, link: 'blocks'] })
-
-def issueList1 = [
-	0: { -> bug[0] },
-    1: { -> bug[1] },
-    2: { -> bug[2] },
-    3: { -> bug[3] },
-    4: { -> story[0] },
-    5: { -> story[1] },
-	6: { -> epic[1] },
-]
-[
-	0:'Remote error: versions: Affects Version/s should be modified during this transition.',
-	1:'Remote error: fixVersions: Fix Version/s should be modified during this transition.',
-	2:'Remote error: assignee: Assignee should be modified during this transition.',
-	3:'Remote error: components: Component/s should be modified during this transition.',
-	4:'Remote error: labels: Labels should be modified during this transition.',
-	5:'Remote error: priority: Priority should be modified during this transition.',
-	6:'Remote error: description: Description should be modified during this transition.'
-].eachWithIndex { data, number ->
-    gint.taskHelper.add([
-            [action: 'transitionIssue',
-            ext: 'whenFieldsNotModified' + number,
-            dependsOn: true,
-            expected: [ -3 ],
-            parameters: [
-                issue: issueList1[number],
-                transition: transition + number
-            ],
-            data: [],
-        ],
-            [action: 'transitionIssue',
-            ext: 'whenFieldsAreModified' + number,
-            dependsOn: true,
-            expected: [ 0 ],
-            parameters: [
-                issue: issueList1[number],
-                transition: transition + number,
-                affectsVersions: '1',
-                fixVersions: '2',
-                assignee: userqa1,
-                components: 'component1',
-                labels: 'Test_label_Automation',
-                priority: 'Low',
-                description: 'Test_description_Automation'
-            ],
-            data: [
-            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
-            	],
-        ]
-    ])
-}
-// When groovy condition returns true and false for the issue
-
-def issueList2 = [
-	7: { -> story[0] },
-    8: { -> story[2] },
-    9: { -> story[1] },
-    10: { -> story[3] },
-]
-
-def expectedData2 = [
-	7:'Remote error: versions: Affects Version/s should be modified during this transition.',
-	8:'Remote error: fixVersions: Fix Version/s should be modified during this transition.',
-	9:'Remote error: assignee: Assignee should be modified during this transition.',
-	10:'Remote error: components: Component/s should be modified during this transition.',
-]
-(7..10).each { number ->
-    gint.taskHelper.add([
-            [action: 'transitionIssue',
-            ext: 'whenGroovyConditionReturnsTrueAndFieldsNotModified' + number,
-            dependsOn: true,
-            expected: [ -3 ],
-            parameters: [
-                issue: issueList2[number],
-                transition: transition + number
-            ],
-            data: [expectedData2[number]],
-        	],
-            [action: 'transitionIssue',
-            ext: 'whenGroovyConditionReturnsTrueAndFieldsModified' + number,
-            dependsOn: true,
-            expected: [ 0 ],
-            parameters: [
-                issue: issueList2[number],
-                transition: transition + number,
-                affectsVersions: '3',
-                fixVersions: '2',
-                assignee: userqa2,
-                components: 'component1',
-            ],
-            data: [
-            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
-            	],
-        	],
-            [action: 'transitionIssue',
-            ext: 'whenGroovyConditionReturnsFalseAndFieldsNotModified' + number,
-            dependsOn: true,
-            expected: [ 0 ],
-            parameters: [
-                issue: { -> bug[4] },
-                transition: transition + number
-            ],
-            data: [
-            	~/Successfully transitioned issue ${project}-\d+ with transition '${transition + number}'./
-            	],
-        	]
-    ])
-}
 
 
- */

@@ -13,11 +13,10 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: 'common/setUp.gradle'
-apply from: '../../common/commonMethod.gradle'
+apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
 def transition = 'copyIssueFieldspf'
 def workflow = project
 def screen = project
@@ -119,7 +118,7 @@ transitionIssue(transition+13, {-> createMissingValues[0]}, 0, 'createMissingVal
 getIssueInformation({-> createMissingValues[0]}, ~/Labels  . . . . . . . . . . . : component1/, 'createMissingValues')
 
 def doNotCreateMissingValues = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'doNotCreateMissingValue']}, 'doNotCreateMissingValues')
-transitionIssue(transition+14, {-> doNotCreateMissingValues[0]}, [0], 'doNotCreateMissingValues', null, null)
+transitionIssue(transition+14, {-> doNotCreateMissingValues[0]}, 0, 'doNotCreateMissingValues', null, null)
 getIssueInformation({-> doNotCreateMissingValues[0]}, ~/Labels  . . . . . . . . . . . : /, 'doNotCreateMissingValues')
 
 // appendValues
@@ -141,3 +140,4 @@ getIssueInformation({-> useOldValue[0]}, ~/Labels  . . . . . . . . . . . : compo
 def doNotUseOldValue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue',components: 'component1', labels: 'component2']}, 'doNotUseOldValue')
 transitionIssue(transition+18, {-> doNotUseOldValue[0]}, 0, 'doNotUseOldValue', null, null)
 getIssueInformation({-> doNotUseOldValue[0]}, ~/Labels  . . . . . . . . . . . : component1/, 'doNotUseOldValue')
+

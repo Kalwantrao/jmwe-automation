@@ -1,0 +1,26 @@
+[
+  {
+    "groovyExpression": "!!issue.get('assignee')",
+    "scriptDescription": "",
+    "correlationId": "",
+    "number": "0"
+  },
+  {
+    "groovyExpression": "!!issue.getLinkedIssues()",
+    "scriptDescription": "",
+    "correlationId": "",
+    "number": "1"
+  },
+  {
+    "groovyExpression": "issue.get('fixVersions')?.any{it.name == '1'}",
+    "scriptDescription": "",
+    "correlationId": "",
+    "number": "2"
+  },
+  {
+    "groovyExpression": "issue.get('issuetype')?.name == 'Story'",
+    "scriptDescription": "",
+    "correlationId": "",
+    "number": "3"
+  }
+]

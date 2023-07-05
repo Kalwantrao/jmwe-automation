@@ -13,11 +13,10 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: 'common/setUp.gradle'
-apply from: '../../common/commonMethod.gradle'
+apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
 def transition = 'setIssueFields'
 def workflow = project
 def screen = project
@@ -118,7 +117,7 @@ transitionIssue(transition+13, {-> createMissingValues[0]}, 0, 'createMissingVal
 getIssueInformation({-> createMissingValues[0]}, "Labels  . . . . . . . . . . . : setLabel", 'createMissingValues')
 
 def doNotCreateMissingValues = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'doNotCreateMissingValue']}, 'doNotCreateMissingValues')
-transitionIssue(transition+14, {-> doNotCreateMissingValues[0]}, [0], 'doNotCreateMissingValues', null, null)
+transitionIssue(transition+14, {-> doNotCreateMissingValues[0]}, 0, 'doNotCreateMissingValues', null, null)
 getIssueInformation({-> doNotCreateMissingValues[0]}, "Labels  . . . . . . . . . . . : setLabel", 'doNotCreateMissingValues')
 
 // appendValues
@@ -130,3 +129,5 @@ getIssueInformation({-> appendValues[0]}, "Labels  . . . . . . . . . . . : setLa
 def doNotAppendValues = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'setLabel']}, 'doNotAppendValues')
 transitionIssue(transition+16, {-> doNotAppendValues[0]}, 0, 'doNotAppendValues', null, null)
 getIssueInformation({-> doNotAppendValues[0]}, "Labels  . . . . . . . . . . . : ", 'doNotAppendValues')
+
+

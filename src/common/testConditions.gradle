@@ -1,0 +1,70 @@
+apply from: gint.resourceDirectory + '/src/common/setUp.gradle'
+apply from: gint.resourceDirectory + '/src/common/createIssues.gradle'
+apply from: gint.resourceDirectory + '/src/common/linkIssues.gradle'
+
+def transitionIssue(transition, issueToTransition, expected, ext, fields, data) {
+    gint.taskHelper.add('transitionIssues', [
+            [action    : 'transitionIssue', ext: ext,
+             dependsOn : ['createIssues'],
+             ignoreDependsResult: true,
+             ignoreFailure: true,
+             ignore: true,
+             cmdLog: true,
+             expected: expected,
+             parameters: [
+                     issue  : issueToTransition,
+                     transition: transition,
+             ]+ (fields != null ? fields : [:]),
+             data: ( data == null ? data : [:]),
+             finalClosure: { Task task ->
+                 assert task.result == expected // : gint.helper.log("Transition failed check either issue: $issueToTransition , Or configuration on transition: ", transition)
+                 gint.helper.log("transition issue:$issueToTransition by transition $transition", ext)
+
+             },
+            ],
+    ]
+    )
+}
+def transitionToStatus(issue, previousStatus, currentStatus, ext){
+    gint.taskHelper.add('setIssueStatus',[
+            [action: 'transitionIssue', ext: 'previous' + ext,
+             mustRunBefore: 'transitionIssues',
+             parameters: [
+                     issue: issue,
+                     transition: previousStatus,
+             ],
+             finalClosure: { Task task ->
+                 assert task.result == 0
+                 gint.helper.log("Issue is transition to status: $previousStatus", ext)
+             }
+            ],
+            [action: 'transitionIssue', ext: 'current' + ext,
+             mustRunBefore: 'transitionIssues',
+             parameters: [
+                     issue: issue,
+                     transition: currentStatus,
+             ],
+             finalClosure: { Task task ->
+                 assert task.result == 0
+                 gint.helper.log("Issue is transition to status: $currentStatus", ext)
+             }
+            ]
+    ]
+
+    )
+}
+def transitionByUserTask(transition, userId, issue, data, expected, ext ) {
+    gint.taskHelper.add('transitionByUser', [
+            [expected: expected, name: 'transitionTriggerByOtherUser'+ext , cmd : /acli $userId -a transitionIssue --issue $issue --transition $transition/,
+             data: ( data == null ? data : [:]),
+            finalClosure: {Task task ->
+               assert task.result == expected
+            }]
+    ]
+    )
+}
+ext {
+    transitionIssue=this.&transitionIssue
+    transitionToStatus=this.&transitionToStatus
+    transitionByUserTask=this.&transitionByUserTask
+}

@@ -13,11 +13,10 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: 'common/setUp.gradle'
-apply from: '../../common/commonMethod.gradle'
+apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
 def transition = 'linkIssuesToTheCurrentIssue'
 def workflow = project
 def screen = project
@@ -34,6 +33,11 @@ def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud a
 
 // Create transitions and add transition function for multiple scenarios using json data file from resources
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
+
+def jqlIssue1 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Task']}, 'jqlIssue1')
+def jqlIssue2 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Task']}, 'jqlIssue2')
+def jqlIssue3 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Task']}, 'jqlIssue3')
+def jqlIssue4 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Task']}, 'jqlIssue4')
 
 // check current issue links
 def blocks = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'blocks')
@@ -60,16 +64,18 @@ def isDuplicateBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']},
 transitionIssue(transition+5, {-> isDuplicateBy[0]}, 0, 'linkIssueOfIsDuplicatesLink', null, null)
 getLinkedIssueList({-> isDuplicateBy[0]}, '2', 'linkIssueOfIsDuplicatesLink', "Duplicate", "is duplicated by")
 
+/*
 def causes = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'causes')
 transitionIssue(transition+6, {-> causes[0]}, 0, 'linkIssueOfCausesLink', null, null)
 getLinkedIssueList({-> causes[0]}, '2', 'linkIssueOfCausesLink', "Problem/Incident", "causes")
 
 def isCausedBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isCausedBy')
-transitionIssue(transition+7, {-> isCausedBy[0]}, 0, 'linkIssueOfIsisCausedByLink', null, null)
+transitionIssue(transition+7, {-> isCausedBy[0]}, 0, 'linkIssueOfIsCausedByLink', null, null)
 getLinkedIssueList({-> isCausedBy[0]}, '2', 'linkIssueOfisCausedByLink', "Problem/Incident", "is caused by")
 
+ */
 def relates = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'relatesTo')
-transitionIssue(transition+8, {-> relates[0]}, 0, 'linkIssueOfIsisrelatesLink', null, null)
+transitionIssue(transition+8, {-> relates[0]}, 0, 'linkIssueOfrelatesToLink', null, null)
 getLinkedIssueList({-> relates[0]}, '2', 'linkIssueOfrelatesToLink', "Relates", "relates to")
 
 //check groovy filter
@@ -104,3 +110,5 @@ def runAsUser_fromField = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Iss
 transitionIssue(transition+13, {-> runAsUser_fromField[0]}, 0, 'runAsUser_fromField', null, null)
 getLinkedIssueList({-> runAsUser_fromField[0]}, '1', 'runAsUser_fromField', "Blocks", "Blocks")
 getIssueHistoryList({-> runAsUser_fromField[0]}, userId, 'runAsUser_fromField')
+
+

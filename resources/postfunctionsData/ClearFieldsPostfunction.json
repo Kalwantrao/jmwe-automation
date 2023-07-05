@@ -73,7 +73,7 @@
     },
     {
     "fields": "labels",
-    "selectedLinkType": "jql:project = ZCLEARFIELDSPOSTFUNCTION and assignee = zclearfieldspostfunctionqa1",
+    "selectedLinkType": "jql:issuetype = Task and summary ~JMWE_Task",
     "useGroovyCondition": "false",
     "groovyExpression": "",
     "runAsUser": "",

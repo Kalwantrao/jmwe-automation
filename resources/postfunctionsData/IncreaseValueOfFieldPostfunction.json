@@ -1,0 +1,34 @@
+[
+  {
+    "field": "customfield_10110",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "throwExceptions": "false",
+    "correlationId": "",
+    "number": "0"
+  },
+  {
+    "field": "customfield_10106",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "throwExceptions": "false",
+    "correlationId": "",
+    "number": "1"
+  },
+  {
+    "field": "customfield_10110",
+    "useGroovyCondition": "yes",
+    "groovyExpression": "issue.get('priority')?.name == 'High'",
+    "throwExceptions": "false",
+    "correlationId": "",
+    "number": "2"
+  },
+  {
+    "field": "customfield_10106",
+    "useGroovyCondition": "yes",
+    "groovyExpression": "issue.get('priority')?.name == 'High'",
+    "throwExceptions": "false",
+    "correlationId": "",
+    "number": "3"
+  }
+]

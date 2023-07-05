@@ -13,21 +13,16 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: 'common/setUp.gradle'
+//apply from: 'common/setUp.gradle'
+apply from: gint.resourceDirectory +'/src/common/testValidators.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
 def workflow = project
 def screen = project
 gint.xmlReport =	true	//xml report generates in projects root directory
 gint.verbose =	true
 def user = info.user
-def userqa1 = project.toLowerCase()+'qa1'
-def userqa2 = project.toLowerCase()+'qa2'
-def userdev1 = project.toLowerCase()+'dev1'
-def userdev2 = project.toLowerCase()+'dev2'
-def saved =	[:]
-def savedIssues = [:]
 def transition = 'parentStatusValidator'
 def jsonSlurper = new JsonSlurper();
 def path = Paths.get(gint.directories.resource + "/resources/validatorsData/ParentStatusValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
@@ -40,7 +35,7 @@ createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'va
 // check the subtask of the parent issue
 def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue')
 def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]}, labels: 'test_label']}, 'createSubtask')
-transitionIssue(transition+0, {-> subTask[0]}, [-3], 'transitionSubtaskWhenParentStatuNotInSelectedStatus', null, ["Remote error: Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [In Progress]"])
+transitionIssue(transition+0, {-> subTask[0]}, -3, 'transitionSubtaskWhenParentStatuNotInSelectedStatus', null, ["Remote error: Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [In Progress]"])
 
 // check when the selected field is empty and parent issue having value
 def parent1 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssueWithSelectedStatus')
@@ -50,7 +45,7 @@ transitionIssue(transition+1, {-> subTask1[0]}, 0, 'checkWhenParentIssueInSelect
 // check conditional execution true
 def parent3 = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue']}, 'createParentForConditionalExecutionTrue')
 def subtask3 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent3[0]}, priority: 'Low' ]}, 'createSubtaskForConditionalExecutionTrue')
-transitionIssue(transition+3, {-> subtask3[0]}, [-3], 'transitionToCheckConditionalExecTrue', null, ["Remote error: Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [In Progress]"])
+transitionIssue(transition+3, {-> subtask3[0]}, -3, 'transitionToCheckConditionalExecTrue', null, ["Remote error: Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [In Progress]"])
 
 // check conditional execution false
 def parent4 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentForConditionalExecutionFalse')
@@ -58,80 +53,3 @@ def subtask4 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', p
 transitionIssue(transition+3, {-> subtask4[0]}, 0, 'transitionToCheckConditionalExecFalse', null, null)
 
 
-
-/*
-def summaries = [
-		'parentIssueMustBeSelectedStatus',
-		'parentIssueMustBeInSelectedStatus',
-		'parentIssueMustBeInOneOfTheSelectedStatus',
-]
-def bug = createIssue(project, summaries.collect{[type: 'Bug', summary: it, priority: 'Low', ] }, 'createIssue1' )
-def subTask = createIssue(project, [ 0, 1, 2 ].collect{[type: 'Sub-Task', summary: 'summary', parent: { -> bug[it] }, priority: 'Low' ]}, 'createIssue2' )
-def story = createIssue(project, summaries.collect{[type: 'Story', summary: it] }, 'createIssue3' )
-def Task = createIssue(project, summaries.collect{[type: 'Task', summary: it] }, 'createIssue4' )
-linkIssues({[ issue: { -> subTask[0] }, toIssue: { -> subTask[1] }, link: 'blocks'] } )
-
-// check when parent issue of current issue is not in selected status
-[
-		"Remote error: Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [In Progress]",
-		"Remote error: parentIssueMustBeInOneOfTheSelectedStatus",
-		"Remote error: Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [Done, In Review, In Progress]"
-].eachWithIndex { data, number ->
-	gint.taskHelper.add([
-		[action: 'transitionIssue', ext: 'WhenIssueNotHavingFieldValues' + number,
-		dependsOn: true,
-		expected: [ -3 ],
-		parameters:[
-			issue: {-> subTask[number] },
-			transition: transition + number
-			],
-		data: [ ]
-		],
-])
-}
-
-
-// Conditional validation when groovy condition returns true
-def issueList1 = [
-		3:{-> subTask[0] },
-		4:{-> subTask[1] },
-		5:{-> subTask[2] },
-]
-def expectedData = [
-		3:"Remote error: Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [In Progress]",
-		4:"Remote error: parentIssueMustBeInOneOfTheSelectedStatus",
-		5:"Remote error: Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [Done, In Review, In Progress]"
-]
-(3..5).each { number ->
-	gint.taskHelper.add([
-		[action: 'transitionIssue', ext: 'When Groovy Condition Returns True For Issue' + number,
-		dependsOn: true,
-		expected: [ -3 ],
-		parameters:[
-			issue: issueList1[number],
-			transition: transition + number,
-			],
-		data:[ expectedData ]
-		]
-])
-}
-// Conditional validation when groovy condition returns false
-def issueList2 = [
-		6:{-> subTask[0] },
-		7:{-> subTask[1] },
-		8:{-> subTask[2] },
-]
-(6..8).each { number ->
-	gint.taskHelper.add([
-		[action: 'transitionIssue', ext: 'When Groovy Condition Returns False For Issue' + number,
-		dependsOn: true,
-		expected: [ 0 ],
-		parameters:[
-			issue: issueList2[number],
-			transition: transition + number,
-			],
-		]
-])
-}
-
- */

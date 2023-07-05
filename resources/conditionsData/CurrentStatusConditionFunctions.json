@@ -1,13 +1,19 @@
 [
 	{
-	"issue_statuses": "1",
+	"issue_statuses": "10000",
 	"correlationId": "",
 	"number": "0"
 	},
 	{
-	"issue_statuses": "1",
+	"issue_statuses": "10000",
 	"not": "yes",
 	"correlationId": "",
 	"number": "1"
+	},
+	{
+	"issue_statuses": "3",
+	"not": "yes",
+	"correlationId": "",
+	"number": "2"
 	}
 ]

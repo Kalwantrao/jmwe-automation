@@ -1,0 +1,25 @@
+apply from: gint.resourceDirectory + '/src/common/createProject.gradle'
+
+def createIssue(project, parametersList,ext) {
+    def savedIssues = [:]
+    parametersList.eachWithIndex { parameters, number ->
+        gint.taskHelper.add('createIssues',[
+                [action: 'createIssue', ext: ext + number,
+                 group: 'create',
+                 project: project,
+                 parameters: parameters,
+                 stopOnFail: true,
+                 cmdLog:true,
+                 finalClosure: { Task task ->
+                     def currentIssue = gint.searchForIssueKey(task.outData)
+                     savedIssues[number] = currentIssue
+                     gint.helper.log("Issue created ", savedIssues[number]);
+                 },
+                ],
+        ])
+    }
+    return savedIssues
+}
+ext {
+    createIssue=this.&createIssue
+}

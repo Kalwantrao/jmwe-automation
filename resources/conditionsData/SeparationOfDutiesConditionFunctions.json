@@ -1,0 +1,20 @@
+[
+  {
+    "fromStatus": "",
+    "toStatus": "In Progress",
+    "correlationId": "",
+    "number": "0"
+  },
+  {
+    "fromStatus": "In Progress",
+    "toStatus": "Done",
+    "correlationId": "",
+    "number": "1"
+  },
+  {
+    "fromStatus": "Done",
+    "toStatus": "In Progress",
+    "correlationId": "",
+    "number": "2"
+  }
+]
