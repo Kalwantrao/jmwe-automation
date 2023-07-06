@@ -58,3 +58,4 @@ transitionToStatus({-> currentIssue[0]}, "Done", "In Progress", 'TC_05- When iss
 // TC_06- When issue not transitioned from status_Done to toStatus_InProgress
 transitionIssue(transition+2, {-> parent[0]}, 0, 'TC_06- When issue not transitioned fromStatus_Done to toStatus_InProgress', null, null)
 
+

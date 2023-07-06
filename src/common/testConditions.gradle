@@ -28,6 +28,7 @@ def transitionIssue(transition, issueToTransition, expected, ext, fields, data) 
 def transitionToStatus(issue, previousStatus, currentStatus, ext){
     gint.taskHelper.add('setIssueStatus',[
             [action: 'transitionIssue', ext: 'previous' + ext,
+	     dependsOn: 'createIssues',	
              mustRunBefore: 'transitionIssues',
              parameters: [
                      issue: issue,
@@ -40,7 +41,8 @@ def transitionToStatus(issue, previousStatus, currentStatus, ext){
             ],
             [action: 'transitionIssue', ext: 'current' + ext,
              mustRunBefore: 'transitionIssues',
-             parameters: [
+             dependsOn: 'createIssues',	
+		parameters: [
                      issue: issue,
                      transition: currentStatus,
              ],
