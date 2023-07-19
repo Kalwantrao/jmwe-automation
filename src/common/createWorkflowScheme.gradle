@@ -5,6 +5,7 @@ def createWorkflowScheme(workflow, workflowScheme, ext) {
             action: 'createWorkflowScheme',
             ext: ext,
             dependsOn: 'setupTransitions',
+            mustRunBefore: 'createProject',
             ignoreDependsResult: true,
             parameters:[
                     workflowScheme: workflowScheme,

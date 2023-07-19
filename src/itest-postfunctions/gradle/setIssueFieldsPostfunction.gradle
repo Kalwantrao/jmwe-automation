@@ -34,6 +34,10 @@ def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud a
 
 // Create transitions and add transition function for multiple scenarios using json data file from resources
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
+addUsers(userId)
+createVersions(project, 5)
+createComponents(project, 'component', 5)
+
 // check current issue
 def currentIssue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createCurrentIssue')
 transitionIssue(transition+0, {-> currentIssue[0]}, 0, 'addFieldCurrentIssue', null, null)

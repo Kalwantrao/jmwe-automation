@@ -35,68 +35,71 @@ def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:AssignIssue-
 def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
+addUsers(userId)
 
-// check current issue should be assigned to  current user
+// TC_01-check current issue should be assigned to  current user
 def currentIssue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createCurrentIssue')
 transitionIssue(transition+0, {-> currentIssue[0]}, 0, 'currentIssueShouldBeAssignedToCurrentUser', null, null)
-getIssueInformation({-> currentIssue[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'currentIssueAssignedToCurrentUser')
+getIssueInformation({-> currentIssue[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_01-check current issue should be assigned to  current user')
 
-// check the subtask of the parent issue should be assigned to current user
+// TC_02-check the subtask of the parent issue should be assigned to current user
 def parent = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createParentIssue')
 def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]} ]}, 'createSubtask')
 transitionIssue(transition+1, {-> parent[0]}, 0, 'subtaskOfParentIssueShouldBeAssignToCurrentUser', null, null)
-getIssueInformation({-> subTask[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'subtaskOfParentIssueAssignedToCurrentUser')
+getIssueInformation({-> subTask[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_02-check the subtask of the parent issue should be assigned to current user')
 
-// check the parent issue of the current subtask should be assigned to current user
+// TC_03-check the parent issue of the current subtask should be assigned to current user
 transitionIssue(transition+2, {-> subTask[0]}, 0, 'parentIssueOfSubtaskShouldBeAssignToCurrentUser', null, null)
-getIssueInformation({-> parent[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'parentIssueOfCurrentSubtaskAssignedToCurrentUser')
+getIssueInformation({-> parent[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_03-check the parent issue of the current subtask should be assigned to current user')
 
-// check the issue belongs to current epic should be assigned to current user
+
+// TC_04-check the issue belongs to current epic should be assigned to current user
 def epic = createIssue(project,{[ type: 'epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Epic"]}, 'createEpic')
 def story = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[0]} ]}, 'createStory')
 transitionIssue(transition+3, {-> epic[0]}, 0, 'issueBelongsToCurrentEpicShouldBeAssignToCurrentUser', null, null)
-getIssueInformation({-> story[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'issueBelongsToCurrentEpicAssignedToCurrentUser')
+getIssueInformation({-> story[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_04-check the issue belongs to current epic should be assigned to current user')
 
-// check the epic of the current issue should be assigned to current user
+// TC_05-check the epic of the current issue should be assigned to current user
 transitionIssue(transition+4, {-> story[0]}, 0, 'epicOfTheCurrentIssueShouldBeAssignToCurrentUser', null, null)
-getIssueInformation({-> epic[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'epicOfCurrentissueAssignedToCurrentUser')
+getIssueInformation({-> epic[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_05-check the epic of the current issue should be assigned to current user')
 
 def linkIssue1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType1')
 def linkIssue2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType2')
 linkIssues([issue: { -> linkIssue1[0] }, toIssue: { -> linkIssue2[0] }, link: 'duplicates'], 'linkByAnyLinkType' )
 
-//check the issue link by any link type to current issue should be assigned to current user
+// TC_06-check the issue link by any link type to current issue should be assigned to current user
 transitionIssue(transition+5, {-> linkIssue1[0]}, 0, 'issuesLinkedToCurrentIssueByAnyLinkTypeShouldBeAssignedToCurrentUser', null, null)
-getIssueInformation({-> linkIssue2[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'issuesLinkedToCurrentIssueByAnyLinkTypeAssignedToCurrentUser')
+getIssueInformation({-> linkIssue2[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_06-check the issue link by any link type to current issue should be assigned to current user')
 
 def linkIssue3 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueBlocksType1')
 def linkIssue4 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueBlocksType2')
 linkIssues([issue: { -> linkIssue3[0] }, toIssue: { -> linkIssue4[0] }, link: 'blocks'], 'linkByBlocksLinkType' )
 
-//check the issue link by blocks link type to current issue should be assigned to current user
+// TC_07-check the issue link by blocks link type to current issue should be assigned to current user
 transitionIssue(transition+6, {-> linkIssue3[0]}, 0, 'issuesLinkedToCurrentIssueBySpecificLinkTypeShouldBeAssignedToCurrentUser', null, null)
-getIssueInformation({-> linkIssue4[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'issuesLinkedToCurrentIssueBySpecificLinkTypeAssignedToCurrentUser')
+getIssueInformation({-> linkIssue4[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_07-check the issue link by blocks link type to current issue should be assigned to current user')
 
-//check the issue return by groovy expression[issue.getLinkedIssues()] should be assigned to current user
+// TC_08-check the issue return by groovy expression[issue.getLinkedIssues()] should be assigned to current user
 transitionIssue(transition+7, {-> linkIssue4[0]}, 0, 'issuesRetunredByGroovyScriptShouldBeAssignedToCurrentUser', null, null)
-getIssueInformation({-> linkIssue3[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'issuesRetunredByGroovyScriptAssignedToCurrentUser')
+getIssueInformation({-> linkIssue3[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_08-check the issue return by groovy expression[issue.getLinkedIssues()] should be assigned to current user')
 
-//check the issue return by groovy expression should be assigned to current user
+// TC_09-check the issue return by groovy expression should be assigned to current user
 def IssueReturnByJqlSearch = createIssue(project, {[type: 'Task', summary: 'JMWE_Task']}, 'jqlSearch' )
 transitionIssue(transition+8, {-> linkIssue4[0]}, 0, 'issuesRetunredByJqlSearchShouldBeAssignedToCurrentUser', null, null)
-getIssueInformation({-> IssueReturnByJqlSearch[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'issuesRetunredByJqlSearchAssignedToCurrentUser')
+getIssueInformation({-> IssueReturnByJqlSearch[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_09-check the issue return by groovy expression should be assigned to current user')
 
-//check conditional execution = issue.get('issuetype')?.name == 'Story'
+// TC_10-check conditional execution_True = issue.get('issuetype')?.name == 'Story'
 def condExecTrue = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue']}, 'condExecTrue')
 transitionIssue(transition+9, {-> condExecTrue[0]}, 0, 'condExecTrue', null, null)
-getIssueInformation({-> condExecTrue[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'condExecTrue')
+getIssueInformation({-> condExecTrue[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_10-check conditional execution_True')
 
+// TC_11-check conditional execution_False = issue.get('issuetype')?.name == 'Story'
 def condExecFalse = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'condExecFalse')
 transitionIssue(transition+9, {-> condExecFalse[0]}, 0, 'condExecFalse', null, null)
-getIssueInformation({-> condExecFalse[0]}, /Assignee  . . . . . . . . . . : /, 'condExecFalse')
+getIssueInformation({-> condExecFalse[0]}, /Assignee  . . . . . . . . . . : /, 'TC_11-check conditional execution_False')
 
-// check the current issue should be assigned to reporter
+// TC_12-check the current issue should be assigned to reporter
 def issueWithReporter = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', reporter: userId]}, 'issueWithReporter')
 transitionIssue(transition+10, {-> issueWithReporter[0]}, 0, 'issueAssignedToReporter', null, null)
-getIssueInformation({-> issueWithReporter[0]}, "Assignee  . . . . . . . . . . : $userId", 'issueAssignedToReporter')
+getIssueInformation({-> issueWithReporter[0]}, "Assignee  . . . . . . . . . . : $userId", 'TC_12-check the current issue should be assigned to reporter')
 

@@ -1,0 +1,143 @@
+import groovy.json.JsonSlurper
+import java.nio.file.Paths
+
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def transition = 'createIssuePostfunction'
+def workflow = project
+def screen = project
+def user = info.user
+def userId = 'jmwe_qa'
+gint.xmlReport =	true	//xml report generates in projects root directory
+gint.verbose =	true
+
+def jsonSlurper = new JsonSlurper();
+def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/CreateIssuePostfunction${info?.isCloud ? "Cloud" : ""}.json")
+def transitionFunctions = jsonSlurper.parse(path)
+def functionKey =	info ?.isCloud ? 'com.innovalog.jmwe.jira-misc-workflow-extensions:link-issues-function' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CreateIssue-function'
+def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+
+// Create transitions and add transition function for multiple scenarios using json data file from resources
+createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
+
+createVersions(project, 5)
+createComponents(project, 'component', 5)
+addUsers(userId)
+
+// TC_01-check issue creates with fields provided
+def issue1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createIssue1')
+transitionIssue(transition+0, {-> issue1[0]}, 0, 'TC_01-check issue creates with fields provided', null, null)
+checkIssueList('summary~JMWE_Issue_Postfunction','JMWE_Issue_Postfunction', '1', 'Sub-task', 'TC_01-check issue creates with current fields provided')
+
+// TC_02-check issue creates with copy current issue fields
+def issue2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue_Subtask']}, 'createIssue2')
+transitionIssue(transition+1, {-> issue2[0]}, 0, 'TC_02-check issue creates with copy current issue fields', null, null)
+checkIssueList('summary~JMWE_Issue_Subtask','JMWE_Issue_Subtask', '2','Sub-task', 'TC_02-check issue creates with copy current issue fields')
+
+// TC_03-check issue created with specific issuetype
+//def issue3 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createIssue3')
+transitionIssue(transition+2, {-> issue1[0]}, 0, 'TC_03-check issue creates with specific issuetype', null, null)
+checkIssueList('summary~JMWE_Issue_Story','JMWE_Issue_Story', '1', 'Story', 'TC_03-check issue creates with specific issuetype')
+
+// TC_04-check issue creates in project return from script
+def issue4 = createIssue(project,{[ type: 'Bug', summary: 'Summary_Project_fromScript']}, 'createIssue4')
+transitionIssue(transition+3, {-> issue4[0]}, 0, 'TC_04-check issue creates in project return from script', null, null)
+checkIssueList('summary~summary_project_script','AUTOMATION', '1', 'Sub-task', 'TC_04-check issue creates in project return from script')
+
+// TC_05-check issue creates in project selected from projects dropdown and copy summary of current issue
+def issue5 = createIssue(project,{[ type: 'Bug', summary: 'summary_copyToNewIssue_task']}, 'createIssue5')
+transitionIssue(transition+4, {-> issue5[0]}, 0, 'TC_05-check issue creates in project selected from projects dropdown copy summary from current issue', null, null)
+checkIssueList('summary~summary_copyToNewIssue_task','AUTOMATION', '2', 'Task', 'TC_05-check issue creates in project AUTOMATION, selected from projects dropdown and copy summary of current issue')
+
+// TC_06-check issue creates in project selected from projects dropdown and set summary from groovy template
+//def issue6 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createIssue6')
+transitionIssue(transition+5, {-> issue1[0]}, 0, 'TC_06-check issue creates in project selected from projects dropdown copy summary from current issue', null, null)
+checkIssueList("summary~Summary_template_story",'AUTOMATION', '1', 'Story', 'TC_06-check issue creates in project AUTOMATION, selected from projects dropdown and set summary from groovy template')
+
+// TC_07-Creates issue with calculated issuetypes
+//def issue7 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createIssue7')
+transitionIssue(transition+6, {-> issue1[0]}, 0, 'TC_07-Creates issue with calculated issuetypes ', null, null)
+checkIssueList("summary~summary_calculated_issuetype_bug",'AUTOMATION', '1', 'Bug', 'TC_07-Creates issue with calculated issuetypes_bug')
+
+// TC_08-Creates issue with calculated issuetypes
+//def issue8 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createIssue8')
+transitionIssue(transition+7, {-> issue1[0]}, 0, 'TC_08-Creates issue with calculated issuetypes ', null, null)
+checkIssueList("summary~summary_calculated_issuetype_task",'AUTOMATION', '1', 'Task', 'TC_08-Creates issue with calculated issuetypes_task')
+
+// TC_09-Creates issue with calculated issuetypes
+//def issue9 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createIssue9')
+transitionIssue(transition+8, {-> issue1[0]}, 0, 'TC_09-Creates issue with calculated issuetypes_Story ', null, null)
+checkIssueList("summary~summary_calculated_issuetype_story",'AUTOMATION', '1', 'Story', 'TC_09-Creates issue with calculated issuetypes_story')
+
+// TC_10-Creates issue with calculated issuetypes
+//def issue9 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createIssue9')
+transitionIssue(transition+9, {-> issue1[0]}, 0, 'TC_10-Creates issue with calculated issuetype_subtask ', null, null)
+checkIssueList("summary~summary_calculated_issuetype_story",'AUTOMATION', '1', 'Sub-task', 'TC_10-Creates issue with calculated issuetypes_subtask')
+
+// TC_11-check issues link to current issue through links
+def blocks = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'blocks')
+transitionIssue(transition+10, {-> blocks[0]}, 0, 'linkIssueByBlocksLink', null, null)
+getLinkedIssueList({-> blocks[0]}, '1', 'linkIssuesOfBlocksType', "Blocks", "blocks")
+
+def isBlockedBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isBlockedBy')
+transitionIssue(transition+11, {-> isBlockedBy[0]}, 0, 'linkIssuesByIsBlockedByLink', null, null)
+getLinkedIssueList({-> isBlockedBy[0]}, '1', 'linkIssuesOfIsBlockByType', "Blocks", "is blocked by")
+
+def clones = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'clones')
+transitionIssue(transition+12, {-> clones[0]}, 0, 'linkIssuesByClonesLink', null, null)
+getLinkedIssueList({-> clones[0]}, '1', 'linkIssuesOfClonesType', "Cloners", "clones")
+
+def isClonedBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isClonedBy')
+transitionIssue(transition+13, {-> isClonedBy[0]}, 0, 'linkIssueOfIsClonedByLink', null, null)
+getLinkedIssueList({-> isClonedBy[0]}, '1', 'linkIssuesOfIsClonedByType', "Cloners", "is cloned by")
+
+def duplicates = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'duplicates')
+transitionIssue(transition+14, {-> duplicates[0]}, 0, 'linkIssueOfDuplicatesLink', null, null)
+getLinkedIssueList({-> duplicates[0]}, '1', 'linkIssueOfDuplicatesLink', "Duplicate", "duplicates")
+
+def isDuplicateBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isDuplicateBy')
+transitionIssue(transition+15, {-> isDuplicateBy[0]}, 0, 'linkIssueOfIsDuplicatesLink', null, null)
+getLinkedIssueList({-> isDuplicateBy[0]}, '1', 'linkIssueOfIsDuplicatesLink', "Duplicate", "is duplicated by")
+
+def causes = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'causes')
+transitionIssue(transition+16, {-> causes[0]}, 0, 'linkIssueOfCausesLink', null, null)
+getLinkedIssueList({-> causes[0]}, '1', 'linkIssueOfCausesLink', "Problem/Incident", "causes")
+
+def isCausedBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isCausedBy')
+transitionIssue(transition+17, {-> isCausedBy[0]}, 0, 'linkIssueOfIsCausedByLink', null, null)
+getLinkedIssueList({-> isCausedBy[0]}, '1', 'linkIssueOfisCausedByLink', "Problem/Incident", "is caused by")
+
+def relates = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'relatesTo')
+transitionIssue(transition+18, {-> relates[0]}, 0, 'linkIssueOfrelatesToLink', null, null)
+getLinkedIssueList({-> relates[0]}, '1', 'linkIssueOfrelatesToLink', "Relates", "relates to")
+
+// TC_12-Copy only selected fields
+// Case1: Copy from the current issue
+def issue6 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'label_copy_to_newIssue']}, 'createIssue6')
+transitionIssue(transition+19, {-> issue6[0]}, 0, 'copySelectedFieldsFromCurrentIssue', null, null)
+checkIssueList("summary~label_copy_to_newIssue",'Labels', '1', 'label_copy_to_newIssue', 'TC_12-Case1: Copy from the current issue')
+
+// Case2: testLabel_set_groovyTemplate
+transitionIssue(transition+20, {-> issue6[0]}, 0, 'testLabel_set_groovyTemplate', null, null)
+checkIssueList("summary~testLabel_set_groovyTemplate",'Labels', '1', 'testLabel_set_groovyTemplate', 'TC_12-Case2: testLabel_set_groovyTemplate')
+
+// Case3: testLabel_set_groovyExpression
+transitionIssue(transition+21, {-> issue6[0]}, 0, 'testLabel_set_groovyExpression', null, null)
+checkIssueList("summary~testLabel_set_groovyExpression",'Labels', '1', 'testLabel_set_groovyExpression', 'TC_12-Case3: testLabel_set_groovyExpression')
+
+
+

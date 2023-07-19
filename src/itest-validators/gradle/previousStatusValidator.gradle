@@ -37,7 +37,6 @@ createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'va
 def issue1 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue')
 transitionIssue(transition+0, {-> issue1[0]}, -3, 'transitionWhenPreviousStatuNotInSelectedStatus', null, ["Remote error: Transition is not authorized because current Issue has never been in status To Do before."])
 
-
 def issue2 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue1')
 transitionToStatus({-> issue2[0]}, "In Progress", "To Do", 'setPreviousStatusOfIssueInSelected1')
 transitionIssue(transition+0, {-> issue2[0]}, 0, 'checkWhenIssuesPreviousStatusInSelected', null, null)
@@ -62,5 +61,4 @@ transitionIssue(transition+5, {-> issue5[0]}, 0, 'transitionToCheckConditionalEx
 // check conditional execution false
 def issue6 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentForConditionalExecutionFalse')
 transitionIssue(transition+5, {-> issue6[0]}, 0, 'transitionToCheckConditionalExecFalse', null, null)
-
 

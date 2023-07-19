@@ -5,6 +5,7 @@ def createProject(project, template, workflowScheme, ext) {
         action: 'createProject' ,
         ext: ': '+ template,
         dependsOn: 'setupTransitions',
+        mustRunBefore: 'createIssues',
         ignoreDependsResult: true,
         parameters:[
             project: project,

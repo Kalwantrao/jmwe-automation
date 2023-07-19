@@ -1,8 +1,5 @@
 apply plugin: 'org.gint.atlassian'
-//apply from: '../../common/commonMethod.gradle'
-apply from: gint.resourceDirectory + '/src/common/createUsers.gradle'
-apply from: gint.resourceDirectory + '/src/common/createVersions.gradle'
-apply from: gint.resourceDirectory + '/src/common/createComponents.gradle'
+apply from: gint.resourceDirectory + '/src/common/createProject.gradle'
 
 def project = 'AUTOMATION' //gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
@@ -15,7 +12,5 @@ def userId = 'jmwe_qa'
 importWorkflow(baseWorkflow, workflow)
 createWorkflowScheme(workflow, workflowScheme, 'JMWE')
 createProject(project, template, workflowScheme, 'JMWE')
-createVersions(project, 5)
-createComponents(project, 'component', 5)
-//addUsers(userId)
+
 

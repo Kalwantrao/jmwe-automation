@@ -3,7 +3,7 @@ apply from: gint.resourceDirectory + '/src/common/createProject.gradle'
 def createIssue(project, parametersList,ext) {
     def savedIssues = [:]
     parametersList.eachWithIndex { parameters, number ->
-        gint.taskHelper.add('createIssues',[
+        gint.taskHelper.addSetUp('createIssues',[
                 [action: 'createIssue', ext: ext + number,
                  group: 'create',
                  project: project,
@@ -23,3 +23,4 @@ def createIssue(project, parametersList,ext) {
 ext {
     createIssue=this.&createIssue
 }
+

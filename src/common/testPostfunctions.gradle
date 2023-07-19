@@ -1,17 +1,18 @@
-//apply from: 'common/setUp.gradle'
 apply from: gint.resourceDirectory + '/src/common/createIssues.gradle'
 apply from: gint.resourceDirectory + '/src/common/linkIssues.gradle'
 apply from: gint.resourceDirectory + '/src/common/setUp.gradle'
+apply from: gint.resourceDirectory + '/src/common/createVersions.gradle'
+apply from: gint.resourceDirectory + '/src/common/createComponents.gradle'
+apply from: gint.resourceDirectory + '/src/common/createUsers.gradle'
 
+//createVersions(project, 5)
+//createComponents(project, 'component', 5)
 
 def transitionIssue(transition, issueToTransition, expected, ext, fields, data) {
-    gint.taskHelper.add('transitionIssues', [
+    gint.taskHelper.addSetUp('transitionIssues', [
             [action    : 'transitionIssue', ext: ext,
              dependsOn : 'createIssues',
              ignoreDependsResult: true,
-             ignoreFailure: true,
-             ignore: true,
-             cmdLog: true,
              expected: expected,
              parameters: [
                      issue  : issueToTransition,
@@ -31,8 +32,8 @@ def getIssueInformation(issueToCheck, data, ext) {
     gint.taskHelper.add('getIssueInformation',[
             [action: 'getIssue', ext: ext ,
              dependsOn: 'transitionIssues',
-             ignoreFailure: true,
-             ignore: true,
+             //ignoreFailure: true,
+             //ignore: true,
              group:'test',
              cmdLog: true,
              parameters: [
@@ -50,13 +51,16 @@ def getLinkedIssueList(currentIssue, numberOfLinkedIssues, ext, linkType, link){
     gint.taskHelper.add('getLinkIssues',[
             [action: 'getLinkList', ext: ext,
              dependsOn: 'transitionIssues',
-             ignore: true,
+             //ignore: true,
              parameters: [
                      issue: currentIssue,
              ],
              data: [/$numberOfLinkedIssues links for issue: $currentIssue/,
-                    "$currentIssue","$linkType","$link"]
-
+                    "$currentIssue","$linkType","$link"],
+             finalClosure: { Task task ->
+                 assert task.found == true
+                 gint.helper.log("Check $numberOfLinkedIssues in issue $currentIssue", ext)
+             }
             ]
     ]
     )
@@ -82,7 +86,7 @@ def getIssueHistoryList(issue, userId, ext){
     gint.taskHelper.add('getIssueHistoryList',[
             [action: 'getIssueHistoryList', ext: ext,
              mustRunAfter: 'transitionIssues',
-             ignore: true,
+             //ignore: true,
              parameters: [
                      issue: issue,
              ],
@@ -100,6 +104,10 @@ def getComments(issueToCheckComments, expected, user, ext){
                      issue: issueToCheckComments,
              ],
              data: [~/$user added a comment/],
+                    finalClosure: {Task task ->
+                        assert task.found == true
+                        gint.helper.log("Comment added by: ", user)
+                    }
             ],
     ])
 }
@@ -121,8 +129,13 @@ def checkCommentVisibleToUser(issue, userId, user, ext) {
              ],
              data: [~/$user added a comment/],
             ],
-            [dependsOn: 'transitionIssues', cmd : /acli $userId -a getComments --issue $issue /,
-             failData: [~/$user added a comment/]]
+            [dependsOn: 'transitionIssues', name: 'Comment Visible To User'+ ext , cmd : /acli $userId -a getComments --issue $issue /,
+             failData: [~/$user added a comment/],
+            finalClosure: {Task task ->
+                assert task.found == true
+                gint.helper.log("Comment visible to: ", userId)
+            }
+    ]
     ]
     )
 }
@@ -137,3 +150,5 @@ ext {
     checkCommentVisibleToUser= this.&checkCommentVisibleToUser
     getComments=this.&getComments
 }
+
+

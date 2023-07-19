@@ -80,5 +80,3 @@ transitionToStatus({-> includeCurrent4[0]}, "To Do", "To Do", 'set_PreviousStatu
 transitionIssue(transition+4, {-> includeCurrent4[0]}, -1, 'TC_10-check when issues previous status including current status not in selected status', null, null)
 
 
-
-

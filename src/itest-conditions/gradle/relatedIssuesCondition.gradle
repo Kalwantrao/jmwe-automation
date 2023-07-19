@@ -15,12 +15,12 @@ apply plugin: 'org.gint.atlassian'
 //apply from: 'common/setUp.gradle'
 apply from: gint.resourceDirectory +'/src/common/testConditions.gradle'
 
+
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
 def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
 def workflow = project
 def screen = project
-
-gint.xmlReport =	true	//xml report generates in projects root directory
+gint.xmlReport =	gint.resourceDirectory + 'test-reports'	//xml report generates in projects root directory
 gint.verbose =	true
 def userId = 'jmwe_qa'
 def user = info.user
@@ -33,6 +33,10 @@ def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud a
 
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'condition', startStep, workflow, screen, 0)
+
+addUsers(userId)
+createVersions(project, 5)
+createComponents(project, 'component', 5)
 
 // TC_01-current issue not having subtasks
 def currentIssue1 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createCurrentIssue1')

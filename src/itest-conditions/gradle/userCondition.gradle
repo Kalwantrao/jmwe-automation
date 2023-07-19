@@ -31,17 +31,19 @@ def functionKey = info ?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plug
 def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'condition', startStep, workflow, screen, 0)
-
+createVersions(project, 5)
+createComponents(project, 'component', 5)
+addUsers(userId)
 // TC_01-check when currrent user is not reporter - criteria fails
 def currentIssue = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', reporter: userId]}, 'currentIssue')
-transitionIssue(transition+0, {-> currentIssue[0]}, -1, 'TC_01- current user not satisfies the criteria', null, null)
+transitionIssue(transition+0, {-> currentIssue[0]}, -1, 'TC_01-when currrent user is not reporter - criteria failsa', null, null)
 
 // TC_02-check when currrent user is reporter - condition true
 def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', reporter: user, assignee: user]}, 'currentUserReporter')
-transitionIssue(transition+0, {-> parent[0]}, 0, 'TC_02-current user satisfies the criteria', null, null)
+transitionIssue(transition+0, {-> parent[0]}, 0, 'TC_02-when currrent user is reporter - condition true', null, null)
 
 // TC_03-check when currrent user is not assignee - criteria fails
-transitionIssue(transition+1, {-> currentIssue[0]}, -1, 'TC_03- current user not satisfies the criteria', null, null)
+transitionIssue(transition+1, {-> currentIssue[0]}, -1, 'TC_03-when currrent user is not assignee - criteria fails', null, null)
 
 // TC_04-check when currrent user is assignee - condition true
 transitionIssue(transition+1, {-> parent[0]}, 0, 'TC_04-current user satisfies the criteria', null, null)
@@ -50,26 +52,26 @@ transitionIssue(transition+1, {-> parent[0]}, 0, 'TC_04-current user satisfies t
 transitionIssue(transition+2, {-> parent[0]}, 0, 'TC_05-current user satisfies the criteria', null, null)
 
 // TC_06-check when currrent user is not project lead - condition false
-transitionByUserTask(transition+2, userId, {-> parent[0]}, null, -1, 'TC_06-check when currrent user is not project lead - condition false')
+transitionByUserTask(transition+2, userId, {-> parent[0]}, null, -1, 'TC_06-when currrent user is not project lead - condition false')
 
 // TC-07-check when currrent user is in selected group - condition true
-transitionIssue(transition+4, {-> parent[0]}, 0, "TC_07-When condition true", null, null)
+transitionIssue(transition+4, {-> parent[0]}, 0, "TC-07-when currrent user is in selected group - condition true", null, null)
 
 // TC_08-check when currrent user is not in selected group - condition false
-transitionByUserTask(transition+4, userId, {-> parent[0]}, null, -1, 'TC_08-user not in selected group' )
+transitionByUserTask(transition+4, userId, {-> parent[0]}, null, -1, 'TC_08-when currrent user is not in selected group - condition false' )
 
 // TC_09-check when currrent user is in selected field - condition true
 def parent2 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', assignee: user]}, 'currentUserIsAssignee')
-transitionIssue(transition+5, {-> parent2[0]}, 0, "TC_09-When condition true", null, null)
+transitionIssue(transition+5, {-> parent2[0]}, 0, "TC_09-when currrent user is in selected field - condition true", null, null)
 
 // TC_10-check when currrent user is not in selected field - condition false
-transitionByUserTask(transition+5, userId, {-> parent2[0]}, null, -1, 'TC_10-user not satisfies the criteria' )
+transitionByUserTask(transition+5, userId, {-> parent2[0]}, null, -1, 'TC_10-when currrent user is not in selected field - condition false' )
 
 // TC_11-check when currrent user is return from the script - condition true
-transitionIssue(transition+6, {-> parent2[0]}, 0, "TC_11-When condition true", null, null)
+transitionIssue(transition+6, {-> parent2[0]}, 0, "TC_11-when currrent user is return from the script - condition true", null, null)
 
 // TC_12-check when currrent user is not return from the script- condition false
-transitionByUserTask(transition+6, userId, {-> parent2[0]}, null, -1, 'TC_12-user not satisfies the criteria' )
+transitionByUserTask(transition+6, userId, {-> parent2[0]}, null, -1, 'TC_12-when currrent user is not return from the script- condition false' )
 
 
 

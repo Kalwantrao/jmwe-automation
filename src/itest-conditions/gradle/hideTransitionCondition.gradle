@@ -24,7 +24,7 @@ gint.xmlReport =	true	//xml report generates in projects root directory
 gint.verbose =	true
 def userId = 'jmwe_qa'
 def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/conditionsData/CurrentStatusConditionFunctions${info?.isCloud ? "Cloud" : ""}.json")
+def path = Paths.get(gint.directories.resource + "/resources/conditionsData/HideTransitionConditionFunctions${info?.isCloud ? "Cloud" : ""}.json")
 def transitionFunctions = jsonSlurper.parse(path)
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:non-interactive-condition'	//function key for Hide transition condition
 def transition = 'hideTransitionFromUser'
@@ -35,6 +35,5 @@ createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'co
 // TC_01-check when current status of the issue is selected
 def currentIssue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createCurrentIssue')
 transitionIssue(transition+0, {-> currentIssue[0]}, -1, 'TC_01-check hide this transition from user', null, null)
-
 
 

@@ -27,12 +27,15 @@ def transition = 'fieldHasBeenModifiedValidator'
 def startStep =	'11' // depends on workflow. '11' (To Do) works for custom jira workflow
 def screen = project
 
-
 def jsonSlurper = new JsonSlurper();
 def path = Paths.get(gint.directories.resource + "/resources/validatorsData/FieldHasBeenModifiedValidator.json")
 def transitionFunctions = jsonSlurper.parse(path)
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
+
+addUsers(userId)
+createVersions(project, 5)
+createComponents(project, 'component', 5)
 
 
 // check affectsVersions

@@ -31,6 +31,9 @@ def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugi
 def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
+addUsers(userId)
+createVersions(project, 5)
+createComponents(project, 'component', 5)
 
 // check when currrent user is not reporter - criteria fails
 def currentIssue = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', reporter: userId]}, 'currentIssue')

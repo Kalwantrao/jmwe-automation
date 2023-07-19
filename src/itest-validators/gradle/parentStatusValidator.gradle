@@ -52,4 +52,3 @@ def parent4 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'cre
 def subtask4 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent4[0]}, priority: 'Medium', labels: 'conditionalExecution']}, 'createSubtaskForConditionalExecutionFalse')
 transitionIssue(transition+3, {-> subtask4[0]}, 0, 'transitionToCheckConditionalExecFalse', null, null)
 
-

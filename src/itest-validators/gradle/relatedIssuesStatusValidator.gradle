@@ -13,7 +13,6 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: 'common/setUp.gradle'
 apply from: gint.resourceDirectory +'/src/common/testValidators.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
@@ -87,6 +86,7 @@ def linkIssue1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'l
 def linkIssue2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssue2')
 linkIssues([issue: { -> linkIssue1[0] }, toIssue: { -> linkIssue2[0] }, link: 'duplicates'], 'linkByAnyLinkType1' )
 transitionIssue(transition+4, {-> linkIssue1[0]}, -3, 'issuesLinkedByAnyLinkNotInSelectedStatus', null, null)
+
 
 // Case2: When in selected status
 def linkIssue3 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssue3')

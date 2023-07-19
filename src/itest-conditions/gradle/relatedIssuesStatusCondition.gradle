@@ -32,6 +32,7 @@ def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud a
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'condition', startStep, workflow, screen, 0)
 
+
 // TC_10-Verify Sub-task of the current issue
 //Case1: When not in selected Status
 def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent')

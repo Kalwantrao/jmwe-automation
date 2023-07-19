@@ -32,6 +32,9 @@ def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud a
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
 
+createVersions(project, 5)
+createComponents(project, 'component', 5)
+
 // check affectsVersions
 def singleValue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: 'component1']}, 'singleValue')
 transitionIssue(transition+0, {-> singleValue[0]}, 0, 'whenComponentsHasSingleValues', null, null)

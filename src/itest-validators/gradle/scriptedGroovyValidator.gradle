@@ -33,6 +33,9 @@ def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud a
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
 
+createVersions(project, 5)
+createComponents(project, 'component', 5)
+
 // check when issue is not assigned - condition fails
 def currentIssue = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'currentIssue')
 transitionIssue(transition+0, {-> currentIssue[0]}, -3, 'TC_01- When issue not having assignee', null, null)
@@ -57,4 +60,3 @@ transitionIssue(transition+2, {-> parent1[0]}, -3, "TC_05-When condition false",
 // check when condition (!!issue.getLinkedIssues()) returns true
 def parent2 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', fixVersions: '1']}, 'currentIssueWithFixVersion')
 transitionIssue(transition+2, {-> parent2[0]}, 0, "TC_06-When condition true", null, null)
-

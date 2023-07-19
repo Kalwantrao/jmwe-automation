@@ -36,31 +36,32 @@ def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud a
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
 
-// check the subtask of the parent issue
+// TC_01-check the subtask of the parent issue
 def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue')
 def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]}, labels: 'test_label']}, 'createSubtask')
 transitionIssue(transition+0, {-> subTask[0]}, 0, 'transitionSubtask', null, null)
-getIssueInformation({-> subTask[0]}, "Labels  . . . . . . . . . . . : test_label", 'checkSubtask')
-getIssueInformation({-> parent[0]}, "Labels  . . . . . . . . . . . : test_label", 'checkParentIssue')
+getIssueInformation({-> subTask[0]}, "Labels  . . . . . . . . . . . : test_label", 'TC_01-check the subtask of the parent issue')
 
-// check when the selected field is empty and parent issue having value
+// TC_02-check the parentIssue field added from subtask
+getIssueInformation({-> parent[0]}, "Labels  . . . . . . . . . . . : test_label", 'TC_02-check the parentIssue field added from subtask')
+
+// TC_03-check when the selected field is empty and parent issue having value
 def parent1 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', labels: 'test_label']}, 'createParentIssueWithFieldValue')
 def subTask1 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent1[0]}, labels: '']}, 'checkSubtaskHavingEmptyValue')
 transitionIssue(transition+0, {-> subTask1[0]}, 0, 'checkEmptyValueOfSubtask', null, null)
-getIssueInformation({-> parent1[0]}, "Labels  . . . . . . . . . . . : test_label", 'checkSubtaskHavingEmptyValue')
+getIssueInformation({-> parent1[0]}, "Labels  . . . . . . . . . . . : test_label", 'TC_03-check when the selected field is empty and parent issue having value')
 
-// check conditional execution true
+// TC_04-check conditional execution true
 def parent3 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentForConditionalExecutionTrue')
 def subtask3 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent3[0]}, assignee: user, labels: 'conditionalExecution']}, 'createSubtaskForConditionalExecutionTrue')
 transitionIssue(transition+1, {-> subtask3[0]}, 0, 'transitionToCheckConditionalExecTrue', null, null)
-getIssueInformation({-> parent3[0]}, "Labels  . . . . . . . . . . . : conditionalExecution", 'checkParentIssueCondExecTrue')
+getIssueInformation({-> parent3[0]}, "Labels  . . . . . . . . . . . : conditionalExecution", 'TC_04-check conditional execution true')
 
-// check conditional execution false
+// TC_05-check conditional execution false
 def parent4 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentForConditionalExecutionFalse')
 def subtask4 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent4[0]}, labels: 'conditionalExecution']}, 'createSubtaskForConditionalExecutionFalse')
 transitionIssue(transition+1, {-> subtask4[0]}, 0, 'transitionToCheckConditionalExecFalse', null, null)
-getIssueInformation({-> parent4[0]}, "Labels  . . . . . . . . . . . : ", 'checkParentIssueCondExecFalse')
-
+getIssueInformation({-> parent4[0]}, "Labels  . . . . . . . . . . . : ", 'TC_05-check conditional execution false')
 
 
 

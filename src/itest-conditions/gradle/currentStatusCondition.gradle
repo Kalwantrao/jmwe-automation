@@ -40,7 +40,6 @@ transitionIssue(transition+0, {-> currentIssue[0]}, 0, 'TC_01-check issues curre
 def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue')
 transitionIssue(transition+1, {-> parent[0]}, -1, 'TC_02-check issues current status should not be in selected status but in selected status', null, null)
 
-
 /*
 1. select all status checkbox
 2. multiple conditions with To Do and In Progress

@@ -13,7 +13,6 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: 'common/setUp.gradle'
 apply from: gint.resourceDirectory +'/src/common/testValidators.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available

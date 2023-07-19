@@ -1,7 +1,7 @@
 apply from: gint.resourceDirectory + '/src/common/createIssues.gradle'
 
 def linkIssues(parameters, ext) {
-    gint.taskHelper.add('linkIssues',[
+    gint.taskHelper.addSetUp('linkIssues',[
             [action: 'linkIssue', ext: ext,
              dependsOn: 'createIssues',
              mustRunBefore: 'transitionIssues',

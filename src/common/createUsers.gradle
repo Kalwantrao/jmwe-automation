@@ -1,9 +1,10 @@
 apply from: gint.resourceDirectory + '/src/common/createProject.gradle'
 
 def addUsers(userId) {
-    gint.taskHelper.add('createUsers', [
+    gint.taskHelper.addSetUp('createUsers', [
             [
                     action    : 'addUser',
+                    dependsOn: 'createProject',
                     parameters: [
                             userId      : userId,
                             userEmail   : userId + '@gmail.com',
@@ -16,8 +17,16 @@ def addUsers(userId) {
                     }
             ],
     ])
+    gint.taskHelper.addTearDown('deleteUsers', [
+            [
+                    action    : 'removeUser',
+                    dependsOn: 'deleteProject',
+                    parameters: [
+                            userId      : userId,
+                    ],
+            ],
+    ])
 }
 ext {
     addUsers=this.&addUsers
-
 }

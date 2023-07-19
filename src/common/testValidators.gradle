@@ -1,14 +1,21 @@
 apply from: gint.resourceDirectory + '/src/common/setUp.gradle'
 apply from: gint.resourceDirectory + '/src/common/createIssues.gradle'
 apply from: gint.resourceDirectory + '/src/common/linkIssues.gradle'
+apply from: gint.resourceDirectory + '/src/common/createUsers.gradle'
+apply from: gint.resourceDirectory + '/src/common/createVersions.gradle'
+apply from: gint.resourceDirectory + '/src/common/createComponents.gradle'
+
+//createVersions(project, 5)
+//createComponents(project, 'component', 5)
 
 def transitionIssue(transition, issueToTransition, expected, ext, fields, data) {
     gint.taskHelper.add('transitionIssues', [
             [action    : 'transitionIssue', ext: ext,
              dependsOn : ['createIssues'],
-             ignoreDependsResult: true,
-             ignoreFailure: true,
-             ignore: true,
+             //ignoreDependsResult: true,
+             //ignoreFailure: true,
+             //ignore: true,
+             group: 'test',
              cmdLog: true,
              expected: expected,
              parameters: [
@@ -27,7 +34,7 @@ def transitionIssue(transition, issueToTransition, expected, ext, fields, data) 
 }
 
 def updateIssues(issue, parameters, ext){
-    gint.taskHelper.add('setFields',[
+    gint.taskHelper.addSetUp('setFields',[
             [action: 'updateIssue', ext: ext,
              dependsOn: 'createIssues',
              mustRunBefore: 'transitionIssues',
@@ -51,9 +58,10 @@ def transitionByUserTask(transition, userId, issue, data, expected ) {
     )
 }
 def transitionToStatus(issue, previousStatus, currentStatus, ext){
-    gint.taskHelper.add('setIssueStatus',[
+    gint.taskHelper.addSetUp('setPreviousStatus',[
             [action: 'transitionIssue', ext: 'previous' + ext,
              mustRunBefore: 'transitionIssues',
+             mustRunAfter: 'createIssues',
              parameters: [
                      issue: issue,
                      transition: previousStatus,
@@ -62,9 +70,12 @@ def transitionToStatus(issue, previousStatus, currentStatus, ext){
                  assert task.result == 0
                  gint.helper.log("Issue is transition to status: $previousStatus", ext)
              }
-            ],
+       ]
+    ])
+    gint.taskHelper.addSetUp('setCurrentStatus',[
             [action: 'transitionIssue', ext: 'current' + ext,
              mustRunBefore: 'transitionIssues',
+             dependsOn: 'setPreviousStatus',
              parameters: [
                      issue: issue,
                      transition: currentStatus,
@@ -74,9 +85,8 @@ def transitionToStatus(issue, previousStatus, currentStatus, ext){
                  gint.helper.log("Issue is transition to status: $currentStatus", ext)
              }
             ]
-    ]
 
-    )
+   ] )
 }
 ext {
     transitionIssue=this.&transitionIssue

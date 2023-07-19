@@ -36,16 +36,17 @@ def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud a
 
 createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
 
-// check increase field values without condition
+// TC_01-check increase value of field original story points
 def originalStoryPoints = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue']}, 'originalStoryPoints')
 transitionIssue(transition+0, {-> originalStoryPoints[0]}, 0, 'originalStoryPoints', null, null)
 getIssueInformation({-> originalStoryPoints[0]}, "Original story points . . . . : 1.0", 'originalStoryPoints')
 
+// TC_02-check increase value of field story points
 def storyPoints = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue']}, 'storyPoints')
 transitionIssue(transition+1, {-> storyPoints[0]}, 0, 'storyPoints', null, null)
 getIssueInformation({-> storyPoints[0]}, "Story Points  . . . . . . . . : 1.0", 'storyPoints')
 
-// check conditional execution true
+// TC_01-check increase value of field original story points when  conditional execution true
 def condExecTrue_originalStoryPoints = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue', priority: 'High']}, 'condExecTrue_originalStoryPoints')
 transitionIssue(transition+2, {-> condExecTrue_originalStoryPoints[0]}, 0, 'condExecTrue_originalStoryPoints', null, null)
 getIssueInformation({-> condExecTrue_originalStoryPoints[0]}, "Original story points . . . . : 1.0", 'condExecTrue_originalStoryPoints')
@@ -59,6 +60,7 @@ getIssueInformation({-> condExecTrue_storyPoints[0]}, "Story Points  . . . . . .
 def condExecFalse_originalStoryPoints = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'condExecFalse_originalStoryPoints')
 transitionIssue(transition+2, {-> condExecFalse_originalStoryPoints[0]}, 0, 'condExecFalse_originalStoryPoints', null, null)
 getIssueInformation({-> condExecFalse_originalStoryPoints[0]}, " ", 'condExecFalse_originalStoryPoints')
+
 
 def condExecFalse_storyPoints = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'condExecFalse_storyPoints')
 transitionIssue(transition+3, {-> condExecFalse_originalStoryPoints[0]}, 0, 'condExecFalse_storyPoints', null, null)
