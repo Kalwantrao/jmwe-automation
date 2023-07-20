@@ -16,7 +16,7 @@ createProject(project, template, workflowScheme, 'JMWE')
 
 /*
  acli jira10 --action addTransitionFunction --workflow TESTK --transition test --step 1 --type postfunction --functionKey com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__ClearFieldsFunction --field 'postFunction.id=c3b95df4-bceb-4ec5-a1bd-3de19042887c' --field 'postFunction.config-c3b95df4-bceb-4ec5-a1bd-3de19042887c={"conditionalExecution":false,"_modified":"2023-07-20T05:56:14.556Z","fields":"customfield_12109","runAsType":"addonUser"}' -v
-*/
+
 // Not working jmwe postfunction - ClearFields
         // [cmd: /acli jira10 --action addTransitionFunction --workflow TESTK --transition test --step 1 --type postfunction --functionKey com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__ClearFieldsFunction --field 'postFunction.id=c3b95df4-bceb-4ec5-a1bd-3de19042887c' --field 'postFunction.config-c3b95df4-bceb-4ec5-a1bd-3de19042887c={"conditionalExecution":false,"_modified":"2023-07-20T05:56:14.556Z","fields":"customfield_12109","runAsType":"addonUser"}' -v/]
 
@@ -37,3 +37,12 @@ createProject(project, template, workflowScheme, 'JMWE')
 
 
 // acli jiraCloud -a addTransitionFunction --workflow CopyZVALIDATOR --transition test --step 1 --type condition --functionKey com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CurrentStatusCondition --field 'condition.id=0da9ad67-6137-4d41-b074-bd436800f0c9' --field 'condition.config-0da9ad67-6137-4d41-b074-bd436800f0c9={"_modified":"2023-07-20T12:23:16.294Z","statusIds":[10011],"options":{"not":false},"expression":"config.statusIds.includes(issue.status.id)"}' -v
+
+*/
+
+
+
+// acli jiraCloud --action addTransitionFunction --workflow CopyZVALIDATOR --transition test --step 1 --type postfunction --functionKey com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ClearFieldsFunction --field 'postFunction.id=ebea656a-b4a9-4bdf-9386-cd5ff7dbdebd' --field 'postFunction.config-ebea656a-b4a9-4bdf-9386-cd5ff7dbdebd={"conditionalExecution":false,"_modified":"2023-07-20T12:35:38.008Z","fields":"customfield_10026","runAsType":"addonUser"}' -v
+
+
+
