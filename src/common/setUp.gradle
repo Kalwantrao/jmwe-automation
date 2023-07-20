@@ -17,4 +17,22 @@ createProject(project, template, workflowScheme, 'JMWE')
 /*
  acli jira10 --action addTransitionFunction --workflow TESTK --transition test --step 1 --type postfunction --functionKey com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__ClearFieldsFunction --field 'postFunction.id=c3b95df4-bceb-4ec5-a1bd-3de19042887c' --field 'postFunction.config-c3b95df4-bceb-4ec5-a1bd-3de19042887c={"conditionalExecution":false,"_modified":"2023-07-20T05:56:14.556Z","fields":"customfield_12109","runAsType":"addonUser"}' -v
 */
+// Not working jmwe postfunction - ClearFields
+        // [cmd: /acli jira10 --action addTransitionFunction --workflow TESTK --transition test --step 1 --type postfunction --functionKey com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__ClearFieldsFunction --field 'postFunction.id=c3b95df4-bceb-4ec5-a1bd-3de19042887c' --field 'postFunction.config-c3b95df4-bceb-4ec5-a1bd-3de19042887c={"conditionalExecution":false,"_modified":"2023-07-20T05:56:14.556Z","fields":"customfield_12109","runAsType":"addonUser"}' -v/]
+
+// Not working jmwe postfunction - increase value of fields
+       // [cmd: /acli jira10 -a addTransitionFunction --workflow TESTK --transition test --step 1 --type postfunction --functionKey com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__IncreaseFieldValueFunction --field 'postFunction.id=1c42eba8-b469-4e24-8336-c8b3216b4035' --field 'postFunction.config-1c42eba8-b469-4e24-8336-c8b3216b4035={"conditionalExecution":false,"_modified":"2023-07-20T05:26:13.323Z","sendNotifications":true,"fieldId":"customfield_11954"}' -v/]
+
+// Not Working Jmwe condition - Current Status condition
+       // [cmd: /acli jira10 -a addTransitionFunction --workflow TESTK --transition test --step 1 --type condition --functionKey com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CurrentStatusCondition --field 'condition.id=52cb1ea7-db27-4db8-b08e-3b42274c683d' --field 'condition.config-52cb1ea7-db27-4db8-b08e-3b42274c683d={"_modified":"2023-07-19T11:59:49.997Z","statusIds":[10011],"options":{"not":false},"expression":"config.statusIds.includes(issue.status.id)"}' -v/]
+
+// Not Working Jmwe condition - User condition
+       // [cmd: /acli jira10 -a addTransitionFunction --workflow TESTK --transition test --step 1 --type condition --functionKey com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__UserCondition --field 'condition.id=c7be8fb2-27bc-4d99-8266-c4c0fcfbce96' --field 'condition.config-c7be8fb2-27bc-4d99-8266-c4c0fcfbce96=![CDATA[{"problems":[],"fromUserType":"currentUser","conditionMode":"all-user-condition","userCriteria":{"isReporter":true},"expression":"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))","_modified":"2023-07-20T05:43:27.770Z"}]]' -v/]
+
+//  Not working jmwe validator - Comment required validator
+        [cmd: /acli jira10 -a addTransitionFunction --workflow TESTK --transition test --step 1 --type validator --functionKey com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CommentRequiredValidator --field 'validator.id=e132e42a-ecbb-4556-aa93-eec990cd2933' --field 'validator.config-e132e42a-ecbb-4556-aa93-eec990cd2933={"problems":[],"expression":"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)","_modified":"2023-07-20T05:09:37.709Z"}' -v/]
+
+// Working Jira's validator - checklist not empty
+       // [cmd: /acli jira10 -a addTransitionFunction --workflow TESTK --transition test --step 1 --type validator --functionKey com.atlassian.plugins.atlassian-connect-plugin:com.gebsun.plugins.jira.issuechecklist__issue-checklist-not-empty-workflow-validator --field 'validator.id=518c7836-0f77-4c20-9ce0-a58fa7da11f2' --field 'validator.config-518c7836-0f77-4c20-9ce0-a58fa7da11f2=' -v/]
+
 
