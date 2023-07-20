@@ -36,7 +36,20 @@ createProject(project, template, workflowScheme, 'JMWE')
        // [cmd: /acli jira10 -a addTransitionFunction --workflow TESTK --transition test --step 1 --type validator --functionKey com.atlassian.plugins.atlassian-connect-plugin:com.gebsun.plugins.jira.issuechecklist__issue-checklist-not-empty-workflow-validator --field 'validator.id=518c7836-0f77-4c20-9ce0-a58fa7da11f2' --field 'validator.config-518c7836-0f77-4c20-9ce0-a58fa7da11f2=' -v/]
 
 
-// acli jiraCloud -a addTransitionFunction --workflow CopyZVALIDATOR --transition test --step 1 --type condition --functionKey com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CurrentStatusCondition --field 'condition.id=0da9ad67-6137-4d41-b074-bd436800f0c9' --field 'condition.config-0da9ad67-6137-4d41-b074-bd436800f0c9={"_modified":"2023-07-20T12:23:16.294Z","statusIds":[10011],"options":{"not":false},"expression":"config.statusIds.includes(issue.status.id)"}' -v
+
+
+
+
+
+
+
+
+//---------------------------------------------------------------
+//acli jiraCloud -a addTransitionFunction --workflow CopyZVALIDATOR --transition test --step 1 --type validator --functionKey com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CommentRequiredValidator --field 'validator.id=315f42b1-c0ba-4d38-9bd7-bc9c4fa58aa5' --field 'validator.config-315f42b1-c0ba-4d38-9bd7-bc9c4fa58aa5=![CDATA[{"problems":[],"expression":"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)","_modified":"2023-07-20T12:46:06.026Z"}]]' -v
+
+
+
+// acli jiraCloud -a addTransitionFunction --workflow CopyZVALIDATOR --transition test --step 1 --type condition --functionKey com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CurrentStatusCondition --field 'condition.id=3b924a2a-9078-404f-9ad9-bf7470b9ed59' --field 'condition.config-3b924a2a-9078-404f-9ad9-bf7470b9ed59={"_modified":"2023-07-20T12:42:22.904Z","statusIds":[10011],"options":{"not":false},"expression":"config.statusIds.includes(issue.status.id)"}' -v
 
 */
 
