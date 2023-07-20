@@ -14,3 +14,7 @@ createWorkflowScheme(workflow, workflowScheme, 'JMWE')
 createProject(project, template, workflowScheme, 'JMWE')
 
 
+/*
+ acli jira10 --action addTransitionFunction --workflow TESTK --transition test --step 1 --type postfunction --functionKey com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__ClearFieldsFunction --field 'postFunction.id=c3b95df4-bceb-4ec5-a1bd-3de19042887c' --field 'postFunction.config-c3b95df4-bceb-4ec5-a1bd-3de19042887c={"conditionalExecution":false,"_modified":"2023-07-20T05:56:14.556Z","fields":"customfield_12109","runAsType":"addonUser"}' -v
+*/
+
