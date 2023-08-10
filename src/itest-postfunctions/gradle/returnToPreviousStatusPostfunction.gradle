@@ -1,0 +1,47 @@
+import groovy.json.JsonSlurper
+import java.nio.file.Paths
+
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.3"
+    }
+}
+
+apply plugin: "org.gint.atlassian"
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def user = info.user
+def userId = info?.isCloud ? cloudUser : serverUser
+def transition = 'returnToPreviousStatusPf'
+def jsonSlurper = new JsonSlurper();
+def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/ReturnToPreviousStatusPostfunction${info?.isCloud ? "Cloud" : ""}.json")
+def transitionFunctions = jsonSlurper.parse(path)
+
+
+tearDown()
+addWorkflow()
+addWorkflowExtension( transitionFunctions, transition, returnToPreviousStatusServer, 'postfunction', 0)
+createWorkflowScheme()
+createProject()
+addUser()
+addGroup()
+addProjectRole()
+addProjectRoleActors()
+
+def issue1 = createIssue([type: 'Bug', summary: "JMWE_Issue"],'Bug')
+ext.TC_01 = { ext->
+    transitionIssue('returnToPreviousStatusPf'+0, {->issue1[]}, 0, null, ext)
+    getFieldValue({->issue1[]}, "Status", "In Progress", ext)
+}
+//def toIssue = createIssue([type: 'Bug', summary: "JMWE_Issue"],' ')
+//linkIssue([issue: {-> issue[]}, toIssue: {-> toIssue[]}, link: 'blocks'], 'Blocks')
+
+TC_01("Check issue status should be In Progress" )
+
