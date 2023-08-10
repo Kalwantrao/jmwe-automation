@@ -1,0 +1,142 @@
+apply from: gint.resourceDirectory +'/src/common/tearDown.gradle'
+
+import groovy.json.JsonOutput
+
+def info = gint.getJiraHelper().getServerInfoWithVerify()
+ext.addWorkflow = {
+    gint.taskHelper.addSetUp([
+            [
+                    action       : info?.isCloud ? 'copyWorkflow' : 'importWorkflow',
+                    ignoreFailure: true,
+                    parameters   : info?.isCloud ? [workflow: baseWorkflowCloud, name: projectName] : [workflow: projectName, file: workflowFile]
+            ],
+    ]
+    )
+}
+ext.addWorkflowExtension = { transitionFunctions, transitionName, functionKey, type, offset = 0 -> //transition, functionData, functionKey, type, ext ->
+    transitionFunctions.eachWithIndex { functionData, index, number = index + offset ->
+        def transition = transitionName + number
+        gint.taskHelper.addSetUp([
+                [action    : 'addTransition', ext: number,
+                 parameters: [
+                         workflow: workflow,
+                         name    : transition,
+                         step    : info?.isCloud ? startStepCloud : startStepServer,
+                         screen  : screen
+                 ],
+                ],
+                [action    : 'addTransitionFunction', ext: number,
+                 parameters: [
+                         workflow   : workflow,
+                         transition : transition,
+                         functionKey: functionKey,
+                         type       : type,
+                         step       : info?.isCloud ? startStepCloud : startStepServer,
+                         data       : JsonOutput.toJson(functionData) //data
+                 ]
+                ]
+        ])
+    }
+}
+ext.createWorkflowScheme = {
+    gint.taskHelper.addSetUp([
+            action: 'createWorkflowScheme',
+            parameters:[
+                    workflowScheme: projectName,
+                    workflow: workflow,
+            ],
+    ]
+    )
+}
+ext.createProject = {
+    gint.taskHelper.addSetUp(
+            [action: 'createProject',
+             parameters:[
+                     project: projectName,
+                     template: info?.isCloud? projectTemplateCloud : projectTemplateServer,
+                     lead: '@Self',
+                     workflowScheme: workflowScheme,
+             ],
+            ]
+    )
+}
+ext.addUser = {
+    gint.taskHelper.addSetUp(
+            [action: 'addUser',
+             parameters: info?.isCloud? [userId: cloudUser, userEmail: cloudUser + '@gmail.com'] : [userId:serverUser, userEmail:serverUser + '@gmail.com', userPassword:serverUser]
+            ]
+    )
+}
+ext.addGroup = {
+    gint.taskHelper.addSetUp(
+            [action: 'addGroup',
+             parameters: [
+                     group: groupName
+             ]
+            ]
+    )
+}
+ext.addProjectRole = {
+    gint.taskHelper.addSetUp(
+            [action: 'addProjectRole',
+             parameters: [
+                     name: projectRole
+             ],
+            ]
+    )
+}
+ext.addProjectRoleActors = {
+    gint.taskHelper.addSetUp(
+            [action: 'addProjectRoleActors',
+             parameters: [
+                     project: projectName,
+                     role: projectRole,
+                     userId: info?.isCloud ? cloudUser : serverUser
+             ],
+            ]
+    )
+}
+ext.openWorkflow = { driver, url ->
+    gint.helper.log("opening",'workflow');
+    gint.seleniumHelper.gotoUrl(url: url)
+    driver.scroll(xpath: "//a[@class='project-config-workflow-edit']", type: "xpath")
+    driver.findAndClickElement(xpath: "//a[@class='project-config-workflow-edit']", type: "xpath")
+}
+ext.selectTransition = { driver, id ->
+    gint.helper.log("selcting","transition")
+    driver.scroll(id: "$id", type: "id")
+    driver.findAndClickElement(id: "$id", type: "id") //edit_action_11_51
+}
+ext.postfunctions = { driver ->
+    gint.helper.log("opening","postfunctions on worklfow")
+    driver.scroll(id: "view_post_functions", type: "id")
+    driver.findAndClickElement(id: "view_post_functions", type: "id")
+}
+ext.moveDownArrow = { driver ->
+    gint.helper.log("moving down","postfunction")
+    def warning = driver.findElement(xpath: "//div[@class='aui-message aui-message-error']", type: "xpath")
+    if (warning) {
+        [1, 2, 3].each {
+            driver.scroll(xpath: "(//a[@class='aui-button aui-button-link criteria-move-down'])[$it]", type: "xpath");
+            driver.findAndClickElement(xpath: "(//a[@class='aui-button aui-button-link criteria-move-down'])[$it]", type: "xpath");
+        }
+        gint.helper.log("Positioned the post function", "warning found")
+    }
+    else {
+        gint.helper.log("No need to position the post function", "warning not found")
+    }
+    assert warning
+}
+ext.publishWorkflow = { driver ->
+    gint.helper.log("publishing",'workflow');
+    driver.scroll(id: "publish-draft", type: "id")
+    driver.findAndClickElement(id:"publish-draft", type:"id")
+    gint.helper.log("Clicking", "publish button")
+    driver.scroll(id:"publish-workflow-false", type: "id")
+    driver.findAndClickElement(id:"publish-workflow-false", type: "id")
+    gint.helper.log("Selecting", "noRadioBtn")
+    driver.scroll(id:"publish-workflow-submit",type:"id");
+    driver.findAndClickElement(id:"publish-workflow-submit",type:"id");
+    gint.helper.log("Published workflow","AUTOMATION")
+}
+
