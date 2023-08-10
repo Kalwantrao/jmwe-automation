@@ -6,15 +6,13 @@
  * This project uses @Incubating APIs which are subject to change.
  */
 
-// Run the scripts of jmwe-Conditions using ./gradlew conditions
-// Run the scripts of jmwe-Validators using ./gradlew validators
-// Run the scripts of jmwe-Postfunctions using ./gradlew postfunctions
-
 buildscript {
     def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
     dependencies {
-        classpath 'org.gint:gint:' + gintVersion
+        classpath 'org.gint:gint:3.8.4'
+        classpath 'org.gint:gint-atlassian:3.8.4'
     }
+
 
     repositories {
         flatDir { dirs 'libs' }
@@ -29,6 +27,7 @@ plugins {
     id "idea"
 }
 apply plugin: 'org.gint'
+apply plugin: 'org.gint.atlassian'
 
 configurations {
     localDeps
@@ -58,35 +57,71 @@ repositories {
 
 gint.verbose = true
 
-defaultTasks 'validators'
+defaultTasks
 
 def appLibPath = "$buildDir/output/lib"
 def appLibName = "JMWE.jar"
 def appPath = "$appLibPath/$appLibName"
 
-tasks.register('copyToLib', Copy) {
+ext.info = gint.getJiraHelper().getServerInfoWithVerify()
+ext.gint = gint
+gint.taskHelper.addSetUp('installAcli', [
+        [
+                name: 'Install Acli',
+                action: 'installApp',
+                level: false,
+                app: '@default',
+                parameters: [
+                        app: '@default'
+                ],
+        ],
+        [
+                name: 'Add license Acli',
+                action: 'addLicense',
+                level: false,
+                parameters: [
+                        app: 'org.swift.jira.cli',
+                        file: "${gint.directories.source + '/resources/aclilicense.txt'}"
+                ],
+        ],
+])
+
+tasks.register('copyJMWELib', Copy) {
     project.delete(files(appLibPath))
     from configurations.localDeps
     into appLibPath
     rename "(.*).jar", appLibName
+    outputs.upToDateWhen { false }
 }
+gint.taskHelper.addTaskToGroup(copyJMWELib, "installJMWE")
+gint.taskHelper.addSetUp('installJMWE', [
+        [
+                name: 'Install JMWE',
+                action: 'installApp',
+                level: false,
+                dependsOn: ['copyJMWELib', 'installAcli'],
+                app: "$jmweAppKey",
+                parameters: [
+                        file: "$appPath"
+                ],
+        ],
+        [
+                name: 'Add license JMWE',
+                action: 'addLicense',
+                level: false,
+                parameters: [
+                        app: 'com.innovalog.jmwe.jira-misc-workflow-extensions',
+                        file: "${gint.directories.source + '/resources/jmwelicense.txt'}"
+                ],
+        ],
+])
 
-gint.taskHelper.addTaskToGroup(copyToLib, "installAppGroup")
-gint.taskHelper.addSetUp("installAppGroup",
-    [[name: 'installApp', description: 'jmwe app installed',
-    cmd:[  /acli $jira -a installApp --app @default/,
-           /acli $jira -a addLicense --app $cliAppKey --file "${gint.directories.source + '/resources/cli_licenseKey.txt'}"/,
-           /acli $jira -a installApp --app $jmweAppKey --file "$appPath" /,
-           /acli $jira -a addLicense --app $jmweAppKey --file "${gint.directories.source + '/resources/jmwe_licenseKey.txt'}"/,
-		]
-    ]]
-)
 
 def itestDir = 'src'
 def jmweConditions = 'src/itest-conditions/gradle'
 def jmweValidators = 'src/itest-validators/gradle'
 def jmwePostfunctions = 'src/itest-postfunctions/gradle'
-def jmweAutomation = 'src/itest-automation/gradle'
+def selenium = 'src/itest-selenium'
 
 [itestDir,jmweConditions].each { folder ->
   if (file(folder).exists()) {
@@ -97,7 +132,7 @@ def jmweAutomation = 'src/itest-automation/gradle'
           '-Dclean',
           '--continue',
           '-DsourceDirectory=src/itest-conditions',
-          "-Dcli=acli $jira" ,
+          "-Dcli=acli $server" ,
       ]
       gint.scriptRunner.add(
           taskNamePrefix: 'conditions',
@@ -116,7 +151,7 @@ def jmweAutomation = 'src/itest-automation/gradle'
           '-Dclean',
           '--continue',
           '-DsourceDirectory=src/itest-validators',
-          "-Dcli=acli $jira" ,
+          "-Dcli=acli $server" ,
       ]
       gint.scriptRunner.add(
           taskNamePrefix: 'validators',
@@ -135,7 +170,7 @@ def jmweAutomation = 'src/itest-automation/gradle'
           '-Dclean',
           '--continue',
           '-DsourceDirectory=src/itest-postfunctions',
-          "-Dcli=acli $jira" ,
+          "-Dcli=acli $server" ,
       ]
       gint.scriptRunner.add(
           taskNamePrefix: 'postfunctions',
@@ -144,4 +179,21 @@ def jmweAutomation = 'src/itest-automation/gradle'
       )
   }
 }
-
+[itestDir,selenium].each { folder ->
+  if (file(folder).exists()) {
+      def args = [
+          '-DtargetDirectory=' + project.buildDir,
+          '-DxmlReport',
+          '-Dverbose',
+          '-Dclean',
+          '--continue',
+          '-DsourceDirectory=src/itest-selenium',
+          "-Dcli=acli $server" ,
+      ]
+      gint.scriptRunner.add(
+          taskNamePrefix: 'selenium',
+          directory: folder,
+          args: args,
+      )
+  }
+}
