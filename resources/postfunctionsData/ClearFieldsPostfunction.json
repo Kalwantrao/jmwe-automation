@@ -1,6 +1,6 @@
 [
     {
-    "fields": "versions",
+    "fields": "labels",
     "selectedLinkType": "currentIssue:*",
     "useGroovyCondition": "false",
     "groovyExpression": "",
@@ -9,7 +9,7 @@
     "number": "0"
     },
     {
-    "fields": "components",
+    "fields": "labels",
     "selectedLinkType": "inward:10100",
     "useGroovyCondition": "false",
     "groovyExpression": "",
@@ -27,7 +27,7 @@
     "number": "2"
     },
     {
-    "fields": "fixVersions",
+    "fields": "labels",
     "selectedLinkType": "outward:10200",
     "useGroovyCondition": "false",
     "runAsUser": "",
@@ -36,7 +36,7 @@
     "number": "3"
     },
     {
-    "fields": "assignee",
+    "fields": "labels",
     "selectedLinkType": "inward:10200",
     "useGroovyCondition": "false",
     "groovyExpression": "",
@@ -45,7 +45,7 @@
     "number": "4"
     },
     {
-    "fields": "description",
+    "fields": "labels",
     "selectedLinkType": "*:*",
     "useGroovyCondition": "false",
     "groovyExpression": "",
@@ -54,7 +54,7 @@
     "number": "5"
     },
     {
-    "fields": "versions",
+    "fields": "labels",
     "selectedLinkType": "outward:10000",
     "useGroovyCondition": "false",
     "groovyExpression": "",
@@ -63,7 +63,7 @@
     "number": "6"
     },
     {
-    "fields": "components",
+    "fields": "labels",
     "selectedLinkType": "groovy:issue.getLinkedIssues()",
     "useGroovyCondition": "false",
     "groovyExpression": "",
@@ -84,7 +84,7 @@
     "fields": "labels",
     "selectedLinkType": "currentIssue:*",
     "useGroovyCondition": "yes",
-    "groovyExpression": "issue.get('issuetype')?.name == 'Story'",
+    "groovyExpression": "issue.get('issuetype')?.name == 'Task'",
     "runAsUser": "",
     "correlationId": "",
     "number": "9"
@@ -97,5 +97,14 @@
     "runAsUser": "jmwe_qa",
     "correlationId": "",
     "number": "10"
+    },
+    {
+    "fields": "components",
+    "selectedLinkType": "groovy:['AUTOMATION-1','AUTOMATION-2','AUTOMATION-3','AUTOMATION-4']",
+    "useGroovyCondition": "false",
+    "groovyExpression": "",
+    "runAsUser": "jmwe_qa",
+    "correlationId": "",
+    "number": "11"
     }
 ]

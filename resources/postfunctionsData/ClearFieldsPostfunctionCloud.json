@@ -1,0 +1,111 @@
+[
+  {
+    "postFunction.id": "5d3d4063-fbbd-4929-bab6-34dbe9897ff4",
+    "postFunction.config-5d3d4063-fbbd-4929-bab6-34dbe9897ff4":
+    {
+      "conditionalExecution":false,
+      "fields":"labels",
+      "runAsType":"addonUser"
+    },
+    "number": "0"
+  },
+  {
+    "postFunction.id": "5d3d4063-fbbd-4929-bab6-34dbe9897ff4",
+    "postFunction.config-5d3d4063-fbbd-4929-bab6-34dbe9897ff4":
+    {
+      "conditionalExecution":false,
+      "targetIssue":"outward:jira_subtask_link",
+      "fields":"labels",
+      "runAsType":"addonUser"
+    },
+    "number": "1"
+  },
+  {
+    "postFunction.id": "5d3d4063-fbbd-4929-bab6-34dbe9897ff4",
+    "postFunction.config-5d3d4063-fbbd-4929-bab6-34dbe9897ff4":
+    {
+      "conditionalExecution":false,
+      "targetIssue":"inward:jira_subtask_link",
+      "fields":"labels",
+      "runAsType":"addonUser"
+    },
+    "number": "2"
+  },
+  {
+    "postFunction.id": "5d3d4063-fbbd-4929-bab6-34dbe9897ff4",
+    "postFunction.config-5d3d4063-fbbd-4929-bab6-34dbe9897ff4":
+    {
+      "conditionalExecution":false,
+      "targetIssue":"outward:Epic-Story Link",
+      "fields":"labels",
+      "runAsType":"addonUser"
+    },
+    "number": "3"
+  },
+  {
+    "postFunction.id": "5d3d4063-fbbd-4929-bab6-34dbe9897ff4",
+    "postFunction.config-5d3d4063-fbbd-4929-bab6-34dbe9897ff4":
+    {
+      "conditionalExecution":false,
+      "targetIssue":"inward:Epic-Story Link",
+      "fields":"labels",
+      "runAsType":"addonUser"
+    },
+    "number": "4"
+  },
+  {
+    "postFunction.id": "5d3d4063-fbbd-4929-bab6-34dbe9897ff4",
+    "postFunction.config-5d3d4063-fbbd-4929-bab6-34dbe9897ff4":
+    {
+      "conditionalExecution":false,
+      "targetIssue":"*:*",
+      "fields":"labels",
+      "runAsType":"addonUser"
+    },
+    "number": "5"
+  },
+  {
+    "postFunction.id": "5d3d4063-fbbd-4929-bab6-34dbe9897ff4",
+    "postFunction.config-5d3d4063-fbbd-4929-bab6-34dbe9897ff4":
+    {
+      "conditionalExecution":false,
+      "targetIssue":"outward:10000",
+      "fields":"labels",
+      "runAsType":"addonUser"
+    },
+    "number": "6"
+  },
+  {
+    "postFunction.id": "5d3d4063-fbbd-4929-bab6-34dbe9897ff4",
+    "postFunction.config-5d3d4063-fbbd-4929-bab6-34dbe9897ff4":
+    {
+      "conditionalExecution":false,
+      "targetIssue":"nunjucks:{{ issue | linkedIssues | field('key') }}",
+      "fields":"labels",
+      "runAsType":"addonUser"
+    },
+    "number": "7"
+  },
+  {
+    "postFunction.id": "5d3d4063-fbbd-4929-bab6-34dbe9897ff4",
+    "postFunction.config-5d3d4063-fbbd-4929-bab6-34dbe9897ff4":
+    {
+      "conditionalExecution":false,
+      "targetIssue":"jql:issuetype = Task and summary ~JMWE_Task",
+      "fields":"labels",
+      "runAsType":"addonUser"
+    },
+    "number": "8"
+  },
+  {
+    "postFunction.id": "5d3d4063-fbbd-4929-bab6-34dbe9897ff4",
+    "postFunction.config-5d3d4063-fbbd-4929-bab6-34dbe9897ff4":
+    {
+      "conditionalExecution":true,
+      "conditionalExecutionScript": "{{ issue.fields.issuetype.name == 'Task' }}",
+      "fields":"labels",
+      "runAsType":"addonUser"
+    },
+    "number": "9"
+  }
+]

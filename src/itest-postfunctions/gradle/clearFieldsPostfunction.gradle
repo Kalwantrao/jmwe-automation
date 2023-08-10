@@ -10,95 +10,122 @@ buildscript {
     dependencies {
         classpath "org.gint:gint-atlassian:3.8.4"
     }
+    project.ext.seleniumVersion = findProperty('seleniumVersion') ?: System.getenv('SELENIUM_VERSION') ?: '3.14.+'
+    dependencies { // needed here for selenium testing :(
+        ['java', 'support', 'firefox-driver', 'chrome-driver', 'safari-driver', 'edge-driver'].each { entry ->
+            classpath 'org.seleniumhq.selenium:selenium-' + entry + ':' + seleniumVersion
+        }
+    }
+
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def transition = 'clearFields'
-def workflow = project
-def screen = project
 def user = info.user
-def userId = 'jmwe_qa'
-gint.xmlReport =	true	//xml report generates in projects root directory
-gint.verbose =	true
-
+def userId = info?.isCloud ? cloudUser : serverUser
 def jsonSlurper = new JsonSlurper();
 def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/ClearFieldsPostfunction${info?.isCloud ? "Cloud" : ""}.json")
 def transitionFunctions = jsonSlurper.parse(path)
-def functionKey =	info ?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__ClearFieldsFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:ClearFieldValue-function'
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+def transition = 'clearFieldsPf'
 
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
-addUsers(userId)
-createVersions(project, 5)
-createComponents(project, 'component', 5)
+tearDown()
+addWorkflow()
+addWorkflowExtension( transitionFunctions, transition, info?.isCloud ? clearFieldsCloud : clearFieldsServer, 'postfunction', 0)
+createWorkflowScheme()
+createProject()
+addUser()
+addGroup()
+addProjectRole()
+addProjectRoleActors()
 
-// TC_01-check current issue
-def currentIssue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', affectsVersions: '1']}, 'createCurrentIssue')
-transitionIssue(transition+0, {-> currentIssue[0]}, 0, 'addFieldCurrentIssue', null, null)
-getIssueInformation({-> currentIssue[0]}, 'Affects versions  . . . . . . : ', 'TC_01-check current issue')
+// info?.isServer ? moveDown("edit_action_11_51") : ''
+
+def issue = createIssue([type: 'Bug', summary: "JMWE_Issue"],'Bug')
+def toIssue = createIssue([type: 'Bug', summary: "JMWE_Issue"],' ')
+linkIssue([issue: {-> issue[]}, toIssue: {-> toIssue[]}, link: 'blocks'], 'Blocks')
+
+ext.TC_01 = {
+    transitionIssue(transition +0, {-> issue[]}, null, 0, ext)
+    getFieldValue({->issue1[]}, "Labels", " ", ext)
+}
+//def subtask = createIssue([type: 'Sub-task', summary: "JMWE_Issue", parent: {->issue[]}],'Subtask')
+/*
 
 // TC_02-check the subtask of the parent issue
-def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', labels:'clearLabels']}, 'createParentIssue')
-def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]}, components: 'component1']}, 'createSubtask')
+def parent = createIssue(projectName,{[ type: 'Task', summary: 'JMWE_Issue', labels:'clearLabels']}, 'createParentIssue')
+def subTask = createIssue(projectName,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]}]}, 'createSubtask')
 transitionIssue(transition+1, {-> parent[0]}, 0, 'addFieldToSubtask', null, null)
-getIssueInformation({-> subTask[0]}, 'Components  . . . . . . . . . : ', 'TC_02-check the subtask of the parent issue')
+getIssueInformation({-> subTask[0]}, 'Labels  . . . . . . . . . . . : ', 'TC_02-check the subtask of the parent issue')
 
 // TC_03-check the parent issue of the current subtask
 transitionIssue(transition+2, {-> subTask[0]}, 0, 'checkParentIssue', null, null)
 getIssueInformation({-> parent[0]}, 'Labels  . . . . . . . . . . . : ', 'TC_03-check the parent issue of the current subtask')
 
 // TC_04-check the issue belongs to current epic
-def epic = createIssue(project,{[ type: 'epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Epic", assignee: user]}, 'createEpic')
-def story = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[0]}, fixVersions: '1']}, 'createStory')
+def epic = createIssue(projectName,{[ type: 'epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Epic"]}, 'createEpic')
+def story = createIssue(projectName,{[ type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[0]}]}, 'createStory')
 transitionIssue(transition+3, {-> epic[0]}, 0, 'copyToStoryOfEpic', null, null)
-getIssueInformation({-> story[0]}, 'Fix versions  . . . . . . . . : ', 'TC_04-check the issue belongs to current epic')
+getIssueInformation({-> story[0]}, 'Labels  . . . . . . . . . . . : ', 'TC_04-check the issue belongs to current epic')
 
 // TC_05-check the epic of the current issue
 transitionIssue(transition+4, {-> story[0]}, 0, 'commentAddedToEpicOfStory', null, null)
-getIssueInformation({-> epic[0]}, 'Assignee  . . . . . . . . . . : ', 'TC_05-check the epic of the current issue')
+getIssueInformation({-> epic[0]}, 'Labels  . . . . . . . . . . . : ', 'TC_05-check the epic of the current issue')
 
-def linkIssue1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType1')
-def linkIssue2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType2')
+def linkIssue1 = createIssue(projectName,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType1')
+def linkIssue2 = createIssue(projectName,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType2')
 linkIssues([issue: { -> linkIssue1[0] }, toIssue: { -> linkIssue2[0] }, link: 'duplicates'], 'linkByAnyLinkType' )
 
 // TC-06-check the issue link by any link type to current issue
 transitionIssue(transition+5, {-> linkIssue1[0]}, 0, 'checkLinkIssueByAnyLinkType', null, null)
-getIssueInformation({-> linkIssue2[0]}, 'Reporter  . . . . . . . . . . : ', 'TC-06-check the issue link by any link type to current issue')
+getIssueInformation({-> linkIssue2[0]}, 'Labels  . . . . . . . . . . . : ', 'TC-06-check the issue link by any link type to current issue')
 
-def linkIssue3 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: 'component2']}, 'linkIssueBlocksType1')
-def linkIssue4 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', affectsVersions: '2', components: 'component2']}, 'linkIssueBlocksType2')
+def linkIssue3 = createIssue(projectName,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'testLabel']}, 'linkIssueBlocksType1')
+def linkIssue4 = createIssue(projectName,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'testLabel']}, 'linkIssueBlocksType2')
 linkIssues([issue: { -> linkIssue3[0] }, toIssue: { -> linkIssue4[0] }, link: 'blocks'], 'linkByBlocksLinkType' )
 
 // TC_07-check the issue link by blocks link type to current issue
 transitionIssue(transition+6, {-> linkIssue3[0]}, 0, 'checkLinkIssueBySpecificLinkType', null, null)
-getIssueInformation({-> linkIssue4[0]}, 'Affects versions  . . . . . . : ', 'TC_07-check the issue link by blocks link type to current issue')
+getIssueInformation({-> linkIssue4[0]}, 'Labels  . . . . . . . . . . . : ', 'TC_07-check the issue link by blocks link type to current issue')
 
 // TC_08-check the issue return by groovy script [issue.getLinkedIssues()]
 transitionIssue(transition+7, {-> linkIssue3[0]}, 0, 'checkIssueReturnFromGroovyScript', null, null)
-getIssueInformation({-> linkIssue4[0]}, 'Components  . . . . . . . . . : ', 'TC_08-check the issue return by groovy script')
+getIssueInformation({-> linkIssue4[0]}, 'Labels  . . . . . . . . . . . : ', 'TC_08-check the issue return by groovy script')
 
 // TC_09-check the issue return by jql search
-def IssueReturnByJqlSearch = createIssue(project, {[type: 'Task', summary: 'JMWE_Task', labels: 'clearLabels']}, 'jqlSearch' )
+def IssueReturnByJqlSearch = createIssue(projectName, {[type: 'Task', summary: 'JMWE_Task', labels: 'clearLabels']}, 'jqlSearch' )
 transitionIssue(transition+8, {-> linkIssue4[0]}, 0, 'checkIssueReturnByJqlSearch', null, null)
 getIssueInformation({-> IssueReturnByJqlSearch[0]}, 'Labels  . . . . . . . . . . . : ', 'TC_09-check the issue return by jql search')
 
 // TC_10-check conditional execution_True - issueType = story
-def condExecTrue = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', labels: 'clearLabel']}, 'condExecTrue')
+def condExecTrue = createIssue(projectName,{[ type: 'Task', summary: 'JMWE_Issue', labels: 'clearLabel']}, 'condExecTrue')
 transitionIssue(transition+9, {-> condExecTrue[0]}, 0, 'condExecTrue', null, null)
 getIssueInformation({-> condExecTrue[0]}, 'Labels  . . . . . . . . . . . : ', 'TC_10-check conditional execution_True')
 
 // TC_11-check conditional execution_False - issueType = story
-def condExecFalse = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'clearLabel']}, 'condExecFalse')
+def condExecFalse = createIssue(projectName,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'clearLabel']}, 'condExecFalse')
 transitionIssue(transition+9, {-> condExecFalse[0]}, 0, 'condExecFalse', null, null)
 getIssueInformation({-> condExecFalse[0]}, 'Labels  . . . . . . . . . . . : clearLabel', 'TC_11-check conditional execution_False')
 
 // TC_12-check run as user
-def runAsUser = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'clearLabel']}, 'runAsUser')
-transitionIssue(transition+10, {-> runAsUser[0]}, 0, 'runAsUser', null, null)
+//def runAsUser = createIssue(projectName,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'clearLabel', components: 'component1']}, 'runAsUser')
+//transitionIssue(transition+10, {-> runAsUser[0]}, 0, 'runAsUser', null, null)
 //getIssueInformation({-> runAsUser[0]}, 'Labels  . . . . . . . . . . . : ', 'TC_12-check run as user')
-getIssueHistoryList({-> runAsUser[0]}, user, 'TC_12-check run as user')
+//getIssueHistoryList({-> runAsUser[0]}, user, 'TC_12-check run as user')
+
+
+ */
+/*
+//transitionIssue(transition+11, {-> runAsUser[0]}, 0, 'TC_13_Check clear fields of issues returns from the list of issues by groovy script', null, null)
+getIssueInformation('AUTOMATION-1', 'Components  . . . . . . . . . : ', 'TC_13-clear components')
+getIssueInformation('AUTOMATION-2', 'Components  . . . . . . . . . : ', 'TC_14-clear components')
+getIssueInformation('AUTOMATION-3', 'Components  . . . . . . . . . : ', 'TC_15-clear components')
+getIssueInformation('AUTOMATION-4', 'Components  . . . . . . . . . : ', 'TC_16-clear components')
+*/
+
+
+
+
+
 
