@@ -8,40 +8,118 @@ buildscript {
         }
     }
     dependencies {
-        classpath "org.gint:gint-atlassian:3.8.3"
+        classpath "org.gint:gint-atlassian:3.8.4"
     }
+    project.ext.seleniumVersion = findProperty('seleniumVersion') ?: System.getenv('SELENIUM_VERSION') ?: '3.14.+'
+    dependencies { // needed here for selenium testing :(
+        ['java', 'support', 'firefox-driver', 'chrome-driver', 'safari-driver', 'edge-driver'].each { entry ->
+            classpath 'org.seleniumhq.selenium:selenium-' + entry + ':' + seleniumVersion
+        }
+    }
+
 }
 
-apply plugin: "org.gint.atlassian"
+apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def user = info.user
-def userId = info?.isCloud ? cloudUser : serverUser
 def transition = 'returnToPreviousStatusPf'
+def userId = info?.isCloud ? cloudUser : serverUser
 def jsonSlurper = new JsonSlurper();
 def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/ReturnToPreviousStatusPostfunction${info?.isCloud ? "Cloud" : ""}.json")
 def transitionFunctions = jsonSlurper.parse(path)
 
-
 tearDown()
 addWorkflow()
-addWorkflowExtension( transitionFunctions, transition, returnToPreviousStatusServer, 'postfunction', 0)
+
+addWorkflowExtension(transitionFunctions, transition, returnToPreviousStatusServer, 'postfunction', 0)
+
+(0..5).each {
+   moveTransitionFunction(transition + it, 4)
+}
 createWorkflowScheme()
 createProject()
 addUser()
-addGroup()
-addProjectRole()
-addProjectRoleActors()
+createVersions(1)
+createComponents(1)
 
-def issue1 = createIssue([type: 'Bug', summary: "JMWE_Issue"],'Bug')
-ext.TC_01 = { ext->
-    transitionIssue('returnToPreviousStatusPf'+0, {->issue1[]}, 0, null, ext)
-    getFieldValue({->issue1[]}, "Status", "In Progress", ext)
+def simpleIssue = createIssue([type: 'Task', summary: 'JMWE_Issue', priority: 'Low'], 'Task')
+
+ext.transitionIssueToCheckReturnToPrevStatusPf = { transitions, issue, prevStatus, ext ->
+    transitionIssue(prevStatus, issue, 0, prevStatus + ext)
+    transitionIssue("To Do", issue, 0, ext)
+    transitionIssue(transitions, issue, 0, transitions + ext)
+//    getFieldValue(issue, "Status", prevStatus, "check current issue status $prevStatus"+ext) //issue, field, value, ext
+            gint.taskHelper.add(
+                action: 'getFieldValue',
+                ext: "check current issue status $prevStatus"+ext,
+                parameters: [
+                    issue: issue,
+                    field: "Status"
+                    ],
+                data: ["Status  . . . . . . . . . . . : $prevStatus"]
+            )
 }
-//def toIssue = createIssue([type: 'Bug', summary: "JMWE_Issue"],' ')
-//linkIssue([issue: {-> issue[]}, toIssue: {-> toIssue[]}, link: 'blocks'], 'Blocks')
 
-TC_01("Check issue status should be In Progress" )
+def runAsSpecificUser = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'RunAsUser_specificUser')
+ext.runAsUserSpecificUser = { transitions, issue, prevStatus, ext ->
+    transitionIssueToCheckReturnToPrevStatusPf(transitions, issue, prevStatus, ext)
+    getIssueHistory(issue, serverUser, ext)
+}
+
+def runAsUserAssigneeField = createIssue([type: 'Task', summary: 'JMWE_Issue', assignee: serverUser], 'RunAsUser_assigneeField')
+ext.runAsUserInFieldAssignee = { transitions, issue, prevStatus, ext ->
+    transitionIssueToCheckReturnToPrevStatusPf(transitions, issue, prevStatus, ext)
+    getIssueHistory(issue, serverUser, ext)
+}
+
+def runAsUserReporterField = createIssue([type: 'Task', summary: 'JMWE_Issue', reporter: serverUser], 'runAsUserReporterField')
+ext.runAsUserInFieldReporter = { transitions, issue, prevStatus, ext ->
+    transitionIssueToCheckReturnToPrevStatusPf(transitions, issue, prevStatus, ext)
+    getIssueHistory(issue, serverUser, ext)
+}
+def issue_priority = createIssue([type: 'Task', summary: 'JMWE_Issue', priority: 'Low'], 'priority High')
+
+ext.runAsUserReturnFromScript = { transitions, issue, prevStatus, ext ->
+    transitionIssueToCheckReturnToPrevStatusPf(transitions, issue, prevStatus, ext)
+    getIssueHistory(issue, serverUser, ext)
+}
+
+ext.checkConditionalExecutionFalse = { transitions, issue, prevStatus, ext ->
+    transitionIssue(prevStatus, issue, 0, prevStatus + ext)
+    transitionIssue("To Do", issue, 0, ext)
+    transitionIssue(transitions, issue, 0, transitions + ext)
+    gint.taskHelper.add(
+            action: 'getFieldValue',ext: ext,
+                parameters: [
+                        issue: issue,
+                        field: "Status"
+                ],
+            failData: ["Status  . . . . . . . . . . . : $prevStatus"]
+    )
+}
+ext.checkConditionalExecutionTrue = { transitions, issue, prevStatus, ext ->
+    updateIssue([issue: {->issue_priority[]}, priority: 'High'], ext)
+    transitionIssue(prevStatus, issue, 0, prevStatus + ext)
+    transitionIssue("To Do", issue, 0, ext)
+    transitionIssue(transitions, issue, 0, transitions + ext)
+    gint.taskHelper.add(
+            action: 'getFieldValue',ext: ext,
+            parameters: [
+                    issue: issue,
+                    field: "Status"
+            ],
+            data: ["Status  . . . . . . . . . . . : $prevStatus"]
+    )
+}
+
+transitionIssueToCheckReturnToPrevStatusPf(transition+0, {->simpleIssue[]}, "In Progress", "check issue must be return to previous status of issue_In Progress")
+transitionIssueToCheckReturnToPrevStatusPf(transition+0, {->simpleIssue[]}, "Done", "check issue must be return to previous status_Done")
+transitionIssueToCheckReturnToPrevStatusPf(transition+0, {->simpleIssue[]}, "In Review", "check issue must be return to previous status_In Review")
+runAsUserSpecificUser(transition+1, {->runAsSpecificUser[]}, "In Progress", "Run as specific user "+ serverUser )
+runAsUserInFieldAssignee(transition+2, {->runAsUserAssigneeField[]}, "Done", "Run as user in field assignee " + serverUser)
+runAsUserInFieldReporter(transition+3, {->runAsUserReporterField[]}, "Done", "Run as user in field reporter " + serverUser)
+runAsUserReturnFromScript(transition+4, {->runAsUserReporterField[]}, "Done", "Run as user return from script " + serverUser)
+checkConditionalExecutionFalse(transition+5, {->issue_priority[]}, "Done", "check conditional execution false")
+checkConditionalExecutionTrue(transition+5, {->issue_priority[]}, "Done", "check conditional execution true")
+
 

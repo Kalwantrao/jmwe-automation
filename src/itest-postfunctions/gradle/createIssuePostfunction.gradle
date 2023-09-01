@@ -113,6 +113,14 @@ def isDuplicateBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']},
 transitionIssue(transition+15, {-> isDuplicateBy[0]}, 0, 'linkIssueOfIsDuplicatesLink', null, null)
 getLinkedIssueList({-> isDuplicateBy[0]}, '1', 'linkIssueOfIsDuplicatesLink', "Duplicate", "is duplicated by")
 
+def causes = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'causes')
+transitionIssue(transition+16, {-> causes[0]}, 0, 'linkIssueOfCausesLink', null, null)
+getLinkedIssueList({-> causes[0]}, '1', 'linkIssueOfCausesLink', "Problem/Incident", "causes")
+
+def isCausedBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isCausedBy')
+transitionIssue(transition+17, {-> isCausedBy[0]}, 0, 'linkIssueOfIsCausedByLink', null, null)
+getLinkedIssueList({-> isCausedBy[0]}, '1', 'linkIssueOfisCausedByLink', "Problem/Incident", "is caused by")
+
 def relates = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'relatesTo')
 transitionIssue(transition+18, {-> relates[0]}, 0, 'linkIssueOfrelatesToLink', null, null)
 getLinkedIssueList({-> relates[0]}, '1', 'linkIssueOfrelatesToLink', "Relates", "relates to")

@@ -1,0 +1,87 @@
+import groovy.json.JsonSlurper
+import java.nio.file.Paths
+
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def transition = 'unlinkIssuesFromTheCurrentIssue'
+def workflow = project
+def screen = project
+def user = info.user
+def userId = 'jmwe_qa'
+def jsonSlurper = new JsonSlurper();
+def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/UnlinkIssuesFromTheCurrentIssue${info?.isCloud ? "Cloud" : ""}.json")
+def transitionFunctions = jsonSlurper.parse(path)
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:unlink-issues-function'	//function key for current status condition
+def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+
+createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
+
+addUsers(userId)
+
+// unlink the issues if groovy condition returns true
+def simpleIssue = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'simpleIssue')
+
+def issue_assignee = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', assignee: userId]}, 'issue_assignee')
+def issue_not_assignee = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', ]}, 'issue_not_assignee')
+def issue_description = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', description: 'test_unlink_issue_pf']}, 'issue_description')
+def issue_not_description = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'issue_not_description')
+linkIssues([issue: { -> simpleIssue[0] }, toIssue: { -> issue_assignee[0] }, link: 'duplicates'], 'duplicatesType' )
+linkIssues([issue: { -> simpleIssue[0] }, toIssue: { -> issue_not_assignee[0] }, link: 'duplicates'], 'duplicatesType1' )
+linkIssues([issue: { -> simpleIssue[0] }, toIssue: { -> issue_description[0] }, link: 'duplicates'], 'duplicatesType3' )
+linkIssues([issue: { -> simpleIssue[0] }, toIssue: { -> issue_not_description[0] }, link: 'duplicates'], 'duplicatesType2' )
+
+// unlink issues from current issues having assignee
+transitionIssue(transition+0, {-> simpleIssue[0]}, 0, 'issue_unlink from the current issue when current issue satisfy the condition', null, null)
+
+getLinkedIssueList({-> issue_not_assignee[0]}, '1', 'TC_11:Case_1_Verify Issue to unlink condition_when current issue satisfy the condition', "", "")
+getLinkedIssueList({-> issue_assignee[0]}, '0', 'TC_11:Case_2_Verify Issue to unlink condition_when current issue not satisfy the condition', "", "")
+
+//unlink issues from current issues having description
+transitionIssue(transition+1, {-> simpleIssue[0]}, 0, 'issue_unlink from the current issue when related issues satisfy the condition', null, null)
+
+getLinkedIssueList({-> issue_description[0]}, '0', 'TC_12:Case_1_Verify Issue to unlink condition_when related issue satisfy the condition', "", "")
+getLinkedIssueList({-> issue_not_description[0]}, '1', 'TC_12:Case_2_Verify Issue to unlink condition_when related issue not satisfy the condition', "", "")
+
+// run as current user
+getIssueHistoryList({-> issue_assignee[0]}, user, 'TC_13-runAsUser_currentUser')
+
+//run as user from field assignee
+def issue_runAsUser_assigneeField = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', assignee: userId]}, 'issue_runAsUser_assigneeField')
+def toIssue_runAsUser_assigneeField = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'toIssue_runAsUser_assigneeField')
+linkIssues([issue: { -> issue_runAsUser_assigneeField[0] }, toIssue: { -> toIssue_runAsUser_assigneeField[0] }, link: 'blocks'], 'blocksType' )
+
+transitionIssue(transition+2, {-> issue_runAsUser_assigneeField[0]}, 0, 'run as user assignee field', null, null)
+getIssueHistoryList({-> issue_runAsUser_assigneeField[0]}, userId, 'TC_15-runAsUser_in_Field assignee')
+
+//run as user from field reporter
+def issue_runAsUser_reporterField = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', reporter: userId, assignee: user]}, 'issue_runAsUser_reporterField')
+def toIssue_runAsUser_reporterField = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'toIssue_runAsUser_reporterField')
+linkIssues([issue: { -> issue_runAsUser_reporterField[0] }, toIssue: { -> toIssue_runAsUser_reporterField[0] }, link: 'clones'], 'clones' )
+
+transitionIssue(transition+3, {-> issue_runAsUser_reporterField[0]}, 0, 'run as user reporter field', null, null)
+getIssueHistoryList({-> issue_runAsUser_reporterField[0]}, userId, 'TC_15-runAsUser_in_Field reporter')
+
+//run as user from script
+def issue_runAsUser_from_script = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', assignee: userId]}, 'runAsUser_from_script')
+def toissue_runAsUser_from_script = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'toissue_runAsUser_from_script')
+linkIssues([issue: { -> issue_runAsUser_from_script[0] }, toIssue: { -> toissue_runAsUser_from_script[0] }, link: 'relates to'], 'relates' )
+
+transitionIssue(transition+4, {-> issue_runAsUser_from_script[0]}, 0, 'run as user from script', null, null)
+getIssueHistoryList({-> issue_runAsUser_from_script[0]}, userId, 'TC_16-runAsUser_from script')
+
+
+

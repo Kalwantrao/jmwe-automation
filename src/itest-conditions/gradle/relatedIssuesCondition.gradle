@@ -1,6 +1,3 @@
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
 buildscript {
 	repositories {
 		maven {
@@ -11,475 +8,436 @@ buildscript {
 		classpath "org.gint:gint-atlassian:3.8.4"
 	}
 }
+
 apply plugin: 'org.gint.atlassian'
-//apply from: 'common/setUp.gradle'
-apply from: gint.resourceDirectory +'/src/common/testConditions.gradle'
-
-
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def workflow = project
-def screen = project
-gint.xmlReport =	gint.resourceDirectory + 'test-reports'	//xml report generates in projects root directory
-gint.verbose =	true
-def userId = 'jmwe_qa'
-def user = info.user
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/conditionsData/RelatedIssuesConditionFunctions${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
-def functionKey = info ?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__LinkedIssuesCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linked-issues-condition'	//function key for RelatedIssue condition
-def transition = 'relatedIssuesCondition'
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
-
-
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'condition', startStep, workflow, screen, 0)
-
-addUsers(userId)
-createVersions(project, 5)
-createComponents(project, 'component', 5)
-
-// TC_01-current issue not having subtasks
-def currentIssue1 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createCurrentIssue1')
-transitionIssue(transition+0, {-> currentIssue1[0]}, -1, 'TC_01-current issue not having subtasks', null, null)
-
-// TC_02-current issue having 1 subtask
-def currentIssue2 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', priority: 'High']}, 'createCurrentIssue2')
-def subtask2 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> currentIssue2[0]}]}, 'subtask2')
-transitionIssue(transition+0, {-> currentIssue2[0]}, 0, 'TC_02-current issue having 1 subtask', null, null)
-
-// TC_03-subtask having parent issue respecting given constraints
-transitionIssue(transition+1, {-> subtask2[0]}, 0, 'TC_03-subtask having parent issue respecting given constraints', null, null)
-
-// TC_04-check the epic not having issues
-def epic = createIssue(project,{[ type: 'epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Epic"]}, 'createEpic')
-transitionIssue(transition+2, {-> epic[0]}, -1, 'TC_04-check the issue belongs to current epic', null, null)
-
-// TC_05-check the Epic contain at least 1 issues (e.g. stories)
-def epic1 = createIssue(project,{[ type: 'epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Epic"]}, 'createEpic1')
-def story1 = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic1[0]}, fixVersions: '1']}, 'createStory1')
-transitionIssue(transition+2, {-> epic1[0]}, 0, 'TC_05-Epic contain at least 1 issues', null, null)
-
-// TC_06-check the story not belongs to epic
-def story2 = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue']}, 'createStory2')
-transitionIssue(transition+3, {-> story2[0]}, -1, 'TC_06-check the story not belongs to epic', null, null)
-
-// TC_07-check the story belongs to epic
-transitionIssue(transition+3, {-> story1[0]}, 0, 'TC_07-check the story belongs to epic', null, null)
-
-// TC_08-issue not having issues linked to it through any linkType
-transitionIssue(transition+4, {-> story2[0]}, -1, 'TC_08-issue not having issues linked to it through any linkType', null, null)
-
-// TC_09-issue having issues linked to it through any linkType
-def anyLinkType1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType1')
-def anyLinkType2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType2')
-linkIssues([issue: { -> anyLinkType1[0] }, toIssue: { -> anyLinkType2[0] }, link: 'duplicates'], 'linkByAnyLinkType' )
-transitionIssue(transition+4, {-> anyLinkType1[0]}, 0, 'TC_09-issue having issues linked to it through any linkType', null, null)
-
-// TC_10-issue not having issues linked to it through any blocksLinkType
-transitionIssue(transition+5, {-> anyLinkType1[0]}, -1, 'TC_09-issue having not issues linked to it through any blocksLinkType', null, null)
-
-// TC_11-issue having issues linked to it through blocksLinkType
-def blocksLink_outwards = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueBlocksType1')
-def blocksLink_inwards = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueBlocksType2')
-linkIssues([issue: { -> blocksLink_outwards[0] }, toIssue: { -> blocksLink_inwards[0] }, link: 'blocks'], 'BlocksLinkType' )
-transitionIssue(transition+5, {-> blocksLink_outwards[0]}, 0, 'TC_11-issue having issues linked to it through blocksLinkType', null, null)
-
-// TC_12-issue not having issues linked to it through_isBlockedBy_LinkType
-transitionIssue(transition+6, {-> anyLinkType1[0]}, -1, 'TC_12-issue not having issues linked to it through_isBlockedBy_LinkType', null, null)
-
-// TC_13-issue having issues linked to it through_isBlockedBy_LinkType
-transitionIssue(transition+6, {-> blocksLink_inwards[0]}, 0, 'TC_13-issue having issues linked to it through_isBlockedBy_LinkType', null, null)
-
-// TC_14-issue not having issues linked to it through_clones_LinkType
-transitionIssue(transition+7, {-> anyLinkType1[0]}, -1, 'TC_14-issue not having issues linked to it through_clones_LinkType', null, null)
-
-// TC_15-issue having issues linked to it through_clones_LinkType
-def clonesLink_outwards = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'clonesLink_outwards')
-def clonesLink_inwards = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'clonesLink_inwards')
-linkIssues([issue: { -> clonesLink_outwards[0] }, toIssue: { -> clonesLink_inwards[0] }, link: 'clones'], 'ClonesLinkType' )
-transitionIssue(transition+7, {-> clonesLink_outwards[0]}, 0, 'TC_15-issue having issues linked to it through_clones_LinkType', null, null)
-
-// TC_16-issue not having issues linked to it through_isClonedBy_LinkType
-transitionIssue(transition+8, {-> blocksLink_outwards[0]}, -1, 'TC_16-issue not having issues linked to it through_isClonedBy_LinkType', null, null)
-
-// TC_17-issue having issues linked to it through_isClonedBy_LinkType
-transitionIssue(transition+8, {-> clonesLink_inwards[0]}, 0, 'TC_17-issue having issues linked to it through_isClonedBy_LinkType', null, null)
-
-// TC_18-issue not having issues linked to it through_duplicates_LinkType
-transitionIssue(transition+9, {-> blocksLink_outwards[0]}, -1, 'TC_18-issue not having issues linked to it through_duplicates_LinkType', null, null)
-
-// TC_19-issue having issues linked to it through_duplicates_LinkType
-def duplicatesLink_outwards = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'duplicatesLink_outwards')
-def duplicatesLink_inwards = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'duplicatesLink_inwards')
-linkIssues([issue: { -> duplicatesLink_outwards[0] }, toIssue: { -> duplicatesLink_inwards[0] }, link: 'duplicates'], 'DuplicatesLinkType' )
-transitionIssue(transition+9, {-> duplicatesLink_outwards[0]}, 0, 'TC_19-issue having issues linked to it through_duplicates_LinkType', null, null)
-
-// TC_20-issue not having issues linked to it through_isDuplicatedBy_LinkType
-transitionIssue(transition+10, {-> blocksLink_outwards[0]}, -1, 'TC_20-issue not having issues linked to it through_isDuplicatedBy_LinkType', null, null)
-
-// TC_21-issue having issues linked to it through_isDuplicatedBy_LinkType
-transitionIssue(transition+10, {-> duplicatesLink_inwards[0]}, 0, 'TC_21-issue having issues linked to it through_isDuplicatedBy_LinkType', null, null)
-
-// TC_22-issue not having issues linked to it through_causes_LinkType
-transitionIssue(transition+11, {-> blocksLink_outwards[0]}, -1, 'TC_22-issue not having issues linked to it through_causes_LinkType', null, null)
-
-// TC_23-issue having issues linked to it through_causes_LinkType
-def causesLink_outwards = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'causesLink_outwards')
-def causesLink_inwards = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'causesLink_inwards')
-linkIssues([issue: { -> causesLink_outwards[0] }, toIssue: { -> causesLink_inwards[0] }, link: 'causes'], 'CausesLinkType' )
-transitionIssue(transition+11, {-> causesLink_outwards[0]}, 0, 'TC_23-issue having issues linked to it through_causes_LinkType', null, null)
-
-// TC_24-issue not having issues linked to it through_isCausedBy_LinkType
-transitionIssue(transition+12, {-> blocksLink_outwards[0]}, -1, 'TC_24-issue not having issues linked to it through_isCausedBy_LinkType', null, null)
-
-// TC_25-issue having issues linked to it through_causes_LinkType
-transitionIssue(transition+12, {-> causesLink_inwards[0]}, 0, 'TC_25-issue having issues linked to it through_causes_LinkType', null, null)
-
-// TC_26-issue not having issues linked to it through_relatesTo_LinkType
-transitionIssue(transition+13, {-> blocksLink_outwards[0]}, -1, 'TC_26-issue not having issues linked to it through_relatesTo_LinkType', null, null)
-
-// TC_27-issue having issues linked to it through_relatesTo_LinkType
-def relatesLink_outwards = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'relatesLink_outwards')
-def relatesLink_inwards = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'relatesLink_inwards')
-linkIssues([issue: { -> relatesLink_outwards[0] }, toIssue: { -> relatesLink_inwards[0] }, link: 'relates to'], 'RelatesToLinkType' )
-transitionIssue(transition+13, {-> relatesLink_outwards[0]}, 0, 'TC_27-issue having issues linked to it through_relatesTo_LinkType', null, null)
-
-// TC_28-issue not having issues return by groovy script-[issue.getLinkedIssues()]
-transitionIssue(transition+14, {-> story2[0]}, -1, 'TC_28-issue not having issues return by groovy script', null, null)
-
-// TC_29-issue having issues return by groovy script-[issue.getLinkedIssues()]
-transitionIssue(transition+14, {-> relatesLink_outwards[0]}, 0, 'TC_29-issue having issues return by groovy script', null, null)
-
-// TC_30-jql search not returns at least 1 issue[issuetype = Task and summary~noIssueWithThisSummary]
-transitionIssue(transition+15, {-> relatesLink_outwards[0]}, -1, 'TC_30-jql search not returns at least 1 issue', null, null)
-
-// TC_31-jql search returns at least one issue[issuetype = Task and summary~JMWE_Task]
-def IssueReturnByJqlSearch = createIssue(project, {[type: 'Task', summary: 'JMWE_Task']}, 'jqlSearch' )
-transitionIssue(transition+16, {-> relatesLink_outwards[0]}, 0, 'TC_31-jql search returns at least one issue', null, null)
-
-// TC_32-current issue not having subtasks respecting given constraints ie must having 2 subtasks
-// Case:1-When current issue not having subtasks
-transitionIssue(transition+17, {-> currentIssue1[0]}, 0, 'TC_32:Case:1-When current issue not having subtasks ', null, null)
-
-// Case:2-When current issue having 1 subtask
-transitionIssue(transition+17, {-> currentIssue2[0]}, -1, 'TC_32:Case:2-When current issue having 1 subtask ', null, null)
-
-// Case:3-When current issue having 2 subtask
-def currentIssue3 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createCurrentIssue3')
-def subtask3 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> currentIssue3[0]}]}, 'subtask3')
-def subtask4 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> currentIssue3[0]}]}, 'subtask4')
-transitionIssue(transition+17, {-> currentIssue3[0]}, 0, 'TC_32:Case:3-When current issue having 2 subtask ', null, null)
-
-// TC_33-subtask not having parent issue respecting given constraints
-//transitionIssue(transition+18, {-> subtask1[0]}, 0, 'TC_33-subtask not having parent issue respecting given constraints', null, null)
-
-// TC_34-subtask having parent issue respecting given constraints
-//transitionIssue(transition+18, {-> subtask2[0]}, 0, 'TC_34-subtask having parent issue respecting given constraints', null, null)
-
-// TC_35-check the issue belongs to the current epic not respecting the given constraints - min 2 stories
-// Case:1-When epic not having stories
-transitionIssue(transition+19, {-> epic[0]}, 0, 'TC_35-Case:1-When epic not having stories', null, null)
-
-// Case:2-When epic having 1 stories
-transitionIssue(transition+19, {-> epic1[0]}, -1, 'TC_35-Case:2-When epic 1 having story', null, null)
-
-// Case:3-When epic having 2 stories
-def epic3 = createIssue(project,{[ type: 'epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Epic"]}, 'createEpic3')
-def story3 = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic3[0]},]}, 'createStory3')
-def story4 = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic3[0]},]}, 'createStory4')
-transitionIssue(transition+19, {-> epic3[0]}, 0, 'TC_35-Case:3-When epic 2 having stories', null, null)
-
-// TC_36-story not having epic respecting given constraints-
-// Case:1-When issue not belong to epic
-transitionIssue(transition+20, {-> story2[0]}, 0, 'TC_36:Case:1-When story not belongs to epic', null, null)
-
-// Case:2-When story belong to epic not respecting given constraints
-transitionIssue(transition+20, {-> story1[0]}, -1, 'TC_36-Case:2-When story belong to epic not respecting given constraints', null, null)
-
-// Case:3-When story belong to epic respecting given constraints-priority High
-//def epic4 = createIssue(project,{[ type: 'epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Epic", priority: 'High']}, 'createEpic4')
-//def story5 = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic1[0]}, fixVersions: '1']}, 'createStory5')
-//transitionIssue(transition+20, {-> story5[0]}, 0, 'TC_36:Case:3-When story belong to epic respecting given constraints-priority High', null, null)
-
-// TC_37-issue having issues linked to it through_any_linkType respecting given constraints- min 2 linkedIssues
-// Case:1-issue not having issues link to it through anyLinkType
-transitionIssue(transition+21, {-> currentIssue1[0]}, 0, 'TC_37-Case:1-issue not having issues link to it through anyLinkType', null, null)
-
-// Case:2-issue having issues link to it through_any_LinkType not respecting given constraints
-transitionIssue(transition+21, {-> relatesLink_outwards[0]}, -1, 'TC_37-Case:2-issue having issues link to it through anyLinkType not respecting given constraints', null, null)
-
-// Case:3-issue having issues linked to it through_any_linkType respecting given constraints
-def linkIssue3 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType3')
-def linkIssue4 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType4')
-def linkIssue5 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType5')
-linkIssues([issue: { -> linkIssue3[0] }, toIssue: { -> linkIssue4[0] }, link: 'duplicates'], 'linkByAnyLinkType4' )
-linkIssues([issue: { -> linkIssue3[0] }, toIssue: { -> linkIssue5[0] }, link: 'duplicates'], 'linkByAnyLinkType5' )
-transitionIssue(transition+21, {-> linkIssue3[0]}, 0, 'TC_37-Case:3-issue having issues linked to it through any linkType respecting given constraints', null, null)
-
-// TC_38-issue having issues linked to it through_blocks_linkType respecting given constraints-min 2linkedIssues
-def blocksLink_outwards1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'blocksLink_outwards1')
-def blocksLink_inwards1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'blocksLink_inwards1')
-def blocksLink_inwards2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'blocksLink_inwards2')
-linkIssues([issue: { -> blocksLink_outwards1[0] }, toIssue: { -> blocksLink_inwards1[0] }, link: 'blocks'], 'BlocksLinkType1' )
-linkIssues([issue: { -> blocksLink_outwards1[0] }, toIssue: { -> blocksLink_inwards2[0] }, link: 'blocks'], 'BlocksLinkType2' )
-// Case:1-issue not having issues linked to it through_blocks_linkType
-transitionIssue(transition+22, {-> linkIssue3[0]}, 0, 'TC_38-Case:1-issue not having issues linked to it through_blocks_linkType', null, null)
-
-// Case:2-issue having issues linked to it through_blocks_linkType not respecting constraints
-transitionIssue(transition+22, {-> blocksLink_outwards[0]}, -1, 'TC_38-Case:2-issue having issues linked to it through blocks linkType not respecting constraints', null, null)
-
-// Case:3-issue having issues linked to it through_blocks_linkType respecting constraints
-transitionIssue(transition+22, {-> blocksLink_outwards1[0]}, 0, 'TC_38-Case:3-issue having issues linked to it through blocks linkType respecting constraints', null, null)
-
-// TC_39-issue having issues linked to it through_isBlockedBy_LinkType respecting given constraints
-// Case:1-issue not having issues linked to it through isBlockedBy linkType
-transitionIssue(transition+23, {-> blocksLink_outwards[0]}, 0, 'TC_39-Case:1-issue not having issues linked to it through isBlockedBy linkType', null, null)
-
-// Case:2-issue having issues linked to it through isBlockedBy linkType not respecting given constraints
-transitionIssue(transition+23, {-> blocksLink_inwards[0]}, -1, 'TC_39-Case:2-issue having issues linked to it through isBlockedBy linkType not respecting given constraints', null, null)
-
-// Case:3-issue having issues linked to it through isBlockedBy linkType respecting given constraints
-def blocksLink_outwards2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'blocksLink_outwards2')
-def blocksLink_inwards3 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'blocksLink_inwards3')
-def blocksLink_inwards4 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'blocksLink_inwards4')
-linkIssues([issue: { -> blocksLink_inwards3[0] }, toIssue: { -> blocksLink_outwards2[0] }, link: 'blocks'], 'BlocksLinkType4' )
-linkIssues([issue: { -> blocksLink_inwards4[0] }, toIssue: { -> blocksLink_outwards2[0] }, link: 'blocks'], 'BlocksLinkType5' )
-transitionIssue(transition+23, {-> blocksLink_outwards2[0]}, 0, 'TC_39-Case:3-issue having issues linked to it through isBlockedBy linkType respecting given constraints', null, null)
-
-// TC_40-issue having issues linked to it through_clones_LinkType respecting given constraints
-// Case:1-issue not having issues linked to it through_clones_LinkType
-transitionIssue(transition+24, {-> currentIssue1[0]}, 0, 'TC_40:Case:1-issue not having issues linked to it through_clones_LinkType', null, null)
-
-// Case:2-issue having issues linked to it through_clones_LinkType not respecting given constraints
-transitionIssue(transition+24, {-> clonesLink_outwards[0]}, -1, 'TC_40:Case:2-issue having issues linked to it through_clones_LinkType not respecting given constraints', null, null)
-
-// Case:3-issue having issues linked to it through clones linkType respecting given constraints
-def clonesLink_outwards2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'clonesLink_outwards2')
-def clonesLink_inwards3 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'clonesLink_inwards3')
-def clonesLink_inwards4 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'clonesLink_inwards4')
-linkIssues([issue: { -> clonesLink_outwards2[0] }, toIssue: { -> clonesLink_inwards3[0] }, link: 'clones'], 'ClonesLinkType1' )
-linkIssues([issue: { -> clonesLink_outwards2[0] }, toIssue: { -> clonesLink_inwards4[0] }, link: 'clones'], 'ClonesLinkType2' )
-transitionIssue(transition+24, {-> clonesLink_outwards2[0]}, 0, 'TC_40-Case:3-issue having issues linked to it through clones linkType respecting given constraints', null, null)
-
-// TC_41-issue having issues linked to it through_isClonedBy_LinkType respecting given constraints
-// Case:1-issue not having issues linked to it through_isClonedBy_LinkType
-transitionIssue(transition+25, {-> anyLinkType1[0]}, 0, 'TC_41:Case:1-issue not having issues linked to it through_isclonedBy_LinkType', null, null)
-
-// Case:2-issue having issues linked to it through_isClonedBy_LinkType not respecting given constraints
-transitionIssue(transition+25, {-> clonesLink_inwards[0]}, -1, 'TC_41:Case:2-issue having issues linked to it through_isClonedBy_LinkType not respecting given constraints', null, null)
-
-// Case:3-issue having issues linked to it through isClonedBy linkType respecting given constraints
-def isClonedByLink_outwards = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isClonedByLink_outwards')
-def isClonedByLink_inwards1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isClonedByLink_inwards1')
-def isClonedByLink_inwards2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isClonedByLink_inwards2')
-linkIssues([issue: { -> isClonedByLink_outwards[0] }, toIssue: { -> isClonedByLink_inwards1[0] }, link: 'clones'], 'IsClonedByLinkType1' )
-linkIssues([issue: { -> isClonedByLink_outwards[0] }, toIssue: { -> isClonedByLink_inwards2[0] }, link: 'clones'], 'IsClonedByLinkType2' )
-transitionIssue(transition+25, {-> isClonedByLink_outwards[0]}, 0, 'TC_41-Case:3-issue having issues linked to it through isClonedBy linkType respecting given constraints', null, null)
-
-// TC_42-issue having issues linked to it through_duplicates_LinkType respecting given constraints
-// Case:1-issue not having issues linked to it through_duplicates_LinkType
-transitionIssue(transition+26, {-> blocksLink_outwards[0]}, 0, 'TC_42:Case:1-issue not having issues linked to it through_duplicates_LinkType', null, null)
-
-// Case:2-issue having issues linked to it through_duplicates_LinkType not respecting given constraints
-transitionIssue(transition+26, {-> duplicatesLink_outwards[0]}, -1, 'TC_42:Case:2-issue having issues linked to it through_duplicates_LinkType not respecting given constraints', null, null)
-
-// Case:3-issue having issues linked to it through_duplicates_LinkType respecting given constraints
-def duplicatesLink_outwards1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'duplicatesLink_outwards1')
-def duplicatesLink_inwards1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'duplicatesLink_inwards1')
-def duplicatesLink_inwards2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'duplicatesLink_inwards2')
-linkIssues([issue: { -> duplicatesLink_outwards1[0] }, toIssue: { -> duplicatesLink_inwards1[0] }, link: 'duplicates'], 'DuplicatesLinkType1' )
-linkIssues([issue: { -> duplicatesLink_outwards1[0] }, toIssue: { -> duplicatesLink_inwards2[0] }, link: 'duplicates'], 'DuplicatesLinkType2' )
-transitionIssue(transition+26, {-> duplicatesLink_outwards1[0]}, 0, 'TC_42:Case:3-issue having issues linked to it through_duplicates_LinkType respecting given constraints', null, null)
-
-// TC_43-issue having issues linked to it through_isDuplicatedBy_LinkType respecting given constraints
-// Case:1-issue not having issues linked to it through_isDuplicatedBy_LinkType
-transitionIssue(transition+27, {-> blocksLink_outwards[0]}, 0, 'TC_43:Case:1-issue not having issues linked to it through_isDuplicatedBy_LinkType', null, null)
-
-// Case:2-issue having issues linked to it through_isDuplicatedBy_LinkType not respecting given constraints
-transitionIssue(transition+27, {-> duplicatesLink_inwards[0]}, -1, 'TC_43:Case:2-issue having issues linked to it through_isDuplicatedBy_LinkType not respecting given constraints', null, null)
-
-// Case:3-issue having issues linked to it through_duplicates_LinkType respecting given constraints
-def isDuplicatedByLink_outwards = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isDuplicatedByLink_outwards')
-def isDuplicatedByLink_inwards1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isDuplicatedByLink_inwards1')
-def isDuplicatedByLink_inwards2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isDuplicatedByLink_inwards2')
-linkIssues([issue: { -> isDuplicatedByLink_outwards[0] }, toIssue: { -> isDuplicatedByLink_inwards1[0] }, link: 'duplicates'], 'IsDuplicatedByLink1' )
-linkIssues([issue: { -> isDuplicatedByLink_outwards[0] }, toIssue: { -> isDuplicatedByLink_inwards2[0] }, link: 'duplicates'], 'IsDuplicatedByLink2' )
-transitionIssue(transition+27, {-> isDuplicatedByLink_outwards[0]}, 0, 'TC_43:Case:3-issue having issues linked to it through_isDuplicatedBy_LinkType respecting given constraints', null, null)
-
-// TC_44-issue having issues linked to it through_isDuplicatedBy_LinkType respecting given constraints
-// Case:1-issue not having issues linked to it through_Causes_LinkType
-transitionIssue(transition+28, {-> blocksLink_outwards[0]}, 0, 'TC_44:Case:1-issue not having issues linked to it through_Causes_LinkType', null, null)
-
-// Case:2-issue having issues linked to it through_Causes_LinkType not respecting given constraints
-transitionIssue(transition+28, {-> causesLink_outwards[0]}, -1, 'TC_44:Case:2-issue having issues linked to it through_Causes_LinkType not respecting given constraints', null, null)
-
-// Case:3-issue having issues linked to it through_Causes_LinkType respecting given constraints
-def causesLink_outwards1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'causesLink_outwards1')
-def causesLink_inwards1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'causesLink_inwards1')
-def causesLink_inwards2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'causesLink_inwards2')
-linkIssues([issue: { -> causesLink_outwards1[0] }, toIssue: { -> causesLink_inwards1[0] }, link: 'causes'], 'CausesLinkType1' )
-linkIssues([issue: { -> causesLink_outwards1[0] }, toIssue: { -> causesLink_inwards2[0] }, link: 'causes'], 'CausesLinkType2' )
-transitionIssue(transition+28, {-> causesLink_outwards1[0]}, 0, 'TC_44:Case:3-issue having issues linked to it through_Causes_LinkType respecting given constraints', null, null)
-
-// TC_45-issue having issues linked to it through_isCausedBy_LinkType respecting given constraints
-// Case:1-issue not having issues linked to it through_isCausedBy_LinkType
-transitionIssue(transition+29, {-> blocksLink_outwards[0]}, 0, 'TC_45:Case:1-issue not having issues linked to it through_isCausedBy_LinkType', null, null)
-
-// Case:2-issue having issues linked to it through_isCausedBy_LinkType not respecting given constraints
-transitionIssue(transition+29, {-> causesLink_inwards[0]}, -1, 'TC_45:Case:2-issue having issues linked to it through_isCausedBy_LinkType not respecting given constraints', null, null)
-
-// Case:3-issue having issues linked to it through_IsCausedBy_LinkType respecting given constraints
-def isCausedByLink_outwards = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isCausedByLink_outwards')
-def isCausedByLink_inwards1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isCausedByLink_inwards1')
-def isCausedByLink_inwards2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isCausedByLink_inwards2')
-linkIssues([issue: { -> isCausedByLink_outwards[0] }, toIssue: { -> isCausedByLink_inwards1[0] }, link: 'causes'], 'isCausedByLinkType1' )
-linkIssues([issue: { -> isCausedByLink_outwards[0] }, toIssue: { -> isCausedByLink_inwards2[0] }, link: 'causes'], 'isCausedByLinkType2' )
-transitionIssue(transition+29, {-> causesLink_outwards[0]}, 0, 'TC_45:Case:3-issue having issues linked to it through_IsCausedBy_LinkType respecting given constraints', null, null)
-
-// TC_46-issue having issues linked to it through_relatesTo_LinkType respecting given constraints
-// Case:1-issue not having issues linked to it through_relatesTo_LinkType
-transitionIssue(transition+30, {-> blocksLink_outwards[0]}, 0, 'TC_46:Case:1-issue not having issues linked to it through_relatesTo_LinkType', null, null)
-
-// Case:2-issue having issues linked to it through_relatesTo_LinkType not respecting given constraints
-transitionIssue(transition+30, {-> blocksLink_outwards[0]}, 0, 'TC_46:Case:2-issue having issues linked to it through_relatesTo_LinkType not respecting given constraints', null, null)
-
-// Case:3-issue having issues linked to it through_relatesTo_LinkType respecting given constraints
-def relatesLink_outwards1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'relatesLink_outwards1')
-def relatesLink_inwards1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'relatesLink_inwards1')
-def relatesLink_inwards2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'relatesLink_inwards2')
-linkIssues([issue: { -> relatesLink_outwards1[0] }, toIssue: { -> relatesLink_inwards1[0] }, link: 'relates to'], 'relates to1' )
-linkIssues([issue: { -> relatesLink_outwards1[0] }, toIssue: { -> relatesLink_inwards2[0] }, link: 'relates to'], 'relates to2' )
-transitionIssue(transition+30, {-> relatesLink_outwards1[0]}, 0, 'TC_46:Case:3-issue having issues linked to it through_relatesTo_LinkType respecting given constraints', null, null)
-
-// TC_47-issue not having issues return by groovy script-[issue.getLinkedIssues()]
-// Case:1-issue not having issues return by groovy script
-transitionIssue(transition+31, {-> story2[0]}, 0, 'TC_47:Case:1-issue not having issues return by groovy script', null, null)
-
-// Case:2-issue having issues return by groovy script not respecting given constraints
-transitionIssue(transition+31, {-> causesLink_outwards[0]}, -1, 'TC_47:Case:2-issue having issues return by groovy script not respecting given constraints', null, null)
-
-// Case:3-issue not having issues return by groovy script not respecting given constraints
-transitionIssue(transition+31, {-> isCausedByLink_outwards[0]}, 0, 'TC_47:Case:3-issue having issues return by groovy script respecting given constraints', null, null)
-
-// TC_48-jql search not returns at least 1 issue[issuetype = Task and summary~noIssueWithThisSummary]
-// Case:1-jql search not returns at least 1 issue
-transitionIssue(transition+32, {-> relatesLink_outwards[0]}, 0, 'TC_48:Case:1-jql search not returns at least 1 issue', null, null)
-
-//Case:2-jql search returns issues not respecting the given constraints
-transitionIssue(transition+33, {-> relatesLink_outwards[0]}, -1, 'TC_48-Case:2-jql search returns issues not respecting the given constraints', null, null)
-
-//Case:3-jql search returns issues respecting the given constraints
-transitionIssue(transition+34, {-> relatesLink_outwards[0]}, 0, 'TC_48-Case:3-jql search returns issues respecting the given constraints', null, null)
-
-// TC_49-current issue should not have subtasks
-// Case:1-When current issue not having subtasks- check forbidLinks
-transitionIssue(transition+35, {-> currentIssue1[0]}, 0, 'TC_49:Case:1-When current issue not having subtasks-check forbidLinks', null, null)
-
-// Case:2-When current issue having 1 subtask
-transitionIssue(transition+35, {-> currentIssue2[0]}, -1, 'TC_49:Case:2-When current issue having 1 subtask-checkForbid ', null, null)
-
-// TC_50-subtask not having parent issue respecting given constraints
-//transitionIssue(transition+36, {-> subtask1[0]}, 0, 'TC_50-subtask not having parent issue respecting given constraints-checkForbid', null, null)
-
-// TC_51-subtask having parent issue respecting given constraints
-//transitionIssue(transition+36, {-> subtask2[0]}, -1, 'TC_51-subtask having parent issue respecting given constraints-checkForbid', null, null)
-
-// TC_52-check the issue belongs to the current epic not respecting the given constraints - min 2 stories
-// Case:1-When epic not having stories
-transitionIssue(transition+37, {-> epic[0]}, 0, 'TC_52-Case:1-When epic not having stories-checkForbid', null, null)
-
-// Case:2-When epic having 1 stories
-transitionIssue(transition+37, {-> epic1[0]}, -1, 'TC_52-Case:2-When epic 1 having story-checkForbid', null, null)
-
-// TC_53-story not having epic respecting given constraints-
-// Case:1-When issue not belong to epic
-transitionIssue(transition+38, {-> story2[0]}, 0, 'TC_53:Case:1-When story not belongs to epic-checkForbid', null, null)
-
-// Case:2-When story belong to epic not respecting given constraints
-//transitionIssue(transition+38, {-> story1[0]}, -1, 'TC_53-Case:2-When story belong to epic not respecting given constraints-checkForbid', null, null)
-
-// TC_54-issue having issues linked to it through_any_linkType respecting given constraints- min 2 linkedIssues
-// Case:1-issue not having issues link to it through anyLinkType
-transitionIssue(transition+39, {-> currentIssue1[0]}, 0, 'TC_54-Case:1-issue not having issues link to it through anyLinkType-checkForbid', null, null)
-
-// Case:2-issue having issues link to it through_any_LinkType not respecting given constraints
-transitionIssue(transition+39, {-> relatesLink_outwards[0]}, -1, 'TC_54-Case:2-issue having issues link to it through anyLinkType-checkForbid', null, null)
-
-// TC_55-issue having issues linked to it through_blocks_linkType respecting given constraints-min 2linkedIssues
-// Case:1-issue not having issues linked to it through_blocks_linkType
-transitionIssue(transition+40, {-> linkIssue3[0]}, 0, 'TC_55-Case:1-issue not having issues linked to it through_blocks_linkType-checkForbid', null, null)
-
-// Case:2-issue having issues linked to it through_blocks_linkType not respecting constraints
-transitionIssue(transition+40, {-> blocksLink_outwards[0]}, -1, 'TC_55-Case:2-issue having issues linked to it through blocks linkType-checkForbid', null, null)
-
-// TC_56-issue having issues linked to it through_isBlockedBy_LinkType respecting given constraints
-// Case:1-issue not having issues linked to it through isBlockedBy linkType
-transitionIssue(transition+41, {-> blocksLink_outwards[0]}, 0, 'TC_56-Case:1-issue not having issues linked to it through isBlockedBy linkType-checkForbid', null, null)
-
-// Case:2-issue having issues linked to it through isBlockedBy linkType
-transitionIssue(transition+41, {-> blocksLink_inwards[0]}, -1, 'TC_56-Case:2-issue having issues linked to it through isBlockedBy linkType-checkForbid', null, null)
-
-// TC_57-issue having issues linked to it through_clones_LinkType respecting given constraints
-// Case:1-issue not having issues linked to it through_clones_LinkType
-transitionIssue(transition+42, {-> currentIssue1[0]}, 0, 'TC_57:Case:1-issue not having issues linked to it through_clones_LinkType-checkForbid', null, null)
-
-// Case:2-issue having issues linked to it through_clones_LinkType
-transitionIssue(transition+42, {-> clonesLink_outwards[0]}, -1, 'TC_57:Case:2-issue having issues linked to it through_clones_LinkType-checkForbid', null, null)
-
-// TC_58-issue having issues linked to it through_isClonedBy_LinkType respecting given constraints
-// Case:1-issue not having issues linked to it through_isClonedBy_LinkType
-transitionIssue(transition+43, {-> anyLinkType1[0]}, 0, 'TC_58:Case:1-issue not having issues linked to it through_isclonedBy_LinkType-checkForbid', null, null)
-
-// Case:2-issue having issues linked to it through_isClonedBy_LinkType
-transitionIssue(transition+43, {-> clonesLink_inwards[0]}, -1, 'TC_58:Case:2-issue having issues linked to it through_isClonedBy_LinkType-checkForbid', null, null)
-
-// TC_59-issue having issues linked to it through_duplicates_LinkType respecting given constraints
-// Case:1-issue not having issues linked to it through_duplicates_LinkType
-transitionIssue(transition+44, {-> blocksLink_outwards[0]}, 0, 'TC_59:Case:1-issue not having issues linked to it through_duplicates_LinkType-checkForbid', null, null)
-
-// Case:2-issue having issues linked to it through_duplicates_LinkType
-transitionIssue(transition+44, {-> duplicatesLink_outwards[0]}, -1, 'TC_59:Case:2-issue having issues linked to it through_duplicates_LinkType-checkForbid', null, null)
-
-// TC_60-issue having issues linked to it through_isDuplicatedBy_LinkType respecting given constraints
-// Case:1-issue not having issues linked to it through_isDuplicatedBy_LinkType
-transitionIssue(transition+45, {-> blocksLink_outwards[0]}, 0, 'TC_60:Case:1-issue not having issues linked to it through_isDuplicatedBy_LinkType-checkForbid', null, null)
-
-// Case:2-issue having issues linked to it through_isDuplicatedBy_LinkType not respecting given constraints
-transitionIssue(transition+45, {-> duplicatesLink_inwards[0]}, -1, 'TC_60:Case:2-issue having issues linked to it through_isDuplicatedBy_LinkType-checkForbid', null, null)
-
-// TC_61-issue having issues linked to it through_isDuplicatedBy_LinkType respecting given constraints
-// Case:1-issue not having issues linked to it through_Causes_LinkType
-transitionIssue(transition+46, {-> blocksLink_outwards[0]}, 0, 'TC_61:Case:1-issue not having issues linked to it through_Causes_LinkType-checkForbid', null, null)
-
-// Case:2-issue having issues linked to it through_Causes_LinkType not respecting given constraints
-transitionIssue(transition+46, {-> causesLink_outwards[0]}, -1, 'TC_61:Case:2-issue having issues linked to it through_Causes_LinkType-checkForbid', null, null)
-
-// TC_62-issue having issues linked to it through_isCausedBy_LinkType respecting given constraints
-// Case:1-issue not having issues linked to it through_isCausedBy_LinkType
-transitionIssue(transition+47, {-> blocksLink_outwards[0]}, 0, 'TC_62:Case:1-issue not having issues linked to it through_isCausedBy_LinkType-checkForbid', null, null)
-
-// Case:2-issue having issues linked to it through_isCausedBy_LinkType not respecting given constraints
-transitionIssue(transition+47, {-> causesLink_inwards[0]}, -1, 'TC_62:Case:2-issue having issues linked to it through_isCausedBy_LinkType-checkForbid', null, null)
-
-// TC_63-issue having issues linked to it through_relatesTo_LinkType respecting given constraints
-// Case:1-issue not having issues linked to it through_relatesTo_LinkType
-transitionIssue(transition+48, {-> blocksLink_outwards[0]}, 0, 'TC_63:Case:1-issue not having issues linked to it through_relatesTo_LinkType-checkForbid', null, null)
-
-// Case:2-issue having issues linked to it through_relatesTo_LinkType not respecting given constraints
-transitionIssue(transition+48, {-> blocksLink_outwards[0]}, 0, 'TC_63:Case:2-issue having issues linked to it through_relatesTo_LinkType-checkForbid', null, null)
-
-// TC_64-issue not having issues return by groovy script-[issue.getLinkedIssues()]
-// Case:1-issue not having issues return by groovy script
-transitionIssue(transition+49, {-> story2[0]}, 0, 'TC_64:Case:1-issue not having issues return by groovy script-checkForbid', null, null)
-
-// Case:2-issue having issues return by groovy script not respecting given constraints
-transitionIssue(transition+49, {-> causesLink_outwards[0]}, -1, 'TC_64:Case:2-issue having issues return by groovy script-checkForbid', null, null)
-
-// TC_65-jql search not returns at least 1 issue[issuetype = Task and summary~noIssueWithThisSummary]
-// Case:1-jql search not returns at least 1 issue
-transitionIssue(transition+50, {-> relatesLink_outwards[0]}, 0, 'TC_65:Case:1-jql search not returns at least 1 issue-checkForbid', null, null)
-
-//Case:2-jql search returns issues not respecting the given constraints
-transitionIssue(transition+51, {-> relatesLink_outwards[0]}, -1, 'TC_65-Case:2-jql search returns issues-checkForbid', null, null)
-
-
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+
+tearDown()
+addWorkflow()
+
+def functionKey = info?.isCloud? functionKey.relatedIssuesConditionCloud : functionKey.relatedIssuesConditionServer
+
+project.ext.relatedIssueFields_default_server = [
+		"maxLinkedIssues=",
+		"minLinkedIssues=1",
+		"conditionMode=requireLinks",
+		"groovyExpression=",
+		"checkAllLinkedIssues=yes",
+		"correlationId="
+]
+
+def relatedIssue = info?.isCloud ? requireRelatedIssuesFieldsCloud : relatedIssueServer
+
+def fieldsToRemove = ["currentIssue", "parentIssue", "epicOfTheCurrentIssue","parentPortfolio"]
+
+fieldsToRemove.each { key ->
+	relatedIssue.remove(key)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+	def defaultFieldsCloud = ["condition.id=9def4812-c8d0-45eb-9903-21dcbe2a70be"]
+	def targetIssueString = new groovy.json.JsonBuilder(value).toString()
+	def targetIssue = "condition.config-9def4812-c8d0-45eb-9903-21dcbe2a70be=${targetIssueString}"
+
+	defaultFieldsCloud.add(targetIssue)
+
+	def transition = 'relatedIssueCondition_requireLinks'
+	def fields = info?.isCloud? defaultFieldsCloud.each{element -> element } : relatedIssueFields_default_server + "selectedLinkType=$value"
+	addTransitionFunction(transition + i, 'condition', fields, functionKey)
+}
+/*
+relatedIssue.eachWithIndex { key, value, i ->
+	relatedIssueFields_default_server[3] = "groovyExpression=$groovyExpression.checkPriorityHigh"
+	relatedIssueFields_default_server[2] = "conditionMode=checkLinks"
+	def transition = 'relatedIssueCondition_checkLinks'
+	def fields = info?.isCloud? defaultFieldsCloud.each{element -> element } : relatedIssueFields_default_server + "selectedLinkType=$value"
+	addTransitionFunction( transition + i, 'condition', fields, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+	def defaultFieldsCloud = ["condition.id=9def4812-c8d0-45eb-9903-21dcbe2a70be"]
+	def targetIssueString = new groovy.json.JsonBuilder(targetIssueFieldsMap).toString()
+	def targetIssue = "condition.config-9def4812-c8d0-45eb-9903-21dcbe2a70be=${targetIssueString}"
+
+	defaultFieldsCloud.add(targetIssue)
+
+	relatedIssueFields_default_server[2] = "conditionMode=forbidLinks"
+	relatedIssueFields_default_server[3] = "groovyExpression=$groovyExpression.checkPriorityHigh"
+	def transition = 'relatedIssueCondition_forbidLinks'
+	def fields = info?.isCloud? defaultFieldsCloud.each{element -> element } : relatedIssueFields_default_server + "selectedLinkType=$value"
+	addTransitionFunction(transition + i, 'condition', fields, functionKey)
+}
+
+relatedIssue.take(2).eachWithIndex { key, value, i ->
+	def transition = 'relatedIssueCondition_issueConstraintsFalse'
+	relatedIssueFields_default_server[2] = "conditionMode=requireLinks"
+	relatedIssueFields_default_server[0] = "maxLinkedIssues=2"
+	relatedIssueFields_default_server[1] = "minLinkedIssues=2"
+	def fields = info?.isCloud? "" : relatedIssueFields_default_server + "selectedLinkType=$value"
+	addTransitionFunction(transition + i, 'condition', fields, functionKey)
+}
+
+relatedIssue.take(2).eachWithIndex { key, value, i ->
+	def transition = 'relatedIssueCondition_issueConstraintsTrue'
+	relatedIssueFields_default_server[2] = "conditionMode=requireLinks"
+	relatedIssueFields_default_server[0] = "maxLinkedIssues=5"
+	relatedIssueFields_default_server[1] = "minLinkedIssues=2"
+	def fields = info?.isCloud? "" : relatedIssueFields_default_server + "selectedLinkType=$value"
+	addTransitionFunction(transition + i, 'condition', fields, functionKey)
+}
+
+['issueReturnFromJqlSearch_require'].each {
+	def transition = 'relatedIssueCondition_issueConstraintsTrue'
+	relatedIssueFields_default_server[2] = "conditionMode=requireLinks"
+	relatedIssueFields_default_server[0] = "maxLinkedIssues="
+	relatedIssueFields_default_server[1] = "minLinkedIssues=1"
+	relatedIssueFields_default_server[3] = "groovyExpression="
+	def fields = info?.isCloud? "" : relatedIssueFields_default_server + "selectedLinkType=jql:project = $projectName AND summary ~ JQL_ISSUE"
+	addTransitionFunction(it, 'condition', fields, functionKey)
+}
+
+['issueReturnFromJqlSearch_check'].each {
+	def transition = 'relatedIssueCondition_issueConstraintsTrue'
+	relatedIssueFields_default_server[0] = "maxLinkedIssues="
+	relatedIssueFields_default_server[1] = "minLinkedIssues=1"
+	relatedIssueFields_default_server[2] = "conditionMode=checkLinks"
+	relatedIssueFields_default_server[3] = "groovyExpression=$groovyExpression.checkPriorityHigh"
+	def fields = info?.isCloud? "" : relatedIssueFields_default_server + "selectedLinkType=jql:project = $projectName AND summary ~ JQL_ISSUE"
+	addTransitionFunction( it, 'condition', fields, functionKey)
+}
+['issueReturnFromJqlSearch_forbid'].each {
+	def transition = 'relatedIssueCondition_issueConstraintsTrue'
+	relatedIssueFields_default_server[0] = "maxLinkedIssues="
+	relatedIssueFields_default_server[1] = "minLinkedIssues=1"
+	relatedIssueFields_default_server[2] = "conditionMode=forbidLinks"
+	relatedIssueFields_default_server[3] = "groovyExpression=$groovyExpression.checkPriorityHigh"
+	def fields = info?.isCloud? "" : relatedIssueFields_default_server + "selectedLinkType=jql:project = $projectName AND summary ~ JQL_ISSUE"
+	addTransitionFunction(it, 'condition', fields, functionKey)
+}
+
+ */
+createWorkflowScheme()
+createProject()
+
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'default')
+def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[] }], 'Sub-task')
+def subtask2 = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[] }, priority: 'High'], 'Sub-task2')
+def subtask3 = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[] },priority: 'High'], 'Sub-task3')
+def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
+def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {->epic[]}], 'BelongsToEpic')
+def issueBelongsToEpic2 = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {->epic[]}, priority: 'High'], 'BelongsToEpic2')
+def issueBelongsToEpic3 = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {->epic[]}, priority: 'High'], 'BelongsToEpic3')
+def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue'], 'Initiative')
+def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
+def epic_initiative2 = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue", priority: 'High'], 'Epic_initiative2')
+def epic_initiative3 = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue", priority: 'High'], 'Epic_initiative3')
+def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
+def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
+def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
+def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
+def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesTo')
+def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
+
+updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
+
+def linkIssuesMap = [
+		blocks : {->blocks[]},
+		clones : {->clones[]},
+		duplicates : {->duplicates[]},
+		'relates to': {->relatesTo[]}
+]
+linkIssuesMap.eachWithIndex { key, value, i ->
+	linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
+}
+
+def relatedIssuesMapServer = [
+		{->parent[]}: {->subtask[]},
+		{->epic[]}: {->issueBelongsToEpic[]},
+		{-> initiative[]} : {->epic_initiative[]},
+		{->issueLinks[]} : {->blocks[]},
+		{->issueLinks[]} : {->blocks[]},
+		{->blocks[]} : {->issueLinks[]},
+		{->issueLinks[]} : {->clones[]},
+		{->clones[]} : {->issueLinks[]},
+		{->issueLinks[]} : {->duplicates[]},
+		{->duplicates[]} : {->issueLinks[]},
+		{->issueLinks[]} : {->relatesTo[]},
+		{->issueLinks[]} : {->relatesTo[]},
+		{->issueLinks[]} : {->relatesTo[]},
+]
+def relatedIssuesMapCloud = [
+		{->parent[]}: {->subtask[]},
+		{->epic[]}: {->issueBelongsToEpic[]},
+		{->issueLinks[]} : {->blocks[]},
+		{->issueLinks[]} : {->blocks[]},
+		{->blocks[]} : {->issueLinks[]},
+		{->issueLinks[]} : {->clones[]},
+		{->clones[]} : {->issueLinks[]},
+		{->issueLinks[]} : {->duplicates[]},
+		{->duplicates[]} : {->issueLinks[]},
+		{->issueLinks[]} : {->relatesTo[]},
+]
+def relatedIssuesMap = info?.isCloud ? relatedIssuesMapCloud : relatedIssuesMapServer
+relatedIssue.remove("returnsFromJqlSearch")
+
+[
+		'relatedIssueCondition_requireLinks',
+ 		/*'relatedIssueCondition_forbidLinks',*/
+].collect {
+	relatedIssuesMap.eachWithIndex { key, value, i ->
+		gint.taskHelper.add([
+				[action    : 'transitionIssue', ext: ': issue has linked issues :'+ it + i,
+						sleep: 3000,
+				 expected: 0,
+				 parameters: [
+						 issue     : key,
+						 transition: it + i,
+				 ]
+				],
+		])
+	}
+}
+
+// When issue not having related issues or issues linked to it through specific link types
+
+[
+		'relatedIssueCondition_requireLinks',
+].collect {
+	relatedIssue.eachWithIndex { key, value, i ->
+		gint.taskHelper.add([
+				[action    : 'transitionIssue', ext: ': issue not has linked issues_checkRequireLinks :' + it +i,
+				 sleep: 3000,
+				 expected  : -1,
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: it + i,
+				 ]
+				],
+		])
+	}
+}
+/*
+[
+		'relatedIssueCondition_checkLinks',
+].collect {
+	relatedIssue.eachWithIndex { key, value, i ->
+		gint.taskHelper.add([
+				[action    : 'transitionIssue', ext: ': issue not has linked issues_checkLinks :' + it +i,
+				 expected  : 0,
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: it + i,
+				 ]
+				],
+		])
+	}
+}
+
+[
+		'relatedIssueCondition_checkLinks',
+].collect {
+	relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
+		gint.taskHelper.add([
+				[action    : 'transitionIssue', ext: ': issue not has linked issues following given constraints_checkLinks :'+ it + i,
+				 expected: -1,
+				 parameters: [
+						 issue     : currentIssue,
+						 transition: it + i,
+				 ]
+				],
+		])
+	}
+}
+
+[
+		/'relatedIssueCondition_checkLinks',
+].collect {
+	relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
+		gint.taskHelper.add([
+				[action: 'updateIssue', ext: ': set priority to High_targetIssue:' + it + i,
+				parameters:[
+					 issue: targetIssue,
+					 priority: 'High'
+					]
+				],
+				[action: 'updateIssue', ext: ': set priority to High_currentIssue:' + it + i,
+				 parameters:[
+						 issue: currentIssue,
+						 priority: 'High'
+				 ]
+				],
+				[action    : 'transitionIssue', ext: ': issue has linked issues following given constraints_requireLinks :'+ it + i,
+				 expected: 0,
+				 parameters: [
+						 issue     : currentIssue,
+						 transition: it + i,
+				 ]
+				],
+		])
+	}
+}
+[
+		'relatedIssueCondition_forbidLinks'
+].collect {
+	relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
+		gint.taskHelper.add([
+				[action: 'updateIssue', ext: ': set priority to High_currentIssue:' + it + i,
+				 parameters:[
+						 issue: currentIssue,
+						 priority: 'High'
+				 ]
+				],
+				[action    : 'transitionIssue', ext: ': issue has linked issues following given constraints_forbid :'+ it + i,
+				 expected: -1,
+				 parameters: [
+						 issue     : currentIssue,
+						 transition: it + i,
+				 ]
+				],
+		])
+	}
+}
+[
+		'relatedIssueCondition_issueConstraintsFalse'
+].collect {
+	relatedIssuesMap.take(2).eachWithIndex { currentIssue, targetIssue, i ->
+		gint.taskHelper.add([
+			[action    : 'transitionIssue', ext: ': issue not has linked issues following given constraints_no of Issues :' + it + i,
+			 expected  : -1,
+			 parameters: [
+					 issue     : currentIssue,
+					 transition: it + i,
+				 ]
+			],
+		])
+	}
+}
+[
+		'relatedIssueCondition_issueConstraintsTrue'
+].collect {
+	relatedIssuesMap.take(2).eachWithIndex { currentIssue, targetIssue, i ->
+		gint.taskHelper.add([
+			[action    : 'transitionIssue', ext: ': issue has linked issues following given constraints_no of Issues :' + it + i,
+			 expected  : 0,
+			 parameters: [
+					 issue     : currentIssue,
+					 transition: it + i,
+			 ],
+			],
+	])
+	}
+}
+
+
+[
+		'issueReturnFromJqlSearch_require',
+].collect {
+		gint.taskHelper.add([
+				[action    : 'transitionIssue', ext: ': atleast one issue found by jql search summary_JQL_ISSUE_requireLinks:'+ it,
+				 expected: 0,
+				 parameters: [
+						 issue     : { ->jqlIssue[] },
+						 transition: it,
+				 ]
+				],
+				[action: 'updateIssue', ext: ': change summary_requireLinks:' + it,
+						sleepAfter: 2000,
+				 parameters:[
+						 issue: { ->jqlIssue[] },
+						 summary: 'Invalid',
+						 priority: 'High',
+				 ]
+				],
+				[action    : 'transitionIssue', ext: ': when jql search does not return atleast one issue_requireLinks :'+ it,
+				 expected: -1,
+				 parameters: [
+						 issue     : { ->jqlIssue[] },
+						 transition: it,
+				 ]
+				],
+		])
+}
+
+[		'issueReturnFromJqlSearch_check',
+].each {
+	gint.taskHelper.add([
+			[action: 'updateIssue', ext: ': change summary for check issues_CheckLinks:' + it,
+			 parameters:[
+					 issue: { ->jqlIssue[] },
+					 summary: 'JQL_ISSUE',
+					 priority: 'High',
+			 ]
+			],
+			[action    : 'transitionIssue', ext: ': when jql search issues respecting constraints_CheckLinks:'+ it,
+			 expected: 0,
+			 parameters: [
+					 issue     : { ->jqlIssue[] },
+					 transition: it,
+			 ]
+			],
+			[action: 'updateIssue', ext: ': change priority to check issues_CheckLinks:' + it,
+			 parameters:[
+					 issue: { ->jqlIssue[] },
+					 priority: 'Low',
+			 ]
+			],
+			[action    : 'transitionIssue', ext: ': when jql search issues not respecting constraints_CheckLinks:'+ it,
+			 expected: -1,
+			 parameters: [
+					 issue     : { ->jqlIssue[] },
+					 transition: it,
+			 ]
+			],
+	])
+
+}
+[		'issueReturnFromJqlSearch_forbid',
+].each {
+	gint.taskHelper.add([
+			[action: 'updateIssue', ext: ': change summary for check issues_forbid:' + it,
+			 parameters:[
+					 issue: { ->jqlIssue[] },
+					 summary: 'JQL_ISSUE',
+					 priority: 'High',
+			 ]
+			],
+			[action    : 'transitionIssue', ext: ': when jql search issues respecting constraints:'+ it,
+			 expected: -1,
+			 parameters: [
+					 issue     : { ->jqlIssue[] },
+					 transition: it,
+			 ]
+			],
+			[action: 'updateIssue', ext: ': change priority to check issues-forbid:' + it,
+			 parameters:[
+					 issue: { ->jqlIssue[] },
+					 priority: 'Low',
+			 ]
+			],
+			[action    : 'transitionIssue', ext: ': when jql search issues not respecting constraints_forbid:'+ it,
+			 expected: 0,
+			 parameters: [
+					 issue     : { ->jqlIssue[] },
+					 transition: it,
+			 ]
+			],
+	])
+
+}
+
+ */
+
+/*
+1. The current issue must have at least 1 sub-tasks - default config.-positive = "DONE"
+2.The current issue must have at least 1 sub-tasks/issue belongs to epic = "DONE"
+3.The current issue must not have any sub-task/issue belongs to epic = "DONE"
+4.The current issue must have at least 2 and at most 2 sub-tasks / issue belongs to epic = "Done"
+5.The current issue must have at least 2 and at most 3 sub-tasks/issue belongs to epic = Done
+6.The following Groovy expression:issue.get("project")?.key == "AUTOMATION" -must return at least 2 and at most 2 issues = "Done"
+7.The current issue must have at least 2 and at most 2 sub-tasks and they must all respect the following condition:issue.get("priority")?.name == "High"
+  parent issue has 3 subtasks and out of 3 ,2 subtasks must be of 'High' priority = "Done"
+8.The current issue must have at least 2 and at most 2 sub-tasks and they must all respect the following condition:issue.get("creator")?.name == "automation"
+  create issue with defferent users as creator's and validate issues having given creator - IMPORTANT
+9.
+ */

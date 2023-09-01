@@ -1,6 +1,3 @@
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
 buildscript {
     repositories {
         maven {
@@ -13,93 +10,297 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def transition = 'assignIssuePostfunction'
-def workflow = project
-def screen = project
-def user = info?.user
-def userId = 'jmwe_qa'
-def projectRole = 'jmwe_role'
-def userGroup = 'jmwe_group'
+tearDown()
+//tearDownUsers()
+addWorkflow()
 
-gint.xmlReport = true	//xml report generates in projects root directory
-gint.verbose = true
+def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
+def statusList = info?.isCloud ? statusListCloud :  statusListServer
+def assignIssuePfFields = [
+        "groovyExpression=",
+        "assignmentBehavior=force", //onlyAutomatic
+        "useValuesFromTransitionedIssue=",
+        "assignmentType=currentUser", //reporter
+        "user=",
+        "component=",
+        "throwIfNoMatch=",
+        "multipleUserBehavior=alphabetical",
+        "skipIfAlreadyAssigned=",
+        "throwExceptions=",
+        "useGroovyCondition=false",
+        "script=$groovyExpression.returnsReporter",
+        "user=$jmwe_qaUserId",
+        "role=$jiraAdminRoleId",
+        "component=$component1Id",
+        "correlationId="
+]
+def assignmentType = [
+        'reporter',
+        'projectLead',
+        'projectDefault',
+        'lastCommenter',
+        'specificUser',
+        'componentLead',
+        'userFromField',
+        //fieldAssignee: "field=assignee",
+        //fieldReporter: "field=reporter",
+        //fieldsCreator: "field=creator",
+        'lastRoleMember',
+        'roleMember',
+        'script',
+]
+def assignmentBehaviour = [
+        always : "force",
+        automatic : "onlyAutomatic",
+        ifTransitionValueChanged : "preferTransition",
+        ifTransitionUserValueIsNotRoleMember : "ifRoleMember"
+]
+assignmentType.each {
+    relatedIssue.eachWithIndex { key, value, i ->
+        def fields = assignIssuePfFields + "selectedLinkType=$value" + "assignmentType=$it"
+                addTransitionFunction("ASSIGN $value to" + it, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+        }
+    }
 
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/AssignIssuePostfunction${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
-def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:AssignIssue-function'
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+relatedIssue.eachWithIndex { key, value, i ->
+    assignIssuePfFields[3] = "$selectUsersOption.reporter"
+    def transition = 'assignIssuePF_reporter'
+    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    addTransitionFunction( transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
 
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
-addUsers(userId)
+relatedIssue.eachWithIndex { key, value, i ->
+    assignIssuePfFields[3] = "$selectUsersOption.projectLead"
+    def transition ='assignIssuePF_projectLead'
+    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
 
-// TC_01-check current issue should be assigned to  current user
-def currentIssue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createCurrentIssue')
-transitionIssue(transition+0, {-> currentIssue[0]}, 0, 'currentIssueShouldBeAssignedToCurrentUser', null, null)
-getIssueInformation({-> currentIssue[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_01-check current issue should be assigned to  current user')
+relatedIssue.eachWithIndex { key, value, i ->
+    assignIssuePfFields[3] = "$selectUsersOption.returnFromScript"
+    assignIssuePfFields[4] = "$selectUsersOption.script"
+    def transition ='assignIssuePF_returnFromScript'
+    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
 
-// TC_02-check the subtask of the parent issue should be assigned to current user
-def parent = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createParentIssue')
-def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]} ]}, 'createSubtask')
-transitionIssue(transition+1, {-> parent[0]}, 0, 'subtaskOfParentIssueShouldBeAssignToCurrentUser', null, null)
-getIssueInformation({-> subTask[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_02-check the subtask of the parent issue should be assigned to current user')
+relatedIssue.eachWithIndex { key, value, i ->
+    assignIssuePfFields[3] = "$selectUsersOption.userFromUserObjectField"
+    assignIssuePfFields[4] = "$selectUsersOption.fieldReporter"
+    def transition ='assignIssuePF_returnFromUserObjectFieldReporter'
+    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
 
-// TC_03-check the parent issue of the current subtask should be assigned to current user
-transitionIssue(transition+2, {-> subTask[0]}, 0, 'parentIssueOfSubtaskShouldBeAssignToCurrentUser', null, null)
-getIssueInformation({-> parent[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_03-check the parent issue of the current subtask should be assigned to current user')
+relatedIssue.eachWithIndex { key, value, i -> // here user is jmwe_qa
+    assignIssuePfFields[3] = "$selectUsersOption.byUserName"
+    assignIssuePfFields[4] = "$selectUsersOption.user"
+    def transition ='assignIssuePF_byUserName'
+    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    assignIssuePfFields[3] = "$selectUsersOption.userFromUserObjectField"
+    assignIssuePfFields[4] = "$selectUsersOption.fieldsCreator"
+    def transition ='assignIssuePF_returnFromUserObjectFieldCreator'
+    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    assignIssuePfFields[3] = "$selectUsersOption.userFromUserObjectField"
+    assignIssuePfFields[4] = "$selectUsersOption.fieldAssignee"
+    def transition ='assignIssuePF_returnFromUserObjectFieldAssignee'
+    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
+
+relatedIssue.eachWithIndex { key, value, i -> // here component is 'component1' and component lead is current user
+    assignIssuePfFields[3] = "$selectUsersOption.componentLead"
+    assignIssuePfFields[5] = "$selectUsersOption.component"
+    def transition = 'assignIssuePF_componentLead'
+    def fields =  assignIssuePfFields + "selectedLinkType=$value"
+    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    assignIssuePfFields[3] = "$selectUsersOption.defaultAssigneeOfProject"
+    def transition ='assignIssuePF_defaultAssigneeOfProject'
+    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
+
+relatedIssue.eachWithIndex { key, value, i -> // here role is jira admins
+    assignIssuePfFields[3] = "$selectUsersOption.roleMember"
+    assignIssuePfFields[4] = "$selectUsersOption.role"
+    def transition ='assignIssuePF_roleMember'
+    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    assignIssuePfFields[3] = "$selectUsersOption.lastCommented"
+    def transition ='assignIssuePF_lastCommented'
+    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
+
+relatedIssue.eachWithIndex { key, value, i -> // here role is jira admins
+    assignIssuePfFields[3] = "$selectUsersOption.lastRoleMember"
+    assignIssuePfFields[4] = "$selectUsersOption.role"
+    def transition ='assignIssuePF_lastRoleMember'
+    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
 
 
-// TC_04-check the issue belongs to current epic should be assigned to current user
-def epic = createIssue(project,{[ type: 'epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Epic"]}, 'createEpic')
-def story = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[0]} ]}, 'createStory')
-transitionIssue(transition+3, {-> epic[0]}, 0, 'issueBelongsToCurrentEpicShouldBeAssignToCurrentUser', null, null)
-getIssueInformation({-> story[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_04-check the issue belongs to current epic should be assigned to current user')
 
-// TC_05-check the epic of the current issue should be assigned to current user
-transitionIssue(transition+4, {-> story[0]}, 0, 'epicOfTheCurrentIssueShouldBeAssignToCurrentUser', null, null)
-getIssueInformation({-> epic[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_05-check the epic of the current issue should be assigned to current user')
+createWorkflowScheme()
+createProject()
+//addUser()
+//addGroup()
+//addProjectRole()
+//addProjectRoleActors()
+addComponent(1)
 
-def linkIssue1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType1')
-def linkIssue2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType2')
-linkIssues([issue: { -> linkIssue1[0] }, toIssue: { -> linkIssue2[0] }, link: 'duplicates'], 'linkByAnyLinkType' )
+// set issue status to In Progress
 
-// TC_06-check the issue link by any link type to current issue should be assigned to current user
-transitionIssue(transition+5, {-> linkIssue1[0]}, 0, 'issuesLinkedToCurrentIssueByAnyLinkTypeShouldBeAssignedToCurrentUser', null, null)
-getIssueInformation({-> linkIssue2[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_06-check the issue link by any link type to current issue should be assigned to current user')
+def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
+def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
+def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
+def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[]} ], 'BelongsToEpic')
+def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Initiative')
+def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
+def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
+def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
+def isBlockedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isBlockedBy')
+def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
+def isClonedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isClonedBy')
+def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
+def isDuplicatedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isDuplicatedBy')
+def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
 
-def linkIssue3 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueBlocksType1')
-def linkIssue4 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueBlocksType2')
-linkIssues([issue: { -> linkIssue3[0] }, toIssue: { -> linkIssue4[0] }, link: 'blocks'], 'linkByBlocksLinkType' )
+updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
 
-// TC_07-check the issue link by blocks link type to current issue should be assigned to current user
-transitionIssue(transition+6, {-> linkIssue3[0]}, 0, 'issuesLinkedToCurrentIssueBySpecificLinkTypeShouldBeAssignedToCurrentUser', null, null)
-getIssueInformation({-> linkIssue4[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_07-check the issue link by blocks link type to current issue should be assigned to current user')
+def linkIssuesMap = [
 
-// TC_08-check the issue return by groovy expression[issue.getLinkedIssues()] should be assigned to current user
-transitionIssue(transition+7, {-> linkIssue4[0]}, 0, 'issuesRetunredByGroovyScriptShouldBeAssignedToCurrentUser', null, null)
-getIssueInformation({-> linkIssue3[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_08-check the issue return by groovy expression[issue.getLinkedIssues()] should be assigned to current user')
+        blocks : {->blocks[]},
+        'is blocked by' : {->isBlockedBy[]},
+        clones : {->clones[]},
+        'is cloned by' : {->isClonedBy[]},
+        duplicates : {->duplicates[]},
+        'is duplicated by' : {->isDuplicatedBy[]},
+        'relates to': {->relatesTo[]}
+]
 
-// TC_09-check the issue return by groovy expression should be assigned to current user
-def IssueReturnByJqlSearch = createIssue(project, {[type: 'Task', summary: 'JMWE_Task']}, 'jqlSearch' )
-transitionIssue(transition+8, {-> linkIssue4[0]}, 0, 'issuesRetunredByJqlSearchShouldBeAssignedToCurrentUser', null, null)
-getIssueInformation({-> IssueReturnByJqlSearch[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_09-check the issue return by groovy expression should be assigned to current user')
+linkIssuesMap.eachWithIndex { key, value, i ->
+    linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
+}
 
-// TC_10-check conditional execution_True = issue.get('issuetype')?.name == 'Story'
-def condExecTrue = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue']}, 'condExecTrue')
-transitionIssue(transition+9, {-> condExecTrue[0]}, 0, 'condExecTrue', null, null)
-getIssueInformation({-> condExecTrue[0]}, /Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user} (${info?.userKey})/, 'TC_10-check conditional execution_True')
 
-// TC_11-check conditional execution_False = issue.get('issuetype')?.name == 'Story'
-def condExecFalse = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'condExecFalse')
-transitionIssue(transition+9, {-> condExecFalse[0]}, 0, 'condExecFalse', null, null)
-getIssueInformation({-> condExecFalse[0]}, /Assignee  . . . . . . . . . . : /, 'TC_11-check conditional execution_False')
+def relatedIssuesMap = [
+        {->current[]} : {->current[]},
+        {->parent[]} : {->subtask[]},
+        {->subtask[]} : {->parent[]},
+        {->epic[]} : {->issueBelongsToEpic[]},
+        {->issueBelongsToEpic[]} : {->epic[]},
+        {-> initiative[]} : {->epic_initiative[]},
+        {->epic_initiative[]} : {-> initiative[]},
+        {->issueLinks[]} : {->blocks[]},
+        {->issueLinks[]} : {->blocks[]},
+        {->issueLinks[]} : {->isBlockedBy[]},
+        {->issueLinks[]} : {->clones[]},
+        {->issueLinks[]} : {->isClonedBy[]},
+        {->issueLinks[]} : {->duplicates[]},
+        {->issueLinks[]} : {->isDuplicatedBy[]},
+        {->issueLinks[]} : {->relatesTo[]},
+        {->issueLinks[]} : {->relatesTo[]},
+        {->issueLinks[]} : {->relatesTo[]},
+]
 
-// TC_12-check the current issue should be assigned to reporter
-def issueWithReporter = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', reporter: userId]}, 'issueWithReporter')
-transitionIssue(transition+10, {-> issueWithReporter[0]}, 0, 'issueAssignedToReporter', null, null)
-getIssueInformation({-> issueWithReporter[0]}, "Assignee  . . . . . . . . . . : $userId", 'TC_12-check the current issue should be assigned to reporter')
+[
+        'assignIssuePF_currentUser',
+        'assignIssuePF_reporter',
+        'assignIssuePF_projectLead',
+        'assignIssuePF_returnFromScript',
+        'assignIssuePF_returnFromUserObjectFieldCreator',
+        'assignIssuePF_returnFromUserObjectFieldReporter',
+].collect {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': when default issue' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                ext       : 'on default issue'+ it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Assignee"
+                 ],
+                 data      : [/Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user}/],
+                ],
+                [action: 'updateIssue', ext: ': assign issue back to other user to check next options with default issue' + it + i,
+                parameters: [
+                        issue: value,
+                        assignee: serverUser,
+                ]
+                ]
+        ])
+    }
+}
+gint.taskHelper.add(
+        [action: 'updateProject', ext: ": change project lead to $serverUser",
+         parameters: [
+                 project: projectName,
+                 lead: serverUser,
+         ]
+        ],
+)
+[
+
+        'assignIssuePF_reporter',
+        'assignIssuePF_projectLead',
+        'assignIssuePF_returnFromScript',
+        'assignIssuePF_returnFromUserObjectFieldReporter',
+        'assignIssuePF_byUserName'
+].collect {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action: 'updateIssue', ext: ': change the reporter' + it + i,
+                 parameters: [
+                         issue: value,
+                         reporter: serverUser,
+                 ]
+                ],
+                [action    : 'transitionIssue', ext: ':after update issue' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : 'after issue update'+ it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Assignee"
+                 ],
+                 data      : ["Assignee  . . . . . . . . . . : $serverUser"],
+                ],
+                [action: 'updateIssue', ext: ': assign issue back to other user to check next options' + it + i,
+                 parameters: [
+                         issue: value,
+                         assignee: user,
+                 ]
+                ]
+        ])
+    }
+}
+
 

@@ -1,3 +1,113 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+
+tearDown()
+//tearDownUsers()
+addWorkflow()
+
+def fieldsList = [
+        labels : 'labels',
+        fixVersions : 'fixVersions',
+        affectsVersions : 'versions',
+        components : 'components',
+        assignee : 'assignee',
+]
+def defaultFields = [
+        "correlationId=",
+]
+def functionKey = functionKey.addFieldValueToParentIssuePfServer
+
+// Configuration for validator
+
+fieldsList.eachWithIndex { field, value, i ->
+    def fields = defaultFields + "field=$value" + "useGroovyCondition=no"
+    addTransitionFunction( field  + 'addToParentIssue', 'postfunction', fields, functionKey )
+}
+
+fieldsList.eachWithIndex { field, value, i ->
+    def fields = defaultFields +  "field=$value" + "useGroovyCondition=yes" + "groovyExpression=$groovyExpression.getIssuetype"
+    addTransitionFunction(field + 'addToParentIssueIfConditional' , 'postfunction', fields, functionKey )
+}
+
+createWorkflowScheme()
+createProject()
+
+(1..1).each {
+    gint.taskHelper.addSetUp([
+            [action: 'addVersion', ext: ': create versions : ' + it,
+             parameters: [
+                     project: projectName,
+                     version: it
+             ]
+            ],
+            [action: 'addComponent', ext: ': create Component : ' + it,
+             parameters: [
+                     project: projectName,
+                     component: 'component' + it
+             ],
+            ]
+    ])
+}
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->defaultIssue[]}], 'subtask')
+def subtask1 = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->defaultIssue[]}], 'subtask1')
+
+// checking the current status To Do and previous status In Progress
+gint.taskHelper.add(
+        [action: 'updateIssue', ext: ': change field values',
+         parameters: [
+                 issue: {->subtask[]},
+                 labels: 'test_label',
+                 assignee: user,
+                 affectsVersions: 1,
+                 fixVersions: 1,
+                 components: 'component1',
+                 priority: 'High'
+         ]
+        ],
+)
+['addToParentIssue','addToParentIssueIfConditional'].each {
+    fieldsList.eachWithIndex { field, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: " :  field_$field "+ it + i,
+                 parameters: [
+                         transition: field + it,
+                         issue     : { -> subtask[] },
+                 ],
+                ],
+                [action: 'getIssue', ext: ": Chack field value of_$field " + it + i,
+                    parameters: [
+                            issue: {-> defaultIssue[]},
+                    ],
+                data:[
+                        "Labels  . . . . . . . . . . . : test_label",
+                        "Fix Version/s . . . . . . . . : 1",
+                        "Affects Version/s . . . . . . : 1",
+                        "Component/s . . . . . . . . . : component1",
+                        "Assignee  . . . . . . . . . . : $user",
+                ]
+                ],
+        ])
+    }
+}
+
+
+
+
+
+
+/*
 import groovy.json.JsonSlurper
 import java.nio.file.Paths
 
@@ -63,5 +173,6 @@ def subtask4 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', p
 transitionIssue(transition+1, {-> subtask4[0]}, 0, 'transitionToCheckConditionalExecFalse', null, null)
 getIssueInformation({-> parent4[0]}, "Labels  . . . . . . . . . . . : ", 'TC_05-check conditional execution false')
 
+ */
 
 

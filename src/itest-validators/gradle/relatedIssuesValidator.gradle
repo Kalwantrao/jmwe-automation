@@ -1,3 +1,451 @@
+buildscript {
+	repositories {
+		maven {
+			url "https://plugins.gradle.org/m2/"
+		}
+	}
+	dependencies {
+		classpath "org.gint:gint-atlassian:3.8.4"
+	}
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+
+tearDown()
+addWorkflow()
+
+def relatedIssueFields_default_server = [
+		"maxLinkedIssues=",
+		"minLinkedIssues=1",
+		"validatorMode=requireLinks",
+		"groovyExpression=",
+		"checkAllLinkedIssues=yes",
+		"errorMessage=",
+		"correlationId="
+]
+def functionKey = info?.isCloud? functionKey.relatedIssuesValidatorCloud : functionKey.relatedIssuesValidatorServer
+
+def targetIssueFieldsCloud_linkedIssues = [
+		linkByAnyLink: "*:*",
+
+]
+def relatedIssue = info?.isCloud ? targetIssueFieldsCloud_linkedIssues : relatedIssueServer
+
+def fieldsToRemove = ["currentIssue", "parentIssue", "epicOfTheCurrentIssue","parentPortfolio"]
+
+fieldsToRemove.each { key ->
+	relatedIssue.remove(key)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+	def defaultFieldsCloud = ["condition.id=9def4812-c8d0-45eb-9903-21dcbe2a70be"]
+	def targetIssueFieldsMap = [
+			validatorMode:"requireLinks",
+			selectedLinkTypeId:"*",
+			selectedLinkTypeDirection:"*",
+			selectedIssueTypeId:"",
+			anyOrEvery:"noCond",
+			condition:"true",
+			expression:"(issue.links.some(issueLink => (true)))"
+	]
+	def targetIssueString = new groovy.json.JsonBuilder(targetIssueFieldsMap).toString()
+	def targetIssue = "condition.config-9def4812-c8d0-45eb-9903-21dcbe2a70be=${targetIssueString}"
+
+	defaultFieldsCloud.add(targetIssue)
+
+	def transition = 'relatedIssueValidator_requireLinks'
+	def fields = info?.isCloud? defaultFieldsCloud.each{element -> element } : relatedIssueFields_default_server + "selectedLinkType=$value"
+	addTransitionFunction(transition + i, 'validator', fields, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+	def defaultFieldsCloud = ["validator.id=9def4812-c8d0-45eb-9903-21dcbe2a70be"]
+	def targetIssueFieldsMap = [
+			"validatorMode":"checkLinks",
+			selectedLinkTypeId:"*",
+			selectedLinkTypeDirection:"*",
+			selectedIssueTypeId:"",
+			anyOrEvery:"any",
+			validator:"!!issue.priority && issue.priority.name == 'High'",
+			expression:"(!issue.links || issue.links.length == 0 || issue.links.some(issueLink => (!!issue.priority && issue.priority.name == 'High')))"
+	]
+	def targetIssueString = new groovy.json.JsonBuilder(targetIssueFieldsMap).toString()
+	def targetIssue = "validator.config-9def4812-c8d0-45eb-9903-21dcbe2a70be=${targetIssueString}"
+
+	defaultFieldsCloud.add(targetIssue)
+
+	relatedIssueFields_default_server[3] = "groovyExpression=$groovyExpression.checkPriorityHigh"
+	relatedIssueFields_default_server[2] = "validatorMode=checkLinks"
+	def transition = 'relatedIssuevalidator_checkLinks'
+	def fields = info?.isCloud? defaultFieldsCloud.each{element -> element } : relatedIssueFields_default_server + "selectedLinkType=$value"
+	addTransitionFunction( transition + i, 'validator', fields, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+	def defaultFieldsCloud = ["validator.id=9def4812-c8d0-45eb-9903-21dcbe2a70be"]
+	def targetIssueFieldsMap = [
+			validatorMode:"forbidLinks",
+			selectedLinkTypeId:"*",
+			selectedLinkTypeDirection:"*",
+			selectedIssueTypeId:"",
+			anyOrEvery:"any",
+			condition:"!!issue.priority && issue.priority.name == 'High'",
+			expression:"(!(issue.links.some(issueLink => (!!issue.priority && issue.priority.name == 'High'))))"
+	]
+	def targetIssueString = new groovy.json.JsonBuilder(targetIssueFieldsMap).toString()
+	def targetIssue = "validator.config-9def4812-c8d0-45eb-9903-21dcbe2a70be=${targetIssueString}"
+
+	defaultFieldsCloud.add(targetIssue)
+
+	relatedIssueFields_default_server[2] = "validatorMode=forbidLinks"
+	relatedIssueFields_default_server[3] = "groovyExpression=$groovyExpression.checkPriorityHigh"
+	def transition = 'relatedIssuevalidator_forbidLinks'
+	def fields = info?.isCloud? defaultFieldsCloud.each{element -> element } : relatedIssueFields_default_server + "selectedLinkType=$value"
+	addTransitionFunction(transition + i, 'validator', fields, functionKey)
+}
+
+relatedIssue.take(2).eachWithIndex { key, value, i ->
+	def transition = 'relatedIssuevalidator_issueConstraintsFalse'
+	relatedIssueFields_default_server[2] = "validatorMode=requireLinks"
+	relatedIssueFields_default_server[0] = "maxLinkedIssues=2"
+	relatedIssueFields_default_server[1] = "minLinkedIssues=2"
+	def fields = info?.isCloud? "" : relatedIssueFields_default_server + "selectedLinkType=$value"
+	addTransitionFunction(transition + i, 'validator', fields, functionKey)
+}
+
+relatedIssue.take(2).eachWithIndex { key, value, i ->
+	def transition = 'relatedIssuevalidator_issueConstraintsTrue'
+	relatedIssueFields_default_server[2] = "validatorMode=requireLinks"
+	relatedIssueFields_default_server[0] = "maxLinkedIssues=5"
+	relatedIssueFields_default_server[1] = "minLinkedIssues=2"
+	def fields = info?.isCloud? "" : relatedIssueFields_default_server + "selectedLinkType=$value"
+	addTransitionFunction(transition + i, 'validator', fields, functionKey)
+}
+
+['issueReturnFromJqlSearch_require'].each {
+	def transition = 'relatedIssuevalidator_issueConstraintsTrue'
+	relatedIssueFields_default_server[2] = "validatorMode=requireLinks"
+	relatedIssueFields_default_server[0] = "maxLinkedIssues="
+	relatedIssueFields_default_server[1] = "minLinkedIssues=1"
+	relatedIssueFields_default_server[3] = "groovyExpression="
+	def fields = info?.isCloud? "" : relatedIssueFields_default_server + "selectedLinkType=jql:project = $projectName AND summary ~ JQL_ISSUE"
+	addTransitionFunction(it, 'validator', fields, functionKey)
+}
+
+['issueReturnFromJqlSearch_check'].each {
+	def transition = 'relatedIssuevalidator_issueConstraintsTrue'
+	relatedIssueFields_default_server[0] = "maxLinkedIssues="
+	relatedIssueFields_default_server[1] = "minLinkedIssues=1"
+	relatedIssueFields_default_server[2] = "validatorMode=checkLinks"
+	relatedIssueFields_default_server[3] = "groovyExpression=$groovyExpression.checkPriorityHigh"
+	def fields = info?.isCloud? "" : relatedIssueFields_default_server + "selectedLinkType=jql:project = $projectName AND summary ~ JQL_ISSUE"
+	addTransitionFunction( it, 'validator', fields, functionKey)
+}
+['issueReturnFromJqlSearch_forbid'].each {
+	def transition = 'relatedIssuevalidator_issueConstraintsTrue'
+	relatedIssueFields_default_server[0] = "maxLinkedIssues="
+	relatedIssueFields_default_server[1] = "minLinkedIssues=1"
+	relatedIssueFields_default_server[2] = "validatorMode=forbidLinks"
+	relatedIssueFields_default_server[3] = "groovyExpression=$groovyExpression.checkPriorityHigh"
+	def fields = info?.isCloud? "" : relatedIssueFields_default_server + "selectedLinkType=jql:project = $projectName AND summary ~ JQL_ISSUE"
+	addTransitionFunction(it, 'validator', fields, functionKey)
+}
+createWorkflowScheme()
+createProject()
+
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
+def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[] }], 'Sub-task')
+def subtask2 = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[] }, priority: 'High'], 'Sub-task2')
+def subtask3 = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[] },priority: 'High'], 'Sub-task3')
+def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
+def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {->epic[]}], 'BelongsToEpic')
+def issueBelongsToEpic2 = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {->epic[]}, priority: 'High'], 'BelongsToEpic2')
+def issueBelongsToEpic3 = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {->epic[]}, priority: 'High'], 'BelongsToEpic3')
+def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue'], 'Initiative')
+def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
+def epic_initiative2 = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue", priority: 'High'], 'Epic_initiative2')
+def epic_initiative3 = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue", priority: 'High'], 'Epic_initiative3')
+def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
+def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
+def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
+def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
+def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesTo')
+def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
+
+updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
+
+def linkIssuesMap = [
+		blocks : {->blocks[]},
+		clones : {->clones[]},
+		duplicates : {->duplicates[]},
+		'relates to': {->relatesTo[]}
+]
+linkIssuesMap.eachWithIndex { key, value, i ->
+	linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
+}
+
+def relatedIssuesMap = [
+		{->parent[]}: {->subtask[]},
+		{->epic[]}: {->issueBelongsToEpic[]},
+		{-> initiative[]} : {->epic_initiative[]},
+		{->issueLinks[]} : {->blocks[]},
+		{->issueLinks[]} : {->blocks[]},
+		{->blocks[]} : {->issueLinks[]},
+		{->issueLinks[]} : {->clones[]},
+		{->clones[]} : {->issueLinks[]},
+		{->issueLinks[]} : {->duplicates[]},
+		{->duplicates[]} : {->issueLinks[]},
+		{->issueLinks[]} : {->relatesTo[]},
+		{->issueLinks[]} : {->relatesTo[]},
+		{->issueLinks[]} : {->relatesTo[]},
+]
+
+relatedIssue.remove("returnsFromJqlSearch")
+
+[
+		'relatedIssuevalidator_requireLinks',
+		'relatedIssuevalidator_forbidLinks',
+].collect {
+	relatedIssuesMap.eachWithIndex { key, value, i ->
+		gint.taskHelper.add([
+				[action    : 'transitionIssue', ext: ': issue has linked issues :'+ it + i,
+				 expected: 0,
+				 parameters: [
+						 issue     : key,
+						 transition: it + i,
+				 ]
+				],
+		])
+	}
+}
+
+// When issue not having related issues or issues linked to it through specific link types
+
+[
+		'relatedIssuevalidator_requireLinks',
+].collect {
+	relatedIssue.eachWithIndex { key, value, i ->
+		gint.taskHelper.add([
+				[action    : 'transitionIssue', ext: ': issue not has linked issues_checkRequireLinks :' + it +i,
+				 expected  : -3,
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: it + i,
+				 ]
+				],
+		])
+	}
+}
+[
+		'relatedIssuevalidator_checkLinks',
+].collect {
+	relatedIssue.eachWithIndex { key, value, i ->
+		gint.taskHelper.add([
+				[action    : 'transitionIssue', ext: ': issue not has linked issues_checkLinks :' + it +i,
+				 expected  : 0,
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: it + i,
+				 ]
+				],
+		])
+	}
+}
+
+[
+		'relatedIssuevalidator_checkLinks',
+].collect {
+	relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
+		gint.taskHelper.add([
+				[action    : 'transitionIssue', ext: ': issue not has linked issues following given constraints_checkLinks :'+ it + i,
+				 expected: -3,
+				 parameters: [
+						 issue     : currentIssue,
+						 transition: it + i,
+				 ]
+				],
+		])
+	}
+}
+
+[
+		'relatedIssuevalidator_checkLinks',
+].collect {
+	relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
+		gint.taskHelper.add([
+				[action: 'updateIssue', ext: ': set priority to High_targetIssue:' + it + i,
+				 parameters:[
+						 issue: targetIssue,
+						 priority: 'High'
+				 ]
+				],
+				[action: 'updateIssue', ext: ': set priority to High_currentIssue:' + it + i,
+				 parameters:[
+						 issue: currentIssue,
+						 priority: 'High'
+				 ]
+				],
+				[action    : 'transitionIssue', ext: ': issue has linked issues following given constraints_requireLinks :'+ it + i,
+				 expected: 0,
+				 parameters: [
+						 issue     : currentIssue,
+						 transition: it + i,
+				 ]
+				],
+		])
+	}
+}
+[
+		'relatedIssuevalidator_forbidLinks'
+].collect {
+	relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
+		gint.taskHelper.add([
+				[action: 'updateIssue', ext: ': set priority to High_currentIssue:' + it + i,
+				 parameters:[
+						 issue: currentIssue,
+						 priority: 'High'
+				 ]
+				],
+				[action    : 'transitionIssue', ext: ': issue has linked issues following given constraints_forbid :'+ it + i,
+				 expected: -3,
+				 parameters: [
+						 issue     : currentIssue,
+						 transition: it + i,
+				 ]
+				],
+		])
+	}
+}
+[
+		'relatedIssuevalidator_issueConstraintsFalse'
+].collect {
+	relatedIssuesMap.take(2).eachWithIndex { currentIssue, targetIssue, i ->
+		gint.taskHelper.add([
+				[action    : 'transitionIssue', ext: ': issue not has linked issues following given constraints_no of Issues :' + it + i,
+				 expected  : -3,
+				 parameters: [
+						 issue     : currentIssue,
+						 transition: it + i,
+				 ]
+				],
+		])
+	}
+}
+[
+		'relatedIssuevalidator_issueConstraintsTrue'
+].collect {
+	relatedIssuesMap.take(2).eachWithIndex { currentIssue, targetIssue, i ->
+		gint.taskHelper.add([
+				[action    : 'transitionIssue', ext: ': issue has linked issues following given constraints_no of Issues :' + it + i,
+				 expected  : 0,
+				 parameters: [
+						 issue     : currentIssue,
+						 transition: it + i,
+				 ],
+				],
+		])
+	}
+}
+
+[
+		'issueReturnFromJqlSearch_require',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue', ext: ': atleast one issue found by jql search summary_JQL_ISSUE_requireLinks:'+ it,
+			 expected: 0,
+			 parameters: [
+					 issue     : { ->jqlIssue[] },
+					 transition: it,
+			 ]
+			],
+			[action: 'updateIssue', ext: ': change summary_requireLinks:' + it,
+			 sleepAfter: 2000,
+			 parameters:[
+					 issue: { ->jqlIssue[] },
+					 summary: 'Invalid',
+					 priority: 'High',
+			 ]
+			],
+			[action    : 'transitionIssue', ext: ': when jql search does not return atleast one issue_requireLinks :'+ it,
+			 expected: -3,
+			 parameters: [
+					 issue     : { ->jqlIssue[] },
+					 transition: it,
+			 ]
+			],
+	])
+}
+[		'issueReturnFromJqlSearch_check',
+].each {
+	gint.taskHelper.add([
+			[action: 'updateIssue', ext: ': change summary for check issues_CheckLinks:' + it,
+			 parameters:[
+					 issue: { ->jqlIssue[] },
+					 summary: 'JQL_ISSUE',
+					 priority: 'High',
+			 ]
+			],
+			[action    : 'transitionIssue', ext: ': when jql search issues respecting constraints_CheckLinks:'+ it,
+			 expected: 0,
+			 parameters: [
+					 issue     : { ->jqlIssue[] },
+					 transition: it,
+			 ]
+			],
+			[action: 'updateIssue', ext: ': change priority to check issues_CheckLinks:' + it,
+			 parameters:[
+					 issue: { ->jqlIssue[] },
+					 priority: 'Low',
+			 ]
+			],
+			[action    : 'transitionIssue', ext: ': when jql search issues not respecting constraints_CheckLinks:'+ it,
+			 expected: -3,
+			 parameters: [
+					 issue     : { ->jqlIssue[] },
+					 transition: it,
+			 ]
+			],
+	])
+
+}
+[		'issueReturnFromJqlSearch_forbid',
+].each {
+	gint.taskHelper.add([
+			[action: 'updateIssue', ext: ': change summary for check issues_forbid:' + it,
+			 parameters:[
+					 issue: { ->jqlIssue[] },
+					 summary: 'JQL_ISSUE',
+					 priority: 'High',
+			 ]
+			],
+			[action    : 'transitionIssue', ext: ': when jql search issues respecting constraints:'+ it,
+			 expected: -3,
+			 parameters: [
+					 issue     : { ->jqlIssue[] },
+					 transition: it,
+			 ]
+			],
+			[action: 'updateIssue', ext: ': change priority to check issues-forbid:' + it,
+			 parameters:[
+					 issue: { ->jqlIssue[] },
+					 priority: 'Low',
+			 ]
+			],
+			[action    : 'transitionIssue', ext: ': when jql search issues not respecting constraints_forbid:'+ it,
+			 expected: 0,
+			 parameters: [
+					 issue     : { ->jqlIssue[] },
+					 transition: it,
+			 ]
+			],
+	])
+
+}
+
+
+/*
 import groovy.json.JsonSlurper
 import java.nio.file.Paths
 
@@ -98,7 +546,7 @@ transitionIssue(transition+7, {-> IssueReturnByJqlSearch[0]}, -3, 'TC_16-When jq
 // Case16: When jql search returns at least 1 issue
 transitionIssue(transition+8, {-> IssueReturnByJqlSearch[0]}, 0, 'TC_16-When jql search returns at least 1 issue', null, null)
 
-/*
+
 // TC_17-Mode : Check related issues
 //  Case1: When parent issue not having subtask respecting constraints
 def parent3 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'parent3')
@@ -165,8 +613,5 @@ transitionIssue(transition+7, {-> IssueReturnByJqlSearch[0]}, -3, 'TC_16-When jq
 
 // Case15: When jql search returns at least 1 issue
 transitionIssue(transition+8, {-> IssueReturnByJqlSearch[0]}, 0, 'TC_16-When jql search returns at least 1 issue', null, null)
-
-
-
 
 */

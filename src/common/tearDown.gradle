@@ -1,99 +1,109 @@
-def info = gint.getJiraHelper().getServerInfoWithVerify()
 
 ext.tearDown = {
-    gint.taskHelper.addTearDown(
-            [
-            [
-                    action    : 'deleteProject',
-                    parameters: [
-                            project: projectName,
-                    ],
+    gint.taskHelper.addTearDown([
+            [action    : 'deleteProject',
+            parameters: [
+                project: projectName,
+                ],
+            ],
+            [action    : 'createProject',ext: ': FOR WORKFLOW',
+            sleep: 3000,
+             parameters: [
+                     project: TestProject,
+                     lead: '@Self',
+                     template: info?.isCloud? projectTemplateCloud : projectTemplateServer
+             ],
             ],
             [
-                    action: 'removeProjectRoleActors',
+                    action    : 'deleteIssueTypeScheme',
+                    dependsOn : 'deleteProject',
+                    parameters: [
+                            issueTypeScheme: "$projectName: Software Development Issue Type Scheme" // info?.isCloud ? "$projectName: Software Development Issue Type Scheme" : "$projectName: Scrum Issue Type Scheme"
+                    ]
+            ] ,
+            [
+                    action      : 'deleteIssueTypeScreenScheme',
+                    dependsOn   : 'deleteProject',
+                    mustRunAfter: 'deleteIssueTypeScheme',
+                    parameters  : [
+                            issueTypeScreenScheme:  "$projectName: Software Development Issue Type Screen Scheme" //info?.isCloud ? "$projectName: Software Development Issue Type Screen Scheme" : "$projectName: Scrum Issue Type Screen Scheme"
+                    ]
+            ] ,
+            [
+                    action      : 'deleteScreenScheme', ext: 'Bug',
+                    dependsOn   : 'deleteProject',
+                    mustRunAfter: 'deleteIssueTypeScreenScheme',
+                    parameters  : [
+                            screenScheme: "$projectName: Software Development Bug Screen Scheme" //info?.isCloud ? "$projectName: Software Development Bug Screen Scheme" : "$projectName: Scrum Bug Screen Scheme"
+                    ]
+            ] ,
+            [
+                    action      : 'deleteScreenScheme', ext: 'Default',
+                    dependsOn   : 'deleteProject',
+                    mustRunAfter: 'deleteIssueTypeScreenScheme',
+                    parameters  : [
+                            screenScheme: "$projectName: Software Development Default Screen Scheme" // info?.isCloud ? "$projectName: Software Development Default Screen Scheme" : "$projectName: Scrum Default Screen Scheme"
+                    ]
+            ] ,
+            [
+                    action      : 'removeScreen', ext: 'Bug',
+                    dependsOn   : 'deleteProject',
+                    mustRunAfter: 'deleteScreenSchemeBug',
+                    parameters  : [
+                            screen: "$projectName: Software Development Bug Screen" // info?.isCloud ? "$projectName: Software Development Bug Screen" : "$projectName: Scrum Bug Screen"
+                    ]
+            ] ,
+            [
+                    action      : 'removeScreen', ext: 'Default',
+                    dependsOn   : 'deleteProject',
+                    mustRunAfter: 'deleteScreenSchemeDefault',
+                    parameters  : [
+                            screen: "$projectName: Software Development Default Issue Screen" //info?.isCloud ? "$projectName: Software Development Default Issue Screen" : "$projectName: Scrum Default Issue Screen"
+                    ]
+            ],
+            [action: 'deleteWorkflowScheme',
+            mustRunAfter: 'deleteProject',
+            parameters: [
+                workflowScheme: workflowScheme
+                  ]
+            ],
+            [action: 'deleteWorkflow',
+            mustRunAfter: 'deleteWorkflowScheme',
+                parameters: [
+                    workflow: workflow
+                ]
+            ]
+    ])
+}
+
+ext.tearDownUsers = {
+    gint.taskHelper.addTearDown([
+            [
+                    action    : 'removeProjectRoleActors',
                     parameters: [
                             project: projectName,
-                            role: projectRole,
-                            userId: info?.isCloud ? cloudUser : serverUser
+                            role   : projectRole,
+                            userId : info?.isCloud ? cloudUser : serverUser
                     ],
 
-            ],
+            ] ,
             [
-                     action: 'removeGroup',
-                            parameters: [
-                                group: groupName
-                           ],
-            ],
+                    action    : 'removeGroup',
+                    parameters: [
+                            group: groupName
+                    ],
+            ] ,
             [
-                    action: 'removeProjectRole',
+                    action    : 'removeProjectRole',
                     parameters: [
                             name: projectRole
                     ]
-            ],
+            ] ,
             [action    : 'removeUser',
              parameters: [
                      userId: info?.isCloud ? cloudUser : serverUser
-                ],
              ],
-        [
-                action:'deleteIssueTypeScheme',
-                dependsOn: 'deleteProject',
-                parameters:[
-                        issueTypeScheme: info?.isCloud ? "$projectName: Software Development Issue Type Scheme":"$projectName: Scrum Issue Type Scheme"
-                ]
-        ],
-        [
-                action:'deleteIssueTypeScreenScheme',
-                dependsOn: 'deleteProject',
-                mustRunAfter: 'deleteIssueTypeScheme',
-                parameters:[
-                        issueTypeScreenScheme: info?.isCloud ? "$projectName: Software Development Issue Type Screen Scheme" : "$projectName: Scrum Issue Type Screen Scheme"
-                ]
-        ],
-        [
-                action:'deleteScreenScheme',ext: 'Bug',
-                dependsOn: 'deleteProject',
-                mustRunAfter: 'deleteIssueTypeScreenScheme',
-                parameters:[
-                        screenScheme: info?.isCloud ? "$projectName: Software Development Bug Screen Scheme" : "$projectName: Scrum Bug Screen Scheme"
-                ]
-        ],
-        [
-                action:'deleteScreenScheme',ext: 'Default',
-                dependsOn: 'deleteProject',
-                mustRunAfter: 'deleteIssueTypeScreenScheme',
-                parameters:[
-                        screenScheme: info?.isCloud ? "$projectName: Software Development Default Screen Scheme" : "$projectName: Scrum Default Screen Scheme"
-                ]
-        ],
-        [
-                action:'removeScreen',ext: 'Bug',
-                dependsOn: 'deleteProject',
-                mustRunAfter: 'deleteScreenSchemeBug',
-                parameters:[
-                        screen: info?.isCloud ? "$projectName: Software Development Bug Screen" : "$projectName: Scrum Bug Screen"
-                ]
-        ],
-        [
-                action:'removeScreen',ext: 'Default',
-                dependsOn: 'deleteProject',
-                mustRunAfter: 'deleteScreenSchemeDefault',
-                parameters:[
-                        screen: info?.isCloud ? "$projectName: Software Development Default Issue Screen" : "$projectName: Scrum Default Issue Screen"
-                ]
-        ],
-                [action: 'deleteWorkflowScheme',
-                 mustRunAfter: 'deleteProject',
-                 parameters: [
-                        workflowScheme: workflowScheme
-                        ]
-                ],
-                [action: 'deleteWorkflow',
-                 mustRunAfter: 'deleteWorkflowScheme',
-                    parameters: [
-                            workflow: workflow
-                    ]
-                ]
-    ]
-    )
+            ] ,
+
+    ])
 }

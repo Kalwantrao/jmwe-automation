@@ -1,6 +1,3 @@
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
 buildscript {
 	repositories {
 		maven {
@@ -13,42 +10,93 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: 'common/setUp.gradle'
-apply from: gint.resourceDirectory +'/src/common/testValidators.gradle'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def workflow = project
-def screen = project
-gint.xmlReport =	true	//xml report generates in projects root directory
-gint.verbose =	true
-def user = info.user
-def transition = 'parentStatusValidator'
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/validatorsData/ParentStatusValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
-def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:parentstatus-validator'
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+tearDown()
+addWorkflow()
 
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
+def defaultFieldsServer = [
+		"correlationId=",
+]
+def functionKey = functionKey.parentStatusValidatorServer
 
-// check the subtask of the parent issue
-def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue')
-def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]}, labels: 'test_label']}, 'createSubtask')
-transitionIssue(transition+0, {-> subTask[0]}, -3, 'transitionSubtaskWhenParentStatuNotInSelectedStatus', null, ["Remote error: Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [In Progress]"])
+def testUser =  info?.isCloud ? cloudUser : serverUser
+// Configuration for validator
 
-// check when the selected field is empty and parent issue having value
-def parent1 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssueWithSelectedStatus')
-def subTask1 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent1[0]}]}, 'checkSubtaskParentStatus')
-transitionIssue(transition+1, {-> subTask1[0]}, 0, 'checkWhenParentIssueInSelectedStatus', null, null)
+statusListServer.eachWithIndex { status, value, i ->
+	def fields = defaultFieldsServer +"conditionalValidation=no" + "issue_statuses=$value" + "errorMessage="
+	addTransitionFunction( 'parentStatus'+ status, 'validator', fields, functionKey )
+}
 
-// check conditional execution true
-def parent3 = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue']}, 'createParentForConditionalExecutionTrue')
-def subtask3 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent3[0]}, priority: 'Low' ]}, 'createSubtaskForConditionalExecutionTrue')
-transitionIssue(transition+3, {-> subtask3[0]}, -3, 'transitionToCheckConditionalExecTrue', null, ["Remote error: Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [In Progress]"])
+statusListServer.eachWithIndex { status, value, i ->
+	def fields = defaultFieldsServer +"conditionalValidation=yes" + "issue_statuses=$value" + "errorMessage=" + "conditionalValidationScript=$groovyExpression.checkPriorityHigh"
+	addTransitionFunction('parentStatusConditionalValidation' + status , 'validator', fields, functionKey )
+}
 
-// check conditional execution false
-def parent4 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentForConditionalExecutionFalse')
-def subtask4 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent4[0]}, priority: 'Medium', labels: 'conditionalExecution']}, 'createSubtaskForConditionalExecutionFalse')
-transitionIssue(transition+3, {-> subtask4[0]}, 0, 'transitionToCheckConditionalExecFalse', null, null)
+createWorkflowScheme()
+createProject()
+
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->defaultIssue[]}, priority: 'High'], 'subtask')
+
+['parentStatus','parentStatusConditionalValidation'].each {
+	statusListServer.eachWithIndex { status, value, i ->
+		gint.taskHelper.add(
+				[action    : 'transitionIssue', ext: " : Should throw error when parent status is not in_$status status" + it,
+				 expected  : -3,
+				 parameters: [
+						 transition: it + status,
+						 issue     : { -> subtask[] },
+				 ],
+				],
+		)
+	}
+}
+gint.taskHelper.add(
+		[action: 'updateIssue', ext: ': change priority to low',
+		 parameters: [
+				 issue: {->subtask[]},
+				 priority: 'Low',
+		 ],
+		],
+)
+statusListServer.eachWithIndex { status, value, i ->
+	gint.taskHelper.add(
+			[action    : 'transitionIssue', ext: " : should not throw error when conditional validation false : $status",
+			 expected  : 0,
+			 parameters: [
+					 transition: 'parentStatusConditionalValidation' + status ,
+					 issue: { -> subtask[] },
+			 ],
+			]
+	)
+}
+gint.taskHelper.add(
+		[action: 'updateIssue', ext: ': change priority to High',
+		 parameters: [
+				 issue: {->subtask[]},
+				 priority: 'High',
+		 ],
+		],
+)
+['parentStatus','parentStatusConditionalValidation'].each {
+	statusListServer.eachWithIndex { status, value, i ->
+		gint.taskHelper.add([
+				[action    : 'transitionIssue', ext: " : change the parent issue status to $value" + it,
+				 parameters: [
+						 transition: value,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				],
+				[action    : 'transitionIssue', ext: " : Should not throw error when parent issue in selected status_$status" + it,
+				 expected  : 0,
+				 parameters: [
+						 transition: it + status,
+						 issue     : { -> subtask[] },
+				 ],
+				],
+		])
+	}
+}
+
 

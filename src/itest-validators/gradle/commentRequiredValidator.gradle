@@ -1,6 +1,3 @@
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
 buildscript {
     repositories {
         maven {
@@ -11,48 +8,178 @@ buildscript {
         classpath "org.gint:gint-atlassian:3.8.4"
     }
 }
+
 apply plugin: 'org.gint.atlassian'
-//apply from: 'common/setUp.gradle'
-apply from: gint.resourceDirectory +'/src/common/testValidators.gradle'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def transition = 'commentRequiredValidator'
-def workflow = project
-def screen = project
+tearDown()
+addWorkflow()
 
-gint.xmlReport =	true	//xml report generates in projects root directory
-gint.verbose =	true
-def userId = 'jmwe_qa'
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/validatorsData/CommentRequiredValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
-def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CommentRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentrequired-validator'	//function key for HideTransitionCondition
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+def customErrorMessage = "custom error message"
+def systemErrorMessage = "You must provide a Comment"
+def defaultFieldsServer = [
+        "groups=",
+        "showAsterisk=no",
+        "correlationId=",
+]
+def defaultFieldsCloud = [
+            "validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a",
+            "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"problems\":[],\"errorMessage\":\"$customErrorMessage\"\"expression\": \"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}"
+]
 
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
-addUsers(userId)
+def functionKey = info?.isCloud ? functionKey.commentRequiredValidatorServer : functionKey.commentRequiredValidatorServer
+def testUser =  info?.isCloud ? cloudUser : serverUser
+// Configuration for validator
 
-// check when comment not provided
-def currentIssue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createCurrentIssue')
-transitionIssue(transition+0, {-> currentIssue[0]}, -3, 'commentNotProvided-Custom error msg', null, ['Remote error: comment: CommentRequired'])
-transitionIssue(transition+0, {-> currentIssue[0]}, 0, 'commentProvided', [comment: 'test'], null)
+['commentRequired_customError'].each {
+    def fields = info?.isCloud ? defaultFieldsCloud : defaultFieldsServer + "errorMessage=$customErrorMessage"
+    addTransitionFunction(it, 'validator', fields, functionKey )
+}
 
-// check when comment provided
-def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue')
-transitionIssue(transition+1, {-> parent[0]}, -3, 'commentNotProvidedSystemErrorMsg', null, ['Remote error: comment: You must provide a Comment'])
-transitionIssue(transition+1, {-> parent[0]}, 0, 'commentProvided-SystemErrorMsg', [comment: 'test'], null)
+['commentRequired_systemError'].each {
+    def fields = info?.isCloud ? defaultFieldsCloud : defaultFieldsServer + "errorMessage="
+    addTransitionFunction(it, 'validator', fields, functionKey )
+}
 
-// check conditional validation
-def condExecFalse = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'condExecFalse')
-def condExecTrue = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue']}, 'condExecTrue')
-transitionIssue(transition+2, {-> condExecFalse[0]}, 0, 'conditionalValidationFalseCommentNotProvided', null, null)
-transitionIssue(transition+2, {-> condExecTrue[0]}, -3, 'conditionalValidationTrueCommentNotProvided', null, ['Remote error: comment: You must provide a Comment'])
-transitionIssue(transition+2, {-> condExecTrue[0]}, 0, 'conditionalValidationTrueCommentProvided', [comment: 'test'], null)
+['commentRequired_conditionalValidation'].each {
+    def fieldsCloud = defaultFieldsCloud
+    def fieldsServer =  defaultFieldsServer + "conditionalValidation=yes" + "conditionalValidationScript=$groovyExpression.getIssuetype" + "errorMessage="
+    addTransitionFunction(it, 'validator', info?.isCloud ? fieldsCloud : fieldsServer, functionKey )
+}
 
-//check comment omitted to only jira administrators users
-transitionIssue(transition+3, {-> currentIssue[0]}, 0, 'commentOmittedToJiraAdminUsers', null, null)
+['commentRequired_ommitGroups'].each {
+    defaultFieldsServer[0] = "groups=jira-administrators"
+    def fieldsCloud = defaultFieldsCloud
+    def fieldsServer =  defaultFieldsServer + "conditionalValidation=no" + "conditionalValidationScript=$groovyExpression.getIssuetype"+"errorMessage="
+    addTransitionFunction(it, 'validator', info?.isCloud ? fieldsCloud : fieldsServer, functionKey )
+}
 
-// check other user comment required
-transitionByUserTask(transition+3, userId, {-> currentIssue[0]}, ['Remote error: comment: You must provide a Comment'], -3)
+['commentRequired_ommitGroupsInvalid'].each {
+    defaultFieldsServer[0] = "groups=InvalidGroup"
+    def fieldsCloud = defaultFieldsCloud
+    def fieldsServer =  defaultFieldsServer + "conditionalValidation=no" + "conditionalValidationScript=$groovyExpression.getIssuetype"+"errorMessage="
+    addTransitionFunction(it, 'validator', info?.isCloud ? fieldsCloud : fieldsServer, functionKey )
+}
+
+createWorkflowScheme()
+createProject()
+
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+
+// checking the current status To Do and previous status In Progress
+[
+        'commentRequired_customError',
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: ' : custom error when comment not provided ' + it,
+            expected  : -3,
+            parameters: [
+                    transition: it,
+                    issue: { -> defaultIssue[] },
+            ],
+            data: [ /$customErrorMessage/ ]
+            ],
+            [action    : 'transitionIssue', ext: ' : when comment provided ' + it,
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue: { -> defaultIssue[] },
+                     comment: 'test_Comment'
+             ],
+             failData: [ /$customErrorMessage/ ]
+            ]
+    ]
+    )
+}
+[
+        'commentRequired_systemError',
+        'commentRequired_conditionalValidation',
+        'commentRequired_ommitGroupsInvalid'
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: ' : custom error when comment not provided ' + it,
+             expected  : -3,
+             parameters: [
+                     transition: it,
+                     issue: { -> defaultIssue[] },
+             ],
+             data: [ /$systemErrorMessage/ ]
+            ],
+            [action    : 'transitionIssue', ext: ' : when comment provided ' + it,
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue: { -> defaultIssue[] },
+                     comment: 'test_Comment'
+             ],
+             failData: [ /$systemErrorMessage/ ]
+            ]
+    ]
+    )
+}
+[
+        'commentRequired_conditionalValidation',
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: ' :  error when conditional validation true ' + it,
+             expected  : -3,
+             parameters: [
+                     transition: it,
+                     issue: { -> defaultIssue[] },
+             ],
+             data: [ /$systemErrorMessage/ ]
+            ],
+            [action: 'updateIssue', ext: ': change issue type',
+                parameters: [
+                        issue: {->defaultIssue[]},
+                        issueType: 'Story'
+                ]
+            ],
+            [action    : 'transitionIssue', ext: ' : should not throw error when conditional validation false ' + it,
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue: { -> defaultIssue[] },
+                     comment: 'test_Comment'
+             ],
+             failData: [ /$systemErrorMessage/ ]
+            ]
+    ]
+    )
+}
+
+['commentRequired_ommitGroups'].each {
+    gint.taskHelper.add([
+            [action: 'transitionIssue',
+             ext: ': trigger transition by user which is in selected group',
+                    expected: 0,
+                parameters:[
+                        issue:  {defaultIssue[]},
+                        transition: it
+                ],
+                    failData: [/$systemErrorMessage/]
+            ],
+    ])
+}
+def transitionByUserTask =  { transition, userId, issue, data, expected ->
+    gint.taskHelper.add(
+            [expected: expected,
+             name: 'check transition trigger by other user'+ transition,
+             cmd : /acli $userId -a transitionIssue --issue $issue --transition $transition/,
+             data: ( data == null ? data : [:]),
+             finalClosure: {Task task ->
+                 assert task.result == expected
+             }
+            ]
+    )
+}
+transitionByUserTask('commentRequired_ommitGroups', testUser, {->defaultIssue[]}, null, -3)
+/*
+DONE : 1. If a Comment is not provided, report the following error: You must provide a Comment. - positive and negatives = "Done"
+DONE:  2. If a Comment is not provided, report the following error: customError msg. - positive and negatives = "Done"
+DONE:  3. If a Comment is not provided, report the following error: You must provide a Comment.
+          Users in any of following groups will not need to provide a comment:validate one group = "Done"
+DONE:  4. If a Comment is not provided, report the following error: You must provide a Comment.
+          This validation only applies if the following condition is true:!!issue.get("assignee")     -positive and negatives = "Done"
+ */
 

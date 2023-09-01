@@ -1,61 +1,103 @@
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
 buildscript {
-	repositories {
-		maven {
-			url "https://plugins.gradle.org/m2/"
-		}
-	}
-	dependencies {
-		classpath "org.gint:gint-atlassian:3.8.4"
-	}
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: 'common/setUp.gradle'
-apply from: gint.resourceDirectory +'/src/common/testConditions.gradle'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION' //gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def transition = 'separationOfDutiesCondition'
-def workflow = project
-def screen = project
-def user = info.user
-gint.xmlReport =	true	//xml report generates in projects root directory
-gint.verbose =	true
+tearDown()
+addWorkflow()
 
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/conditionsData/SeparationOfDutiesConditionFunctions${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
-def functionKey = info?.isCloud ? 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-condition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:separationofduties-condition'	//function key for HideTransitionCondition
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+def functionKey = functionKey.separationOfDutiesConditionServer
+project.ext.statusIds = [ // statusIds.inProgress
+        toDo: 10000,
+        inProgress: 3,
+        inReview : 10103,
+        done : 10001
+]
+project.ext.defaultFields = [
+               "correlationId=",
+]
+// Configuration for conditions
+['fromAny_ToDo'].each {
+    def fields = defaultFields + "fromStatus=" + "toStatus=To Do"
+    addTransitionFunction(it, 'condition', fields, functionKey )
+}
+['fromToDo_Done'].each {
+    def fields = defaultFields + "fromStatus=To Do" + "toStatus=Done"
+    addTransitionFunction(it, 'condition', fields, functionKey )
+}
+['fromInProgress_ToDo'].each {
+    def fields = defaultFields + "fromStatus=In Progress" + "toStatus=To Do"
+    addTransitionFunction(it, 'condition', fields, functionKey )
+}
+['fromDone_InProgress'].each {
+    def fields = defaultFields + "fromStatus=Done" + "toStatus=In Progress"
+    addTransitionFunction(it, 'condition', fields, functionKey )
+}
 
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'condition', startStep, workflow, screen, 0)
+createWorkflowScheme()
+createProject()
 
-// TC_01- When issue transitioned fromStatus_any to toStatus_ToDo
-def currentIssue = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'currentIssue')
-transitionIssue(transition+0, {-> currentIssue[0]}, -1, 'TC_01- When issue transitioned fromStatus_any to toStatus_ToDo', null, null)
-transitionToStatus({-> currentIssue[0]}, "To Do", "In Progress", 'TC_01- When issue transitioned fromStatus_any to toStatus_InProgress')
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
-// TC_02- When issue not transitioned fromStatus_any to toStatus_ToDo
-def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', assignee: user]}, 'currentIssueWithAssignee')
-transitionIssue(transition+0, {-> parent[0]}, 0, 'TC_02- When issue not transitioned fromStatus_any to toStatus_ToDo', null, null)
-
-// TC_03- When issue transitioned from status_In Progress to toStatus_Done
-def currentIssue1 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'currentIssue1')
-transitionIssue(transition+1, {-> currentIssue[0]}, -1, 'TC_03- When issue transitioned from status_In Progress to toStatus_Done', null, null)
-transitionToStatus({-> currentIssue[0]}, "In Progress", "Done", 'TC_03- When issue transitioned from status_In Progress to toStatus_Done')
-
-// TC_04- When issue not transitioned from status_In Progress to toStatus_Done
-transitionIssue(transition+1, {-> parent[0]}, 0, 'TC_04- When issue not transitioned from status_In Progress to toStatus_Done', null, null)
-
-// TC_05- When issue transitioned fromStatus_Done to toStatus_InProgress
-def currentIssue2 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'currentIssue2')
-transitionIssue(transition+2, {-> currentIssue[0]}, -1, 'TC_05- When issue transitioned fromStatus_Done to toStatus_InProgress', null, null)
-transitionToStatus({-> currentIssue[0]}, "Done", "In Progress", 'TC_05- When issue transitioned fromStatus_Done to toStatus_InProgress')
-
-// TC_06- When issue not transitioned from status_Done to toStatus_InProgress
-transitionIssue(transition+2, {-> parent[0]}, 0, 'TC_06- When issue not transitioned fromStatus_Done to toStatus_InProgress', null, null)
-
+// checking the current status To Do and previous status In Progress
+[
+        'fromAny_ToDo',
+        'fromInProgress_ToDo',
+        'fromDone_InProgress',
+        'fromToDo_Done'
+].each {
+    gint.taskHelper.add([
+            action    : 'transitionIssue', ext: ' : when issue not transitioned between selected status ' + it,
+            expected  : 0,
+            parameters: [
+                    transition: it,
+                    issue: { -> defaultIssue[] },
+            ],
+    ])
+}
+gint.taskHelper.add([
+        [action    : 'transitionIssue', ext: ' : To Done',
+         parameters: [
+                 transition: 'Done',
+                 issue: { -> defaultIssue[] },
+         ],
+        ],
+        [action    : 'transitionIssue', ext: ' : To In Progress',
+         parameters: [
+                 transition: 'In Progress',
+                 issue: { -> defaultIssue[] },
+         ],
+        ],
+        [action    : 'transitionIssue', ext: ' : To To Do',
+         parameters: [
+                 transition: 'To Do',
+                 issue: { -> defaultIssue[] },
+         ],
+        ],
+])
+[
+        'fromToDo_Done',
+        'fromAny_ToDo',
+        'fromInProgress_ToDo',
+        'fromDone_InProgress'
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: ' : transition not visible when issue is transitioned between selected statuses ' + it,
+             expected  : -1,
+             parameters: [
+                     transition: it,
+                     issue: { -> defaultIssue[] },
+             ],
+            ],
+    ])
+}
 

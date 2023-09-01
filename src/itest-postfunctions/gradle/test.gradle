@@ -1,0 +1,175 @@
+ext.transitionIssue = { transition, issue, ext ->
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: ': '+ext,
+             parameters: [
+                     issue     : issue,
+                     transition: transition
+             ],
+             finalClosure: { Task task ->
+                 gint.helper.log("issue transitioned", gint.searchForIssueKey(task.outData))
+                 return true
+             }
+            ],
+    ]
+    )
+}
+ext.transitionToCheckError = { issue, transition, data, ext ->
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: ': error'+ext,
+             expected  : -3,
+             parameters: [
+                     issue     : issue,
+                     transition: transition
+             ],
+             data: data,
+             finalClosure: { org.gradle.api.Task task ->
+                 gint.helper.log("issue transitioned", gint.searchForIssueKey(task.outData))
+                 return true
+             }
+            ],
+    ]
+    )
+}
+ext.addFieldOnTransitionScreenAndTransition = { transition, issue, addfield, ext ->
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: ': add field'+ext,
+             expected  : 0,
+             parameters: [
+                     issue     : issue,
+                     transition: transition
+             ] + (addfield != null ? addfield : [:]),
+             finalClosure: { org.gradle.api.Task task ->
+                 gint.helper.log("issue transitioned", gint.searchForIssueKey(task.outData))
+                 return true
+             }
+            ],
+
+    ]
+    )
+}
+ext.transitionIssueForValidators = { transition, issue, expected, addfield, errorMsg, ext ->
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: ': '+ext,
+             expected  : expected,
+             sleep: 1000,
+             parameters: [
+                     issue     : issue,
+                     transition: transition
+             ] + (addfield != null ? addfield : [:]),
+             data: [(errorMsg != null ? errorMsg : [:])],
+             finalClosure: { Task task ->
+                 gint.helper.log("issue transitioned", gint.searchForIssueKey(task.outData))
+                 return true
+             }
+            ]
+    ]
+    )
+}
+ext.getFieldValue = { issue, field, value, ext ->
+    gint.taskHelper.add(
+            [action: 'getFieldValue',
+             ext: ': '+ext,
+             sleep: 1000,
+             parameters: [
+                     issue: issue,
+                     field: field
+             ],
+             data: ["$field  . . . . . . . . . . . : $value"],
+             finalClosure: { Task task ->
+                 gint.helper.log("value of field $field is $value", gint.searchForIssueKey(task.outData))
+                 if(!task.outData){
+                     gint.helper.log("expected value of field $field is $value but got", task.outData)
+                 }
+                 else {
+                     gint.helper.log("found expected field value", value)
+                 }
+                 assert task.found == true
+             }
+            ]
+    )
+}
+ext.jqlSearch = { jql, field, number, issueType, ext ->
+    gint.taskHelper.add([
+            [action: 'getIssueList', ext: ': '+ext,
+             parameters: [
+                     jql: jql
+             ],
+             data: [ "$number issues in list",
+                     "$field","$issueType"
+             ],
+             finalClosure: { Task task ->
+                 assert task.found == true
+                 gint.helper.log("Issues found for the given search: $number", ext)
+             }
+            ]
+    ]
+    )
+}
+
+ext.getIssueHistory = { issue, userId, ext ->
+    gint.taskHelper.add('getIssueHistoryList',[
+            [action: 'getIssueHistoryList', ext: ': '+ext,
+             parameters: [
+                     issue: issue,
+             ],
+             data: [ "$userId" ]
+            ]
+    ])
+}
+
+ext.getLinkedIssueList = {currentIssue, numberOfLinkedIssues, ext, linkType, link ->
+    gint.taskHelper.add('getLinkIssues',[
+            [action: 'getLinkList', ext: ': '+ext,
+             parameters: [
+                     issue: currentIssue,
+             ],
+             data: [/$numberOfLinkedIssues links for issue: $currentIssue/,
+                    "$currentIssue","$linkType","$link"],
+             finalClosure: { Task task ->
+                 assert task.found == true
+                 gint.helper.log("Check $numberOfLinkedIssues in issue $currentIssue", ext)
+             }
+            ]
+    ]
+    )
+}
+
+ext.getComments = { issue, user, ext ->
+    gint.taskHelper.add(
+            [action: 'getComments', ext: ': '+ext,
+             parameters: [
+                     issue: issue,
+             ],
+             data: [~/$user added a comment/],
+             finalClosure: { Task task ->
+                 assert task.found == true
+                 gint.helper.log("Comment found: ", user)
+             }
+            ],
+    )
+}
+ext.transitionIssueByOtherUser = {transition, issue, userId, ext ->
+    gint.taskHelper.add('checkRunAsUser', [
+            [name:"transition issue by user : $userId:"+ext,
+             cmd : /acli $userId -a transitionIsue --issue $issue --transition $transition/,]
+    ],
+    )
+}
+ext.checkIssueHistoryByOtherUser = {transition, issue, userId, ext ->
+    gint.taskHelper.add(
+            [name: "History check by user $userId", ext: ': ' + ext , cmd: /acli ${userId} getIssueHistoryList --issue ${issue} /,
+             data:["$userId"],
+            ],
+    )
+}
+ext.getCommentByOtherUser = { issue, userId, user, ext->
+    gint.taskHelper.add(
+            [name: "Comment Visible To User: $user", ext: ': '+ext, cmd : /acli $userId -a getComments --issue $issue /,
+             failData: [~/$user added a comment/],
+             finalClosure: {Task task ->
+                 assert task.found == true
+                 gint.helper.log("Comment visible to", userId)
+             }
+            ]
+    )
+}

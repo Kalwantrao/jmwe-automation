@@ -1,0 +1,59 @@
+import groovy.json.JsonSlurper
+import java.nio.file.Paths
+
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
+def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
+def transition = 'scriptedGroovyOperationOnIssue'
+def workflow = project
+def screen = project
+def user = info.user
+def userId = 'jmwe_qa'
+def jsonSlurper = new JsonSlurper();
+def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/ScriptedGroovyOperationOnIssue${info?.isCloud ? "Cloud" : ""}.json")
+def transitionFunctions = jsonSlurper.parse(path)
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-function'	//function key for current status condition
+def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+
+createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
+
+addUsers(userId)
+
+// unlink the issues if groovy condition returns true
+def simpleIssue = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'simpleIssue')
+
+transitionIssue(transition+0, {-> simpleIssue[0]}, 0, 'Groovy operation to be performed after transitioning issue', null, null)
+getIssueInformation({-> simpleIssue[0]}, 'Labels  . . . . . . . . . . . : test_label', 'TC_01_Check field of the issue should be set as per the groovy script')
+
+getIssueHistoryList({-> simpleIssue[0]}, user, 'TC_02:Case_1_runAsUser_currentUser')
+
+def run_as_currentUser = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'run_as_currentUser')
+transitionByUserTask(transition+0, userId, {-> run_as_currentUser[0]}, null, 0, 'check run as current user' )
+getIssueHistoryList({-> run_as_currentUser[0]}, userId, 'TC_02:Case_2_runAsUser_currentUser')
+
+/*
+def run_as_user_assignee = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', assignee: userId]}, 'run_as_user_assignee')
+transitionIssue(transition+1, {-> run_as_user_assignee[0]}, 0, 'runAsUser_from_fieldAssignee', null, null)
+getIssueHistoryList({-> run_as_user_assignee[0]}, userId, 'TC_03-runAsUser_from_fieldAssignee')
+
+def run_as_user_reporter = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', reporter: userId]}, 'run_as_user_reporter')
+transitionIssue(transition+2, {-> run_as_user_reporter[0]}, 0, 'runAsUser_from_fieldReporter', null, null)
+getIssueHistoryList({-> run_as_user_reporter[0]}, userId, 'TC_04-runAsUser_from_fieldReporter')
+
+def run_as_user_script = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', assignee: userId]}, 'run_as_user_script')
+transitionIssue(transition+3, {-> run_as_user_script[0]}, 0, 'runAsUser_from_script', null, null)
+getIssueHistoryList({-> run_as_user_script[0]}, userId, 'TC_05-runAsUser_from_script')
+*/

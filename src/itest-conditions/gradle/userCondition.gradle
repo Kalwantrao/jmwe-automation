@@ -1,6 +1,3 @@
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
 buildscript {
 	repositories {
 		maven {
@@ -11,67 +8,351 @@ buildscript {
 		classpath "org.gint:gint-atlassian:3.8.4"
 	}
 }
+
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/testConditions.gradle'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def transition = 'userCondition'
-def workflow = project
-def screen = project
-def user = info.user
-def userId = 'jmwe_qa'
-gint.xmlReport =	true	//xml report generates in projects root directory
-gint.verbose =	true
+tearDown()
+addWorkflow()
 
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/conditionsData/userConditionFunctions${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
-def functionKey = info ?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__UserCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition'	//function key for current status condition
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+def functionKey = info?.isCloud? functionKey.userConditionCloud : functionKey.userConditionServer
+def testUser = info?.isCloud? cloudUser : serverUser
+def defaultFieldsServer = [
+		"fromUserType=currentUser",
+		"conditionMode=all-user-condition",
+		"fieldEmpty=no",
+		"reverse=", // yes
+		"correlationId=",
+]
+defaultFieldsServer[2] = "reverse="
+def userCriteria = [
+        reporter : "isReporter=yes",
+		assignee : "isAssignee=yes",
+		checkFields : "userFieldsToCheck=labels",
+		checkScript : "usersConditionScript=issue.get('reporter')?.name",
+		projectLead : "isProjectLead=yes",
+		checkRoles : "rolesToCheck=$jiraAdminRoleId",
+		checkGroup : "groupsToCheck=jira-administrators",
+		checkUser : "usersToCheck=$user",
+		watcher : "isWatcher=yes",
+]
 
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'condition', startStep, workflow, screen, 0)
-createVersions(project, 5)
-createComponents(project, 'component', 5)
-addUsers(userId)
-// TC_01-check when currrent user is not reporter - criteria fails
-def currentIssue = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', reporter: userId]}, 'currentIssue')
-transitionIssue(transition+0, {-> currentIssue[0]}, -1, 'TC_01-when currrent user is not reporter - criteria failsa', null, null)
+// Configuration for conditions
 
-// TC_02-check when currrent user is reporter - condition true
-def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', reporter: user, assignee: user]}, 'currentUserReporter')
-transitionIssue(transition+0, {-> parent[0]}, 0, 'TC_02-when currrent user is reporter - condition true', null, null)
+userCriteria.eachWithIndex { criteria, userFields, i ->
+	def fieldsCloud = [
+			"condition.id=85e260ad-0ccf-433d-bd76-2fcda1e4bb6d",
+			"condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+	]
+	def fields =  info?.isCloud ? fieldsCloud : defaultFieldsServer + userFields
+	addTransitionFunction('currentUser' + criteria, 'condition',fields, functionKey )
+}
 
-// TC_03-check when currrent user is not assignee - criteria fails
-transitionIssue(transition+1, {-> currentIssue[0]}, -1, 'TC_03-when currrent user is not assignee - criteria fails', null, null)
+userCriteria.eachWithIndex { criteria, userFields, i ->
+	defaultFieldsServer[0] = "fromUserType=userInField"
+	def fieldsCloud = [
+			"condition.id=85e260ad-0ccf-433d-bd76-2fcda1e4bb6d",
+			"condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"groupsToCheck\":[\"cc1adc2d-9df8-4858-ba9e-e2bf571b1124\"]},\"expression\":\"let selectedUser = user; ((!!user && (false || ([\\\"cc1adc2d-9df8-4858-ba9e-e2bf571b1124\\\"].some(groupId => (new User(user.accountId)).groupIds.includes(groupId))))))\"}"
+	]
+	def fields = info?.isCloud? fieldsCloud : defaultFieldsServer + "userField=assignee" + userFields
+	addTransitionFunction('assignee' + criteria, 'condition',fields,  functionKey )
+}
 
-// TC_04-check when currrent user is assignee - condition true
-transitionIssue(transition+1, {-> parent[0]}, 0, 'TC_04-current user satisfies the criteria', null, null)
+userCriteria.eachWithIndex { criteria, userFields, i ->
+	defaultFieldsServer[0] = "fromUserType=userInField"
+	def fieldsCloud = [
+			"condition.id=85e260ad-0ccf-433d-bd76-2fcda1e4bb6d",
+			"condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"groupsToCheck\":[\"cc1adc2d-9df8-4858-ba9e-e2bf571b1124\"]},\"expression\":\"let selectedUser = user; ((!!user && (false || ([\\\"cc1adc2d-9df8-4858-ba9e-e2bf571b1124\\\"].some(groupId => (new User(user.accountId)).groupIds.includes(groupId))))))\"}"
+	]
+	def fields = info?.isCloud? fieldsCloud : defaultFieldsServer + "userField=reporter" + userFields
+	addTransitionFunction('reporter' + criteria, 'condition',fields,  functionKey )
+}
 
-// TC_05-check when currrent user is project lead - condition true
-transitionIssue(transition+2, {-> parent[0]}, 0, 'TC_05-current user satisfies the criteria', null, null)
+userCriteria.eachWithIndex { criteria, userFields, i ->
+	defaultFieldsServer[0] = "fromUserType=userInField"
+	def fieldsCloud = [
+			"condition.id=85e260ad-0ccf-433d-bd76-2fcda1e4bb6d",
+			"condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"groupsToCheck\":[\"cc1adc2d-9df8-4858-ba9e-e2bf571b1124\"]},\"expression\":\"let selectedUser = user; ((!!user && (false || ([\\\"cc1adc2d-9df8-4858-ba9e-e2bf571b1124\\\"].some(groupId => (new User(user.accountId)).groupIds.includes(groupId))))))\"}"
+	]
+	def fields = info?.isCloud? fieldsCloud : defaultFieldsServer + "userField=creator" + userFields
+	addTransitionFunction('creator' + criteria, 'condition',fields,  functionKey )
+}
 
-// TC_06-check when currrent user is not project lead - condition false
-transitionByUserTask(transition+2, userId, {-> parent[0]}, null, -1, 'TC_06-when currrent user is not project lead - condition false')
+['currentUser_assignee_reporter_field'].each {
+	defaultFieldsServer[0] = "fromUserType=currentUser"
+	def fields =  defaultFieldsServer + userCriteria.assignee + userCriteria.reporter + userCriteria.checkFields
+	addTransitionFunction(it, 'condition',fields,  functionKey )
+}
+['assignee_reporter_field'].each {
+	defaultFieldsServer[0] = "fromUserType=userInField"
+	def fields =  defaultFieldsServer + "userField=assignee" + userCriteria.reporter + userCriteria.checkFields
+	addTransitionFunction(it, 'condition',fields,  functionKey )
+}
+['atleastOneCriteria_currentUser'].each {
+	defaultFieldsServer[0] = "fromUserType=currentUser"
+	defaultFieldsServer[1] = "conditionMode=any-user-condition"
+	def fields = info?.isCloud ? '' : defaultFieldsServer + userCriteria.assignee +  userCriteria.reporter + userCriteria.checkFields
+	addTransitionFunction(it, 'condition', fields, functionKey)
+}
+['atleastOneCriteria_assigneeField'].each {
+	defaultFieldsServer[0] = "fromUserType=userInField"
+	defaultFieldsServer[1] = "conditionMode=any-user-condition"
+	def fields = info?.isCloud ? '' : defaultFieldsServer + "userField=assignee" + userCriteria.checkRoles + userCriteria.projectLead
+	addTransitionFunction(it, 'condition', fields, functionKey)
+}
+['atleastOneCriteria_reporterField'].each {
+	defaultFieldsServer[0] = "fromUserType=userInField"
+	defaultFieldsServer[1] = "conditionMode=any-user-condition"
+	def fields = info?.isCloud ? '' : defaultFieldsServer + "userField=reporter" + userCriteria.checkRoles + userCriteria.projectLead
+	addTransitionFunction(it, 'condition', fields, functionKey)
+}
+['atleastOneCriteria_creatorField'].each {
+	defaultFieldsServer[0] = "fromUserType=userInField"
+	defaultFieldsServer[1] = "conditionMode=any-user-condition"
+	def fields = info?.isCloud ? '' : defaultFieldsServer + "userField=creator" + userCriteria.checkFields + userCriteria.projectLead
+	addTransitionFunction(it, 'condition', fields, functionKey)
+}
+['currentUser_assignee_reporter_field_reverse'].each {
+	defaultFieldsServer[3] = "reverse=yes"
+	defaultFieldsServer[0] = "fromUserType=currentUser"
+	def fields =  defaultFieldsServer + userCriteria.assignee + userCriteria.reporter + userCriteria.checkFields
+	addTransitionFunction(it, 'condition',fields,  functionKey )
+}
+['atleastOneCriteria_assigneeField_OrEmpty'].each {
+	defaultFieldsServer[0] = "fromUserType=userInField"
+	defaultFieldsServer[1] = "conditionMode=any-user-condition"
+	defaultFieldsServer[2] = "fieldEmpty=yes"
+	def fields = info?.isCloud ? '' : defaultFieldsServer + "userField=assignee" + userCriteria.checkRoles + userCriteria.projectLead
+	addTransitionFunction(it, 'condition', fields, functionKey)
+}
 
-// TC-07-check when currrent user is in selected group - condition true
-transitionIssue(transition+4, {-> parent[0]}, 0, "TC-07-when currrent user is in selected group - condition true", null, null)
+createWorkflowScheme()
+createProject()
 
-// TC_08-check when currrent user is not in selected group - condition false
-transitionByUserTask(transition+4, userId, {-> parent[0]}, null, -1, 'TC_08-when currrent user is not in selected group - condition false' )
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
-// TC_09-check when currrent user is in selected field - condition true
-def parent2 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', assignee: user]}, 'currentUserIsAssignee')
-transitionIssue(transition+5, {-> parent2[0]}, 0, "TC_09-when currrent user is in selected field - condition true", null, null)
+// update issue so that respective user satisfies all the criteria
+['atleastOneCriteria_assigneeField_OrEmpty'].each {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue', ext: ": WHEN $it field is empty: ",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it,
+			 ],
+			],
+	])
+}
+gint.taskHelper.add(
+		[action: 'assignIssue',ext: ': to current user',sleep: 1000,
+		 parameters:[issue: {->defaultIssue[]}, userId: user]])
 
-// TC_10-check when currrent user is not in selected field - condition false
-transitionByUserTask(transition+5, userId, {-> parent2[0]}, null, -1, 'TC_10-when currrent user is not in selected field - condition false' )
+gint.taskHelper.add( action: 'addLabels',ext: 'current user in label', parameters:[ issue : { ->defaultIssue[] }, labels: user])
 
-// TC_11-check when currrent user is return from the script - condition true
-transitionIssue(transition+6, {-> parent2[0]}, 0, "TC_11-when currrent user is return from the script - condition true", null, null)
+['currentUser','assignee','reporter','creator'].collect {
+	userCriteria.eachWithIndex { criteria, userFields, i ->
+		gint.taskHelper.add([
+				[action    : 'transitionIssue', ext: ": WHEN $it IS: " + criteria,
+				 expected  : 0,
+				 parameters: [
+						 issue     : {->defaultIssue[]},
+						 transition: it + criteria,
+				 ],
+				],
+		])
+	}
+}
 
-// TC_12-check when currrent user is not return from the script- condition false
-transitionByUserTask(transition+6, userId, {-> parent2[0]}, null, -1, 'TC_12-when currrent user is not return from the script- condition false' )
+// when specific user(current and user in selected field) satisfies all the selected criteria
+[
+		'currentUser_assignee_reporter_field',
+ 		'assignee_reporter_field',
+		'atleastOneCriteria_currentUser',
+		'atleastOneCriteria_assigneeField',
+		'atleastOneCriteria_reporterField',
+		'atleastOneCriteria_creatorField'
+].each {
+	gint.taskHelper.add(
+			[action : 'transitionIssue',ext: ": satisfies all the criteria_ $it : ",
+			 expected: 0,
+			 parameters:[
+					 issue: {->defaultIssue[]},
+					 transition:  it ,
+			 ]
+			]
+	)
+}
+['currentUser_assignee_reporter_field_reverse','atleastOneCriteria_assigneeField_OrEmpty'].each {
+	gint.taskHelper.add(
+			[action : 'transitionIssue',ext: ": satisfies all the criteria_ $it : ",
+			 expected: -1,
+			 parameters:[
+					 issue: {->defaultIssue[]},
+					 transition:  it ,
+			 ]
+			]
+	)
+}
+// change assignee, reporter, projectLead, field value, watcher, user from script to check error
+
+gint.taskHelper.add(
+		action: 'updateIssue',
+			parameters:[
+					issue: {->defaultIssue[]},
+					assignee: testUser,
+					reporter: testUser,
+					labels: testUser
+			]
+)
+
+// ToDo this is not working -> removeWatcher
+gint.taskHelper.add(action: 'removeWatchers', ext: ': stop current user from watching issue',
+		parameters: [
+			        issue: {-> defaultIssue[]} ]
+)
+
+gint.taskHelper.add( action: 'updateProject',parameters: [project: projectName, lead: testUser ] )
+
+['reporter','checkFields','projectLead','assignee'].collect {
+		gint.taskHelper.add(
+				[action : 'transitionIssue',ext: ": WHEN current user is NOT $it: ",
+				expected: -1,
+				parameters:[
+					issue: {->defaultIssue[]},
+					transition: 'currentUser' + it,
+					]
+				]
+		)
+}
+
+gint.taskHelper.add(
+		action: 'updateIssue', ext: ': check user in field assignee',
+		parameters:[
+				issue: {->defaultIssue[]},
+				assignee: user,
+				reporter: testUser,
+				labels: testUser
+		]
+)
+['reporter','checkFields','projectLead'].each{
+	gint.taskHelper.add(
+			[action : 'transitionIssue',ext: ": WHEN assignee is NOT $it : ",
+			 expected: -1,
+			 parameters:[
+				 issue: {->defaultIssue[]},
+				 transition: 'assignee'+ it ,
+			 ]
+			]
+		)
+}
+gint.taskHelper.add(
+		action: 'updateIssue', ext: ': check user in field reporter',
+		parameters:[
+				issue: {->defaultIssue[]},
+				assignee: testUser,
+				reporter: user,
+				labels: testUser
+		]
+)
+['assignee','checkFields','projectLead'].each{
+	gint.taskHelper.add(
+			[action : 'transitionIssue',ext: ": WHEN reporter is NOT $it : ",
+			 expected: -1,
+			 parameters:[
+					 issue: {->defaultIssue[]},
+					 transition: 'reporter'+ it ,
+			 ]
+			]
+	)
+}
+['assignee','checkFields','projectLead'].each{
+	gint.taskHelper.add(
+			[action : 'transitionIssue',ext: ": WHEN creator is NOT $it : ",
+			 expected: -1,
+			 parameters:[
+					 issue: {->defaultIssue[]},
+					 transition: 'creator'+ it ,
+			 ]
+			]
+	)
+}
+// when specific user(current and user in selected field) not satisfies all the selected criteria
+['currentUser_assignee_reporter_field','assignee_reporter_field'].each {
+	gint.taskHelper.add(
+			[action : 'transitionIssue',ext: ": not satisfies all the criteria_ $it : ",
+			 expected: -1,
+			 parameters:[
+					 issue: {->defaultIssue[]},
+					 transition:  it ,
+			 ]
+			]
+	)
+}
+['currentUser_assignee_reporter_field_reverse'].each {
+	gint.taskHelper.add(
+			[action : 'transitionIssue',ext: ": not satisfies all the criteria_ $it : ",
+			 expected: 0,
+			 parameters:[
+					 issue: {->defaultIssue[]},
+					 transition:  it ,
+			 ]
+			]
+	)
+}
+[
+		'atleastOneCriteria_currentUser',
+].each {
+	gint.taskHelper.add(
+			[action: 'transitionIssue', ext: ": When $it satisfies",
+			expected: 0,
+				parameters: [
+				        issue: {->defaultIssue[]},
+						transition: it
+				]
+			]
+	)
+}
+gint.taskHelper.add(
+		[action: 'updateIssue', ext: "least one criteria for current user",
+			parameters: [
+			        issue: {->defaultIssue[]},
+					assignee: testUser,
+					reporter: testUser,
+					]
+			]
+)
+
+[
+		'atleastOneCriteria_currentUser',
+].each {
+	gint.taskHelper.add(
+			[action: 'transitionIssue', ext: "When $it not satisfies ",
+			 expected: -1,
+			 parameters: [
+					 issue: {->defaultIssue[]},
+					 transition: it
+			 ]
+			]
+	)
+}
 
 
+/*
+1. The current user should match all the following criteria:
+The user is the reporter : positive - current user is reporter
+ negative - other user is reporter = "DONE"
+
+2.The current user should match at least one of the following criteria:
+The user is the assignee
+The user is one of the following users: jmwe-qa
+ positive: check when assignee is current user / current user is jmwe_qa
+ negative: when assignee is not current user  /  current user is not jmwe_qa = "DONE"
+
+3. The current user should match all the following criteria:
+The user is one of the watchers
+ positive: 1.add multiple watchers 2.add multiple watchers with current user 3. check login by other watchers
+ negative: 1.current user not visible when not selected as watcher
+4. configure with all options under criteria and check -positives and negatives
+5. Active and inactive users
+ */
 

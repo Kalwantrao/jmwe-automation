@@ -1,6 +1,3 @@
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
 buildscript {
     repositories {
         maven {
@@ -13,50 +10,59 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: 'common/setUp.gradle'
-apply from: gint.resourceDirectory +'/src/common/testValidators.gradle'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION' //gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def transition = 'scriptedGroovyValidator'
-def workflow = project
-def screen = project
-def user = info.user
-gint.xmlReport =	true	//xml report generates in projects root directory
-gint.verbose =	true
+tearDown()
+addWorkflow()
+def defaultsFields = [
+        "scriptDescription=",
+        "errorMessage=",
+        "field=",
+        "correlationId=",
+]
+def cloudFields = [
+        "condition.id=e96e5f36-5d19-4cd7-b8d7-f13bfb41877d",
+        "condition.config-e96e5f36-5d19-4cd7-b8d7-f13bfb41877d={\"expression\":\"!! issue.assignee\"}"
+]
+def functionKey = info?.isCloud ? functionKey.scriptedGroovyValidatorCloud : functionKey.scriptedGroovyValidatorServer
 
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/validatorsData/ScriptedGroovyValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
-def functionKey = info?.isCloud ? 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-validator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-validator'	//function key for HideTransitionCondition
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+// Configuration for conditions
+['issueMustHaveAssignee'].each {
+    def fields = info?.isCloud ? cloudFields : defaultsFields + "groovyExpression=!!issue.get('assignee')"
+    addTransitionFunction(it, 'validator', fields, functionKey )
+}
 
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
+createWorkflowScheme()
+createProject()
 
-createVersions(project, 5)
-createComponents(project, 'component', 5)
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
-// check when issue is not assigned - condition fails
-def currentIssue = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'currentIssue')
-transitionIssue(transition+0, {-> currentIssue[0]}, -3, 'TC_01- When issue not having assignee', null, null)
-
-// check when issue has assigned - condition true
-def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', assignee: user]}, 'currentIssueWithAssignee')
-transitionIssue(transition+0, {-> parent[0]}, 0, 'TC_02-When Condition true', null, null)
-
-// check when condition (!!issue.getLinkedIssues()) returns true
-def linkIssue1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssue1')
-def linkIssue2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssue2')
-linkIssues([issue: { -> linkIssue1[0] }, toIssue: { -> linkIssue2[0] }, link: 'duplicates'], 'linkByAnyLinkType1' )
-transitionIssue(transition+1, {-> linkIssue1[0]}, 0, 'TC_03-check when condition (!!issue.getLinkedIssues()) returns true', null, null)
-
-// check when condition (!!issue.getLinkedIssues()) returns false
-transitionIssue(transition+1, {-> parent[0]}, -3, 'TC_04-check when condition (!!issue.getLinkedIssues()) returns false', null, null)
-
-// check when condition (!!issue.getLinkedIssues()) returns false
-def parent1 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'currentIssueWithoutFixVersion')
-transitionIssue(transition+2, {-> parent1[0]}, -3, "TC_05-When condition false", null, null)
-
-// check when condition (!!issue.getLinkedIssues()) returns true
-def parent2 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', fixVersions: '1']}, 'currentIssueWithFixVersion')
-transitionIssue(transition+2, {-> parent2[0]}, 0, "TC_06-When condition true", null, null)
+// checking the current status To Do and previous status In Progress
+[
+        'issueMustHaveAssignee',
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: ' : when condition false ' + it,
+             expected  : -3,
+             parameters: [
+                     transition: it,
+                     issue: { -> defaultIssue[] },
+             ],
+            ],
+            [action    : 'updateIssue', ext: ' : to check next condition ' + it,
+             sleepAfter: 2000,
+             parameters: [
+                     assignee: user,
+                     issue: { -> defaultIssue[] },
+             ],
+            ],
+            [action    : 'transitionIssue', ext: ' : when condition true ' + it,
+             sleep: 2000,
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue: { -> defaultIssue[] },
+             ],
+            ],
+    ])
+}

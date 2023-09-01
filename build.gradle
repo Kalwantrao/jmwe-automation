@@ -6,13 +6,16 @@
  * This project uses @Incubating APIs which are subject to change.
  */
 
+// Run the scripts of jmwe-Conditions using ./gradlew conditions
+// Run the scripts of jmwe-Validators using ./gradlew validators
+// Run the scripts of jmwe-Postfunctions using ./gradlew postfunctions
+
 buildscript {
-    def gintVersion = findProperty('gintVersion') ?: System.getenv('GINT_VERSION') ?: '+'
     dependencies {
         classpath 'org.gint:gint:3.8.4'
         classpath 'org.gint:gint-atlassian:3.8.4'
-    }
 
+    }
 
     repositories {
         flatDir { dirs 'libs' }
@@ -28,7 +31,7 @@ plugins {
 }
 apply plugin: 'org.gint'
 apply plugin: 'org.gint.atlassian'
-
+/*
 configurations {
     localDeps
     localDeps.transitive = false
@@ -63,7 +66,8 @@ def appLibPath = "$buildDir/output/lib"
 def appLibName = "JMWE.jar"
 def appPath = "$appLibPath/$appLibName"
 
-ext.info = gint.getJiraHelper().getServerInfoWithVerify()
+ext.info =  gint.getJiraHelper().getServerInfoWithVerify()
+
 ext.gint = gint
 gint.taskHelper.addSetUp('installAcli', [
         [
@@ -116,84 +120,47 @@ gint.taskHelper.addSetUp('installJMWE', [
         ],
 ])
 
+ */
 
-def itestDir = 'src'
 def jmweConditions = 'src/itest-conditions/gradle'
 def jmweValidators = 'src/itest-validators/gradle'
 def jmwePostfunctions = 'src/itest-postfunctions/gradle'
-def selenium = 'src/itest-selenium'
 
-[itestDir,jmweConditions].each { folder ->
-  if (file(folder).exists()) {
-      def args = [
-          '-DtargetDirectory=' + project.buildDir,
-          '-DxmlReport',
-          '-Dverbose',
-          '-Dclean',
-          '--continue',
-          '-DsourceDirectory=src/itest-conditions',
-          "-Dcli=acli $server" ,
-      ]
-      gint.scriptRunner.add(
-          taskNamePrefix: 'conditions',
-          directory: folder,
-          args: args,
-      )
-  }
+
+[jmweConditions, jmwePostfunctions,jmweValidators].each { folder ->
+    if (file(folder).exists()) {
+        def args = [
+                '-DtargetDirectory=' + project.buildDir,
+                '-DxmlReport',
+                '-Dverbose',
+                '-Dclean',
+                '--continue',
+                '-DsourceDirectory=src',
+                "-Dcli=acli $server" ,
+        ]
+        gint.scriptRunner.add(
+                taskNamePrefix: 'itestServer',
+                directory: folder,
+                args: args,
+        )
+    }
+}
+[jmweConditions].each { folder ->
+    if (file(folder).exists()) {
+        def args = [
+                '-DtargetDirectory=' + project.buildDir,
+                '-DxmlReport',
+                '-Dverbose',
+                '-Dclean',
+                '--continue',
+                '-DsourceDirectory=src',
+                "-Dcli=acli $cloud" ,
+        ]
+        gint.scriptRunner.add(
+                taskNamePrefix: 'itestCloud',
+                directory: folder,
+                args: args,
+        )
+    }
 }
 
-[itestDir,jmweValidators].each { folder ->
-  if (file(folder).exists()) {
-      def args = [
-          '-DtargetDirectory=' + project.buildDir,
-          '-DxmlReport',
-          '-Dverbose',
-          '-Dclean',
-          '--continue',
-          '-DsourceDirectory=src/itest-validators',
-          "-Dcli=acli $server" ,
-      ]
-      gint.scriptRunner.add(
-          taskNamePrefix: 'validators',
-          directory: folder,
-          args: args,
-      )
-  }
-}
-
-[itestDir,jmwePostfunctions].each { folder ->
-  if (file(folder).exists()) {
-      def args = [
-          '-DtargetDirectory=' + project.buildDir,
-          '-DxmlReport',
-          '-Dverbose',
-          '-Dclean',
-          '--continue',
-          '-DsourceDirectory=src/itest-postfunctions',
-          "-Dcli=acli $server" ,
-      ]
-      gint.scriptRunner.add(
-          taskNamePrefix: 'postfunctions',
-          directory: folder,
-          args: args,
-      )
-  }
-}
-[itestDir,selenium].each { folder ->
-  if (file(folder).exists()) {
-      def args = [
-          '-DtargetDirectory=' + project.buildDir,
-          '-DxmlReport',
-          '-Dverbose',
-          '-Dclean',
-          '--continue',
-          '-DsourceDirectory=src/itest-selenium',
-          "-Dcli=acli $server" ,
-      ]
-      gint.scriptRunner.add(
-          taskNamePrefix: 'selenium',
-          directory: folder,
-          args: args,
-      )
-  }
-}

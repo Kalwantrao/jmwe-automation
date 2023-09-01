@@ -1,6 +1,3 @@
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
 buildscript {
 	repositories {
 		maven {
@@ -13,51 +10,121 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: 'common/setUp.gradle'
-apply from: gint.resourceDirectory +'/src/common/testValidators.gradle'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def workflow = project
-def screen = project
-gint.xmlReport =	true	//xml report generates in projects root directory
-gint.verbose =	true
-def user = info.user
-def transition = 'fieldHasSingleValueValidator'
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/validatorsData/FieldHasSingleValueValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
-def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CommentRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldhassinglevalue-validator'
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+tearDown()
+addWorkflow()
 
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
+def defaultFieldsServer = [
+		"correlationId=",
+]
+def fieldsList = [
+		labels : 'labels',
+		fixVersions : 'fixVersions',
+		affectsVersions : 'versions',
+		components : 'components',
+]
+def functionKey = functionKey.fieldHasSingleValueValidatorServer
 
-createVersions(project, 5)
-createComponents(project, 'component', 5)
+def testUser =  info?.isCloud ? cloudUser : serverUser
+// Configuration for validator
 
-// check affectsVersions
-def singleValue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: 'component1']}, 'singleValue')
-transitionIssue(transition+0, {-> singleValue[0]}, 0, 'whenComponentsHasSingleValues', null, null)
+fieldsList.eachWithIndex { field, value, i ->
+	def fields = defaultFieldsServer +"conditionalValidation=no" + "field=$value"
+	addTransitionFunction( field  + 'hasSingleValue', 'validator', fields, functionKey )
+}
 
-def multipleValues = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: 'component1']}, 'multipleValues')
-updateIssues({-> multipleValues[0]}, [components: 'component2', append: null], 'setValue1')
-transitionIssue(transition+0, {-> multipleValues[0]}, -3, 'whenComponentsHasMultipleValues', null, ['Remote error: components: Component/s should not have more than one value.'])
+fieldsList.eachWithIndex { field, value, i ->
+	def fields = defaultFieldsServer +"conditionalValidation=yes" + "field=$value" + "conditionalValidationScript=$groovyExpression.getIssuetype"
+	addTransitionFunction(field + 'conditionalValidation' , 'validator', fields, functionKey )
+}
 
-// check excluding subtasks
-def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', components: 'component1']}, 'createParentIssue')
-def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]}, components: 'component1' ]}, 'createSubtask')
-updateIssues({-> parent[0]}, [components: 'component2', append: null], 'setValue2')
-transitionIssue(transition+5, {-> parent[0]}, 0, 'whenExcludingSubtasksValues', null, null)
+createWorkflowScheme()
+createProject()
 
+(1..2).each {
+	gint.taskHelper.addSetUp([
+			[action: 'addVersion', ext: ': create versions : ' + it,
+				parameters: [
+						project: projectName,
+						version: it
+				]
+			],
+			[action: 'addComponent', ext: ': create Component : ' + it,
+				parameters: [
+						project: projectName,
+						component: 'component' + it
+				],
+			]
+	 ])
+}
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue', labels: 'label1', fixVersions: 1, affectsVersions: 1, components: 'component1'], 'defaultIssue')
 
-// check conditional execution - issueType = story
-def condExecTrue = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', components: 'component1']}, 'condExecTrue')
-updateIssues({-> condExecTrue[0]}, [components: 'component2', append: null], 'setValue3')
-transitionIssue(transition+6, {-> condExecTrue[0]}, -3, 'condExecTrueFieldHasMutipleValues', null, ['Remote error: components: Component/s should not have more than one value.'])
+// checking the current status To Do and previous status In Progress
+['hasSingleValue','conditionalValidation'].each {
+			fieldsList.eachWithIndex { field, value, i ->
+				gint.taskHelper.add(
+						[action    : 'transitionIssue', ext: " : custom error when field_$field not provided during transition" + it,
+						 expected  : 0,
+						 parameters: [
+								 transition: field + it,
+								 issue     : { -> defaultIssue[] },
+						 ],
+						],
+				)
+	}
+}
+gint.taskHelper.add(
+		[action: 'updateIssue', ext: ': add field more than one value',
+		 parameters: [
+				 issue: {->defaultIssue[]},
+				 fixVersions: 2,
+				 affectsVersions: 2,
+				 components: 'component2',
+				 append: null
+		 ]
+		],
+)
+gint.taskHelper.add(
+		action: 'addLabels',
+			parameters:[
+			        issue: {->defaultIssue[]},
+					labels: 'label2',
+			]
+)
+['hasSingleValue','conditionalValidation'].each {
+			fieldsList.eachWithIndex { field, value, i ->
+				gint.taskHelper.add(
+						[action    : 'transitionIssue', ext: " : Should throw error when field_$field has more than one value" + it,
+						 expected  : -3,
+						 parameters: [
+								 transition: field + it,
+								 issue     : { -> defaultIssue[] },
+						 ],
+						],
+				)
+	}
+}
 
-def condExecFalse = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: 'component1']}, 'condExecFalse')
-updateIssues({-> condExecFalse[0]}, [components: 'component2', append: null], 'setValue4')
-transitionIssue(transition+6, {-> condExecFalse[0]}, 0, 'condExeeFalseFieldHasMutipleValues', null, null)
+gint.taskHelper.add(
+		[action: 'updateIssue', ext: ': change issue type',
+		 parameters: [
+				 issue: {->defaultIssue[]},
+				 issueType: 'Story',
+			 ]
+		],
+)
+fieldsList.eachWithIndex { field, value, i ->
+	gint.taskHelper.add(
+			[action    : 'transitionIssue', ext: " : should not throw error when conditional validation false : $field",
+			 expected  : 0,
+			 parameters: [
+					 transition: field + 'conditionalValidation',
+					 issue: { -> defaultIssue[] },
+			 ],
+			]
+	)
+}
 
 
 

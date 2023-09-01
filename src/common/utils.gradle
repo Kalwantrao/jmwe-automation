@@ -1,154 +1,270 @@
 apply from: gint.resourceDirectory +'/src/common/commonTasks.gradle'
 
-ext.createIssue = { parameters, ext ->
-    def savedIssues = [:]
-    gint.taskHelper.addSetUp([
-            [action: 'createIssue',
-             ext: ext ,
-             mustRunAfter: 'createProject',
-             project: projectName,
-             parameters: parameters,
-             finalClosure: { Task task ->
-                 def currentIssue = gint.searchForIssueKey(task.outData)
-                 savedIssues[] = currentIssue
-                 gint.helper.log("Issue created ", savedIssues[]);
-             },
-            ],
-    ]
-    )
-    return savedIssues
-}
-ext.linkIssue = { parameters, ext ->
-    gint.taskHelper.addSetUp([
-            [action: 'linkIssue',
-             ext: ext,
-             parameters: parameters
-            ]
-    ]
-    )
-}
-ext.updateIssue = { parameters, ext ->
-    gint.taskHelper.add(
-            action: 'updateIssue',
-            ext: ': '+ext,
-            parameters: parameters,
-    )
-}
-ext.transitionIssue = { transition, issue, expected, addfield, ext ->
-    gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: ': '+ext,
-             expected  : expected,
-             parameters: [
-                     issue     : issue,
-                     transition: transition
-             ] + (addfield != null ? addfield : [:]),
-            ],
-    ]
-    )
-}
-ext.getFieldValue = { issue, field, data, ext ->
-    gint.taskHelper.add(
-             [action: 'getFieldValue',
-             ext: ': '+ext,
-             parameters: [
-                     issue: issue,
-                     field: field
-             ],
-             data: [data],
-             finalClosure: { Task task ->
-                 if(!task.outData){
-                     gint.helper.log("expected value of field $data but got", task.outData)
-                 }
-                 else {
-                     gint.helper.log("found expected field value", data)
-                 }
-                 assert task.found == true
-             }
-            ]
-    )
-}
-ext.jqlSearch = { jql, field, number, issueType, ext ->
-    gint.taskHelper.add([
-            [action: 'getIssueList', ext: ': '+ext,
-             parameters: [
-                     jql: jql
-             ],
-             data: [ "$number issues in list",
-                     "$field","$issueType"
-             ],
-             finalClosure: { Task task ->
-                 assert task.found == true
-                 gint.helper.log("Issues found for the given search: $number", ext)
-             }
-            ]
-    ]
-    )
-}
+project.ext.info =  gint.getJiraHelper().getServerInfoWithVerify()
+project.ext.user = info?.isCloud ? info?.userDisplayName : info.user
+project.ext.projectName="AUTOMATION"
+project.ext.workflow="AUTOMATION"
+project.ext.screen="AUTOMATION"
+project.ext.cloudUser="qa1"
+project.ext.serverUser="jmwe_qa"
+project.ext.workflowScheme="AUTOMATION"
+project.ext.projectRole="test_projectrole"
+project.ext.groupName="test_group"
+project.ext.startStepCloud=11
+project.ext.startStepServer=11
+project.ext.workflowFile="resources/workflowJ8.xml"
+project.ext.tearDownFile="resources/tearDown.txt"
+project.ext.baseWorkflow="Software Simplified Workflow for Project $TestProject"
+project.ext.projectTemplateCloud="Bug tracking"
+project.ext.projectTemplateServer="Basic software development"
+project.ext.groovyExpression = [
+        returnsLinkedIssues:"issue.getLinkedIssues()",
+        getIssuetype:"issue.get('issuetype')?.name == 'Task'",
+        checkPriorityHigh: "issue.get('priority')?.name == 'High'",
+        returnsReporter : "issue.get('reporter')"
+]
+project.ext.nunjuckExpression = [
+        returnsLinkedIssues:"{{ issue | linkedIssues | field('key') }}",
+        getIssuetype:"{{ issue.fields.issuetype.name == 'Task' }}"
+]
+project.ext.jqlSearchExpression="issuetype = Task and summary~JQL_ISSUE"
+project.ext.fields = [
+        Labels:'labels',
+        Components:'components',
+        Assignee:'assignee',
+        AffectsVersions:'versions',
+        FixVersions:'fixVersions',
+        Priority: 'priority',
+]
+project.ext.relatedIssueServer = [
+        currentIssue: "currentIssue:*",
+        subtask: "outward:10100",
+        parentIssue: "inward:10100",
+        /*issueBelongsToEpic: "outward:10201",
+        epicOfTheCurrentIssue: "inward:10201",
+        childPortfolio: "outward:-2000",
+        parentPortfolio: "inward:-2000",
+        linkByAnyLink: "*:*",
+        linkByBlock: "outward:10000",
+        linkByisBlockedBy: "inward:10000",
+        linkByClones: "outward:10001",
+        linkByIsClonedBy: "inward:10001",
+        linkByDuplicates: "outward:10002",
+        linkByIsDuplicatedBy: "inward:10002",
+        linkByRelatesTo: "outward:10003",
+        returnsByGroovyExpression: "groovy:$groovyExpression.returnsLinkedIssues",
+        returnsFromJqlSearch: "jql:$jqlSearchExpression"*/
+]
+project.ext.relatedIssueCloud = [
+        currentIssue: "currentIssue:*",
+        subtask: "outward:jira_subtask_link",
+        parentIssue: "inward:jira_subtask_link",
+        issueBelongsToEpic: "outward:Epic-Story Link",
+        epicOfTheCurrentIssue: "inward:Epic-Story Link",
+        childPortfolio: "inward:Portfolio Parent Link",
+        parentPortfolio: "outward:Portfolio Parent Link",
+        linkByAnyLink: "*:*",
+        linkByBlock: "outward:10000",
+        linkByisBlockedBy: "inward:10000",
+        linkByClones: "outward:10001",
+        linkByIsClonedBy: "inward:10001",
+        linkByDuplicates: "outward:10002",
+        linkByIsDuplicatedBy: "inward:10002",
+        linkByRelatesTo: "outward:10003",
+        returnsByNunjucksExpression: "nunjucks:$nunjuckExpression.returnsLinkedIssues",
+        returnsFromJqlSearch: "jql:$jqlSearchExpression"
+]
+project.ext.statusListServer = [
+        inProgress: "In Progress",
+        inReview: "In Review",
+        done: "Done"
+]
+project.ext.statusListCloud = [
+        inProgress: "In Progress",
+        inReview: "In Review",
+        done: "Done"
+]
+project.ext.transitionIssueFunctionsCloud = [
+        "postFunction.id=d597971e-9524-4881-9edd-577b8b7b84c2",
+        "postFunction.config-d597971e-9524-4881-9edd-577b8b7b84c2={\"conditionalExecution\":\"false\",\"targetIssue\":\"currentIssue:*\",\"transition\":\"Start Progress@@AUTOMATION\",\"runAsType\":\"currentUser\"}"
+]
+ext.relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
+ext.statusList = info?.isCloud ? statusListCloud :  statusListServer
+project.ext.functionKey = [
+        currentStatusConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:currentstatus-condition',
+        currentStatusConditionCloud: 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CurrentStatusCondition',
+        hideTransitionConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:non-interactive-condition',
+        previousStatusConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:previousstatus-condition',
+        scriptedGroovyConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-condition',
+        scriptedGroovyConditionCloud: 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ScriptedCondition',
+        relatedIssuesConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:linked-issues-condition',
+        relatedIssuesConditionCloud: 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssuesCondition',
+        relatedIssuesStatusConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-condition',
+        relatedIssuesStatusConditionCloud: 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssueStatusCondition',
+        relatedIssuesStatusValidatorServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-validator',
+        userConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition',
+        userConditionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__UserCondition',
+        userValidatotCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__UserValidator',
+        userValidatorServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-validator',
+        transitionIssuePostfunctionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionIssue-function',
+        transitionIssuePostfunctionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__TransitionIssueFunction',
+        transitionRelatedIssuesPostfunctionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__TransitionLinkedIssuesFunction',
+        transitionParentIssuePostfunctionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__TransitionParentIssueFunction',
+        transitionParentIssuePostfunctionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionParentIssue-function',
+        transitionRelatedIssuesPostfunctionServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionLinkedIssues-function',
+        clearFieldsCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ClearFieldsFunction',
+        clearFieldsServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:ClearFieldValue-function',
+        assignToRoleMemberCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__AssignToRoleMemberFunction',
+        assignToRoleMemberServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:assigntorolemember',
+        returnToPreviousStatusServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:return-to-previous-status-function',
+        createIssuePostfunctionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CreateIssueFunction',
+        fieldsRequiredValidatorCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__FieldRequiredValidator',
+        fieldRequiredValidatorServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldrequired-validator',
+        addFieldValueToParentIssuePfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:AddFieldValueToParent-function',
+        scriptedGroovyValidatorServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-validator',
+        scriptedGroovyValidatorCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ScriptedValidator',
+        relatedIssuesValidatorServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:issue-linking-validator',
+        relatedIssuesValidatorCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssuesValidator',
+        assignIssuePostfunctionServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:AssignIssue-function',
+        transitionParentIssuePfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionParentIssue-function',
+        transitionRelatedIssuePfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionParentIssue-function',
+        setFieldValueOfRelatedIssuesPfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:SetFieldValueOfLinkedIssues-function',
+        setFieldValuePfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:SetFieldValue-function',
+        copyValueFromFieldToFieldPfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:copyValueFromFieldToField-function',
+        separationOfDutiesConditionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:separationofduties-condition',
+        commentRequiredValidatorServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentrequired-validator',
+        commentRequiredValidatorCloud : 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CommentRequiredValidator',
+        fieldHasBeenModifiedValidatorServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldchanged-validator',
+        fieldHasSingleValueValidatorServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldhassinglevalue-validator',
+        fieldHasSingleValueValidatorCloud : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldhassinglevalue-validator',
+        parentStatusValidatorServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:parentstatus-validator',
+        previousStatusvalidatorServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:previousstatus-validator',
+        setIssueFieldsPfServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:set-issue-fields-function',
+]
 
-ext.getIssueHistory = { issue, userId, ext ->
-    gint.taskHelper.add('getIssueHistoryList',[
-            [action: 'getIssueHistoryList', ext: ': '+ext,
-             parameters: [
-                     issue: issue,
-             ],
-             data: [ "$userId" ]
-            ]
-    ])
-}
+ext.requireRelatedIssuesFieldsCloud = [
+    subtask : [
+        "selectedLinkTypeId":"jira_subtask_link",
+        "selectedLinkTypeDirection":"outward",
+        "selectedIssueTypeId":"",
+        "anyOrEvery":"noCond",
+        "condition":true,
+        "validatorMode":"requireLinks",
+        "expression":"(issue.subtasks.some(linkedIssue => (true)))"
+],
+    parentIssue : [
+        "selectedLinkTypeId":"jira_subtask_link",
+        "selectedLinkTypeDirection":"inward",
+        "selectedIssueTypeId":"",
+        "anyOrEvery":"noCond",
+        "condition":true,
+        "validatorMode":"requireLinks",
+        "expression":"(!!issue.parent && [issue.parent].some(linkedIssue => (true)))"
+],
+    issueBelongsToEpic : [
+        "selectedLinkTypeId":"Epic-Story Link",
+        "selectedLinkTypeDirection":"outward",
+        "selectedIssueTypeId":"",
+        "anyOrEvery":"noCond",
+        "condition":true,
+        "validatorMode":"requireLinks",
+        "expression":"(!!issue.stories && issue.stories.some(linkedIssue => (true)))"
+],
+    epicOfTheCurrentIssue : [
+        "selectedLinkTypeId":"Epic-Story Link",
+        "selectedLinkTypeDirection":"inward",
+        "selectedIssueTypeId":"",
+        "anyOrEvery":"noCond",
+        "condition":true,
+        "validatorMode":"requireLinks",
+        "expression":"(!!issue.epic && [issue.epic].some(linkedIssue => (true)))"
+],
+    anyLink : [
+        "selectedLinkTypeId":"*",
+        "selectedLinkTypeDirection":"*",
+        "selectedIssueTypeId":"",
+        "anyOrEvery":"noCond",
+        "condition":true,
+        "validatorMode":"requireLinks",
+        "expression":"(issue.links.some(issueLink => (true)))"
+],
+    blocks : [
+        "selectedLinkTypeId":"10000",
+        "selectedLinkTypeDirection":"outward",
+        "selectedIssueTypeId":"",
+        "anyOrEvery":"noCond",
+        "condition":true,
+        "validatorMode":"requireLinks",
+        "expression":"(issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))"
+],
+    isBlockedBy : [
+        "selectedLinkTypeId":"10000",
+        "selectedLinkTypeDirection":"inward",
+        "selectedIssueTypeId":"",
+        "anyOrEvery":"noCond",
+        "condition":true,
+        "validatorMode":"requireLinks",
+        "expression":"(issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (true)))"
+],
+    clones : [
+        "selectedLinkTypeId":"10001",
+        "selectedLinkTypeDirection":"outward",
+        "selectedIssueTypeId":"",
+        "anyOrEvery":"noCond",
+        "condition":true,
+        "validatorMode":"requireLinks",
+        "expression":"(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))"
+],
+    isClonedBy : [
+        "selectedLinkTypeId":"10001",
+        "selectedLinkTypeDirection":"inward",
+        "selectedIssueTypeId":"",
+        "anyOrEvery":"noCond",
+        "condition":true,
+        "validatorMode":"requireLinks",
+        "expression":"(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (true)))"
+],
+    duplicates : [
+        "selectedLinkTypeId":"10002",
+        "selectedLinkTypeDirection":"outward",
+        "selectedIssueTypeId":"",
+        "anyOrEvery":"noCond",
+        "condition":true,
+        "validatorMode":"requireLinks",
+        "expression":"(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))"
+],
+    isDuplicatedBy : [
+        "selectedLinkTypeId":"10002",
+        "selectedLinkTypeDirection":"inward",
+        "selectedIssueTypeId":"",
+        "anyOrEvery":"noCond",
+        "condition":true,
+        "validatorMode":"requireLinks",
+        "expression":"(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (true)))"
+],
+    relatesTo : [
+        "selectedLinkTypeId":"10003",
+        "selectedLinkTypeDirection":"outward",
+        "selectedIssueTypeId":"",
+        "anyOrEvery":"noCond",
+        "condition":true,
+        "validatorMode":"requireLinks",
+        "expression":"(issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))"
+]
+]
 
-ext.getLinkedIssueList = {currentIssue, numberOfLinkedIssues, ext, linkType, link ->
-    gint.taskHelper.add('getLinkIssues',[
-            [action: 'getLinkList', ext: ': '+ext,
-             parameters: [
-                     issue: currentIssue,
-             ],
-             data: [/$numberOfLinkedIssues links for issue: $currentIssue/,
-                    "$currentIssue","$linkType","$link"],
-             finalClosure: { Task task ->
-                 assert task.found == true
-                 gint.helper.log("Check $numberOfLinkedIssues in issue $currentIssue", ext)
-             }
-            ]
-    ]
-    )
-}
-
-ext.getComments = { issue, user, ext ->
-    gint.taskHelper.add(
-            [action: 'getComments', ext: ': '+ext,
-             parameters: [
-                     issue: issue,
-             ],
-             data: [~/$user added a comment/],
-             finalClosure: { Task task ->
-                 assert task.found == true
-                 gint.helper.log("Comment found: ", user)
-                 }
-            ],
-    )
-}
-ext.transitionIssueByOtherUser = {transition, issue, userId, ext ->
-    gint.taskHelper.add('checkRunAsUser', [
-            [name:"transition issue by user : $userId:"+ext,
-             cmd : /acli $userId -a transitionIsue --issue $issue --transition $transition/,]
-    ],
-    )
-}
-ext.checkIssueHistoryByOtherUser = {transition, issue, userId, ext ->
-    gint.taskHelper.add(
-            [name: "History check by user $userId", ext: ': ' + ext , cmd: /acli ${userId} getIssueHistoryList --issue ${issue} /,
-             data:["$userId"],
-            ],
-    )
-}
-ext.getCommentByOtherUser = { issue, userId, user, ext->
-    gint.taskHelper.add(
-            [name: "Comment Visible To User: $user", ext: ': '+ext, cmd : /acli $userId -a getComments --issue $issue /,
-             failData: [~/$user added a comment/],
-             finalClosure: {Task task ->
-                 assert task.found == true
-                 gint.helper.log("Comment visible to", userId)
-             }
-            ]
-    )
-}
+/*
+> Task :addTransitionFunction_relatedIssueCondition_requireLinks7
+    [start] addTransitionFunction_relatedIssueCondition_requireLinks7
+    [error] Remote error: Resource does not exist. Response code: 404. Not Found. Use -v to see more details.
+    [error] Remote error: Resource does not exist. Response code: 404. Not Found. Use -v to see more details.
+   [ignore] addTransitionFunction_relatedIssueCondition_requireLinks7: Expected 0 but got -3
+[reproduce] acli jiraCloud --action addTransitionFunction     --workflow "AUTOMATION"  --transition "relatedIssueCondition_requireLinks7"  --functionKey "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssuesCondition"  --type "condition"  --step 11  --field "condition.id=9def4812-c8d0-45eb-9903-21dcbe2a70be"  --field "condition.config-9def4812-c8d0-45eb-9903-21dcbe2a70be={""selectedLinkTypeId"":""10001"",""selectedLinkTypeDirection"":""outward"",""selectedIssueTypeId"":"""",""anyOrEvery"":""noCond"",""condition"":true,""validatorMode"":""requireLinks"",""expression"":""(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))""}"
+     [info] Restarting task addTransitionFunction_relatedIssueCondition_requireLinks7.
+     [info] 1000 milliseconds sleep requested by task addTransitionFunction_relatedIssueCondition_requireLinks7
+    [start] addTransitionFunction_relatedIssueCondition_requireLinks7
+    [error] Remote error: Resource does not exist. Response code: 404. Not Found. Use -v to see more details.
+   [failed] addTransitionFunction_relatedIssueCondition_requireLinks7: Expected 0 but got -3
+[reproduce] acli jiraCloud --action addTransitionFunction     --workflow "AUTOMATION"  --transition "relatedIssueCondition_requireLinks7"  --functionKey "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssuesCondition"  --type "condition"  --step 11  --field "condition.id=9def4812-c8d0-45eb-9903-21dcbe2a70be"  --field "condition.config-9def4812-c8d0-45eb-9903-21dcbe2a70be={""selectedLinkTypeId"":""10001"",""selectedLinkTypeDirection"":""outward"",""selectedIssueTypeId"":"""",""anyOrEvery"":""noCond"",""condition"":true,""validatorMode"":""requireLinks"",""expression"":""(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))""}"
+ [complete] addTransitionFunction_relatedIssueCondition_requireLinks7 - 4.867 secs
+ */
