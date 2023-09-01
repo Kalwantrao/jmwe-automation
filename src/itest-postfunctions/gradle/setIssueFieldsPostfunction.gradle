@@ -19,7 +19,6 @@ def functionKey = functionKey.setIssueFieldsPfServer
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
 
 def defaultFieldsServer = [
-            "fields=[{\"fieldId\":\"labels\",\"value\":\"test_label\",\"options\":[],\"isTemplate\":true}]",
             "useGroovyCondition=false",
             "groovyExpression=",
             "runAsUser=",
@@ -27,15 +26,58 @@ def defaultFieldsServer = [
             "sendNotifications=",
             "correlationId=",
 ]
+def fieldsOptions = [
+        noOption : ["fields=[{\"fieldId\":\"labels\",\"value\":\"default_value\",\"options\":[],\"isTemplate\":true}]"],
+        ifEmpty : ["fields=[{\"fieldId\":\"labels\",\"value\":\"ifEmpty\",\"options\":[\"copyOnlyIfNotSet\"],\"isTemplate\":true}]"],
+        createMissingValues : ["fields=[{\"fieldId\":\"components\",\"value\":\"createMissingValues\",\"options\":[\"createMissingValues\"],\"isTemplate\":true}]"],
+        ignoreEmptyValue : ["fields=[{\"fieldId\":\"labels\",\"value\":\"\",\"options\":[\"ignoreEmptyValue\"],\"isTemplate\":true}]"],
+        appendValues : ["fields=[{\"fieldId\":\"labels\",\"value\":\"appendValues\",\"options\":[\"appendValues\"],\"isTemplate\":true}]"],
+        allOptions : ["fields=[{\"fieldId\":\"labels\",\"value\":\"test_label\",\"options\":[\"copyOnlyIfNotSet\",\"createMissingValues\",\"ignoreEmptyValue\",\"appendValues\"],\"isTemplate\":true}]"],
+]
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + "selectedLinkType=$value"
+    def fields = defaultFieldsServer + fieldsOptions.noOption + "selectedLinkType=$value"
     addTransitionFunction('setFieldLabelsToTargetIssue' + i, 'postfunction', fields, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def fields = defaultFieldsServer + fieldsOptions.ifEmpty + "selectedLinkType=$value"
+    addTransitionFunction('ifEmpty' + i, 'postfunction', fields, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def fields = defaultFieldsServer + fieldsOptions.createMissingValues + "selectedLinkType=$value"
+    addTransitionFunction('createMissingValueComponent' + i, 'postfunction', fields, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def fields = defaultFieldsServer + fieldsOptions.ignoreEmptyValue + "selectedLinkType=$value"
+    addTransitionFunction('ignoreEmptyValue' + i, 'postfunction', fields, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def fields = defaultFieldsServer + fieldsOptions.appendValues + "selectedLinkType=$value"
+    addTransitionFunction('appendValues' + i, 'postfunction', fields, functionKey)
 }
 
 createWorkflowScheme()
 createProject()
-
+(1..2).each {
+    gint.taskHelper.addSetUp([
+            [action: 'addVersion', ext: ': create versions : ' + it,
+             parameters: [
+                     project: projectName,
+                     version: it
+             ]
+            ],
+            [action: 'addComponent', ext: ': create Component : ' + it,
+             parameters: [
+                     project: projectName,
+                     component: 'component' + it
+             ],
+            ]
+    ])
+}
 // set issue status to In Progress
 
 def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
@@ -70,6 +112,7 @@ def linkIssuesMap = [
 linkIssuesMap.eachWithIndex { key, value, i ->
     linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
 }
+
 def relatedIssuesMap = [
         {->current[]} : {->current[]},
         {->parent[]} : {->subtask[]},
@@ -89,18 +132,36 @@ def relatedIssuesMap = [
         {->issueLinks[]} : {->relatesTo[]},
         {->issueLinks[]} : {->relatesTo[]},
 ]
-['setFieldLabelsToTargetIssue'].collect {
+['ifEmpty'].collect {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ':' + it + i,
-                 sleepAfter: 5000,
+                [action    : 'transitionIssue', ext: ': Set only if field is empty_when  empty' + it + i,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 sleep: 5000,
+                 ext       : "Set only if field is empty_when empty" + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : ifEmpty/],
+                ],
+        ])
+    }
+}
+['setFieldLabelsToTargetIssue'].collect {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ':default configuration' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
                  ext       : it + i,
                  parameters: [
                          issue: value,
@@ -111,5 +172,83 @@ def relatedIssuesMap = [
         ])
     }
 }
-
-
+['ifEmpty'].collect {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': Set only if field is empty_when not empty' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : "Set only if field is empty_when not empty" + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : test_label/],
+                ],
+        ])
+    }
+}
+['appendValues'].collect {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': Add source value to destination field ' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : "Add source value to destination field" + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : appendValues default_value/],
+                ],
+        ])
+    }
+}
+['ignoreEmptyValue'].collect {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': Ignore empty values' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : "Ignore empty values" + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : test_label/],
+                ],
+        ])
+    }
+}
+['createMissingValueComponent'].collect {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ':Create missing value' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : "Create missing value" + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Component/s"
+                 ],
+                 data      : ["Component/s . . . . . . . . . : createMissingValue"],
+                ],
+        ])
+    }
+}
