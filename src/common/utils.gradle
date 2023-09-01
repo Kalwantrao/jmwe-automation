@@ -40,7 +40,7 @@ project.ext.relatedIssueServer = [
         currentIssue: "currentIssue:*",
         subtask: "outward:10100",
         parentIssue: "inward:10100",
-        /*issueBelongsToEpic: "outward:10201",
+        issueBelongsToEpic: "outward:10201",
         epicOfTheCurrentIssue: "inward:10201",
         childPortfolio: "outward:-2000",
         parentPortfolio: "inward:-2000",
@@ -53,7 +53,7 @@ project.ext.relatedIssueServer = [
         linkByIsDuplicatedBy: "inward:10002",
         linkByRelatesTo: "outward:10003",
         returnsByGroovyExpression: "groovy:$groovyExpression.returnsLinkedIssues",
-        returnsFromJqlSearch: "jql:$jqlSearchExpression"*/
+        returnsFromJqlSearch: "jql:$jqlSearchExpression"
 ]
 project.ext.relatedIssueCloud = [
         currentIssue: "currentIssue:*",
