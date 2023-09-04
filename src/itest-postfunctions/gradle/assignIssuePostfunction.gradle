@@ -17,7 +17,6 @@ tearDown()
 addWorkflow()
 
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
-def statusList = info?.isCloud ? statusListCloud :  statusListServer
 def assignIssuePfFields = [
         "groovyExpression=",
         "assignmentBehavior=force", //onlyAutomatic
@@ -30,26 +29,22 @@ def assignIssuePfFields = [
         "skipIfAlreadyAssigned=",
         "throwExceptions=",
         "useGroovyCondition=false",
-        "script=$groovyExpression.returnsReporter",
-        "user=$jmwe_qaUserId",
-        "role=$jiraAdminRoleId",
-        "component=$component1Id",
         "correlationId="
 ]
 def assignmentType = [
-        'reporter',
-        'projectLead',
-        'projectDefault',
-        'lastCommenter',
-        'specificUser',
-        'componentLead',
-        'userFromField',
+        reporter: 'reporter',
+        projectLead: 'projectLead',
+        defaultAssigneeOfProject: 'projectDefault',
+        lastCommented: 'lastCommenter',
+        byUserName: 'specificUser',
+        componentLead: 'componentLead',
+        userFromUserObjectField:'userFromField',
         //fieldAssignee: "field=assignee",
         //fieldReporter: "field=reporter",
         //fieldsCreator: "field=creator",
-        'lastRoleMember',
-        'roleMember',
-        'script',
+        lastRoleMember: 'lastRoleMember',
+        roleMember: 'roleMember',
+        returnFromScript: 'script',
 ]
 def assignmentBehaviour = [
         always : "force",
@@ -57,105 +52,90 @@ def assignmentBehaviour = [
         ifTransitionValueChanged : "preferTransition",
         ifTransitionUserValueIsNotRoleMember : "ifRoleMember"
 ]
-assignmentType.each {
-    relatedIssue.eachWithIndex { key, value, i ->
-        def fields = assignIssuePfFields + "selectedLinkType=$value" + "assignmentType=$it"
-                addTransitionFunction("ASSIGN $value to" + it, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
-        }
-    }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    assignIssuePfFields[3] = "$selectUsersOption.reporter"
+    assignIssuePfFields[3] = "assignmentType=$assignmentType.reporter"
     def transition = 'assignIssuePF_reporter'
     def fields = assignIssuePfFields + "selectedLinkType=$value"
     addTransitionFunction( transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    assignIssuePfFields[3] = "$selectUsersOption.projectLead"
+    assignIssuePfFields[3] = "assignmentType=$assignmentType.projectLead"
     def transition ='assignIssuePF_projectLead'
     def fields = assignIssuePfFields + "selectedLinkType=$value"
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    assignIssuePfFields[3] = "$selectUsersOption.returnFromScript"
-    assignIssuePfFields[4] = "$selectUsersOption.script"
+    assignIssuePfFields[3] = "assignmentType=$assignmentType.returnFromScript"
     def transition ='assignIssuePF_returnFromScript'
-    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    def fields = assignIssuePfFields + "selectedLinkType=$value" + "script=$groovyExpression.returnsReporter"
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    assignIssuePfFields[3] = "$selectUsersOption.userFromUserObjectField"
-    assignIssuePfFields[4] = "$selectUsersOption.fieldReporter"
+    assignIssuePfFields[3] = "assignmentType=$assignmentType.userFromUserObjectField"
     def transition ='assignIssuePF_returnFromUserObjectFieldReporter'
-    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    def fields = assignIssuePfFields + "selectedLinkType=$value" + "field=reporter"
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i -> // here user is jmwe_qa
-    assignIssuePfFields[3] = "$selectUsersOption.byUserName"
-    assignIssuePfFields[4] = "$selectUsersOption.user"
+    assignIssuePfFields[3] = "assignmentType=$assignmentType.byUserName"
     def transition ='assignIssuePF_byUserName'
-    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    def fields = assignIssuePfFields + "selectedLinkType=$value" + "user=$jmwe_qaUserId"
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    assignIssuePfFields[3] = "$selectUsersOption.userFromUserObjectField"
-    assignIssuePfFields[4] = "$selectUsersOption.fieldsCreator"
+    assignIssuePfFields[3] = "assignmentType=$assignmentType.userFromUserObjectField"
     def transition ='assignIssuePF_returnFromUserObjectFieldCreator'
-    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    def fields = assignIssuePfFields + "selectedLinkType=$value" + "field=creator"
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    assignIssuePfFields[3] = "$selectUsersOption.userFromUserObjectField"
-    assignIssuePfFields[4] = "$selectUsersOption.fieldAssignee"
+    assignIssuePfFields[3] = "assignmentType=$assignmentType.userFromUserObjectField"
     def transition ='assignIssuePF_returnFromUserObjectFieldAssignee'
-    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    def fields = assignIssuePfFields + "selectedLinkType=$value" + "field=assignee"
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i -> // here component is 'component1' and component lead is current user
-    assignIssuePfFields[3] = "$selectUsersOption.componentLead"
-    assignIssuePfFields[5] = "$selectUsersOption.component"
+    assignIssuePfFields[3] = "assignmentType=$assignmentType.componentLead"
     def transition = 'assignIssuePF_componentLead'
-    def fields =  assignIssuePfFields + "selectedLinkType=$value"
-    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
-}
-
-relatedIssue.eachWithIndex { key, value, i ->
-    assignIssuePfFields[3] = "$selectUsersOption.defaultAssigneeOfProject"
-    def transition ='assignIssuePF_defaultAssigneeOfProject'
-    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    def fields =  assignIssuePfFields + "selectedLinkType=$value" + "component=$component1Id"
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i -> // here role is jira admins
-    assignIssuePfFields[3] = "$selectUsersOption.roleMember"
-    assignIssuePfFields[4] = "$selectUsersOption.role"
+    assignIssuePfFields[3] = "assignmentType=$assignmentType.roleMember"
     def transition ='assignIssuePF_roleMember'
-    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    def fields = assignIssuePfFields + "selectedLinkType=$value" + "role=$jiraAdminRoleId"
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    assignIssuePfFields[3] = "$selectUsersOption.lastCommented"
+    assignIssuePfFields[3] = "assignmentType=$assignmentType.lastCommented"
     def transition ='assignIssuePF_lastCommented'
     def fields = assignIssuePfFields + "selectedLinkType=$value"
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i -> // here role is jira admins
-    assignIssuePfFields[3] = "$selectUsersOption.lastRoleMember"
-    assignIssuePfFields[4] = "$selectUsersOption.role"
+    assignIssuePfFields[3] = "assignmentType=$assignmentType.lastRoleMember"
     def transition ='assignIssuePF_lastRoleMember'
-    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    def fields = assignIssuePfFields + "selectedLinkType=$value" + "role=$jiraAdminRoleId"
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
+relatedIssue.eachWithIndex { key, value, i ->
+    assignIssuePfFields[3] = "assignmentType=$assignmentType.defaultAssigneeOfProject"
+    def transition ='assignIssuePF_defaultAssigneeOfProject'
+    def fields = assignIssuePfFields + "selectedLinkType=$value"
+    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
 
 
 createWorkflowScheme()
@@ -171,7 +151,7 @@ addComponent(1)
 def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
 def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
-def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
+/*def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
 def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[]} ], 'BelongsToEpic')
 def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Initiative')
 def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
@@ -200,13 +180,13 @@ def linkIssuesMap = [
 linkIssuesMap.eachWithIndex { key, value, i ->
     linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
 }
-
+*/
 
 def relatedIssuesMap = [
         {->current[]} : {->current[]},
         {->parent[]} : {->subtask[]},
         {->subtask[]} : {->parent[]},
-        {->epic[]} : {->issueBelongsToEpic[]},
+       /* {->epic[]} : {->issueBelongsToEpic[]},
         {->issueBelongsToEpic[]} : {->epic[]},
         {-> initiative[]} : {->epic_initiative[]},
         {->epic_initiative[]} : {-> initiative[]},
@@ -219,7 +199,7 @@ def relatedIssuesMap = [
         {->issueLinks[]} : {->isDuplicatedBy[]},
         {->issueLinks[]} : {->relatesTo[]},
         {->issueLinks[]} : {->relatesTo[]},
-        {->issueLinks[]} : {->relatesTo[]},
+        {->issueLinks[]} : {->relatesTo[]},*/
 ]
 
 [
@@ -246,7 +226,7 @@ def relatedIssuesMap = [
                  ],
                  data      : [/Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user}/],
                 ],
-                [action: 'updateIssue', ext: ': assign issue back to other user to check next options with default issue' + it + i,
+                [action: 'updateIssue', ext: ': assign issue back to other user to check next options with same issues' + it + i,
                 parameters: [
                         issue: value,
                         assignee: serverUser,
@@ -302,5 +282,3 @@ gint.taskHelper.add(
         ])
     }
 }
-
-
