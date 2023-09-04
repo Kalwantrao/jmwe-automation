@@ -59,7 +59,7 @@ project.ext.relatedIssueCloud = [
         currentIssue: "currentIssue:*",
         subtask: "outward:jira_subtask_link",
         parentIssue: "inward:jira_subtask_link",
-        issueBelongsToEpic: "outward:Epic-Story Link",
+        /*issueBelongsToEpic: "outward:Epic-Story Link",
         epicOfTheCurrentIssue: "inward:Epic-Story Link",
         childPortfolio: "inward:Portfolio Parent Link",
         parentPortfolio: "outward:Portfolio Parent Link",
@@ -72,7 +72,7 @@ project.ext.relatedIssueCloud = [
         linkByIsDuplicatedBy: "inward:10002",
         linkByRelatesTo: "outward:10003",
         returnsByNunjucksExpression: "nunjucks:$nunjuckExpression.returnsLinkedIssues",
-        returnsFromJqlSearch: "jql:$jqlSearchExpression"
+        returnsFromJqlSearch: "jql:$jqlSearchExpression"*/
 ]
 project.ext.statusListServer = [
         inProgress: "In Progress",
