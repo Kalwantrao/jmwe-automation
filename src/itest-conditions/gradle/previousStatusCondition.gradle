@@ -1,0 +1,170 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+
+tearDown()
+addWorkflow()
+def isCloud = info?.isCloud
+
+def defaultFieldsServer = [
+        "correlationId="
+]
+
+['hideTransitionCondition'].each {transitions ->
+    gint.taskHelper.addSetUp([
+            [action    : 'addTransition', ext: ':' + transitions,
+             onlyIf: !isCloud,
+             parameters: [
+                     workflow: workflow,
+                     name    : transitions,
+                     step    : info?.isCloud ? startStepCloud : startStepServer,
+                     //screen  : screen
+             ]
+            ],
+            [action    : 'addTransitionFunction', ext: ':' + transitions,
+             onlyIf: !isCloud,
+             parameters: [
+                     workflow   : workflow,
+                     transition : transitions,
+                     functionKey: functionKey.hideTransitionConditionServer,
+                     type       : 'condition',
+                     step       : info?.isCloud ? startStepCloud : startStepServer,
+             ]
+            ],
+    ])
+
+}
+
+def previousStatusServer = [
+        previousStatusCondition : [ defaultFieldsServer + "issue_statuses=$statusIds.toDo" ] ,
+        previousStatusCondition_ReverseInProgress : [ defaultFieldsServer + "issue_statuses=$statusIds.inProgress" + "not=yes" ],
+        previousStatusCondition_Reverse_ToDo : [ defaultFieldsServer + "issue_statuses=$statusIds.toDo" + "not=yes" ],
+        previousStatusCondition_MostRecentStatusOnly : [ defaultFieldsServer + "issue_statuses=$statusIds.inProgress" + "mostRecentOnly=yes" ],
+        previousStatusCondition_includeCurrentInProgress : [defaultFieldsServer + "issue_statuses=$statusIds.inProgress" + "includeCurrent=yes" ],
+        previousStatusCondition_includeCurrentToDo : [defaultFieldsServer + "issue_statuses=$statusIds.toDo" + "includeCurrent=yes" ],
+        previousStatusCondition_SelectMultipleStatuses : [defaultFieldsServer + "issue_statuses=$statusIds.inProgress,$statusIds.inReview" ],
+]
+
+previousStatusServer.eachWithIndex { transitions, fields, i->
+    def functionKey = functionKey.previousStatusConditionServer
+    gint.taskHelper.addSetUp([
+            [action    : 'addTransition', ext: ':' + transitions + i,
+             onlyIf: !isCloud,
+             parameters: [
+                     workflow: workflow,
+                     name    : transitions,
+                     step    : info?.isCloud ? startStepCloud : startStepServer,
+                    // screen  : screen
+             ]
+            ],
+            [action    : 'addTransitionFunction', ext: ':' + transitions + i,
+             onlyIf: !isCloud,
+             parameters: [
+                     workflow   : workflow,
+                     transition : transitions,
+                     functionKey: functionKey,
+                     type       : 'condition',
+                     step       : info?.isCloud ? startStepCloud : startStepServer,
+                     field      : fields
+             ]
+            ],
+    ])
+}
+
+createWorkflowScheme()
+createProject()
+
+
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+
+// checking the current status To Do and previous status In Progress
+[
+        'hideTransitionCondition',
+        'previousStatusCondition',
+        'previousStatusCondition_MostRecentStatusOnly',
+        'previousStatusCondition_includeCurrentInProgress',
+].each {
+    gint.taskHelper.add([
+            action    : 'transitionIssue', ext: ' : error for ' + it,
+            onlyIf: !isCloud,
+            expected  : -1,
+            parameters: [
+                    transition: it,
+                    issue: { -> defaultIssue[] },
+            ],
+    ])
+}
+[
+        'previousStatusCondition_ReverseInProgress',
+        'In Progress',
+        'To Do',
+        'previousStatusCondition_MostRecentStatusOnly',
+        'previousStatusCondition',
+        'previousStatusCondition_includeCurrentToDo',
+        'previousStatusCondition_SelectMultipleStatuses'
+].each {
+    gint.taskHelper.add([
+            action    : 'transitionIssue', ext: ' : success for ' + it,
+            onlyIf: !isCloud,
+            expected  : 0,
+            parameters: [
+                    transition: it,
+                    issue: { -> defaultIssue[] },
+            ],
+    ])
+}
+
+
+
+[
+        'previousStatusCondition_Reverse_ToDo',
+        'previousStatusCondition_ReverseInProgress'
+].each {
+    gint.taskHelper.add([
+            action    : 'transitionIssue', ext: ' : error for ' + it,
+            onlyIf: !isCloud,
+            expected  : -1,
+            parameters: [
+                    transition: it,
+                    issue: { -> defaultIssue[] },
+            ],
+    ])
+}
+def prevStatusInReview = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'prevStatusInProgress')
+[
+        'previousStatusCondition_SelectMultipleStatuses'
+].each {
+    gint.taskHelper.add([
+            action    : 'transitionIssue', ext: ' : not allow transition when issue not has atleast one prev status ' + it,
+            onlyIf: !isCloud,
+            expected  : -1,
+            parameters: [
+                    transition: it,
+                    issue: { -> prevStatusInReview[] },
+            ],
+    ])
+}
+[		'In Review',
+         'To Do',
+         'previousStatusCondition_SelectMultipleStatuses'
+].each {
+    gint.taskHelper.add([
+            action    : 'transitionIssue', ext: ' : allow transition when Issue is in previous status_IN PROGRESS or IN REVIEW ' + it,
+            onlyIf: !isCloud,
+            expected  : 0,
+            parameters: [
+                    transition: it,
+                    issue: { -> prevStatusInReview[] },
+            ],
+    ])
+}

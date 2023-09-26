@@ -22,9 +22,16 @@ project.ext.statusIds = [ // statusIds.inProgress
         inReview : 10103,
         done : 10001
 ]
-project.ext.defaultFields = [
+def defaultFields = [
                "correlationId=",
 ]
+def separationOfDuties = [
+        fromAny_ToDo : [defaultFields + "fromStatus=" + "toStatus=To Do"],
+        fromToDo_Done : [defaultFields + "fromStatus=To Do" + "toStatus=Done"],
+        fromInProgress_ToDo : [defaultFields + "fromStatus=In Progress" + "toStatus=To Do"],
+        fromDone_InProgress : [defaultFields + "fromStatus=Done" + "toStatus=In Progress"]
+]
+
 // Configuration for conditions
 ['fromAny_ToDo'].each {
     def fields = defaultFields + "fromStatus=" + "toStatus=To Do"

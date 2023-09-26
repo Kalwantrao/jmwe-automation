@@ -14,6 +14,7 @@ apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 tearDown()
 addWorkflow()
+def errorMessage = "Check the scripted groovy returns true"
 def defaultsFields = [
         "scriptDescription=",
         "errorMessage=",
@@ -21,8 +22,8 @@ def defaultsFields = [
         "correlationId=",
 ]
 def cloudFields = [
-        "condition.id=e96e5f36-5d19-4cd7-b8d7-f13bfb41877d",
-        "condition.config-e96e5f36-5d19-4cd7-b8d7-f13bfb41877d={\"expression\":\"!! issue.assignee\"}"
+        "validator.id=07ce5526-68d4-42ad-8be6-f0a788113a55",
+        "validator.config-07ce5526-68d4-42ad-8be6-f0a788113a55={\"expression\":\"!! issue.assignee && !! issue.assignee.accountId\",\"errorMessage\":\"$errorMessage\"}"
 ]
 def functionKey = info?.isCloud ? functionKey.scriptedGroovyValidatorCloud : functionKey.scriptedGroovyValidatorServer
 

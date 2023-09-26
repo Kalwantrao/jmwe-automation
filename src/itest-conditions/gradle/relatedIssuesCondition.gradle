@@ -17,13 +17,22 @@ addWorkflow()
 
 def functionKey = info?.isCloud? functionKey.relatedIssuesConditionCloud : functionKey.relatedIssuesConditionServer
 
-project.ext.relatedIssueFields_default_server = [
-		"maxLinkedIssues=",
-		"minLinkedIssues=1",
-		"conditionMode=requireLinks",
-		"groovyExpression=",
-		"checkAllLinkedIssues=yes",
+def defaultFields = [
 		"correlationId="
+]
+def mode = [
+		requireLinks : [ "conditionMode=requireLinks" ],
+		checkLinks : [ "conditionMode=checkLinks", "groovyExpression=$groovyExpression.checkPriorityHigh" ],
+		forbidLinks : [	"conditionMode=forbidLinks", "groovyExpression=$groovyExpression.checkPriorityHigh", ]
+]
+def issueConstraints = [
+		atLeastOne : [  "minLinkedIssues=1","maxLinkedIssues=" ],
+		atLeastTwoAtMostTwo : [ "minLinkedIssues=2", "maxLinkedIssues=2" ],
+		atLeastTwoAtMostFive : [  "minLinkedIssues=1", "maxLinkedIssues=5" ]
+]
+def verifyAllLinkedIssues = [
+		yes : [	"checkAllLinkedIssues=yes" ],
+		no : [ "checkAllLinkedIssues=no" ]
 ]
 
 def relatedIssue = info?.isCloud ? requireRelatedIssuesFieldsCloud : relatedIssueServer
@@ -35,87 +44,50 @@ fieldsToRemove.each { key ->
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-	def defaultFieldsCloud = ["condition.id=9def4812-c8d0-45eb-9903-21dcbe2a70be"]
-	def targetIssueString = new groovy.json.JsonBuilder(value).toString()
-	def targetIssue = "condition.config-9def4812-c8d0-45eb-9903-21dcbe2a70be=${targetIssueString}"
-
-	defaultFieldsCloud.add(targetIssue)
-
 	def transition = 'relatedIssueCondition_requireLinks'
-	def fields = info?.isCloud? defaultFieldsCloud.each{element -> element } : relatedIssueFields_default_server + "selectedLinkType=$value"
-	addTransitionFunction(transition + i, 'condition', fields, functionKey)
+	def server = defaultFields + "selectedLinkType=$value" + mode.requireLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	addTransitionFunction(transition + i, 'condition', server, functionKey)
 }
-/*
+
 relatedIssue.eachWithIndex { key, value, i ->
-	relatedIssueFields_default_server[3] = "groovyExpression=$groovyExpression.checkPriorityHigh"
-	relatedIssueFields_default_server[2] = "conditionMode=checkLinks"
 	def transition = 'relatedIssueCondition_checkLinks'
-	def fields = info?.isCloud? defaultFieldsCloud.each{element -> element } : relatedIssueFields_default_server + "selectedLinkType=$value"
-	addTransitionFunction( transition + i, 'condition', fields, functionKey)
+	def server = defaultFields + "selectedLinkType=$value" + mode.checkLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	addTransitionFunction( transition + i, 'condition', server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-	def defaultFieldsCloud = ["condition.id=9def4812-c8d0-45eb-9903-21dcbe2a70be"]
-	def targetIssueString = new groovy.json.JsonBuilder(targetIssueFieldsMap).toString()
-	def targetIssue = "condition.config-9def4812-c8d0-45eb-9903-21dcbe2a70be=${targetIssueString}"
-
-	defaultFieldsCloud.add(targetIssue)
-
-	relatedIssueFields_default_server[2] = "conditionMode=forbidLinks"
-	relatedIssueFields_default_server[3] = "groovyExpression=$groovyExpression.checkPriorityHigh"
 	def transition = 'relatedIssueCondition_forbidLinks'
-	def fields = info?.isCloud? defaultFieldsCloud.each{element -> element } : relatedIssueFields_default_server + "selectedLinkType=$value"
-	addTransitionFunction(transition + i, 'condition', fields, functionKey)
+	def server = defaultFields + "selectedLinkType=$value" + mode.forbidLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	addTransitionFunction(transition + i, 'condition', server, functionKey)
 }
 
 relatedIssue.take(2).eachWithIndex { key, value, i ->
 	def transition = 'relatedIssueCondition_issueConstraintsFalse'
-	relatedIssueFields_default_server[2] = "conditionMode=requireLinks"
-	relatedIssueFields_default_server[0] = "maxLinkedIssues=2"
-	relatedIssueFields_default_server[1] = "minLinkedIssues=2"
-	def fields = info?.isCloud? "" : relatedIssueFields_default_server + "selectedLinkType=$value"
-	addTransitionFunction(transition + i, 'condition', fields, functionKey)
+	def server = defaultFields + "selectedLinkType=$value" + mode.requireLinks + issueConstraints.atLeastTwoAtMostTwo + verifyAllLinkedIssues.yes
+	addTransitionFunction(transition + i, 'condition', server, functionKey)
 }
 
 relatedIssue.take(2).eachWithIndex { key, value, i ->
 	def transition = 'relatedIssueCondition_issueConstraintsTrue'
-	relatedIssueFields_default_server[2] = "conditionMode=requireLinks"
-	relatedIssueFields_default_server[0] = "maxLinkedIssues=5"
-	relatedIssueFields_default_server[1] = "minLinkedIssues=2"
-	def fields = info?.isCloud? "" : relatedIssueFields_default_server + "selectedLinkType=$value"
-	addTransitionFunction(transition + i, 'condition', fields, functionKey)
+	def server = defaultFields + "selectedLinkType=$value" + mode.requireLinks + issueConstraints.atLeastTwoAtMostFive + verifyAllLinkedIssues.yes
+	addTransitionFunction(transition + i, 'condition', server, functionKey)
 }
 
 ['issueReturnFromJqlSearch_require'].each {
-	def transition = 'relatedIssueCondition_issueConstraintsTrue'
-	relatedIssueFields_default_server[2] = "conditionMode=requireLinks"
-	relatedIssueFields_default_server[0] = "maxLinkedIssues="
-	relatedIssueFields_default_server[1] = "minLinkedIssues=1"
-	relatedIssueFields_default_server[3] = "groovyExpression="
-	def fields = info?.isCloud? "" : relatedIssueFields_default_server + "selectedLinkType=jql:project = $projectName AND summary ~ JQL_ISSUE"
-	addTransitionFunction(it, 'condition', fields, functionKey)
+	def server = defaultFields + "selectedLinkType=jql:project = $projectName AND summary ~ JQL_ISSUE" + mode.requireLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	addTransitionFunction(it, 'condition', server, functionKey)
 }
 
 ['issueReturnFromJqlSearch_check'].each {
-	def transition = 'relatedIssueCondition_issueConstraintsTrue'
-	relatedIssueFields_default_server[0] = "maxLinkedIssues="
-	relatedIssueFields_default_server[1] = "minLinkedIssues=1"
-	relatedIssueFields_default_server[2] = "conditionMode=checkLinks"
-	relatedIssueFields_default_server[3] = "groovyExpression=$groovyExpression.checkPriorityHigh"
-	def fields = info?.isCloud? "" : relatedIssueFields_default_server + "selectedLinkType=jql:project = $projectName AND summary ~ JQL_ISSUE"
-	addTransitionFunction( it, 'condition', fields, functionKey)
-}
-['issueReturnFromJqlSearch_forbid'].each {
-	def transition = 'relatedIssueCondition_issueConstraintsTrue'
-	relatedIssueFields_default_server[0] = "maxLinkedIssues="
-	relatedIssueFields_default_server[1] = "minLinkedIssues=1"
-	relatedIssueFields_default_server[2] = "conditionMode=forbidLinks"
-	relatedIssueFields_default_server[3] = "groovyExpression=$groovyExpression.checkPriorityHigh"
-	def fields = info?.isCloud? "" : relatedIssueFields_default_server + "selectedLinkType=jql:project = $projectName AND summary ~ JQL_ISSUE"
-	addTransitionFunction(it, 'condition', fields, functionKey)
+	def server = defaultFields + "selectedLinkType=jql:project = $projectName AND summary ~ JQL_ISSUE" + mode.checkLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	addTransitionFunction( it, 'condition', server, functionKey)
 }
 
- */
+['issueReturnFromJqlSearch_forbid'].each {
+	def server = defaultFields + "selectedLinkType=jql:project = $projectName AND summary ~ JQL_ISSUE" + mode.forbidLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	addTransitionFunction(it, 'condition', server, functionKey)
+}
+
 createWorkflowScheme()
 createProject()
 
@@ -140,6 +112,8 @@ def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesTo')
 def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 
 updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
+updateIssue([issue: {->epic_initiative2[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic2")
+updateIssue([issue: {->epic_initiative3[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic3")
 
 def linkIssuesMap = [
 		blocks : {->blocks[]},
@@ -183,7 +157,7 @@ relatedIssue.remove("returnsFromJqlSearch")
 
 [
 		'relatedIssueCondition_requireLinks',
- 		/*'relatedIssueCondition_forbidLinks',*/
+ 		'relatedIssueCondition_forbidLinks',
 ].collect {
 	relatedIssuesMap.eachWithIndex { key, value, i ->
 		gint.taskHelper.add([
@@ -217,7 +191,7 @@ relatedIssue.remove("returnsFromJqlSearch")
 		])
 	}
 }
-/*
+
 [
 		'relatedIssueCondition_checkLinks',
 ].collect {
@@ -251,7 +225,7 @@ relatedIssue.remove("returnsFromJqlSearch")
 }
 
 [
-		/'relatedIssueCondition_checkLinks',
+		'relatedIssueCondition_checkLinks',
 ].collect {
 	relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
 		gint.taskHelper.add([
@@ -298,6 +272,7 @@ relatedIssue.remove("returnsFromJqlSearch")
 		])
 	}
 }
+
 [
 		'relatedIssueCondition_issueConstraintsFalse'
 ].collect {
@@ -426,7 +401,7 @@ relatedIssue.remove("returnsFromJqlSearch")
 
 }
 
- */
+
 
 /*
 1. The current issue must have at least 1 sub-tasks - default config.-positive = "DONE"

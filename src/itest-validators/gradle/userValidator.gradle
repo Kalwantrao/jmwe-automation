@@ -17,113 +17,125 @@ addWorkflow()
 
 def functionKey = info?.isCloud? functionKey.uservalidatorCloud : functionKey.userValidatorServer
 def testUser = info?.isCloud? cloudUser : serverUser
+def errorMessage = "Check user satisfy the given criteria"
+
 def defaultFieldsServer = [
-        "fromUserType=currentUser",
-        "conditionMode=all-user-condition",
-        "fieldEmpty=no",
-        "reverse=", // yes
-        "errorMessage=",
+        "errorMessage=$errorMessage",
         "correlationId=",
+]
+def defaultFieldsCloud = [
+        "validator.id=e92924ef-17fc-4863-809d-add6da80b9e7"
+]
+def whichUser = [
+        current : [ "fromUserType=currentUser" ],
+        userInFieldAssignee : [ "fromUserType=userInField", "userField=assignee" ],
+        userInFieldReporter : [  "fromUserType=userInField", "userField=reporter"],
+        userInFieldCreator : [  "fromUserType=userInField", "userField=creator"],
+]
+def fieldEmpty = [
+        no : [ "fieldEmpty=no" ],
+        yes : [ "fieldEmpty=yes" ],
+]
+def mode = [
+        allUsers : [ "conditionMode=all-user-condition" ],
+        atLeastOne : [ "conditionMode=any-user-condition" ],
 ]
 def userCriteria = [
         reporter : "isReporter=yes",
         assignee : "isAssignee=yes",
         checkFields : "userFieldsToCheck=labels",
-        checkScript : "usersConditionScript=issue.get('reporter')?.name",
+        checkScript : "usersConditionScript=$groovyExpression.returnsReporter",
         projectLead : "isProjectLead=yes",
         checkRoles : "rolesToCheck=$jiraAdminRoleId",
         checkGroup : "groupsToCheck=jira-administrators",
         checkUser : "usersToCheck=$user",
         watcher : "isWatcher=yes",
 ]
-
+def reverse = [
+        no : [ "reverse=" ],
+        yes : [ "reverse=yes" ]
+]
 // Configuration for conditions
 
 userCriteria.eachWithIndex { criteria, userFields, i ->
-    def fieldsCloud = [
-            "validator.id=85e260ad-0ccf-433d-bd76-2fcda1e4bb6d",
-            "validator.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
-    ]
-    def fields =  info?.isCloud ? fieldsCloud : defaultFieldsServer + userFields
-    addTransitionFunction('currentUser' + criteria, 'validator',fields, functionKey )
+    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server = defaultFieldsServer + userFields + whichUser.current +  mode.allUsers + fieldEmpty.no + reverse.no + conditionalValidation.no
+    addTransitionFunction('currentUser' + criteria, 'validator',info ?.isCloud ? cloud : server, functionKey )
 }
 
 userCriteria.eachWithIndex { criteria, userFields, i ->
-    defaultFieldsServer[0] = "fromUserType=userInField"
-    def fieldsCloud = [
-            "validator.id=85e260ad-0ccf-433d-bd76-2fcda1e4bb6d",
-            "validator.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"groupsToCheck\":[\"cc1adc2d-9df8-4858-ba9e-e2bf571b1124\"]},\"expression\":\"let selectedUser = user; ((!!user && (false || ([\\\"cc1adc2d-9df8-4858-ba9e-e2bf571b1124\\\"].some(groupId => (new User(user.accountId)).groupIds.includes(groupId))))))\"}"
-    ]
-    def fields = info?.isCloud? fieldsCloud : defaultFieldsServer + "userField=assignee" + userFields
-    addTransitionFunction('assignee' + criteria, 'validator',fields,  functionKey )
+ // ToDo for cloud fields should be checked and have to change
+    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server = defaultFieldsServer + userFields + whichUser.userInFieldAssignee +  mode.allUsers + fieldEmpty.no + reverse.no + conditionalValidation.no
+    addTransitionFunction('assignee' + criteria, 'validator',info ?.isCloud ? cloud : server,  functionKey )
 }
 
 userCriteria.eachWithIndex { criteria, userFields, i ->
-    defaultFieldsServer[0] = "fromUserType=userInField"
-    def fieldsCloud = [
-            "validator.id=85e260ad-0ccf-433d-bd76-2fcda1e4bb6d",
-            "validator.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"groupsToCheck\":[\"cc1adc2d-9df8-4858-ba9e-e2bf571b1124\"]},\"expression\":\"let selectedUser = user; ((!!user && (false || ([\\\"cc1adc2d-9df8-4858-ba9e-e2bf571b1124\\\"].some(groupId => (new User(user.accountId)).groupIds.includes(groupId))))))\"}"
-    ]
-    def fields = info?.isCloud? fieldsCloud : defaultFieldsServer + "userField=reporter" + userFields
-    addTransitionFunction('reporter' + criteria, 'validator',fields,  functionKey )
+    // ToDo for cloud fields should be checked and have to change
+    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server = defaultFieldsServer + userFields + whichUser.userInFieldReporter +  mode.allUsers + fieldEmpty.no + reverse.no + conditionalValidation.no
+    addTransitionFunction('reporter' + criteria, 'validator',info ?.isCloud ? cloud : server,  functionKey )
 }
 
 userCriteria.eachWithIndex { criteria, userFields, i ->
-    defaultFieldsServer[0] = "fromUserType=userInField"
-    def fieldsCloud = [
-            "validator.id=85e260ad-0ccf-433d-bd76-2fcda1e4bb6d",
-            "validator.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"groupsToCheck\":[\"cc1adc2d-9df8-4858-ba9e-e2bf571b1124\"]},\"expression\":\"let selectedUser = user; ((!!user && (false || ([\\\"cc1adc2d-9df8-4858-ba9e-e2bf571b1124\\\"].some(groupId => (new User(user.accountId)).groupIds.includes(groupId))))))\"}"
-    ]
-    def fields = info?.isCloud? fieldsCloud : defaultFieldsServer + "userField=creator" + userFields
-    addTransitionFunction('creator' + criteria, 'validator',fields,  functionKey )
+    // ToDo for cloud fields should be checked and have to change
+    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server = defaultFieldsServer + userFields + whichUser.userInFieldCreator +  mode.allUsers + fieldEmpty.no + reverse.no + conditionalValidation.no
+    addTransitionFunction('creator' + criteria, 'validator',info ?.isCloud ? cloud : server,  functionKey )
 }
 
 ['currentUser_assignee_reporter_field'].each {
-    defaultFieldsServer[0] = "fromUserType=currentUser"
-    def fields =  defaultFieldsServer + userCriteria.assignee + userCriteria.reporter + userCriteria.checkFields
-    addTransitionFunction(it, 'validator',fields,  functionKey )
+    // ToDo for cloud fields should be checked and have to change
+    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server = defaultFieldsServer + userCriteria.assignee + userCriteria.reporter +userCriteria.checkFields + whichUser.current +  mode.allUsers + fieldEmpty.no + reverse.no + conditionalValidation.no
+    addTransitionFunction(it, 'validator',info ?.isCloud ? cloud : server,  functionKey )
 }
 ['assignee_reporter_field'].each {
-    defaultFieldsServer[0] = "fromUserType=userInField"
-    def fields =  defaultFieldsServer + "userField=assignee" + userCriteria.reporter + userCriteria.checkFields
-    addTransitionFunction(it, 'validator',fields,  functionKey )
+    // ToDo for cloud fields should be checked and have to change
+    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server = defaultFieldsServer + userCriteria.reporter +userCriteria.checkFields + whichUser.userInFieldAssignee +  mode.allUsers + fieldEmpty.no + reverse.no + conditionalValidation.no
+    addTransitionFunction(it, 'validator',info ?.isCloud ? cloud : server,  functionKey )
 }
 ['atleastOneCriteria_currentUser'].each {
-    defaultFieldsServer[0] = "fromUserType=currentUser"
-    defaultFieldsServer[1] = "conditionMode=any-user-condition"
-    def fields = info?.isCloud ? '' : defaultFieldsServer + userCriteria.assignee +  userCriteria.reporter + userCriteria.checkFields
-    addTransitionFunction(it, 'validator', fields, functionKey)
+    // ToDo for cloud fields should be checked and have to change
+    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server = defaultFieldsServer + userCriteria.assignee + userCriteria.reporter +userCriteria.checkFields + whichUser.current + mode.atLeastOne + fieldEmpty.no + reverse.no + conditionalValidation.no
+    addTransitionFunction(it, 'validator', info ?.isCloud ? cloud : server, functionKey)
 }
 ['atleastOneCriteria_assigneeField'].each {
-    defaultFieldsServer[0] = "fromUserType=userInField"
-    defaultFieldsServer[1] = "conditionMode=any-user-condition"
-    def fields = info?.isCloud ? '' : defaultFieldsServer + "userField=assignee" + userCriteria.checkRoles + userCriteria.projectLead
-    addTransitionFunction(it, 'validator', fields, functionKey)
+    // ToDo for cloud fields should be checked and have to change
+    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server = defaultFieldsServer + whichUser.userInFieldAssignee + userCriteria.checkRoles +userCriteria.projectLead +  mode.atLeastOne + fieldEmpty.no + reverse.no + conditionalValidation.no
+    addTransitionFunction(it, 'validator', info ?.isCloud ? cloud : server, functionKey)
 }
 ['atleastOneCriteria_reporterField'].each {
-    defaultFieldsServer[0] = "fromUserType=userInField"
-    defaultFieldsServer[1] = "conditionMode=any-user-condition"
-    def fields = info?.isCloud ? '' : defaultFieldsServer + "userField=reporter" + userCriteria.checkRoles + userCriteria.projectLead
-    addTransitionFunction(it, 'validator', fields, functionKey)
+    // ToDo for cloud fields should be checked and have to change
+    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server = defaultFieldsServer + whichUser.userInFieldReporter + userCriteria.checkRoles +userCriteria.projectLead +  mode.atLeastOne + fieldEmpty.no + reverse.no + conditionalValidation.no
+    addTransitionFunction(it, 'validator', info ?.isCloud ? cloud : server, functionKey)
 }
 ['atleastOneCriteria_creatorField'].each {
-    defaultFieldsServer[0] = "fromUserType=userInField"
-    defaultFieldsServer[1] = "conditionMode=any-user-condition"
-    def fields = info?.isCloud ? '' : defaultFieldsServer + "userField=creator" + userCriteria.checkFields + userCriteria.projectLead
-    addTransitionFunction(it, 'validator', fields, functionKey)
+    // ToDo for cloud fields should be checked and have to change
+    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server = defaultFieldsServer + whichUser.userInFieldCreator + userCriteria.checkFields +userCriteria.projectLead +  mode.atLeastOne + fieldEmpty.no + reverse.no + conditionalValidation.no
+    addTransitionFunction(it, 'validator', info ?.isCloud ? cloud : server, functionKey)
 }
 ['currentUser_assignee_reporter_field_reverse'].each {
-    defaultFieldsServer[3] = "reverse=yes"
-    defaultFieldsServer[0] = "fromUserType=currentUser"
-    def fields =  defaultFieldsServer + userCriteria.assignee + userCriteria.reporter + userCriteria.checkFields
-    addTransitionFunction(it, 'validator',fields,  functionKey )
+    def server = defaultFieldsServer + whichUser.current + userCriteria.assignee + userCriteria.reporter +userCriteria.checkFields +  mode.atLeastOne + fieldEmpty.no + reverse.yes + conditionalValidation.no
+    // ToDo for cloud fields should be checked and have to change
+    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    addTransitionFunction(it, 'validator',info ?.isCloud ? cloud : server,  functionKey )
 }
 ['atleastOneCriteria_assigneeField_OrEmpty'].each {
-    defaultFieldsServer[0] = "fromUserType=userInField"
-    defaultFieldsServer[1] = "conditionMode=any-user-condition"
-    defaultFieldsServer[2] = "fieldEmpty=yes"
-    def fields = info?.isCloud ? '' : defaultFieldsServer + "userField=assignee" + userCriteria.checkRoles + userCriteria.projectLead
-    addTransitionFunction(it, 'validator', fields, functionKey)
+    def server = defaultFieldsServer + whichUser.userInFieldAssignee + userCriteria.checkRoles + userCriteria.projectLead +  mode.atLeastOne + fieldEmpty.yes + reverse.no + conditionalValidation.no
+    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    addTransitionFunction(it, 'validator', info ?.isCloud ? cloud : server, functionKey)
+}
+
+['checkUser_ifConditionTrue'].each {
+    def server = defaultFieldsServer + whichUser.current + userCriteria.reporter + userCriteria.checkFields + userCriteria.assignee +  mode.allUsers + fieldEmpty.no + reverse.no + conditionalValidation.yes
+    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    addTransitionFunction(it, 'validator', info ?.isCloud ? cloud : server, functionKey)
 }
 
 createWorkflowScheme()
@@ -133,7 +145,10 @@ createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
-['atleastOneCriteria_assigneeField_OrEmpty'].each {
+[
+        'atleastOneCriteria_assigneeField_OrEmpty',
+        'checkUser_ifConditionTrue'
+].each {
     gint.taskHelper.add([
             [action    : 'transitionIssue', ext: ": WHEN $it field is empty: ",
              expected  : 0,
@@ -144,7 +159,22 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
             ],
     ])
 }
+gint.taskHelper.add(
+        [action: 'updateIssue',ext: ': set priority High ',sleep: 1000,
+         parameters:[issue: {->defaultIssue[]}, priority: 'High']])
 
+['checkUser_ifConditionTrue'].each {
+    gint.taskHelper.add(
+            [action : 'transitionIssue',ext: ": when condition true and user not satisfies the given criteria_ $it : ",
+             expected: -3,
+             parameters:[
+                     issue: {->defaultIssue[]},
+                     transition:  it ,
+             ],
+             data : [/$errorMessage/],
+            ]
+    )
+}
 // update issue so that respective user satisfies all the criteria
 gint.taskHelper.add(
         [action: 'assignIssue',ext: ': to current user',sleep: 1000,
@@ -152,7 +182,12 @@ gint.taskHelper.add(
 
 gint.taskHelper.add( action: 'addLabels',ext: 'current user in label', parameters:[ issue : { ->defaultIssue[] }, labels: user])
 
-['currentUser','assignee','reporter','creator'].collect {
+[
+        'currentUser',
+        'assignee',
+        'reporter',
+        'creator'
+].collect {
     userCriteria.eachWithIndex { criteria, userFields, i ->
         gint.taskHelper.add([
                 [action    : 'transitionIssue', ext: ": WHEN $it IS: " + criteria,
@@ -173,7 +208,8 @@ gint.taskHelper.add( action: 'addLabels',ext: 'current user in label', parameter
         'atleastOneCriteria_currentUser',
         'atleastOneCriteria_assigneeField',
         'atleastOneCriteria_reporterField',
-        'atleastOneCriteria_creatorField'
+        'atleastOneCriteria_creatorField',
+        'checkUser_ifConditionTrue',
 ].each {
     gint.taskHelper.add(
             [action : 'transitionIssue',ext: ": satisfies all the criteria_ $it : ",
@@ -181,18 +217,22 @@ gint.taskHelper.add( action: 'addLabels',ext: 'current user in label', parameter
              parameters:[
                      issue: {->defaultIssue[]},
                      transition:  it ,
-             ]
+             ],
+                    failData: [/$errorMessage/],
             ]
     )
 }
-['currentUser_assignee_reporter_field_reverse','atleastOneCriteria_assigneeField_OrEmpty'].each {
+[
+        'currentUser_assignee_reporter_field_reverse',
+].each {
     gint.taskHelper.add(
             [action : 'transitionIssue',ext: ": satisfies all the criteria_ $it : ",
              expected: -3,
              parameters:[
                      issue: {->defaultIssue[]},
                      transition:  it ,
-             ]
+             ],
+                    data : [/$errorMessage/],
             ]
     )
 }
@@ -217,14 +257,20 @@ gint.taskHelper.add(action: 'removeWatchers', ext: ': stop current user from wat
 
 gint.taskHelper.add( action: 'updateProject',parameters: [project: projectName, lead: testUser ] )
 
-['reporter','checkFields','projectLead','assignee'].collect {
+[
+        'reporter',
+        'checkFields',
+        'projectLead',
+        'assignee'
+].collect {
     gint.taskHelper.add(
             [action : 'transitionIssue',ext: ": WHEN current user is NOT $it: ",
              expected: -3,
              parameters:[
                      issue: {->defaultIssue[]},
                      transition: 'currentUser' + it,
-             ]
+             ],
+                    data : [/$errorMessage/]
             ]
     )
 }
@@ -238,14 +284,19 @@ gint.taskHelper.add(
                 labels: testUser
         ]
 )
-['reporter','checkFields','projectLead'].each{
+[
+        'reporter',
+        'checkFields',
+        'projectLead'
+].each{
     gint.taskHelper.add(
             [action : 'transitionIssue',ext: ": WHEN assignee is NOT $it : ",
              expected: -3,
              parameters:[
                      issue: {->defaultIssue[]},
                      transition: 'assignee'+ it ,
-             ]
+             ],
+                    data :[ /$errorMessage/ ],
             ]
     )
 }
@@ -258,41 +309,57 @@ gint.taskHelper.add(
                 labels: testUser
         ]
 )
-['assignee','checkFields','projectLead'].each{
+[
+        'assignee',
+        'checkFields',
+        'projectLead'
+].each{
     gint.taskHelper.add(
             [action : 'transitionIssue',ext: ": WHEN reporter is NOT $it : ",
              expected: -3,
              parameters:[
                      issue: {->defaultIssue[]},
                      transition: 'reporter'+ it ,
-             ]
+             ],
+                    data : [/$errorMessage/],
             ]
     )
 }
-['assignee','checkFields','projectLead'].each{
+[
+        'assignee',
+        'checkFields',
+        'projectLead'
+].each{
     gint.taskHelper.add(
             [action : 'transitionIssue',ext: ": WHEN creator is NOT $it : ",
              expected: -3,
              parameters:[
                      issue: {->defaultIssue[]},
                      transition: 'creator'+ it ,
-             ]
+             ],
+                    data:[/$errorMessage/]
             ]
     )
 }
 // when specific user(current and user in selected field) not satisfies all the selected criteria
-['currentUser_assignee_reporter_field','assignee_reporter_field'].each {
+[
+        'currentUser_assignee_reporter_field',
+        'assignee_reporter_field'
+].each {
     gint.taskHelper.add(
             [action : 'transitionIssue',ext: ": not satisfies all the criteria_ $it : ",
              expected: -3,
              parameters:[
                      issue: {->defaultIssue[]},
                      transition:  it ,
-             ]
+             ],
+                    data:[/$errorMessage/],
             ]
     )
 }
-['currentUser_assignee_reporter_field_reverse'].each {
+[
+        'currentUser_assignee_reporter_field_reverse'
+].each {
     gint.taskHelper.add(
             [action : 'transitionIssue',ext: ": not satisfies all the criteria_ $it : ",
              expected: 0,
@@ -335,7 +402,8 @@ gint.taskHelper.add(
              parameters: [
                      issue: {->defaultIssue[]},
                      transition: it
-             ]
+             ],
+                    data:[/$errorMessage/],
             ]
     )
 }

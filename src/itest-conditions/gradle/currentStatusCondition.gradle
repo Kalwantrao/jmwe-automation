@@ -21,68 +21,53 @@ project.ext.statusIds = [ // statusIds.inProgress
 		inReview : 10103,
 		done : 10001
 ]
-project.ext.fields_StatusConfig = [
+def defaultFieldsServer = [
 		"correlationId="
 ]
-ext.currentStatusConditionCloudNot_yes = [
+def defaultFieldsCloud =[
 		"condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9",
-		"condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[10000],\"options\":{\"not\":true},\"expression\":\"!config.statusIds.includes(issue.status.id)\"}"
 ]
-ext.currentStatusConditionCloud = [
-		"condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9",
-		"condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[10000],\"options\":{\"not\":false},\"expression\":\"config.statusIds.includes(issue.status.id)\"}"
+def currentStatusServer = [
+		currentStatusCondition_ToDo_inStatus : [ defaultFieldsServer + "issue_statuses=$statusIds.toDo", "not="],
+		currentStatusCondition_ToDo_Reverse : [ defaultFieldsServer +  "issue_statuses=$statusIds.toDo", "not=yes" ],
 ]
+def currentStatusCloud = [
+		currentStatusCondition_ToDo_inStatus :  [ defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[10003],\"options\":{\"not\":false},\"expression\":\"config.statusIds.includes(issue.status.id)\"}" ],
+		currentStatusCondition_ToDo_Reverse : [	defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[10003],\"options\":{\"not\":true},\"expression\":\"!config.statusIds.includes(issue.status.id)\"}" ]
+]
+def currentStatus = info?.isCloud ? currentStatusCloud : currentStatusServer
 // Configuration for conditions
-['currentStatusCondition_ToDo_inStatus'].each {
-	def functionKey = info?.isCloud ? functionKey.currentStatusConditionCloud : functionKey.currentStatusConditionServer
-	def fields = info?.isCloud ? currentStatusConditionCloud : fields_StatusConfig + "issue_statuses=$statusIds.toDo"
-	addTransitionFunction(it, 'condition', fields, functionKey )
-}
-['currentStatusCondition_ToDo_Reverse'].each {
-	def functionKey = info?.isCloud ? functionKey.currentStatusConditionCloud : functionKey.currentStatusConditionServer
-	def fields = info?.isCloud ? currentStatusConditionCloudNot_yes : fields_StatusConfig + "not=yes" + "issue_statuses=$statusIds.toDo"
-	addTransitionFunction(it, 'condition', fields, functionKey)
-}
-['hideTransitionCondition'].each {
-	def functionKey = functionKey.hideTransitionConditionServer
-	def fields = fields_StatusConfig
-	addTransitionFunction(it, 'condition', fields, functionKey )
-}
-['previousStatusCondition'].each {
-	def functionKey = functionKey.previousStatusConditionServer
-	def fields = fields_StatusConfig + "issue_statuses=3"
-	addTransitionFunction(it, 'condition', fields, functionKey)
-}
-['previousStatusCondition_ReverseInProgress'].each {
-	def functionKey = functionKey.previousStatusConditionServer
-	def fields = fields_StatusConfig + "issue_statuses=3" + "not=yes"
-	addTransitionFunction(it, 'condition', fields, functionKey)
-}
-['previousStatusCondition_Reverse_ToDo'].each {
-	def functionKey = functionKey.previousStatusConditionServer
-	def fields = fields_StatusConfig + "issue_statuses=10000" + "not=yes"
-	addTransitionFunction(it, 'condition', fields, functionKey)
-}
-['previousStatusCondition_MostRecentStatusOnly'].each {
-	def functionKey = functionKey.previousStatusConditionServer
-	def fields = fields_StatusConfig + "issue_statuses=3" + "mostRecentOnly=yes"
-	addTransitionFunction(it, 'condition', fields, functionKey)
-}
-['previousStatusCondition_includeCurrentInProgress'].each {
-	def functionKey = functionKey.previousStatusConditionServer
-	def fields = fields_StatusConfig + "issue_statuses=3" + "includeCurrent=yes"
-	addTransitionFunction(it, 'condition', fields, functionKey)
-}
-['previousStatusCondition_includeCurrentToDo'].each {
-	def functionKey = functionKey.previousStatusConditionServer
-	def fields = fields_StatusConfig + "issue_statuses=10000" + "includeCurrent=yes"
-	addTransitionFunction(it, 'condition', fields, functionKey)
-}
 
-['previousStatusCondition_SelectMultipleStatuses'].each {
-	def functionKey = functionKey.previousStatusConditionServer
-	def fields = fields_StatusConfig + "issue_statuses=$statusIds.inProgress,$statusIds.inReview"
-	addTransitionFunction(it, 'condition', fields, functionKey)
+currentStatus.eachWithIndex { transitions , fields, i ->
+	def functionKey = info?.isCloud ? functionKey.currentStatusConditionCloud : functionKey.currentStatusConditionServer
+	gint.taskHelper.addSetUp([
+			[action    : 'addTransition', ext: ':' + transitions,
+			 retry: true,
+			 retrySleep: 5000,
+			 sleep: 3000,
+			 parameters: [
+					 workflow: workflow,
+					 name    : transitions,
+					 step    : info?.isCloud ? startStepCloud : startStepServer,
+					// screen  : screen
+			 ]
+			],
+			[action    : 'addTransitionFunction', ext: ':' + transitions,
+			 retry: true,
+			 retrySleep: 5000,
+			 sleep: 3000,
+			 parameters: [
+					 workflow   : workflow,
+					 transition : transitions,
+					 functionKey: functionKey,
+					 type       : 'condition',
+					 step       : info?.isCloud ? startStepCloud : startStepServer,
+					 field : fields
+			 ]
+			],
+	])
+
+
 }
 
 createWorkflowScheme()
@@ -90,13 +75,8 @@ createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
-// checking the current status To Do and previous status In Progress
 [
 		'currentStatusCondition_ToDo_Reverse',
-		'hideTransitionCondition',
-		'previousStatusCondition',
-		'previousStatusCondition_MostRecentStatusOnly',
-		'previousStatusCondition_includeCurrentInProgress',
 ].each {
 	gint.taskHelper.add([
 			action    : 'transitionIssue', ext: ' : error for ' + it,
@@ -109,13 +89,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 }
 [
 		'currentStatusCondition_ToDo_inStatus',
-		'previousStatusCondition_ReverseInProgress',
-		'In Progress',
-		'To Do',
-		'previousStatusCondition_MostRecentStatusOnly',
-		'previousStatusCondition',
-		'previousStatusCondition_includeCurrentToDo',
-		'previousStatusCondition_SelectMultipleStatuses'
 ].each {
 	gint.taskHelper.add([
 			action    : 'transitionIssue', ext: ' : success for ' + it,
@@ -126,45 +99,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			],
 	])
 }
-[
-		'previousStatusCondition_Reverse_ToDo',
-		'previousStatusCondition_ReverseInProgress'
-].each {
-	gint.taskHelper.add([
-			action    : 'transitionIssue', ext: ' : error for ' + it,
-			expected  : -1,
-			parameters: [
-					transition: it,
-					issue: { -> defaultIssue[] },
-			],
-	])
-}
-def prevStatusInReview = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'prevStatusInProgress')
-[
-		'previousStatusCondition_SelectMultipleStatuses'
-].each {
-	gint.taskHelper.add([
-			action    : 'transitionIssue', ext: ' : not allow transition when issue not has atleast one prev status ' + it,
-			expected  : -1,
-			parameters: [
-					transition: it,
-					issue: { -> prevStatusInReview[] },
-			],
-	])
-}
-[		'In Review',
-		'To Do',
-		'previousStatusCondition_SelectMultipleStatuses'
-].each {
-	gint.taskHelper.add([
-			action    : 'transitionIssue', ext: ' : allow transition when Issue is in previous status_IN PROGRESS or IN REVIEW ' + it,
-			expected  : 0,
-			parameters: [
-					transition: it,
-					issue: { -> prevStatusInReview[] },
-			],
-	])
-}
+
 
 /*
 1.  Negative  - add current status condition with in progress and check on issue when issue status is to do = Need to addTransitionFunction on workflow step

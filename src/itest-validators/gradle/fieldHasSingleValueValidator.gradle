@@ -126,6 +126,10 @@ fieldsList.eachWithIndex { field, value, i ->
 	)
 }
 
+/*
+1. check only multi valued fields - "Done"
+2 check custom multi value field - pos and neg = // ToDo "Need to add custom fields"
+ */
 
 
 

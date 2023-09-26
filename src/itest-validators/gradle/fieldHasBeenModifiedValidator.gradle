@@ -40,7 +40,6 @@ fieldsList.eachWithIndex { field, value, i ->
             addTransitionFunction(field + 'ShouldModifiedIfConditionValidationTrue' , 'validator', fields, functionKey )
 }
 
-
 createWorkflowScheme()
 createProject()
 
@@ -108,9 +107,12 @@ fieldsList.eachWithIndex { field, value, i ->
     )
 }
 
+/*
+1.single value fields and multi valued fields = "Done"
+2.conditional validation = "Done"
+positives and negatives
 
-
-
+ */
 
 
 

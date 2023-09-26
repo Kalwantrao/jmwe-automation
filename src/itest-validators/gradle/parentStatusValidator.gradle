@@ -23,9 +23,20 @@ def functionKey = functionKey.parentStatusValidatorServer
 def testUser =  info?.isCloud ? cloudUser : serverUser
 // Configuration for validator
 
+project.ext.statusListServer = [
+		inProgress: "In Progress",
+		inReview: "In Review",
+		done: "Done"
+]
+
 statusListServer.eachWithIndex { status, value, i ->
 	def fields = defaultFieldsServer +"conditionalValidation=no" + "issue_statuses=$value" + "errorMessage="
 	addTransitionFunction( 'parentStatus'+ status, 'validator', fields, functionKey )
+}
+
+['multipleStatus'].each {
+	def fields = defaultFieldsServer +"conditionalValidation=no" + "issue_statuses=$statusListServer.inProgress@@$statusListServer.done@@" + "errorMessage="
+	addTransitionFunction( it, 'validator', fields, functionKey )
 }
 
 statusListServer.eachWithIndex { status, value, i ->
@@ -51,6 +62,17 @@ def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->d
 				],
 		)
 	}
+}
+['multipleStatus'].each {
+		gint.taskHelper.add(
+				[action    : 'transitionIssue', ext: " : Should throw error when parent status is not in one of the selected_status" + it,
+				 expected  : -3,
+				 parameters: [
+						 transition: it ,
+						 issue     : { -> subtask[] },
+				 ],
+				],
+		)
 }
 gint.taskHelper.add(
 		[action: 'updateIssue', ext: ': change priority to low',
@@ -79,6 +101,30 @@ gint.taskHelper.add(
 		 ],
 		],
 )
+['multipleStatus'].each {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue', ext: " : to change the status of parent issues" + it,
+			 parameters: [
+					 transition: "Done" ,
+					 issue     : { -> defaultIssue[] },
+			 ],
+			],
+			[action    : 'transitionIssue', ext: " : Should not throw error when parent status is in one of the selected_status" + it,
+			 expected  : 0,
+			 parameters: [
+					 transition: it ,
+					 issue     : { -> subtask[] },
+			 ],
+			],
+			[action    : 'transitionIssue', ext: " : to change the status of parent issues to To Do" + it,
+			 parameters: [
+					 transition: "To Do" ,
+					 issue     : { -> defaultIssue[] },
+			 ],
+			],
+	])
+}
+
 ['parentStatus','parentStatusConditionalValidation'].each {
 	statusListServer.eachWithIndex { status, value, i ->
 		gint.taskHelper.add([
@@ -99,4 +145,8 @@ gint.taskHelper.add(
 	}
 }
 
+/*
+1. check single status and multiple status - pos and neg
+2. custom and default error msg
+*/
 

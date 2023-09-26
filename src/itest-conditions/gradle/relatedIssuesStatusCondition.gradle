@@ -1,3 +1,5 @@
+
+/*
 buildscript {
     repositories {
         maven {
@@ -14,7 +16,6 @@ apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 tearDown()
 addWorkflow()
-
 
 def fieldsToRemoveServer = [
         "currentIssue",
@@ -33,177 +34,80 @@ def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
 def functionKey = info?.isCloud? functionKey.relatedIssuesStatusConditionCloud : functionKey.relatedIssuesStatusConditionServer
 def defaultFieldsCloud = ["condition.id=7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f"]
 
-def relatedIssueStatusFieldsServer = [
-        "conditionMode=all-in-status",
-        "selectedIssueType=",
-        "correlationId="
+def defaultFields = [ "correlationId=" ]
+
+def issueType = [
+        any : [ "selectedIssueType=" ],
+        story : [ "selectedIssueType=$issueType.story" ],
+        task : [ "selectedIssueType=$issueType.task" ],
+        bug : [ "selectedIssueType=$issueType.bug" ],
+        initiative: [ "selectedIssueType=$issueType.initiative" ]
+]
+def mode = [
+        all : [ "conditionMode=all-in-status" ],
+        one : ["conditionMode=one-in-status"],
+        none : ["conditionMode=none-in-status"],
+        oneNot : ["conditionMode=one-not-in-status"]
+]
+def statuses = [
+        inProgress : ["issue_statuses=$statusIds.inProgress" ],
+        toDo : [ "issue_statuses=$statusIds.toDo" ],
+        inReview : [ "issue_statuses=$statusIds.inReview" ],
+        done : [ "issue_statuses=$statusIds.done" ]
 ]
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def fieldsMapAdd = [
-            "selectedLinkTypeId":"*",
-            "selectedLinkTypeDirection":"*",
-            "selectedIssueTypeId":"",
-            "validatorMode":"allInStatus",
-            "statusIds":[3],
-            "expression":"issue.links.every(issueLink => config.statusIds.includes(issueLink.linkedIssue.status.id))"
-    ]
-    def fieldsMapAddString = new groovy.json.JsonBuilder(fieldsMapAdd).toString()
-    def finalFieldsCloud = "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=${fieldsMapAddString}"
-    defaultFieldsCloud.add(finalFieldsCloud)
-
-    relatedIssueStatusFieldsServer[0] = "conditionMode=all-in-status"
     def transition = 'allIssuesMustBe_InProgress'
-    def fields = info?.isCloud? fieldsCloud : relatedIssueStatusFieldsServer + "selectedLinkType=$value"+"issue_statuses=$statusIds.inProgress"
-    addTransitionFunction(transition + i, 'condition', fields, functionKey)
+    def server = defaultFields + issueType.any + "selectedLinkType=$value" + mode.all + statuses.inProgress
+    addTransitionFunction(transition + i, 'condition', server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def fieldsMapAdd = [
-            "selectedLinkTypeId":"*",
-            "selectedLinkTypeDirection":"*",
-            "selectedIssueTypeId":"",
-            "validatorMode":"oneInStatus",
-            "statusIds":[3],
-            "expression":"issue.links.some(issueLink => config.statusIds.includes(issueLink.linkedIssue.status.id))"
-    ]
-    def fieldsMapAddString = new groovy.json.JsonBuilder(fieldsMapAdd).toString()
-    def finalFieldsCloud = "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=${fieldsMapAddString}"
-    defaultFieldsCloud.add(finalFieldsCloud)
-
-    relatedIssueStatusFieldsServer[0] = "conditionMode=one-in-status"
     def transition = 'atLeastOneIssueMustBe_InProgress'
-    def fields = info?.isCloud? "" : relatedIssueStatusFieldsServer + "selectedLinkType=$value" +"issue_statuses=$statusIds.inProgress"
-    addTransitionFunction( transition + i, 'condition', fields, functionKey)
+    def server = defaultFields + issueType.any + "selectedLinkType=$value" + mode.one + statuses.inProgress
+    addTransitionFunction( transition + i, 'condition', server, functionKey)
 }
 relatedIssue.eachWithIndex { key, value, i ->
-    def fieldsMapAdd = [
-            "selectedLinkTypeId":"*",
-            "selectedLinkTypeDirection":"*",
-            "selectedIssueTypeId":"",
-            "validatorMode":"noneInStatus",
-            "statusIds":[3],
-            "expression":"issue.links.every(issueLink => !config.statusIds.includes(issueLink.linkedIssue.status.id))"
-    ]
-    def fieldsMapAddString = new groovy.json.JsonBuilder(fieldsMapAdd).toString()
-    def finalFieldsCloud = "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=${fieldsMapAddString}"
-    defaultFieldsCloud.add(finalFieldsCloud)
-
-    relatedIssueStatusFieldsServer[0] = "conditionMode=none-in-status"
     def transition = 'noIssueMustBe_InProgress'
-    def fields = info?.isCloud? "" : relatedIssueStatusFieldsServer + "selectedLinkType=$value" + "issue_statuses=$statusIds.inProgress"
-    addTransitionFunction(transition + i, 'condition', fields, functionKey)
+    def server = defaultFields + issueType.any + "selectedLinkType=$value" + mode.none + statuses.inProgress
+    addTransitionFunction(transition + i, 'condition', server, functionKey)
 }
 relatedIssue.eachWithIndex { key, value, i ->
-    def fieldsMapAdd = [
-            "selectedLinkTypeId":"*",
-            "selectedLinkTypeDirection":"*",
-            "selectedIssueTypeId":"",
-            "validatorMode":"oneNotInStatus",
-            "statusIds":[3],
-            "expression":"issue.links.some(issueLink => !config.statusIds.includes(issueLink.linkedIssue.status.id))"
-    ]
-    def fieldsMapAddString = new groovy.json.JsonBuilder(fieldsMapAdd).toString()
-    def finalFieldsCloud = "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=${fieldsMapAddString}"
-    defaultFieldsCloud.add(finalFieldsCloud)
-
-    relatedIssueStatusFieldsServer[0] = "conditionMode=one-not-in-status"
     def transition = 'oneIssueMustNotBe_InProgress'
-    def fields = info?.isCloud? "" : relatedIssueStatusFieldsServer + "selectedLinkType=$value" + "issue_statuses=$statusIds.inProgress"
-    addTransitionFunction(transition + i, 'condition', fields, functionKey)
+    def server = defaultFields + issueType.any + "selectedLinkType=$value" + mode.oneNot + statuses.inProgress
+    addTransitionFunction(transition + i, 'condition', server, functionKey)
 }
 relatedIssue.eachWithIndex { key, value, i ->
-    def fieldsMapAdd = [
-            "selectedLinkTypeId":"*",
-            "selectedLinkTypeDirection":"*",
-            "selectedIssueTypeId":"",
-            "validatorMode":"allInStatus",
-            "statusIds":[10000],
-            "expression":"issue.links.every(issueLink => config.statusIds.includes(issueLink.linkedIssue.status.id))"
-    ]
-    def fieldsMapAddString = new groovy.json.JsonBuilder(fieldsMapAdd).toString()
-    def finalFieldsCloud = "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=${fieldsMapAddString}"
-    defaultFieldsCloud.add(finalFieldsCloud)
-
-    relatedIssueStatusFieldsServer[0] = "conditionMode=all-in-status"
     def transition = 'allIssuesMustBe_ToDo'
-    def fields = info?.isCloud? fieldsCloud : relatedIssueStatusFieldsServer + "selectedLinkType=$value"+"issue_statuses=$statusIds.toDo"
-    addTransitionFunction(transition + i, 'condition', fields, functionKey)
+    def server = defaultFields + issueType.any + "selectedLinkType=$value" + mode.all + statuses.toDo
+    addTransitionFunction(transition + i, 'condition', server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def fieldsMapAdd = [
-            "selectedLinkTypeId":"*",
-            "selectedLinkTypeDirection":"*",
-            "selectedIssueTypeId":"",
-            "validatorMode":"oneInStatus",
-            "statusIds":[10000],
-            "expression":"issue.links.some(issueLink => config.statusIds.includes(issueLink.linkedIssue.status.id))"
-    ]
-    def fieldsMapAddString = new groovy.json.JsonBuilder(fieldsMapAdd).toString()
-    def finalFieldsCloud = "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=${fieldsMapAddString}"
-    defaultFieldsCloud.add(finalFieldsCloud)
-
-    relatedIssueStatusFieldsServer[0] = "conditionMode=one-in-status"
+    def server = defaultFields + issueType.any + "selectedLinkType=$value" + mode.one + statuses.toDo
     def transition = 'atLeastOneIssueMustBe_ToDo'
-    def fields = info?.isCloud? "" : relatedIssueStatusFieldsServer + "selectedLinkType=$value" +"issue_statuses=$statusIds.toDo"
-    addTransitionFunction( transition + i, 'condition', fields, functionKey)
+    addTransitionFunction( transition + i, 'condition', server, functionKey)
 }
-relatedIssue.eachWithIndex { key, value, i ->
-    def fieldsMapAdd = [
-            "selectedLinkTypeId":"*",
-            "selectedLinkTypeDirection":"*",
-            "selectedIssueTypeId":"",
-            "validatorMode":"noneInStatus",
-            "statusIds":[10000],
-            "expression":"issue.links.every(issueLink => !config.statusIds.includes(issueLink.linkedIssue.status.id))"
-    ]
-    def fieldsMapAddString = new groovy.json.JsonBuilder(fieldsMapAdd).toString()
-    def finalFieldsCloud = "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=${fieldsMapAddString}"
-    defaultFieldsCloud.add(finalFieldsCloud)
 
-    relatedIssueStatusFieldsServer[0] = "conditionMode=none-in-status"
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'noIssueMustBe_ToDo'
-    def fields = info?.isCloud? "" : relatedIssueStatusFieldsServer + "selectedLinkType=$value" + "issue_statuses=$statusIds.toDo"
-    addTransitionFunction(transition + i, 'condition', fields, functionKey)
+    def server = defaultFields + issueType.any + "selectedLinkType=$value" + mode.none + statuses.toDo
+    addTransitionFunction(transition + i, 'condition', server, functionKey)
 }
 relatedIssue.eachWithIndex { key, value, i ->
-    def fieldsMapAdd = [
-            "selectedLinkTypeId":"*",
-            "selectedLinkTypeDirection":"*",
-            "selectedIssueTypeId":"",
-            "validatorMode":"oneNotInStatus",
-            "statusIds":[10000],
-            "expression":"issue.links.some(issueLink => !config.statusIds.includes(issueLink.linkedIssue.status.id))"
-    ]
-    def fieldsMapAddString = new groovy.json.JsonBuilder(fieldsMapAdd).toString()
-    def finalFieldsCloud = "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=${fieldsMapAddString}"
-    defaultFieldsCloud.add(finalFieldsCloud)
-
-    relatedIssueStatusFieldsServer[0] = "conditionMode=one-not-in-status"
+    def server = defaultFields + issueType.any + "selectedLinkType=$value" + mode.oneNot + statuses.toDo
     def transition = 'oneIssueMustNotBe_ToDo'
-    def fields = info?.isCloud? "" : relatedIssueStatusFieldsServer + "selectedLinkType=$value" + "issue_statuses=$statusIds.toDo"
-    addTransitionFunction(transition + i, 'condition', fields, functionKey)
+    addTransitionFunction(transition + i, 'condition', server, functionKey)
 }
+
 ['allIssuesInProgress_Task'].each {
-    def fieldsMapAdd = [
-            "selectedLinkTypeId":"*",
-            "selectedLinkTypeDirection":"*",
-            "selectedIssueTypeId":"",
-            "validatorMode":"allInStatus",
-            "statusIds":[3],
-            "expression":"issue.links.every(issueLink => config.statusIds.includes(issueLink.linkedIssue.status.id))"
-    ]
-    def fieldsMapAddString = new groovy.json.JsonBuilder(fieldsMapAdd).toString()
-    def finalFieldsCloud = "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=${fieldsMapAddString}"
-    defaultFieldsCloud.add(finalFieldsCloud)
-
-    relatedIssueStatusFieldsServer[0] = "conditionMode=all-in-status"
-    relatedIssueStatusFieldsServer[1] = "selectedIssueType=$TaskIssueType"
-    def fields = info?.isCloud? fieldsCloud : relatedIssueStatusFieldsServer + "selectedLinkType=$relatedIssueServer.parentIssue"+"issue_statuses=$statusIds.inProgress"
-    addTransitionFunction(it, 'condition', fields, functionKey)
+    def server = defaultFields + issueType.task + "selectedLinkType=$relatedIssueServer.parentIssue" + mode.all + statuses.inProgress
+    addTransitionFunction(it, 'condition', server, functionKey)
 }
-
+['allIssuesInProgress_Story'].each {
+    def server = defaultFields + issueType.story + "selectedLinkType=$relatedIssueServer.parentIssue" + mode.all + statuses.inProgress
+    addTransitionFunction(it, 'condition', server, functionKey)
+}
 
 createWorkflowScheme()
 createProject()
@@ -281,14 +185,16 @@ def relatedIssuesMapCloud = [
         {->duplicates[]} : {->issueLinks[]},
         {->issueLinks[]} : {->relatesTo[]},
 ]
+
+
 def relatedIssuesMapServer = [
-        {->parent[]} : {->subtask[]},
+       {->parent[]} : {->subtask[]},
         {->subtask[]} : {->parent[]},
         {->epic[]} : {->issueBelongsToEpic[]},
         {->issueBelongsToEpic[]} : {->epic[]},
         {-> initiative[]} : {->epic_initiative[]},
         {-> epic_initiative[]} : {->initiative[]},
-        {->issueLinks[]} : {->blocks[]},
+       {->issueLinks[]} : {->blocks[]},
         {->issueLinks[]} : {->blocks[]},
         {->blocks[]} : {->issueLinks[]},
         {->issueLinks[]} : {->clones[]},
@@ -328,6 +234,7 @@ def relatedIssuesMap = info?.isCloud ? relatedIssuesMapCloud : relatedIssuesMapS
         ])
     }
 }
+
 ['oneIssueMustNotBe_ToDo','noIssueMustBe_ToDo'].collect {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
@@ -356,7 +263,6 @@ def relatedIssuesMap = info?.isCloud ? relatedIssuesMapCloud : relatedIssuesMapS
     }
 }
 
-
 ['allIssuesInProgress_Task'].each {
     gint.taskHelper.add([
             [action    : 'transitionIssue', ext: ': when issueType is task type :' + it,
@@ -382,9 +288,33 @@ def relatedIssuesMap = info?.isCloud ? relatedIssuesMapCloud : relatedIssuesMapS
     ]
     )
 }
+['allIssuesInProgress_Story'].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: ': when issueType is story type :' + it,
+             expected  : -1,
+             parameters: [
+                     issue     : {->subtask[]},
+                     transition: it,
+             ],
+            ],
+            [action: 'updateIssue',ext: it,
+             parameters: [
+                     issue: {->parent[]},
+                     issueType: 'Task'
+             ]
+            ],
+            [action    : 'transitionIssue', ext: ': when issueType is task type :' + it,
+             expected  : 0,
+             parameters: [
+                     issue     : {->subtask[]},
+                     transition: it,
+             ],
+            ],
+    ]
+    )
+}
 
-
-
+ */
 
 /*
 1. Each sub-task of the current issue must be in one of the following statuses: IN PROGRESS - positives and negatives = "DONE"

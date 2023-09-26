@@ -14,30 +14,44 @@ apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 tearDown()
 addWorkflow()
-
+def errorMessage = "provide required field"
+def errorMessageWhenConditionalvalidationTrue = "provide required field if conditional validation returns true"
 def defaultFieldsServer = [
 		"correlationId=",
+]
+def defaultFieldsCloud = [
+		"validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a",
 ]
 def fieldsList = [
 		labels : 'labels',
 		fixVersions : 'fixVersions',
 		affectsVersions : 'versions',
 		components : 'components',
-		assignee: 'assignee',
 ]
-def functionKey = functionKey.fieldRequiredValidatorServer
+def functionKey = info?.isCloud ? functionKey.fieldsRequiredValidatorCloud : functionKey.fieldRequiredValidatorServer
 
 def testUser =  info?.isCloud ? cloudUser : serverUser
 // Configuration for validator
 
 fieldsList.eachWithIndex { field, value, i ->
-	def fields = defaultFieldsServer +"conditionalValidation=no" + "field=$value"
+	def server = defaultFieldsServer +"conditionalValidation=no" + "field=$value" + "errorMessage=$errorMessage"
+	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"conditionalValidation\":false,\"fields\":\"$value\",\"errorMessage\":\"$errorMessage\",\"expression\":\"!!issue.${value} && issue.${value}.length > 0\"}"
+	def fields = info?.isCloud ? cloud : server
 	addTransitionFunction( field  + 'Required', 'validator', fields, functionKey )
 }
 
 fieldsList.eachWithIndex { field, value, i ->
-	def fields = defaultFieldsServer +"conditionalValidation=yes" + "field=$value" + "conditionalValidationScript=$groovyExpression.getIssuetype"
+	def server = defaultFieldsServer +"conditionalValidation=yes" + "field=$value" + "conditionalValidationScript=$groovyExpression.getIssuetype" + "errorMessage=$errorMessage"
+	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"conditionalValidation\":true,\"conditionalValidationExpression\":\"$jiraExpression.getIssueType\",\"fields\":\"$value\",\"errorMessage\":\"$errorMessageWhenConditionalvalidationTrue\",\"expression\":\"!($jiraExpression.getIssueType) || !!issue.${value} && issue.${value}.length > 0\"}"
+	def fields = info?.isCloud ? cloud : server
 	addTransitionFunction(field + 'RequiredConditionalValidation' , 'validator', fields, functionKey )
+}
+
+['RequiredMultipleFields'].each{
+	def server = defaultFieldsServer + "conditionalValidation=no" + "field=labels,assignee,components" + "errorMessage=$errorMessage"
+	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"conditionalValidation\":false,\"fields\":\"labels,assignee,components\",\"errorMessage\":\"$errorMessage\",\"expression\":\"!!issue.labels && issue.labels.length > 0 && issue.assignee != null && (typeof(issue.assignee) != 'List' || issue.assignee.length > 0) && !!issue.components && issue.components.length > 0\"}"
+	def fields = info?.isCloud ? cloud : server
+	addTransitionFunction( it, 'validator', fields, functionKey )
 }
 
 createWorkflowScheme()
@@ -59,6 +73,7 @@ createProject()
 			]
 	])
 }
+
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
 // checking the current status To Do and previous status In Progress
@@ -71,28 +86,32 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 						 transition: field + it,
 						 issue     : { -> defaultIssue[] },
 				 ],
+						data: ["$errorMessage"],
 				],
 		)
 	}
 }
 gint.taskHelper.add(
 		[action: 'updateIssue', ext: ': change issue type',
+				sleepAfter: 3000,
 		 parameters: [
 				 issue: {->defaultIssue[]},
 				 issueType: 'Story',
 		 ]
 		],
 )
-fieldsList.eachWithIndex { field, value, i ->
-	gint.taskHelper.add(
-			[action    : 'transitionIssue', ext: " : should not throw error when conditional validation false : $field",
-			 expected  : 0,
-			 parameters: [
-					 transition: field + 'RequiredConditionalValidation',
-					 issue: { -> defaultIssue[] },
-			 ],
-			]
-	)
+['RequiredConditionalValidation'].each {
+	fieldsList.eachWithIndex { field, value, i ->
+		gint.taskHelper.add(
+				[action    : 'transitionIssue', ext: " : should not throw error when conditional validation false : $field",
+				 expected  : 0,
+				 parameters: [
+						 transition: field + it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				]
+		)
+	}
 }
 gint.taskHelper.add(
 		[action: 'updateIssue', ext: ': add required field values',
@@ -121,6 +140,48 @@ gint.taskHelper.add(
 	}
 }
 
+def multipleFields = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'multipleFields')
+
+['RequiredMultipleFields'].each {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue', ext: " : Should throw error when all require field not provided" + it,
+			 expected  : -3,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> multipleFields[] },
+			 ],
+					data: [/$errorMessage/],
+			],
+			[action    : 'transitionIssue', ext: " : Should throw error when only one require field provided" + it,
+			 expected  : -3,
+			 sleep: 3000,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> multipleFields[] },
+					 assignee: user
+			 ],
+			 data: [/$errorMessage/],
+			],
+			[action    : 'transitionIssue', ext: " : Should not throw error when all require field provided" + it,
+			 expected  : 0,
+			 sleep: 3000,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> multipleFields[] },
+					 assignee: user,
+					 labels: 'test_label',
+					 components: 'component1'
+			 ],
+			 failData: [/$errorMessage/],
+			],
+	])
+}
+
+/*
+1. single and multi value fields = "Done"
+2. check with custom field and normal fields = "ToDo - need to configure custom field"
+3. check with multiple fields and provide value for any one value and check error  = "Done"
+ */
 
 
 
