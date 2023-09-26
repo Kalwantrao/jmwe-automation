@@ -1,3 +1,167 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+
+tearDown()
+addWorkflow()
+
+def functionKey = functionKey.copyIssueFieldsPfServer
+def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
+def testUser = info?.isCloud? cloudUser : serverUser
+def defaultFieldsServer = [
+        "throwExceptions=false",
+        "oldValue=",
+        "sendNotifications=no",
+        "correlationId=",
+]
+
+def fieldsToCopy = [
+        labels : ["copyFieldsConfig=[{\"sourceField\":\"labels\",\"destinationField\":\"labels\"}]"],
+        ifEmpty : ["copyFieldsConfig=[{\"options\":{\"copyOnlyIfNotSet\":true,\"sourceField\":\"labels\",\"destinationField\":\"labels\"}"],
+        createMissing : ["copyFieldsConfig=[{\"options\":{\"createMissingValues\":true,\"sourceField\":\"labels\",\"destinationField\":\"components\"}"],
+        ignoreEmpty : ["copyFieldsConfig=[{\"options\":{\"ignoreEmptyValue\":true},\"sourceField\":\"labels\",\"destinationField\":\"labels\"}"],
+        appendValues : ["copyFieldsConfig=[{\"options\":{\"appendValues\":true},\"sourceField\":\"labels\",\"destinationField\":\"labels\"}"],
+        useOldValue : ["copyFieldsConfig=[{\"options\":{\"useOldValue\":true},\"sourceField\":\"labels\",\"destinationField\":\"labels\"}"],
+        selectAllOptions : ["copyFieldsConfig=[{\"options\":{\"copyOnlyIfNotSet\":true,\"createMissingValues\":true,\"ignoreEmptyValue\":true,\"appendValues\":true,\"useOldValue\":true},\"sourceField\":\"labels\",\"destinationField\":\"labels\"}"]
+]
+
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def fields = defaultFieldsServer + fieldsToCopy.labels + "selectedLinkTypeSource=currentIssue:*" + "selectedLinkTypeDestination=$value" + conditionalExecution.false + runAsUser.currentUser
+    addTransitionFunction('copyLabelsFromCurrentIssueTo'+ i, 'postfunction', fields, functionKey)
+}
+
+fieldsToCopy.each {options, fieldsForOptions ->
+    relatedIssue.take(2).eachWithIndex { key, value, i ->
+        def fields = defaultFieldsServer + fieldsForOptions + "selectedLinkTypeSource=$value" + "selectedLinkTypeDestination=currentIssue:*" + conditionalExecution.false + runAsUser.currentUser
+        addTransitionFunction(options + 'CopyLabelsFromCurrentIssueTo' + i, 'postfunction', fields, functionKey)
+    }
+}
+
+
+createWorkflowScheme()
+createProject()
+
+// set issue status to In Progress
+
+def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
+def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
+def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
+def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[]} ], 'BelongsToEpic')
+def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Initiative')
+def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
+def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
+def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
+def isBlockedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isBlockedBy')
+def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
+def isClonedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isClonedBy')
+def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
+def isDuplicatedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isDuplicatedBy')
+def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
+
+updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
+
+def linkIssuesMap = [
+
+        blocks : {->blocks[]},
+        'is blocked by' : {->isBlockedBy[]},
+        clones : {->clones[]},
+        'is cloned by' : {->isClonedBy[]},
+        duplicates : {->duplicates[]},
+        'is duplicated by' : {->isDuplicatedBy[]},
+        'relates to': {->relatesTo[]}
+]
+
+linkIssuesMap.eachWithIndex { key, value, i ->
+    linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
+}
+
+def relatedIssuesMap = [
+        {->current[]} : {->current[]},
+        {->parent[]} : {->subtask[]},
+        {->subtask[]} : {->parent[]},
+        {->epic[]} : {->issueBelongsToEpic[]},
+        {->issueBelongsToEpic[]} : {->epic[]},
+        {-> initiative[]} : {->epic_initiative[]},
+        {->epic_initiative[]} : {-> initiative[]},
+        {->issueLinks[]} : {->blocks[]},
+        {->issueLinks[]} : {->blocks[]},
+        {->issueLinks[]} : {->isBlockedBy[]},
+        {->issueLinks[]} : {->clones[]},
+        {->issueLinks[]} : {->isClonedBy[]},
+        {->issueLinks[]} : {->duplicates[]},
+        {->issueLinks[]} : {->isDuplicatedBy[]},
+        {->issueLinks[]} : {->relatesTo[]},
+        {->issueLinks[]} : {->relatesTo[]},
+        {->issueLinks[]} : {->relatesTo[]},
+]
+
+def labelToCheck = "test_labels"
+relatedIssuesMap.eachWithIndex{ key, value, i ->
+    gint.taskHelper.add(
+            action: 'addLabels' ,ext : " : to copy to target issues: " + i,
+            parameters: [
+                    issue: key,
+                    labels: labelToCheck
+            ]
+    )
+}
+
+['copyLabelsFromCurrentIssueTo'].collect {
+        relatedIssuesMap.eachWithIndex { key, value, i ->
+            gint.taskHelper.add([
+                    [action    : 'transitionIssue', ext: it + i,
+                     parameters: [
+                             issue     : key,
+                             transition: it + i,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     ext       : it + i,
+                     parameters: [
+                             issue: value,
+                             field: "Labels"
+                     ],
+                     data      : [/Labels  . . . . . . . . . . . : $labelToCheck/],
+                    ],
+            ])
+        }
+}
+
+
+
+/*
+
+
+(1..2).each {
+    gint.taskHelper.addSetUp([
+            [action: 'addVersion', ext: ': create versions : ' + it,
+             parameters: [
+                     project: projectName,
+                     version: it
+             ]
+            ],
+            [action: 'addComponent', ext: ': create Component : ' + it,
+             parameters: [
+                     project: projectName,
+                     component: 'component' + it
+             ],
+            ]
+    ])
+}
+
+
 import groovy.json.JsonSlurper
 import java.nio.file.Paths
 
@@ -147,4 +311,4 @@ getIssueInformation({-> useOldValue[0]}, ~/Labels  . . . . . . . . . . . : compo
 def doNotUseOldValue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue',components: 'component1', labels: 'component2']}, 'doNotUseOldValue')
 transitionIssue(transition+18, {-> doNotUseOldValue[0]}, 0, 'doNotUseOldValue', [components: 'component2'], null)
 getIssueInformation({-> doNotUseOldValue[0]}, ~/Labels  . . . . . . . . . . . : component2/, 'TC_21-doNotUseOldValue')
-
+*/

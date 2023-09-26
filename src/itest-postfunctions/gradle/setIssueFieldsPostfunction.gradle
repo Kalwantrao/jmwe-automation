@@ -13,19 +13,17 @@ apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 tearDown()
-addWorkflow()
+//addWorkflow()
 
 def functionKey = functionKey.setIssueFieldsPfServer
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
-
+def testUser = info?.isCloud? cloudUser : serverUser
 def defaultFieldsServer = [
-            "useGroovyCondition=false",
-            "groovyExpression=",
-            "runAsUser=",
             "throwExceptions=",
             "sendNotifications=",
             "correlationId=",
 ]
+
 def fieldsOptions = [
         noOption : ["fields=[{\"fieldId\":\"labels\",\"value\":\"default_value\",\"options\":[],\"isTemplate\":true}]"],
         ifEmpty : ["fields=[{\"fieldId\":\"labels\",\"value\":\"ifEmpty\",\"options\":[\"copyOnlyIfNotSet\"],\"isTemplate\":true}]"],
@@ -33,35 +31,88 @@ def fieldsOptions = [
         ignoreEmptyValue : ["fields=[{\"fieldId\":\"labels\",\"value\":\"\",\"options\":[\"ignoreEmptyValue\"],\"isTemplate\":true}]"],
         appendValues : ["fields=[{\"fieldId\":\"labels\",\"value\":\"appendValues\",\"options\":[\"appendValues\"],\"isTemplate\":true}]"],
         allOptions : ["fields=[{\"fieldId\":\"labels\",\"value\":\"test_label\",\"options\":[\"copyOnlyIfNotSet\",\"createMissingValues\",\"ignoreEmptyValue\",\"appendValues\"],\"isTemplate\":true}]"],
+        removeValues : ["fields=[{\"fieldId\":\"components\",\"value\":\"createMissingValues\",\"options\":[\"removeValues\"],\"isTemplate\":true}]"],
+        conditionalExecution : ["fields=[{\"fieldId\":\"labels\",\"value\":\"conditionalExecution\",\"options\":[],\"isTemplate\":true}]"],
+        runAsCurrentUser : ["fields=[{\"fieldId\":\"labels\",\"value\":\"runAsCurrentUser\",\"options\":[],\"isTemplate\":true}]"],
+        runAsSpecificUser : ["fields=[{\"fieldId\":\"labels\",\"value\":\"runAsSpecificUser\",\"options\":[],\"isTemplate\":true}]"],
+        runAsUserInFieldAssignee : ["fields=[{\"fieldId\":\"labels\",\"value\":\"runAsUserInFieldAssignee\",\"options\":[],\"isTemplate\":true}]"],
+        runAsUserInFieldReporter : ["fields=[{\"fieldId\":\"labels\",\"value\":\"runAsUserInFieldReporter\",\"options\":[],\"isTemplate\":true}]"],
+        runAsUserInFieldCreator : ["fields=[{\"fieldId\":\"labels\",\"value\":\"runAsUserInFieldCreator\",\"options\":[],\"isTemplate\":true}]"],
+        runAsUserReturnFromScript : ["fields=[{\"fieldId\":\"labels\",\"value\":\"runAsUserReturnFromScript\",\"options\":[],\"isTemplate\":true}]"],
 ]
-
+/*
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + fieldsOptions.noOption + "selectedLinkType=$value"
+    def fields = defaultFieldsServer + conditionalExecution.false +  fieldsOptions.noOption + "selectedLinkType=$value" + runAsUser.currentUser
     addTransitionFunction('setFieldLabelsToTargetIssue' + i, 'postfunction', fields, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + fieldsOptions.ifEmpty + "selectedLinkType=$value"
+    def fields = defaultFieldsServer + conditionalExecution.false+ fieldsOptions.ifEmpty + "selectedLinkType=$value" + runAsUser.currentUser
     addTransitionFunction('ifEmpty' + i, 'postfunction', fields, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + fieldsOptions.createMissingValues + "selectedLinkType=$value"
+    def fields = defaultFieldsServer + conditionalExecution.false + fieldsOptions.createMissingValues + "selectedLinkType=$value" + runAsUser.currentUser
     addTransitionFunction('createMissingValueComponent' + i, 'postfunction', fields, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + fieldsOptions.ignoreEmptyValue + "selectedLinkType=$value"
+    def fields = defaultFieldsServer + conditionalExecution.false + fieldsOptions.ignoreEmptyValue + "selectedLinkType=$value" + runAsUser.currentUser
     addTransitionFunction('ignoreEmptyValue' + i, 'postfunction', fields, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + fieldsOptions.appendValues + "selectedLinkType=$value"
+    def fields = defaultFieldsServer + conditionalExecution.false + fieldsOptions.appendValues + "selectedLinkType=$value" + runAsUser.currentUser
     addTransitionFunction('appendValues' + i, 'postfunction', fields, functionKey)
 }
 
-createWorkflowScheme()
+relatedIssue.eachWithIndex { key, value, i ->
+    def fields = defaultFieldsServer + conditionalExecution.false + fieldsOptions.removeValues + "selectedLinkType=$value" + runAsUser.currentUser
+    addTransitionFunction('removeValues' + i, 'postfunction', fields, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def fields = defaultFieldsServer + conditionalExecution.true +  fieldsOptions.conditionalExecution + "selectedLinkType=$value" + runAsUser.currentUser
+    addTransitionFunction('conditionalExecution' + i, 'postfunction', fields, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def fields = defaultFieldsServer + runAsUser.currentUser +  conditionalExecution.false +  fieldsOptions.runAsCurrentUser + "selectedLinkType=$value"
+    addTransitionFunction('runAsCurrentUser' + i, 'postfunction', fields, functionKey)
+    moveTransitionFunction('runAsCurrentUser'+ i, 3)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def fields = defaultFieldsServer + runAsUser.specificUser +  conditionalExecution.false +  fieldsOptions.runAsSpecificUser + "selectedLinkType=$value"
+    addTransitionFunction('runAsSpecificUser' + i, 'postfunction', fields, functionKey)
+    moveTransitionFunction('runAsSpecificUser'+ i, 4)
+}
+relatedIssue.eachWithIndex { key, value, i ->
+    def fields = defaultFieldsServer + runAsUser.userInFieldAssignee +  conditionalExecution.false +  fieldsOptions.runAsUserInFieldAssignee + "selectedLinkType=$value"
+    addTransitionFunction('runAsUserInFieldAssignee' + i, 'postfunction', fields, functionKey)
+    moveTransitionFunction('runAsUserInFieldAssignee'+ i, 4)
+}
+relatedIssue.eachWithIndex { key, value, i ->
+    def fields = defaultFieldsServer + runAsUser.userInFieldReporter +  conditionalExecution.false +  fieldsOptions.runAsUserInFieldReporter + "selectedLinkType=$value"
+    addTransitionFunction('runAsUserInFieldReporter' + i, 'postfunction', fields, functionKey)
+    moveTransitionFunction('runAsUserInFieldReporter'+ i, 4)
+}
+relatedIssue.eachWithIndex { key, value, i ->
+    def fields = defaultFieldsServer + runAsUser.userInFieldCreator +  conditionalExecution.false +  fieldsOptions.runAsUserInFieldCreator + "selectedLinkType=$value"
+    addTransitionFunction('runAsUserInFieldCreator' + i, 'postfunction', fields, functionKey)
+    moveTransitionFunction('runAsUserInFieldCreator'+ i, 4)
+}
+relatedIssue.eachWithIndex { key, value, i ->
+    def fields = defaultFieldsServer + runAsUser.userFromScript +  conditionalExecution.false +  fieldsOptions.runAsUserReturnFromScript + "selectedLinkType=$value"
+    addTransitionFunction('runAsUserReturnFromScript' + i, 'postfunction', fields, functionKey)
+    moveTransitionFunction('runAsUserReturnFromScript'+ i, 4)
+}
+ */
+
+// createWorkflowScheme()
+associateWorkflow(projectKey)
 createProject()
+
 (1..2).each {
     gint.taskHelper.addSetUp([
             [action: 'addVersion', ext: ': create versions : ' + it,
@@ -94,12 +145,12 @@ def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
 def isClonedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isClonedBy')
 def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
 def isDuplicatedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isDuplicatedBy')
-def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
+def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesTo')
+def jqlIssue = createIssue([type: 'Task', summary: "$jqlSearchExpression"], 'jqlIssue')
 
 updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
 
 def linkIssuesMap = [
-
         blocks : {->blocks[]},
         'is blocked by' : {->isBlockedBy[]},
         clones : {->clones[]},
@@ -130,8 +181,9 @@ def relatedIssuesMap = [
         {->issueLinks[]} : {->isDuplicatedBy[]},
         {->issueLinks[]} : {->relatesTo[]},
         {->issueLinks[]} : {->relatesTo[]},
-        {->issueLinks[]} : {->relatesTo[]},
+        {->issueLinks[]} : {->jqlIssue[]},
 ]
+
 ['ifEmpty'].collect {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
@@ -167,7 +219,7 @@ def relatedIssuesMap = [
                          issue: value,
                          field: "Labels"
                  ],
-                 data      : [/Labels  . . . . . . . . . . . : test_label/],
+                 data      : [/Labels  . . . . . . . . . . . : default_value/],
                 ],
         ])
     }
@@ -183,6 +235,26 @@ def relatedIssuesMap = [
                 ],
                 [action    : 'getFieldValue',
                  ext       : "Set only if field is empty_when not empty" + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : test_label/],
+                ],
+        ])
+    }
+}
+['ignoreEmptyValue'].collect {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': Ignore empty values' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : "Ignore empty values" + it + i,
                  parameters: [
                          issue: value,
                          field: "Labels"
@@ -212,26 +284,7 @@ def relatedIssuesMap = [
         ])
     }
 }
-['ignoreEmptyValue'].collect {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ': Ignore empty values' + it + i,
-                 parameters: [
-                         issue     : key,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getFieldValue',
-                 ext       : "Ignore empty values" + it + i,
-                 parameters: [
-                         issue: value,
-                         field: "Labels"
-                 ],
-                 data      : [/Labels  . . . . . . . . . . . : test_label/],
-                ],
-        ])
-    }
-}
+
 ['createMissingValueComponent'].collect {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
@@ -248,6 +301,150 @@ def relatedIssuesMap = [
                          field: "Component/s"
                  ],
                  data      : ["Component/s . . . . . . . . . : createMissingValue"],
+                ],
+        ])
+    }
+}
+['removeValues'].collect {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ':Remove source value from destination field' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : "Remove source value from destination field" + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Component/s"
+                 ],
+                 failData      : ["Component/s . . . . . . . . . : createMissingValue"],
+                ],
+        ])
+    }
+}
+
+[
+        'runAsCurrentUser',
+        'runAsUserInFieldReporter',
+        'runAsUserInFieldCreator',
+        'runAsUserReturnFromScript',
+].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ':' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getIssueHistoryList',
+                 ext       : ": " + it + i,
+                 parameters: [
+                         issue: value,
+                         outputType: "text",
+                         select: "Field:labels",
+                         columns: "Author,Field,'To String'"
+                 ],
+                 data      : ["$user labels $it"],
+                ],
+        ])
+    }
+}
+['runAsUserInFieldAssignee'].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add(
+                [action    : 'transitionIssue', ext: ': when assignee field is empty and check :' + it + i,
+                 expected: -3,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+        )
+    }
+}
+relatedIssuesMap.eachWithIndex{ key, value,  i ->
+    gint.taskHelper.add(
+            action: 'assignIssue', ext: ": to $testUser " + i,
+            parameters: [
+                    issue: key,
+                    userId: testUser
+            ]
+    )
+}
+[
+        'runAsUserInFieldAssignee',
+        'runAsSpecificUser'
+].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ':' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getIssueHistoryList',
+                 ext       : ": " + it + i,
+                 parameters: [
+                         issue: value,
+                         outputType: "text",
+                         select: "Field:labels",
+                         columns: "Author,Field,'To String'"
+                 ],
+                 data      : ["$testUser labels $it"],
+                ],
+        ])
+    }
+}
+['conditionalExecution'].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': ' + it +' : when false' + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : ": $it when false" +  i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 failData      : [/Labels  . . . . . . . . . . . : conditionalExecution/],
+                ],
+        ])
+    }
+}
+relatedIssuesMap.eachWithIndex{ key, value,  i ->
+    gint.taskHelper.add(
+            action: 'updateIssue', ext: ": set priority High to check conditional execution true " + i,
+            parameters: [
+                    issue: key,
+                    priority: 'High'
+            ]
+    )
+}
+['conditionalExecution'].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': ' + it +' : when true' + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : ": $it when true" +  i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : conditionalExecution/],
                 ],
         ])
     }

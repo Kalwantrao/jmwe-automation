@@ -1,6 +1,3 @@
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
 buildscript {
     repositories {
         maven {
@@ -13,47 +10,151 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def transition = 'scriptedGroovyOperationOnIssue'
-def workflow = project
-def screen = project
-def user = info.user
-def userId = 'jmwe_qa'
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/ScriptedGroovyOperationOnIssue${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
-def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-function'	//function key for current status condition
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+tearDown()
+//tearDownUsers()
+addWorkflow()
 
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
+def defaultFields = [
+        "throwExceptions=false",
+        "correlationId=",
+]
 
-addUsers(userId)
+def script = [
+        setLabels : [ "groovyExpression=issue.setFieldValue('Labels','test_label')","scriptDescription=" ],
+        currentUser : [ "groovyExpression=issue.setFieldValue('Labels','runAsCurrentUser')","scriptDescription=" ],
+        specificUser : [ "groovyExpression=issue.setFieldValue('Labels','runAsSpecificUser')","scriptDescription=" ],
+        userInFieldAssignee : [ "groovyExpression=issue.setFieldValue('Labels','runAsUserInFieldAssignee')","scriptDescription=" ],
+        userInFieldReporter : [ "groovyExpression=issue.setFieldValue('Labels','runAsUserInFieldReporter')","scriptDescription=" ],
+        userInFieldCreator : [ "groovyExpression=issue.setFieldValue('Labels','runAsUserInFieldCreator')","scriptDescription=" ],
+        userFromScript : [ "groovyExpression=issue.setFieldValue('Labels','runAsUserFromScript')","scriptDescription=" ],
+]
 
-// unlink the issues if groovy condition returns true
-def simpleIssue = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'simpleIssue')
 
-transitionIssue(transition+0, {-> simpleIssue[0]}, 0, 'Groovy operation to be performed after transitioning issue', null, null)
-getIssueInformation({-> simpleIssue[0]}, 'Labels  . . . . . . . . . . . : test_label', 'TC_01_Check field of the issue should be set as per the groovy script')
+       def fields =  {\"sendNotifications\":true,\"problems\":[],\"targetIssue\":\"currentIssue:*\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"xxd\"}
 
-getIssueHistoryList({-> simpleIssue[0]}, user, 'TC_02:Case_1_runAsUser_currentUser')
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ScriptedPostFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-function'
 
-def run_as_currentUser = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'run_as_currentUser')
-transitionByUserTask(transition+0, userId, {-> run_as_currentUser[0]}, null, 0, 'check run as current user' )
-getIssueHistoryList({-> run_as_currentUser[0]}, userId, 'TC_02:Case_2_runAsUser_currentUser')
+// Configuration for validator
 
-/*
-def run_as_user_assignee = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', assignee: userId]}, 'run_as_user_assignee')
-transitionIssue(transition+1, {-> run_as_user_assignee[0]}, 0, 'runAsUser_from_fieldAssignee', null, null)
-getIssueHistoryList({-> run_as_user_assignee[0]}, userId, 'TC_03-runAsUser_from_fieldAssignee')
+['setLabelByScript'].each {
+    def fields = defaultFields + script.setLabels
+    addTransitionFunction(it, 'postfunction', fields, functionKey )
+}
 
-def run_as_user_reporter = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', reporter: userId]}, 'run_as_user_reporter')
-transitionIssue(transition+2, {-> run_as_user_reporter[0]}, 0, 'runAsUser_from_fieldReporter', null, null)
-getIssueHistoryList({-> run_as_user_reporter[0]}, userId, 'TC_04-runAsUser_from_fieldReporter')
+['runAsCurrentUser'].each {
+    def fields = defaultFields + script.currentUser + runAsUser.currentUser
+    addTransitionFunction(it , 'postfunction', fields, functionKey )
+    moveTransitionFunction (it, 4)
+}
+['runAsUserInFieldReporter'].each {
+    def fields = defaultFields + script.userInFieldReporter + runAsUser.userInFieldReporter
+    addTransitionFunction(it , 'postfunction', fields, functionKey )
+    moveTransitionFunction (it, 4)
+}
+['runAsUserInFieldCreator'].each {
+    def fields = defaultFields + script.userInFieldCreator + runAsUser.userInFieldCreator
+    addTransitionFunction(it , 'postfunction', fields, functionKey )
+    moveTransitionFunction (it, 4)
+}
 
-def run_as_user_script = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', assignee: userId]}, 'run_as_user_script')
-transitionIssue(transition+3, {-> run_as_user_script[0]}, 0, 'runAsUser_from_script', null, null)
-getIssueHistoryList({-> run_as_user_script[0]}, userId, 'TC_05-runAsUser_from_script')
-*/
+['runAsUserFromScript'].each {
+    def fields = defaultFields + script.userFromScript + runAsUser.userFromScript
+    addTransitionFunction(it, 'postfunction', fields, functionKey )
+    moveTransitionFunction (it, 4)
+}
+
+['runAsUserInFieldAssignee'].each {
+    def fields = defaultFields + script.userInFieldAssignee + runAsUser.userInFieldAssignee
+    addTransitionFunction(it, 'postfunction', fields, functionKey )
+    moveTransitionFunction (it, 4)
+}
+['runAsSpecificUser'].each {
+    def fields = defaultFields + script.specificUser + runAsUser.specificUser
+    addTransitionFunction(it, 'postfunction', fields, functionKey )
+    moveTransitionFunction (it, 4)
+}
+createWorkflowScheme()
+createProject()
+
+
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+
+// checking the current status To Do and previous status In Progress
+['setLabelByScript',].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " : " + it,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action: 'getFieldValue', ext: ": Chack :" + it,
+             parameters: [
+                     issue: {-> defaultIssue[]},
+                     field : "Labels",
+             ],
+             data:[ "Labels  . . . . . . . . . . . : test_label" ],
+            ]
+
+    ])
+}
+[
+        'runAsCurrentUser',
+        'runAsUserInFieldReporter',
+        'runAsUserInFieldCreator',
+        'runAsUserFromScript'
+].each {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: " : " + it ,
+                 parameters: [
+                         transition: it ,
+                         issue     : { -> defaultIssue[] },
+                 ],
+                ],
+                [action    : 'getIssueHistoryList', ext: ": Chack :" + it ,
+                 parameters: [
+                         issue: { -> defaultIssue[] },
+                         outputType: "Text",
+                         select: "Field:labels",
+                         columns : "Author,'To String'",
+                 ],
+                 data      : ["$user","$it"],
+                ]
+
+        ])
+}
+
+gint.taskHelper.add(
+        action: 'assignIssue',
+        sleepAfter: 2000,
+        parameters:[
+                issue: {->defaultIssue[]},
+                assignee: testUser
+        ]
+)
+
+[
+        'runAsUserInFieldAssignee',
+        'runAsSpecificUser',
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " : " + it ,
+             parameters: [
+                     transition: it ,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action    : 'getIssueHistoryList', ext: ": Chack :" + it ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     outputType: "Text",
+                     select: "Field:labels",
+                     columns : "Author,'To String'",
+             ],
+             data      : ["$testUser","$it"],
+            ]
+
+    ])
+}

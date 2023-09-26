@@ -29,150 +29,79 @@ def defaultFields = [
 def functionKey = functionKey.addFieldValueToParentIssuePfServer
 
 // Configuration for validator
-
-fieldsList.eachWithIndex { field, value, i ->
-    def fields = defaultFields + "field=$value" + "useGroovyCondition=no"
-    addTransitionFunction( field  + 'addToParentIssue', 'postfunction', fields, functionKey )
+['addFieldLabelToParentIssue'].each {
+    def fields = defaultFields + "field=labels" + "useGroovyCondition=no"
+    addTransitionFunction(it, 'postfunction', fields, functionKey )
 }
 
-fieldsList.eachWithIndex { field, value, i ->
-    def fields = defaultFields +  "field=$value" + "useGroovyCondition=yes" + "groovyExpression=$groovyExpression.getIssuetype"
-    addTransitionFunction(field + 'addToParentIssueIfConditional' , 'postfunction', fields, functionKey )
+['addToParentIssueIfConditionTrue'].each {
+    def fields = defaultFields +  "field=labels" + "useGroovyCondition=yes" + "groovyExpression=$groovyExpression.checkPriorityHigh"
+    addTransitionFunction(it , 'postfunction', fields, functionKey )
 }
 
 createWorkflowScheme()
 createProject()
 
-(1..1).each {
-    gint.taskHelper.addSetUp([
-            [action: 'addVersion', ext: ': create versions : ' + it,
-             parameters: [
-                     project: projectName,
-                     version: it
-             ]
-            ],
-            [action: 'addComponent', ext: ': create Component : ' + it,
-             parameters: [
-                     project: projectName,
-                     component: 'component' + it
-             ],
-            ]
-    ])
-}
+
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
-def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->defaultIssue[]}], 'subtask')
-def subtask1 = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->defaultIssue[]}], 'subtask1')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->defaultIssue[]}, labels: 'test_label'], 'subtask')
+def defaultIssue1 = createIssue([type: 'Story', summary: 'JMWE_Issue', priority: 'High'], 'defaultIssue1')
+def subtask1 = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->defaultIssue1[]},labels: 'test_label',priority: 'High'], 'subtask1')
 
 // checking the current status To Do and previous status In Progress
-gint.taskHelper.add(
-        [action: 'updateIssue', ext: ': change field values',
-         parameters: [
-                 issue: {->subtask[]},
-                 labels: 'test_label',
-                 assignee: user,
-                 affectsVersions: 1,
-                 fixVersions: 1,
-                 components: 'component1',
-                 priority: 'High'
-         ]
-        ],
-)
-['addToParentIssue','addToParentIssueIfConditional'].each {
-    fieldsList.eachWithIndex { field, value, i ->
+['addToParentIssueIfConditionTrue',].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " :  when condition false ",
+             parameters: [
+                     transition: it,
+                     issue     : { -> subtask[] },
+             ],
+            ],
+            [action: 'getFieldValue', ext: ": Chack field value not added to parent issue as condition false",
+             parameters: [
+                     issue: {-> defaultIssue[]},
+                     field : "Labels",
+             ],
+             failData:[ "Labels  . . . . . . . . . . . : test_label" ]
+            ]
+
+    ])
+}
+
+['addFieldLabelToParentIssue',].each {
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: " :  field_$field "+ it + i,
+                [action    : 'transitionIssue', ext: " :  labels "+ it,
                  parameters: [
-                         transition: field + it,
+                         transition: it,
                          issue     : { -> subtask[] },
                  ],
                 ],
-                [action: 'getIssue', ext: ": Chack field value of_$field " + it + i,
-                    parameters: [
-                            issue: {-> defaultIssue[]},
-                    ],
-                data:[
-                        "Labels  . . . . . . . . . . . : test_label",
-                        "Fix Version/s . . . . . . . . : 1",
-                        "Affects Version/s . . . . . . : 1",
-                        "Component/s . . . . . . . . . : component1",
-                        "Assignee  . . . . . . . . . . : $user",
+                [action: 'getFieldValue', ext: ": Chack field value should be added to parent issue",
+                 parameters: [
+                         issue: {-> defaultIssue[]},
+                         field : "Labels",
+                 ],
+                 data:[
+                         "Labels  . . . . . . . . . . . : test_label",
+                 ]
                 ]
-                ],
+
         ])
-    }
 }
-
-
-
-
-
-
-/*
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
-buildscript {
-    repositories {
-        maven {
-            url "https://plugins.gradle.org/m2/"
-        }
-    }
-    dependencies {
-        classpath "org.gint:gint-atlassian:3.8.4"
-    }
+['addToParentIssueIfConditionTrue',].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " :  when condition true ",
+             parameters: [
+                     transition: it,
+                     issue     : { -> subtask1[] },
+             ],
+            ],
+            [action: 'getFieldValue', ext: ": Chack field value should be added to parent issue when condition is true",
+             parameters: [
+                     issue: {-> defaultIssue1[]},
+                     field : "Labels",
+             ],
+             data:[ "Labels  . . . . . . . . . . . : test_label" ]
+            ]
+    ])
 }
-
-apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
-
-
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def transition = 'addFieldValueToParentIssue'
-def workflow = project
-def screen = project
-def user = info.user
-def userId = 'jmwe_qa'
-def projectRole = 'jmwe_role'
-def userGroup = 'jmwe_group'
-gint.xmlReport =	true	//xml report generates in projects root directory
-gint.verbose =	true
-
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/AddFieldValueToParentIssuePostfunction${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
-def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:AddFieldValueToParent-function'	//function key for current status condition
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
-
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
-
-// TC_01-check the subtask of the parent issue
-def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue')
-def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]}, labels: 'test_label']}, 'createSubtask')
-transitionIssue(transition+0, {-> subTask[0]}, 0, 'transitionSubtask', null, null)
-getIssueInformation({-> subTask[0]}, "Labels  . . . . . . . . . . . : test_label", 'TC_01-check the subtask of the parent issue')
-
-// TC_02-check the parentIssue field added from subtask
-getIssueInformation({-> parent[0]}, "Labels  . . . . . . . . . . . : test_label", 'TC_02-check the parentIssue field added from subtask')
-
-// TC_03-check when the selected field is empty and parent issue having value
-def parent1 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', labels: 'test_label']}, 'createParentIssueWithFieldValue')
-def subTask1 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent1[0]}, labels: '']}, 'checkSubtaskHavingEmptyValue')
-transitionIssue(transition+0, {-> subTask1[0]}, 0, 'checkEmptyValueOfSubtask', null, null)
-getIssueInformation({-> parent1[0]}, "Labels  . . . . . . . . . . . : test_label", 'TC_03-check when the selected field is empty and parent issue having value')
-
-// TC_04-check conditional execution true
-def parent3 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentForConditionalExecutionTrue')
-def subtask3 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent3[0]}, assignee: user, labels: 'conditionalExecution']}, 'createSubtaskForConditionalExecutionTrue')
-transitionIssue(transition+1, {-> subtask3[0]}, 0, 'transitionToCheckConditionalExecTrue', null, null)
-getIssueInformation({-> parent3[0]}, "Labels  . . . . . . . . . . . : conditionalExecution", 'TC_04-check conditional execution true')
-
-// TC_05-check conditional execution false
-def parent4 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentForConditionalExecutionFalse')
-def subtask4 = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent4[0]}, labels: 'conditionalExecution']}, 'createSubtaskForConditionalExecutionFalse')
-transitionIssue(transition+1, {-> subtask4[0]}, 0, 'transitionToCheckConditionalExecFalse', null, null)
-getIssueInformation({-> parent4[0]}, "Labels  . . . . . . . . . . . : ", 'TC_05-check conditional execution false')
-
- */
-
-

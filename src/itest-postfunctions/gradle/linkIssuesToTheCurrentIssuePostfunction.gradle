@@ -1,3 +1,88 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+
+tearDown()
+//tearDownUsers()
+addWorkflow()
+
+def defaultFields = [
+        "correlationId=",
+        "throwExceptions=false",
+]
+def issuesToLink = [
+        jql : ["jql=issueType = Task and summary ~ JMWE_Issue"],
+]
+def maxIssues = [
+        zero : [ "maxIssues=0"],
+        one : [ "maxIssues=1"],
+        two : [ "maxIssues=2"],
+        three : [ "maxIssues=3"],
+]
+
+def  selectedLinkType = [
+        block: ["selectedLinkType=$relatedIssue.linkByBlock"],
+        isBlockedBy: ["selectedLinkType=$relatedIssue.linkByisBlockedBy"],
+        clones: ["selectedLinkType=$relatedIssue.linkByClones"],
+        isClonedby: ["selectedLinkType=$relatedIssue.linkByIsClonedBy"],
+        duplicates: ["selectedLinkType=$relatedIssue.linkByDuplicates"],
+        isDuplicatedBy: ["selectedLinkType=$relatedIssue.linkByIsDuplicatedBy"],
+        relatesTo: ["selectedLinkType=$relatedIssue.linkByRelatesTo"],
+]
+def useGroovyFilter = [
+        no : ["useGroovyFilter=false"],
+        yes : ["useGroovyFilter=true"],
+]
+def functionKey =	info ?.isCloud ? 'com.innovalog.jmwe.jira-misc-workflow-extensions:link-issues-function' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:link-issues-function'
+
+// Configuration for validator
+selectedLinkType.eachWithIndex { key,  value, i ->
+        def transition = 'linkIssuesToCurrentIssue'
+        def fields = defaultFields + value + issuesToLink.jql + maxIssues.one +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.false
+        addTransitionFunction(transition + i, 'postfunction', fields, functionKey )
+}
+
+createWorkflowScheme()
+createProject()
+
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+def subtask = createIssue([type: 'Task', summary: 'JMWE_Issue',], 'subtask')
+def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue', ], 'defaultIssue1')
+def subtask1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'subtask1')
+
+// checking the current status To Do and previous status In Progress
+selectedLinkType.eachWithIndex { key, value, i ->
+    ['linkIssuesToCurrentIssue',].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " : " + it + key +i ,
+             parameters: [
+                     transition: it + i,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action: 'getFieldValue', ext: ": " + it + key + i,
+             parameters: [
+                     issue: {-> defaultIssue[] },
+                     field: "Linked Issues",
+             ],
+            ]
+    ])
+    }
+}
+
+
+
+/*
 import groovy.json.JsonSlurper
 import java.nio.file.Paths
 
@@ -65,7 +150,6 @@ def isDuplicateBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']},
 transitionIssue(transition+5, {-> isDuplicateBy[0]}, 0, 'linkIssueOfIsDuplicatesLink', null, null)
 getLinkedIssueList({-> isDuplicateBy[0]}, '2', 'linkIssueOfIsDuplicatesLink', "Duplicate", "is duplicated by")
 
-/*
 def causes = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'causes')
 transitionIssue(transition+6, {-> causes[0]}, 0, 'linkIssueOfCausesLink', null, null)
 getLinkedIssueList({-> causes[0]}, '2', 'linkIssueOfCausesLink', "Problem/Incident", "causes")
@@ -74,7 +158,7 @@ def isCausedBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'i
 transitionIssue(transition+7, {-> isCausedBy[0]}, 0, 'linkIssueOfIsCausedByLink', null, null)
 getLinkedIssueList({-> isCausedBy[0]}, '2', 'linkIssueOfisCausedByLink', "Problem/Incident", "is caused by")
 
- */
+
 def relates = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'relatesTo')
 transitionIssue(transition+8, {-> relates[0]}, 0, 'linkIssueOfrelatesToLink', null, null)
 getLinkedIssueList({-> relates[0]}, '2', 'linkIssueOfrelatesToLink', "Relates", "relates to")
@@ -112,4 +196,4 @@ transitionIssue(transition+13, {-> runAsUser_fromField[0]}, 0, 'runAsUser_fromFi
 getLinkedIssueList({-> runAsUser_fromField[0]}, '1', 'runAsUser_fromField', "Blocks", "Blocks")
 getIssueHistoryList({-> runAsUser_fromField[0]}, userId, 'runAsUser_fromField')
 
-
+*/

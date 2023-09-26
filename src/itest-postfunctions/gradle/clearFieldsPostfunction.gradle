@@ -1,6 +1,3 @@
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
 buildscript {
     repositories {
         maven {
@@ -13,92 +10,382 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def transition = 'clearFields'
-def workflow = project
-def screen = project
-def user = info.user
-def userId = 'jmwe_qa'
-gint.xmlReport =	true	//xml report generates in projects root directory
-gint.verbose =	true
+tearDown()
+addWorkflow()
 
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/ClearFieldsPostfunction${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
-def functionKey =	info ?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__ClearFieldsFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:ClearFieldValue-function'
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
+def functionKey = info?.isCloud ? functionKey.clearFieldsCloud : functionKey.clearFieldsServer
+def testUser = info?.isCloud ? cloudUser : serverUser
 
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
-addUsers(userId)
-createVersions(project, 5)
-createComponents(project, 'component', 5)
+def clearFieldsPfFields = [
+        "correlationId=",
+]
+def fields = [
+        labels : [ "fields=labels"],
+        components : [ "fields=components"],
+        fixVersions : [ "fields=fixVersions"],
+        affectsVersions : [ "fields=versions"],
+        assignee : [ "fields=assignee"]
+]
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'clearFieldLabel'
+    def server = clearFieldsPfFields + fields.labels + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
+    addTransitionFunction( transition + i, 'postfunction', server, functionKey)
+}
 
-// TC_01-check current issue
-def currentIssue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', affectsVersions: '1']}, 'createCurrentIssue')
-transitionIssue(transition+0, {-> currentIssue[0]}, 0, 'addFieldCurrentIssue', null, null)
-getIssueInformation({-> currentIssue[0]}, 'Affects versions  . . . . . . : ', 'TC_01-check current issue')
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'runAsSpecificUser'
+    def server = clearFieldsPfFields + fields.components + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.specificUser
+    addTransitionFunction( transition + i, 'postfunction', server, functionKey)
+    moveTransitionFunction ( transition + i, 4)
+}
 
-// TC_02-check the subtask of the parent issue
-def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue', labels:'clearLabels']}, 'createParentIssue')
-def subTask = createIssue(project,{[ type: 'Sub-task', summary: 'JMWE_Issue', parent: {-> parent[0]}, components: 'component1']}, 'createSubtask')
-transitionIssue(transition+1, {-> parent[0]}, 0, 'addFieldToSubtask', null, null)
-getIssueInformation({-> subTask[0]}, 'Components  . . . . . . . . . : ', 'TC_02-check the subtask of the parent issue')
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'runAsUserInFieldAssignee'
+    def server = clearFieldsPfFields +fields.fixVersions + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldAssignee
+    addTransitionFunction( transition + i, 'postfunction', server, functionKey)
+    moveTransitionFunction ( transition + i, 4)
+}
 
-// TC_03-check the parent issue of the current subtask
-transitionIssue(transition+2, {-> subTask[0]}, 0, 'checkParentIssue', null, null)
-getIssueInformation({-> parent[0]}, 'Labels  . . . . . . . . . . . : ', 'TC_03-check the parent issue of the current subtask')
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'runAsUserInFieldReporter'
+    def server = clearFieldsPfFields +fields.assignee + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldReporter
+    addTransitionFunction( transition + i, 'postfunction', fields, functionKey)
+    moveTransitionFunction ( transition + i, 4)
+}
 
-// TC_04-check the issue belongs to current epic
-def epic = createIssue(project,{[ type: 'epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Epic", assignee: user]}, 'createEpic')
-def story = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[0]}, fixVersions: '1']}, 'createStory')
-transitionIssue(transition+3, {-> epic[0]}, 0, 'copyToStoryOfEpic', null, null)
-getIssueInformation({-> story[0]}, 'Fix versions  . . . . . . . . : ', 'TC_04-check the issue belongs to current epic')
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'runAsUserInFieldCreator'
+    def server = clearFieldsPfFields +fields.affectsVersions + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldCreator
+    addTransitionFunction( transition + i, 'postfunction', server, functionKey)
+    moveTransitionFunction ( transition + i, 4)
+}
 
-// TC_05-check the epic of the current issue
-transitionIssue(transition+4, {-> story[0]}, 0, 'commentAddedToEpicOfStory', null, null)
-getIssueInformation({-> epic[0]}, 'Assignee  . . . . . . . . . . : ', 'TC_05-check the epic of the current issue')
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'clearFieldsIfConditionalExecutionTrue'
+    def server = clearFieldsPfFields + fields.labels + "selectedLinkType=$value" + conditionalExecution.true + runAsUser.currentUser
+    addTransitionFunction( transition + i, 'postfunction', server, functionKey)
+}
 
-def linkIssue1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType1')
-def linkIssue2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'linkIssueAnyType2')
-linkIssues([issue: { -> linkIssue1[0] }, toIssue: { -> linkIssue2[0] }, link: 'duplicates'], 'linkByAnyLinkType' )
+createWorkflowScheme()
+createProject()
+(1..1).each {
+    gint.taskHelper.addSetUp([
+            [action: 'addVersion', ext: ': create versions : ' + it,
+             parameters: [
+                     project: projectName,
+                     version: it
+             ]
+            ],
+            [action: 'addComponent', ext: ': create Component : ' + it,
+             parameters: [
+                     project: projectName,
+                     component: 'component' + it
+             ],
+            ]
+    ])
+}
 
-// TC-06-check the issue link by any link type to current issue
-transitionIssue(transition+5, {-> linkIssue1[0]}, 0, 'checkLinkIssueByAnyLinkType', null, null)
-getIssueInformation({-> linkIssue2[0]}, 'Reporter  . . . . . . . . . . : ', 'TC-06-check the issue link by any link type to current issue')
+// set issue status to In Progress
 
-def linkIssue3 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', components: 'component2']}, 'linkIssueBlocksType1')
-def linkIssue4 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', affectsVersions: '2', components: 'component2']}, 'linkIssueBlocksType2')
-linkIssues([issue: { -> linkIssue3[0] }, toIssue: { -> linkIssue4[0] }, link: 'blocks'], 'linkByBlocksLinkType' )
+def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
+def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
+def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
+def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[]} ], 'BelongsToEpic')
+def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Initiative')
+def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
+def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
+def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
+def isBlockedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isBlockedBy')
+def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
+def isClonedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isClonedBy')
+def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
+def isDuplicatedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isDuplicatedBy')
+def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
 
-// TC_07-check the issue link by blocks link type to current issue
-transitionIssue(transition+6, {-> linkIssue3[0]}, 0, 'checkLinkIssueBySpecificLinkType', null, null)
-getIssueInformation({-> linkIssue4[0]}, 'Affects versions  . . . . . . : ', 'TC_07-check the issue link by blocks link type to current issue')
+updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
 
-// TC_08-check the issue return by groovy script [issue.getLinkedIssues()]
-transitionIssue(transition+7, {-> linkIssue3[0]}, 0, 'checkIssueReturnFromGroovyScript', null, null)
-getIssueInformation({-> linkIssue4[0]}, 'Components  . . . . . . . . . : ', 'TC_08-check the issue return by groovy script')
+def linkIssuesMap = [
 
-// TC_09-check the issue return by jql search
-def IssueReturnByJqlSearch = createIssue(project, {[type: 'Task', summary: 'JMWE_Task', labels: 'clearLabels']}, 'jqlSearch' )
-transitionIssue(transition+8, {-> linkIssue4[0]}, 0, 'checkIssueReturnByJqlSearch', null, null)
-getIssueInformation({-> IssueReturnByJqlSearch[0]}, 'Labels  . . . . . . . . . . . : ', 'TC_09-check the issue return by jql search')
+        blocks : {->blocks[]},
+        'is blocked by' : {->isBlockedBy[]},
+        clones : {->clones[]},
+        'is cloned by' : {->isClonedBy[]},
+        duplicates : {->duplicates[]},
+        'is duplicated by' : {->isDuplicatedBy[]},
+        'relates to': {->relatesTo[]}
+]
 
-// TC_10-check conditional execution_True - issueType = story
-def condExecTrue = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue', labels: 'clearLabel']}, 'condExecTrue')
-transitionIssue(transition+9, {-> condExecTrue[0]}, 0, 'condExecTrue', null, null)
-getIssueInformation({-> condExecTrue[0]}, 'Labels  . . . . . . . . . . . : ', 'TC_10-check conditional execution_True')
+linkIssuesMap.eachWithIndex { key, value, i ->
+    linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
+}
 
-// TC_11-check conditional execution_False - issueType = story
-def condExecFalse = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'clearLabel']}, 'condExecFalse')
-transitionIssue(transition+9, {-> condExecFalse[0]}, 0, 'condExecFalse', null, null)
-getIssueInformation({-> condExecFalse[0]}, 'Labels  . . . . . . . . . . . : clearLabel', 'TC_11-check conditional execution_False')
 
-// TC_12-check run as user
-def runAsUser = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'clearLabel']}, 'runAsUser')
-transitionIssue(transition+10, {-> runAsUser[0]}, 0, 'runAsUser', null, null)
-//getIssueInformation({-> runAsUser[0]}, 'Labels  . . . . . . . . . . . : ', 'TC_12-check run as user')
-getIssueHistoryList({-> runAsUser[0]}, user, 'TC_12-check run as user')
+def relatedIssuesMap = [
+        {->current[]} : {->current[]},
+        {->parent[]} : {->subtask[]},
+        {->subtask[]} : {->parent[]},
+         {->epic[]} : {->issueBelongsToEpic[]},
+         {->issueBelongsToEpic[]} : {->epic[]},
+         {-> initiative[]} : {->epic_initiative[]},
+         {->epic_initiative[]} : {-> initiative[]},
+         {->issueLinks[]} : {->blocks[]},
+         {->issueLinks[]} : {->blocks[]},
+         {->issueLinks[]} : {->isBlockedBy[]},
+         {->issueLinks[]} : {->clones[]},
+         {->issueLinks[]} : {->isClonedBy[]},
+         {->issueLinks[]} : {->duplicates[]},
+         {->issueLinks[]} : {->isDuplicatedBy[]},
+         {->issueLinks[]} : {->relatesTo[]},
+         {->issueLinks[]} : {->relatesTo[]},
+         {->issueLinks[]} : {->relatesTo[]},
+]
+def clearLabel = 'test_label'
+def fixVersions = 1
+def affectsVersions = 1
+def component = 'component1'
+def assignee = user
+
+relatedIssuesMap.eachWithIndex{ key ,value,i ->
+    gint.taskHelper.add(
+            action: 'updateIssue', ext: " : add fields to clear " + i,
+            parameters: [
+                    issue: value,
+                    labels: clearLabel,
+                    fixVersions: fixVersions,
+                    affectsVersions : affectsVersions,
+                    components: component,
+                    assignee: assignee
+            ]
+    )
+}
+
+[
+        'clearFieldLabel',
+].collect {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: it + ': of related issue'  + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : it + ': of related issue' + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 failData      : [/Labels  . . . . . . . . . . . : $clearLabel/],
+                ],
+                [action: 'addLabels', ext: " : add labels to check next option " + it + i,
+                 parameters: [
+                         issue: value,
+                         labels: clearLabel
+                 ]]
+        ])
+    }
+}
+['clearFieldsIfConditionalExecutionTrue'].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': when condition return false' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : 'labels should not clear when condition false : '+ it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : $clearLabel/],
+                ],
+        ])
+    }
+}
+relatedIssuesMap.eachWithIndex{ key ,value,i ->
+    gint.taskHelper.add(
+            action: 'updateIssue', ext: " : set priority to return condition true for issues: " + i,
+            parameters: [
+                    issue: key,
+                    priority: 'High'
+            ]
+    )
+}
+['clearFieldsIfConditionalExecutionTrue'].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': when condition return true' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : 'labels should clear when condition true'+ it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 failData      : [/Labels  . . . . . . . . . . . : $clearLabel/],
+                ],
+                [action: 'addLabels', ext: " : add labels to check next option " + it + i,
+                 parameters: [
+                         issue: value,
+                         labels: clearLabel
+                 ]]
+        ])
+    }
+}
+
+[
+        'runAsSpecificUser',
+].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': clear components and ' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ],
+                ],
+                [action    : 'getIssueHistoryList',
+                 ext       : ' : to check clear components : '+ it + i,
+                 parameters: [
+                         issue: value,
+                         outputType: "text",
+                         select: "Field:Component",
+                         columns: "Author,'From String','To String'"
+                 ],
+                 data      : ["$testUser","$component", ""],
+                ],
+        ])
+    }
+}
+def userInFieldAssignee = user
+
+relatedIssuesMap.eachWithIndex { key, value, i ->
+    gint.taskHelper.add([
+            [action: 'assignIssue', ext: ': to check run as user in field assignee related issue: ' + i ,
+            parameters: [
+                    issue: value,
+                    assignee: userInFieldAssignee
+                    ],
+            ],
+            [action: 'assignIssue', ext: ': to check run as user in field assignee current issue: ' + i ,
+            parameters: [
+                    issue: key,
+                    assignee: userInFieldAssignee
+                    ]
+            ]
+    ])
+}
+['runAsUserInFieldAssignee'].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': clear fixVersions : ' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ],
+                ],
+                [action    : 'getIssueHistoryList',
+                 ext       : ' : to check clear fix version : '+ it + i,
+                 parameters: [
+                         issue: value,
+                         outputType: "text",
+                         select: "Field:Fix Version",
+                         columns: "Author,'From String','To String'"
+                 ],
+                 data      : ["$userInFieldAssignee","$fixVersions", ""],
+                ],
+        ])
+    }
+}
+
+[
+        'clearFieldsIfConditionalExecutionTrue',
+].collect {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action: 'updateIssue', ext: ': change the reporter' + it + i,
+                 parameters: [
+                         issue: key,
+                         labels: 'test_label',
+                 ],
+                ],
+                [action    : 'transitionIssue', ext: ':after update issue' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ],
+                ],
+                [action    : 'getFieldValue',
+                 ext       : 'after issue update'+ it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 failData      : ["Labels  . . . . . . . . . . : test_label"],
+                ],
+        ])
+    }
+}
+
+[
+        'runAsUserInFieldReporter',
+].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': clear assignee and ' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ],
+                ],
+                [action    : 'getIssueHistoryList',
+                 ext       : ' : to check clear assignee : '+ it + i,
+                 parameters: [
+                         issue: value,
+                         outputType: "text",
+                         select: "Field:assignee",
+                         columns: "Author,'From String','To String'"
+                 ],
+                 data      : ["$user","$assignee", ""],
+                ],
+        ])
+    }
+
+}
+
+['runAsUserInFieldCreator'].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': clear components and ' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ],
+                ],
+                [action    : 'getIssueHistoryList',
+                 ext       : ' : to check clear affects version : '+ it + i,
+                 parameters: [
+                         issue: value,
+                         outputType: "text",
+                         select: "Field:Version",
+                         columns: "Author,'From String','To String'"
+                 ],
+                 data      : ["$user","$affectsVersions", ""],
+                ],
+        ])
+    }
+}
+
 

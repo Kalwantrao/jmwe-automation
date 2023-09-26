@@ -1,3 +1,355 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory + '/src/common/utils.gradle'
+
+tearDown()
+addWorkflow()
+
+def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
+def functionKey =	info ?.isCloud ?  functionKey.createIssuePostfunctionCloud : functionKey.createIssuePostfunctionServer
+
+def testUser = info?.isCloud ? cloudUser : serverUser
+
+def defaultFieldsServer = [
+        "restrictToInternal=no",
+        "sendNotification=no",
+        "correlationId=",
+]
+def defaultFieldsCloud = [ "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249" ]
+
+def setSpecificField = [
+        defaultFields : ["fieldsToSet={\"summary\":{\"action\":\"template\",\"value\":\"CLONE - <%=issue.get('summary')%>\"}}"],
+        setSummary : ["fieldsToSet={\"summary\":{\"action\":\"template\",\"value\":\"JMWE_Issue_Postfunction\"}}"],
+]
+def project = [
+        current : [/projectKey= "$sameAsCurrentIssue$"/, "calculatedProjectKey="],
+]
+def issueType = [
+        subtask : ["issuetype=$issueType.subtask", "calculatedIssueType="],
+]
+def parentIssue = [
+        current: ["parentIssueType=currentIssue","calculatedParentIssue="]
+]
+def linkToNewIssue = [
+        notSelected: ["selectedLinkType="],
+]
+def setFields = [
+        onlySelected : ["fieldsToCopy=selected-fields-only"],
+]
+def addFields = [
+        not : ["fieldsToCopy=selected-fields-only","createMissingValues=no"]
+]
+
+def postCreationScript = [
+        no : ["runPostCreationScript=no","postCreationScript="],
+        yes : ["runPostCreationScript=yes","postCreationScript=newIssue.setFieldValue('Priority','High')"],
+]
+def copySubtask = [
+        no : ["copySubtasks=no"]
+]
+def commentType = [
+        template : ["commentIssue=no", "commentType=template", "comment=template" ],
+        expression : [ "commentIssue=no","commentType=expression", "comment=$groovyExpression.getDescription" ],
+]
+def commentVisibility = [
+        notSelected : [ "restrictToGroup=", "restrictToProjectRole=" ],
+        jiraAdminGroups : [ "restrictToGroup=$jiraAdminGrooup", "restrictToProjectRole=" ],
+        jiraAdminRoles : [ "restrictToGroup=", "restrictToProjectRole=$jiraAdminRoleId" ],
+        jiraSoftwareUsers : ["restrictToGroup=$testGroup", "restrictToProjectRole="]
+]
+def createMultipleIssues = [
+        no : ["createMultiple=no","iterationScript="],
+        two: ["createMultiple=yes","iterationScript=1..2"],
+        three:["createMultiple=yes","iterationScript=1..3"]
+]
+
+['createIssue'].eachWithIndex { key, value, i ->
+    def server = defaultFieldsServer +  + runAsUser.currentUser
+    def cloud = defaultFieldsCloud
+    addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'expression'
+    def fields = commentIssuePfFields + commentType.expression + commentVisibility.notSelected+  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
+    addTransitionFunction( transition + i, 'postfunction', fields, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'addCommentIfConditionTrue'
+    def fields = commentIssuePfFields + commentType.addCommentIfConditionTrue + commentVisibility.notSelected+  "selectedLinkType=$value" + conditionalExecution.true + runAsUser.currentUser
+    addTransitionFunction( transition + i, 'postfunction', fields, functionKey)
+}
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'runAsSpecificUser'
+    def fields = commentIssuePfFields + commentType.runAsSpecificUser + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.specificUser
+    addTransitionFunction( transition + i, 'postfunction', fields, functionKey)
+    moveTransitionFunction ( transition + i, 4)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'runAsUserInFieldAssignee'
+    def fields = commentIssuePfFields + commentType.runAsUserInFieldAssignee + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldAssignee
+    addTransitionFunction( transition + i, 'postfunction', fields, functionKey)
+    moveTransitionFunction ( transition + i, 4)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'runAsUserInFieldReporter'
+    def fields = commentIssuePfFields + commentType.runAsUserInFieldReporter + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldReporter
+    addTransitionFunction( transition + i, 'postfunction', fields, functionKey)
+    moveTransitionFunction ( transition + i, 4)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'runAsUserInFieldCreator'
+    def fields = commentIssuePfFields + commentType.runAsUserInFieldCreator + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldCreator
+    addTransitionFunction( transition + i, 'postfunction', fields, functionKey)
+    moveTransitionFunction ( transition + i, 4)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'runAsUserFromScript'
+    def fields = commentIssuePfFields + commentType.runAsUserFromScript + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userFromScript
+    addTransitionFunction( transition + i, 'postfunction', fields, functionKey)
+    moveTransitionFunction ( transition + i, 4)
+}
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'visibleToJiraAdminRoles'
+    def fields = commentIssuePfFields + commentType.visibleToJiraAdminRoles + commentVisibility.jiraAdminRoles +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
+    addTransitionFunction( transition + i, 'postfunction', fields, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'visibleToJiraSoftwareUsers'
+    def fields = commentIssuePfFields + commentType.visibleToJiraSoftwareUsers + commentVisibility.jiraSoftwareUsers +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
+    addTransitionFunction( transition + i, 'postfunction', fields, functionKey)
+}
+
+
+
+
+createWorkflowScheme()
+createProject()
+
+// set issue status to In Progress
+
+def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
+def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
+def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
+def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[]} ], 'BelongsToEpic')
+def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Initiative')
+def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
+def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
+def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
+def isBlockedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isBlockedBy')
+def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
+def isClonedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isClonedBy')
+def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
+def isDuplicatedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isDuplicatedBy')
+def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
+
+updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
+
+def linkIssuesMap = [
+
+        blocks : {->blocks[]},
+        'is blocked by' : {->isBlockedBy[]},
+        clones : {->clones[]},
+        'is cloned by' : {->isClonedBy[]},
+        duplicates : {->duplicates[]},
+        'is duplicated by' : {->isDuplicatedBy[]},
+        'relates to': {->relatesTo[]}
+]
+
+linkIssuesMap.eachWithIndex { key, value, i ->
+    linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
+}
+
+
+def relatedIssuesMap = [
+        {->current[]} : {->current[]},
+        {->parent[]} : {->subtask[]},
+        {->subtask[]} : {->parent[]},
+        {->epic[]} : {->issueBelongsToEpic[]},
+        {->issueBelongsToEpic[]} : {->epic[]},
+        {-> initiative[]} : {->epic_initiative[]},
+        {->epic_initiative[]} : {-> initiative[]},
+        {->issueLinks[]} : {->blocks[]},
+        {->issueLinks[]} : {->blocks[]},
+        {->issueLinks[]} : {->isBlockedBy[]},
+        {->issueLinks[]} : {->clones[]},
+        {->issueLinks[]} : {->isClonedBy[]},
+        {->issueLinks[]} : {->duplicates[]},
+        {->issueLinks[]} : {->isDuplicatedBy[]},
+        {->issueLinks[]} : {->relatesTo[]},
+        {->issueLinks[]} : {->relatesTo[]},
+        {->issueLinks[]} : {->relatesTo[]},
+]
+
+
+relatedIssuesMap.eachWithIndex{ key, value, i ->
+    gint.taskHelper.add(
+            action: 'updateIssue' , ext: " : add description to add in comment : " + i,
+            parameters: [
+                    issue: value,
+                    description : expressionComment
+            ]
+    )
+}
+
+[
+        'template',
+        'expression',
+        'runAsUserInFieldReporter',
+        'runAsUserInFieldCreator',
+        'runAsUserFromScript',
+].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: it + ': add comment by template :' + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ],
+                ],
+                [action: 'getComments', ext: " : add comment by template :" + it + i,
+                 parameters: [
+                         issue: value
+                 ],
+                 data:[   /$user added a comment on/,
+                          /$it/
+                 ],
+                ]
+        ])
+    }
+}
+
+[
+        'visibleToJiraSoftwareUsers',
+].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: it + ': ' + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ],
+                ],
+                [action: 'getComments', ext: " : " + it + i,
+                 parameters: [
+                         issue: value
+                 ],
+                 failData:[ /$it/  ],
+                ]
+        ])
+    }
+}
+
+[
+        'visibleToJiraAdminRoles',
+].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: it + ': ' + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ],
+                ],
+                [action: 'getComments', ext: " : " + it + i,
+                 parameters: [
+                         issue: value
+                 ],
+                 data:[ /$it/  ],
+                ]
+        ])
+    }
+}
+
+['addCommentIfConditionTrue'].collect {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: it + ': when conditional validation false do not add comment: ' + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ],
+                ],
+                [action: 'getComments', ext: it +" : when conditional validation false do not add comment :" + i,
+                 parameters: [
+                         issue: value
+                 ],
+                 failData:[/$it/],
+                ]
+        ])
+    }
+}
+relatedIssuesMap.eachWithIndex{ key, value, i ->
+    gint.taskHelper.add(
+            action: 'updateIssue' , ext: " : to check conditional validation and assignee field : " + i,
+            parameters: [
+                    issue: value,
+                    priority : 'High',
+                    assignee: testUser
+            ]
+    )
+}
+['addCommentIfConditionTrue'].collect {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: it + ': when conditional validation true do add comment: ' + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ],
+                ],
+                [action: 'getComments', ext: it +" : when conditional validation true do add comment :" + i,
+                 parameters: [
+                         issue: value
+                 ],
+                 data:[/$it/],
+                ]
+        ])
+    }
+}
+[
+        'runAsSpecificUser',
+        'runAsUserInFieldAssignee'
+].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: it + ' :' + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ],
+                ],
+                [action: 'getComments', ext: " : " + it + i,
+                 parameters: [
+                         issue: value
+                 ],
+                 data:[   /$testUser added a comment on/,
+                          /$it/
+                 ],
+                ]
+        ])
+    }
+}
+*/
+
+/*
 import groovy.json.JsonSlurper
 import java.nio.file.Paths
 
