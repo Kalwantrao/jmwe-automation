@@ -1,4 +1,3 @@
-
 ext.tearDown = {
     gint.taskHelper.addTearDown([
             [action    : 'deleteProject',
@@ -7,7 +6,7 @@ ext.tearDown = {
                 ],
             ],
             [action    : 'createProject',ext: ': FOR WORKFLOW',
-            sleep: 3000,
+             onlyIf: createTestProject == "yes",
              parameters: [
                      project: TestProject,
                      lead: '@Self',
@@ -62,12 +61,14 @@ ext.tearDown = {
                     ]
             ],
             [action: 'deleteWorkflowScheme',
+            onlyIf: skipSetup != "yes",
             mustRunAfter: 'deleteProject',
             parameters: [
                 workflowScheme: workflowScheme
                   ]
             ],
             [action: 'deleteWorkflow',
+            onlyIf: skipSetup != "yes",
             mustRunAfter: 'deleteWorkflowScheme',
                 parameters: [
                     workflow: workflow
@@ -76,34 +77,3 @@ ext.tearDown = {
     ])
 }
 
-ext.tearDownUsers = {
-    gint.taskHelper.addTearDown([
-            [
-                    action    : 'removeProjectRoleActors',
-                    parameters: [
-                            project: projectName,
-                            role   : projectRole,
-                            userId : info?.isCloud ? cloudUser : serverUser
-                    ],
-
-            ] ,
-            [
-                    action    : 'removeGroup',
-                    parameters: [
-                            group: groupName
-                    ],
-            ] ,
-            [
-                    action    : 'removeProjectRole',
-                    parameters: [
-                            name: projectRole
-                    ]
-            ] ,
-            [action    : 'removeUser',
-             parameters: [
-                     userId: info?.isCloud ? cloudUser : serverUser
-             ],
-            ] ,
-
-    ])
-}

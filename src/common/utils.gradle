@@ -2,14 +2,20 @@ apply from: gint.resourceDirectory +'/src/common/commonTasks.gradle'
 
 project.ext.info =  gint.getJiraHelper().getServerInfoWithVerify()
 project.ext.user = info?.isCloud ? info?.userDisplayName : info.user
+project.ext.projectKey = gint.getJiraHelper().getProjectKey()
+project.ext.isServer = info?.isServer
+project.ext.isCloud = info?.isCloud
 project.ext.projectName="AUTOMATION"
-project.ext.workflow="AUTOMATION"
+project.ext.workflow = projectKey
 project.ext.screen="AUTOMATION"
-project.ext.cloudUser="qa1"
-project.ext.serverUser="jmwe_qa"
 project.ext.workflowScheme="AUTOMATION"
-project.ext.projectRole="test_projectrole"
-project.ext.groupName="test_group"
+project.ext.cloudUserId='63973398ff36874b23af74a6'
+project.ext.cloudUser="jmwe_qa"
+project.ext.serverUser="jmwe_qa"
+project.ext.testUser = info?.isCloud ? cloudUser : serverUser
+project.ext.projectRole="testprojectrole"
+project.ext.groupName="testgroup"
+project.ext.groupAdminIdCloud = "e7f578b8-2111-40ff-8117-323d289aa7e0"
 project.ext.startStepCloud=11
 project.ext.startStepServer=11
 project.ext.workflowFile="resources/workflowJ8.xml"
@@ -17,16 +23,30 @@ project.ext.tearDownFile="resources/tearDown.txt"
 project.ext.baseWorkflow="Software Simplified Workflow for Project $TestProject"
 project.ext.projectTemplateCloud="Bug tracking"
 project.ext.projectTemplateServer="Basic software development"
+project.ext.securityLevelId = [
+        lavel1 : 10204,
+        level2 : 10205
+]
 project.ext.groovyExpression = [
         returnsLinkedIssues:"issue.getLinkedIssues()",
         getIssuetype:"issue.get('issuetype')?.name == 'Task'",
         checkPriorityHigh: "issue.get('priority')?.name == 'High'",
-        returnsReporter : "issue.get('reporter')"
+        checkPriorityLow: "issue.get('priority')?.name == 'Low'",
+        returnsReporter : "issue.get('reporter')",
+        getDescription : "issue.get('description')"
 ]
 project.ext.nunjuckExpression = [
-        returnsLinkedIssues:"{{ issue | linkedIssues | field('key') }}",
-        getIssuetype:"{{ issue.fields.issuetype.name == 'Task' }}"
+        returnsLinkedIssues: "{{ issue | linkedIssues | field('key') }}",
+        getIssuetype: "{{ issue.fields.issuetype.name == 'Task' }}",
+        checkPriorityHigh: "{{ issue.fields.priority.name == 'High' }}",
+        checkPriorityLow: "{{ issue.fields.priority.name == 'Low' }}",
+        returnsReporter : "{{ issue.fields.reporter }}"
 ]
+
+project.ext.jiraExpression = [
+        getIssueType : "!!issue.issueType && issue.issueType.name == 'Task'"
+]
+
 project.ext.jqlSearchExpression="issuetype = Task and summary~JQL_ISSUE"
 project.ext.fields = [
         Labels:'labels',
@@ -40,8 +60,8 @@ project.ext.relatedIssueServer = [
         currentIssue: "currentIssue:*",
         subtask: "outward:10100",
         parentIssue: "inward:10100",
-        issueBelongsToEpic: "outward:10201",
-        epicOfTheCurrentIssue: "inward:10201",
+        issueBelongsToEpic: "outward:10201", //10200 for jira9
+        epicOfTheCurrentIssue: "inward:10201", // 10200 for jira9
         childPortfolio: "outward:-2000",
         parentPortfolio: "inward:-2000",
         linkByAnyLink: "*:*",
@@ -58,8 +78,8 @@ project.ext.relatedIssueServer = [
 project.ext.relatedIssueCloud = [
         currentIssue: "currentIssue:*",
         subtask: "outward:jira_subtask_link",
-        parentIssue: "inward:jira_subtask_link",
-        /*issueBelongsToEpic: "outward:Epic-Story Link",
+        /*parentIssue: "inward:jira_subtask_link",
+        issueBelongsToEpic: "outward:Epic-Story Link",
         epicOfTheCurrentIssue: "inward:Epic-Story Link",
         childPortfolio: "inward:Portfolio Parent Link",
         parentPortfolio: "outward:Portfolio Parent Link",
@@ -74,6 +94,62 @@ project.ext.relatedIssueCloud = [
         returnsByNunjucksExpression: "nunjucks:$nunjuckExpression.returnsLinkedIssues",
         returnsFromJqlSearch: "jql:$jqlSearchExpression"*/
 ]
+project.ext.statusIds = [
+        toDo: 10000,
+        inProgress: 3,
+        inReview : 10103,
+        done : 10001
+]
+
+project.ext.issueType = [
+        subtask  : 10004,
+        epic : 10000,
+        story : 10002, //10001 FOR JIRA9
+        task : 10003,
+        bug : 10006,
+        initiative : 10007
+]
+project.ext.customFields = [
+        storyPoints : "customfield_10111",
+        originalStoryPoints : "customfield_10104"
+]
+
+project.ext.conditionalValidation = [
+        no : [ "conditionalValidation=no", "conditionalValidationScript=" ],
+        yes : [ "conditionalValidation=yes", "conditionalValidationScript=$groovyExpression.checkPriorityHigh" ]
+]
+
+project.ext.runAsUser = [
+        currentUser : [
+                "runAsUser=",
+        ],
+        specificUser: [
+                "runAsUser=userByKey:$jmwe_qaUserId",
+        ],
+        userInFieldAssignee : [
+                "runAsUser=userField:assignee",
+        ],
+        userInFieldReporter : [
+                "runAsUser=userField:reporter",
+        ],
+        userInFieldCreator : [
+                "runAsUser=userField:creator",
+        ],
+        userFromScript : [
+                "runAsUser=userFromScript:$groovyExpression.returnsReporter"
+        ]
+]
+project.ext.conditionalExecution = [
+        false : [
+                "useGroovyCondition=false",
+                "groovyExpression=",
+        ],
+        true : [
+                "useGroovyCondition=yes",
+                "groovyExpression=$groovyExpression.checkPriorityHigh",
+        ]
+]
+
 project.ext.statusListServer = [
         inProgress: "In Progress",
         inReview: "In Review",
@@ -101,6 +177,7 @@ project.ext.functionKey = [
         relatedIssuesConditionCloud: 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssuesCondition',
         relatedIssuesStatusConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-condition',
         relatedIssuesStatusConditionCloud: 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssueStatusCondition',
+        sharedConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:shared-condition',
         relatedIssuesStatusValidatorServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-validator',
         userConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition',
         userConditionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__UserCondition',
@@ -109,9 +186,9 @@ project.ext.functionKey = [
         transitionIssuePostfunctionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionIssue-function',
         transitionIssuePostfunctionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__TransitionIssueFunction',
         transitionRelatedIssuesPostfunctionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__TransitionLinkedIssuesFunction',
-        transitionParentIssuePostfunctionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__TransitionParentIssueFunction',
-        transitionParentIssuePostfunctionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionParentIssue-function',
         transitionRelatedIssuesPostfunctionServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionLinkedIssues-function',
+        transitionParentIssuePostfunctionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionParentIssue-function',
+        transitionParentIssuePostfunctionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__TransitionParentIssueFunction',
         clearFieldsCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ClearFieldsFunction',
         clearFieldsServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:ClearFieldValue-function',
         assignToRoleMemberCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__AssignToRoleMemberFunction',
@@ -140,131 +217,13 @@ project.ext.functionKey = [
         parentStatusValidatorServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:parentstatus-validator',
         previousStatusvalidatorServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:previousstatus-validator',
         setIssueFieldsPfServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:set-issue-fields-function',
+        commentIssuePostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function',
+        commentIssuePostfunctionCloud : 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CommentIssueFunction',
+        copyIssueFieldsPfServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:copy-fields-function',
+        assignToRoleMemberPf : 'com.innovalog.jmwe.jira-misc-workflow-extensions:assigntorolemember',
+        createIssuePostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CreateIssue-function',
+        createIssuePostfunctionCloud : 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CreateIssueFunction',
 ]
 
-ext.requireRelatedIssuesFieldsCloud = [
-    subtask : [
-        "selectedLinkTypeId":"jira_subtask_link",
-        "selectedLinkTypeDirection":"outward",
-        "selectedIssueTypeId":"",
-        "anyOrEvery":"noCond",
-        "condition":true,
-        "validatorMode":"requireLinks",
-        "expression":"(issue.subtasks.some(linkedIssue => (true)))"
-],
-    parentIssue : [
-        "selectedLinkTypeId":"jira_subtask_link",
-        "selectedLinkTypeDirection":"inward",
-        "selectedIssueTypeId":"",
-        "anyOrEvery":"noCond",
-        "condition":true,
-        "validatorMode":"requireLinks",
-        "expression":"(!!issue.parent && [issue.parent].some(linkedIssue => (true)))"
-],
-    issueBelongsToEpic : [
-        "selectedLinkTypeId":"Epic-Story Link",
-        "selectedLinkTypeDirection":"outward",
-        "selectedIssueTypeId":"",
-        "anyOrEvery":"noCond",
-        "condition":true,
-        "validatorMode":"requireLinks",
-        "expression":"(!!issue.stories && issue.stories.some(linkedIssue => (true)))"
-],
-    epicOfTheCurrentIssue : [
-        "selectedLinkTypeId":"Epic-Story Link",
-        "selectedLinkTypeDirection":"inward",
-        "selectedIssueTypeId":"",
-        "anyOrEvery":"noCond",
-        "condition":true,
-        "validatorMode":"requireLinks",
-        "expression":"(!!issue.epic && [issue.epic].some(linkedIssue => (true)))"
-],
-    anyLink : [
-        "selectedLinkTypeId":"*",
-        "selectedLinkTypeDirection":"*",
-        "selectedIssueTypeId":"",
-        "anyOrEvery":"noCond",
-        "condition":true,
-        "validatorMode":"requireLinks",
-        "expression":"(issue.links.some(issueLink => (true)))"
-],
-    blocks : [
-        "selectedLinkTypeId":"10000",
-        "selectedLinkTypeDirection":"outward",
-        "selectedIssueTypeId":"",
-        "anyOrEvery":"noCond",
-        "condition":true,
-        "validatorMode":"requireLinks",
-        "expression":"(issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))"
-],
-    isBlockedBy : [
-        "selectedLinkTypeId":"10000",
-        "selectedLinkTypeDirection":"inward",
-        "selectedIssueTypeId":"",
-        "anyOrEvery":"noCond",
-        "condition":true,
-        "validatorMode":"requireLinks",
-        "expression":"(issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (true)))"
-],
-    clones : [
-        "selectedLinkTypeId":"10001",
-        "selectedLinkTypeDirection":"outward",
-        "selectedIssueTypeId":"",
-        "anyOrEvery":"noCond",
-        "condition":true,
-        "validatorMode":"requireLinks",
-        "expression":"(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))"
-],
-    isClonedBy : [
-        "selectedLinkTypeId":"10001",
-        "selectedLinkTypeDirection":"inward",
-        "selectedIssueTypeId":"",
-        "anyOrEvery":"noCond",
-        "condition":true,
-        "validatorMode":"requireLinks",
-        "expression":"(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (true)))"
-],
-    duplicates : [
-        "selectedLinkTypeId":"10002",
-        "selectedLinkTypeDirection":"outward",
-        "selectedIssueTypeId":"",
-        "anyOrEvery":"noCond",
-        "condition":true,
-        "validatorMode":"requireLinks",
-        "expression":"(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))"
-],
-    isDuplicatedBy : [
-        "selectedLinkTypeId":"10002",
-        "selectedLinkTypeDirection":"inward",
-        "selectedIssueTypeId":"",
-        "anyOrEvery":"noCond",
-        "condition":true,
-        "validatorMode":"requireLinks",
-        "expression":"(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (true)))"
-],
-    relatesTo : [
-        "selectedLinkTypeId":"10003",
-        "selectedLinkTypeDirection":"outward",
-        "selectedIssueTypeId":"",
-        "anyOrEvery":"noCond",
-        "condition":true,
-        "validatorMode":"requireLinks",
-        "expression":"(issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))"
-]
-]
 
-/*
-> Task :addTransitionFunction_relatedIssueCondition_requireLinks7
-    [start] addTransitionFunction_relatedIssueCondition_requireLinks7
-    [error] Remote error: Resource does not exist. Response code: 404. Not Found. Use -v to see more details.
-    [error] Remote error: Resource does not exist. Response code: 404. Not Found. Use -v to see more details.
-   [ignore] addTransitionFunction_relatedIssueCondition_requireLinks7: Expected 0 but got -3
-[reproduce] acli jiraCloud --action addTransitionFunction     --workflow "AUTOMATION"  --transition "relatedIssueCondition_requireLinks7"  --functionKey "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssuesCondition"  --type "condition"  --step 11  --field "condition.id=9def4812-c8d0-45eb-9903-21dcbe2a70be"  --field "condition.config-9def4812-c8d0-45eb-9903-21dcbe2a70be={""selectedLinkTypeId"":""10001"",""selectedLinkTypeDirection"":""outward"",""selectedIssueTypeId"":"""",""anyOrEvery"":""noCond"",""condition"":true,""validatorMode"":""requireLinks"",""expression"":""(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))""}"
-     [info] Restarting task addTransitionFunction_relatedIssueCondition_requireLinks7.
-     [info] 1000 milliseconds sleep requested by task addTransitionFunction_relatedIssueCondition_requireLinks7
-    [start] addTransitionFunction_relatedIssueCondition_requireLinks7
-    [error] Remote error: Resource does not exist. Response code: 404. Not Found. Use -v to see more details.
-   [failed] addTransitionFunction_relatedIssueCondition_requireLinks7: Expected 0 but got -3
-[reproduce] acli jiraCloud --action addTransitionFunction     --workflow "AUTOMATION"  --transition "relatedIssueCondition_requireLinks7"  --functionKey "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssuesCondition"  --type "condition"  --step 11  --field "condition.id=9def4812-c8d0-45eb-9903-21dcbe2a70be"  --field "condition.config-9def4812-c8d0-45eb-9903-21dcbe2a70be={""selectedLinkTypeId"":""10001"",""selectedLinkTypeDirection"":""outward"",""selectedIssueTypeId"":"""",""anyOrEvery"":""noCond"",""condition"":true,""validatorMode"":""requireLinks"",""expression"":""(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))""}"
- [complete] addTransitionFunction_relatedIssueCondition_requireLinks7 - 4.867 secs
- */
+

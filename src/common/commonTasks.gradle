@@ -1,62 +1,68 @@
 apply from: gint.resourceDirectory +'/src/common/tearDown.gradle'
 
-ext.addWorkflow = {
-    gint.taskHelper.addSetUp([
-            [
-                    action       : 'copyWorkflow' ,
-                    parameters   : [workflow: baseWorkflow, name: projectName]
-            ],
-    ]
-    )
-}
-ext.addTransitionFunction = { transitions, type, field, functionKey -> // key, type, condition, functionKey, description
-    gint.taskHelper.addSetUp([
-            [action    : 'addTransition', ext: ':' + transitions,
-             retry: true,
-             retrySleep: 5000,
-             sleep: 2000,
-             parameters: [
-                     workflow: workflow,
-                     name    : transitions,
-                     step    : info?.isCloud ? startStepCloud : startStepServer,
-                     screen  : screen
-                ]
-            ],
-            [action    : 'addTransitionFunction', ext: ':' + transitions,
-             retry: true,
-             retrySleep: 5000,
-             sleep: 2000,
-             parameters: [
-                     workflow   : workflow,
-                     transition : transitions,
-                     functionKey: functionKey,
-                     type       : type,
-                     step       : info?.isCloud ? startStepCloud : startStepServer,
-                     field      : field
-                ]
-            ],
-           /*[action: 'getTransitionFunctionList', ext: ':' + transitions,
-             retry: true,
-              sleep: 2000,
-             parameters: [
-                     workflow: workflow,
-                     transition : transitions,
-                     type       : type,
-                     step       : info?.isCloud ? startStepCloud : startStepServer,
-                     outputType: "text",
-                     columns: "description",
-                ],
-             ]*/
-    ])
 
+ext.addWorkflow = {
+    if(skipSetup != "yes"){
+        gint.taskHelper.addSetUp([
+                [
+                        action       : 'copyWorkflow' ,
+                        parameters   : [workflow: baseWorkflow, name: workflow]
+                ],
+        ]
+        )
+    }
+}
+
+ext.addTransitionFunction = { transitions, type, field, functionKey -> // key, type, condition, functionKey, description
+    if(skipSetup != "yes"){
+        gint.taskHelper.addSetUp([
+                [action    : 'addTransition', ext: ':' + transitions,
+                 retry: true,
+                 retrySleep: 5000,
+                 sleepAfter: 3000,
+                 parameters: [
+                         workflow: workflow,
+                         name    : transitions,
+                         step    : info?.isCloud ? startStepCloud : startStepServer,
+                         screen  : screen
+                 ]
+                ],
+                [action    : 'addTransitionFunction', ext: ':' + transitions,
+                 retry: true,
+                 retrySleep: 5000,
+                 sleepAfter: 3000,
+                 parameters: [
+                         workflow   : workflow,
+                         transition : transitions,
+                         functionKey: functionKey,
+                         type       : type,
+                         step       : info?.isCloud ? startStepCloud : startStepServer,
+                         field      : field
+                 ],
+                ],
+                /*[action: 'getTransitionFunctionList', ext: ':' + transitions,
+                  retry: true,
+                   sleep: 2000,
+                  parameters: [
+                          workflow: workflow,
+                          transition : transitions,
+                          type       : type,
+                          step       : info?.isCloud ? startStepCloud : startStepServer,
+                          outputType: "text",
+                          columns: "description",
+                     ],
+                  ]*/
+        ])
+    }
 }
 
 ext.moveTransitionFunction = { transition, after ->
-    gint.taskHelper.addSetUp(
-            action: 'moveTransitionFunction',
-            retry: true,
-            retrySleep: 5000,
-            ext: transition,
+    if(skipSetup != "yes"){
+        gint.taskHelper.addSetUp(
+                action: 'moveTransitionFunction',
+                retry: true,
+                retrySleep: 5000,
+                ext: transition,
                 parameters: [
                         workflow: workflow,
                         type: 'postfunction',
@@ -65,19 +71,42 @@ ext.moveTransitionFunction = { transition, after ->
                         name: 1,
                         after: after
                 ]
-    )
+        )
+    }
 }
 ext.createWorkflowScheme = {
-    gint.taskHelper.addSetUp([
-            action: 'createWorkflowScheme',
-            retrySleep: 5000,
-            retry: true,
-            parameters:[
-                    workflowScheme: projectName,
-                    workflow: workflow,
-            ],
-    ]
-    )
+    if(skipSetup != "yes"){
+        gint.taskHelper.addSetUp([
+                action: 'createWorkflowScheme',
+                retrySleep: 5000,
+                retry: true,
+                parameters:[
+                        workflowScheme: projectName,
+                        workflow: workflow,
+                ],
+        ]
+        )
+    }
+    else {
+        gint.taskHelper.addSetUp([
+                [
+                        action    : 'associateWorkflow',
+                        parameters: [workflowScheme: projectName, name: workflow]
+                ],
+        ]
+        )
+    }
+}
+ext.associateWorkflow = { workflowName ->
+    if(skipSetup == "yes") {
+        gint.taskHelper.addSetUp([
+                [
+                        action    : 'associateWorkflow',
+                        parameters: [workflowScheme: projectName, name: workflowName]
+                ],
+        ]
+        )
+    }
 }
 ext.createProject = {
     gint.taskHelper.addSetUp(
@@ -90,7 +119,8 @@ ext.createProject = {
                      lead: '@Self',
                      workflowScheme: workflowScheme,
                      issueTypeScreenScheme: projectName,
-                     issueTypeScheme: projectName
+                     issueTypeScheme: projectName,
+                     issueSecurityScheme: projectName
              ],
             ]
     )
@@ -102,7 +132,6 @@ ext.createIssue = { parameters, ext ->
              retrySleep: 5000,
              retry: true,
              ext: ': '+ ext ,
-             mustRunAfter: 'createProject',
              project: projectName,
              parameters: parameters,
              finalClosure: { Task task ->
@@ -134,18 +163,7 @@ ext.linkIssue = { parameters, ext ->
     ]
     )
 }
-ext.addVersions = { version ->
-    (1..version){
-        gint.taskHelper.add(
-                [action: 'addVersion',ext: version,
-                 parameters: [
-                         project: projectName,
-                         version: version
-                 ]
-                ]
-        )
-    }
-}
+
 ext.addComponent = { numberOfComponents ->
     (1..numberOfComponents).each{
         gint.taskHelper.add(
