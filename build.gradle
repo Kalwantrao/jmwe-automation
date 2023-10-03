@@ -163,4 +163,7 @@ def jmwePostfunctions = 'src/itest-postfunctions/gradle'
         )
     }
 }
-
+task MyTask {
+    println "This is demo"
+}
+defaultTasks 'MyTask'
