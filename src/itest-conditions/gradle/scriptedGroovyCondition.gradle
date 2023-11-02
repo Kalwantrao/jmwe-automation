@@ -14,19 +14,17 @@ apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 tearDown()
 addWorkflow()
-def defaultsFields = [
-		"scriptDescription=",
-		"correlationId=",
-]
+
 def cloudFields = [
 		"condition.id=e96e5f36-5d19-4cd7-b8d7-f13bfb41877d",
         "condition.config-e96e5f36-5d19-4cd7-b8d7-f13bfb41877d={\"expression\":\"!! issue.assignee\"}"
 ]
-def functionKey = info?.isCloud ? functionKey.scriptedGroovyConditionCloud : functionKey.scriptedGroovyConditionServer
 
-// Configuration for conditions
-['issueMustHaveAssignee'].each {
-	def fields = info?.isCloud ? cloudFields : defaultsFields + "groovyExpression=!!issue.get('assignee')"
+// create transition and configure the condition to it with required options
+
+['issueMustBeAssignedToSpecificUser'].each {
+	def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ScriptedCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-condition'
+	def fields = info?.isCloud ? cloudFields : defaultFieldsServer + "scriptDescription=" + /groovyExpression=issue.getAsString('assignee') == "$testUser"/
 	addTransitionFunction(it, 'condition', fields, functionKey )
 }
 
@@ -35,26 +33,37 @@ createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
-// checking the current status To Do and previous status In Progress
+// SCRIPTED_GROOVY_CONDITION_TC_24_Case_01-Verify for the Groovy script_when returns false on issue
 [
-		'issueMustHaveAssignee',
+		'issueMustBeAssignedToSpecificUser',
 ].each {
 	gint.taskHelper.add([
-			[action    : 'transitionIssue', ext: ' : when condition false ' + it,
+			[action    : 'transitionIssue',
+			 ext: ":SCRIPTED_GROOVY_CONDITION_TC_24_Case_01-Verify for the Groovy script_when returns false on issue",
 			expected  : -1,
 			parameters: [
 					transition: it,
 					issue: { -> defaultIssue[] },
 				],
 			],
-			[action    : 'updateIssue', ext: ' : to check next condition ' + it,
+	])
+}
+
+//SCRIPTED_GROOVY_CONDITION_TC_24_Case_02-Verify for the Groovy script_when returns true on issue
+[
+		'issueMustBeAssignedToSpecificUser',
+].each {
+	gint.taskHelper.add([
+			[action    : 'updateIssue',
+			 ext: ": assign issue to $testUser : ",
 			 sleepAfter: 2000,
 			 parameters: [
-					 assignee: user,
+					 assignee: testUser,
 					 issue: { -> defaultIssue[] },
 			 ],
 			],
-			[action    : 'transitionIssue', ext: ' : when condition true ' + it,
+			[action    : 'transitionIssue',
+			 ext: ":SCRIPTED_GROOVY_CONDITION_TC_24_Case_02-Verify for the Groovy script_when returns true on issue",
 			 sleep: 2000,
 			 expected  : 0,
 			 parameters: [
@@ -64,7 +73,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			],
 	])
 }
-
 
 
 

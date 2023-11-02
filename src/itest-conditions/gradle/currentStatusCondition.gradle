@@ -15,53 +15,52 @@ apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 tearDown()
 addWorkflow()
 
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CurrentStatusCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:currentstatus-condition'
 
-def defaultFieldsServer = [
-		"correlationId="
-]
-def defaultFieldsCloud =[
-		"condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9",
-]
 def currentStatusServer = [
-		currentStatusCondition_ToDo_inStatus : [ defaultFieldsServer + "issue_statuses=$statusIds.toDo", "not="],
-		currentStatusCondition_ToDo_Reverse : [ defaultFieldsServer +  "issue_statuses=$statusIds.toDo", "not=yes" ],
+		SELECT_CURRENT_STATUS_TODO : [ defaultFieldsServer + "issue_statuses=$statusIds.toDo", "not="],
+		SELECT_CURRENT_STATUS_TODO_AND_REVERSE : [ defaultFieldsServer +  "issue_statuses=$statusIds.toDo", "not=yes" ],
 ]
 def currentStatusCloud = [
-		currentStatusCondition_ToDo_inStatus :  [ defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[10003],\"options\":{\"not\":false},\"expression\":\"config.statusIds.includes(issue.status.id)\"}" ],
-		currentStatusCondition_ToDo_Reverse : [	defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[10003],\"options\":{\"not\":true},\"expression\":\"!config.statusIds.includes(issue.status.id)\"}" ]
+		SELECT_CURRENT_STATUS_TODO :  [ defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[10003],\"options\":{\"not\":false},\"expression\":\"config.statusIds.includes(issue.status.id)\"}" ],
+		SELECT_CURRENT_STATUS_TODO_AND_REVERSE : [	defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[10003],\"options\":{\"not\":true},\"expression\":\"!config.statusIds.includes(issue.status.id)\"}" ]
 ]
-def currentStatus = info?.isCloud ? currentStatusCloud : currentStatusServer
+
+def currentStatusCondition = info?.isCloud ? currentStatusCloud : currentStatusServer
 // Configuration for conditions
 
-currentStatus.eachWithIndex { transitions, fields, i->
-    def functionKey = info?.isCloud ? functionKey.currentStatusConditionCloud : functionKey.currentStatusConditionServer
-    addTransitionFunction(transitions, 'condition', fields, functionKey)
+currentStatusCondition.eachWithIndex { transitions, fields, i->
+	addTransitionFunction(transitions, 'condition', fields, functionKey)
 }
-
 
 createWorkflowScheme()
 createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
+// CURRENT_STATUS_CONDITION_TC_10_Verify transition tab after apply Current Status Condition on ToDo status and current status of Issue is also ToDo
 [
-		'currentStatusCondition_ToDo_Reverse',
+		'SELECT_CURRENT_STATUS_TODO',
 ].each {
 	gint.taskHelper.add([
-			action    : 'transitionIssue', ext: ' : error for ' + it,
-			expected  : -1,
+			action    : 'transitionIssue',
+			ext: ": CURRENT_STATUS_CONDITION_TC_10-Verify transition tab $it after apply Current Status Condition on ToDo status and current status of Issue is also ToDo:",
+			expected  : 0,
 			parameters: [
 					transition: it,
 					issue: { -> defaultIssue[] },
 			],
 	])
 }
+
+// CURRENT_STATUS_CONDITION_TC_14-Verify transition eg $it tab on issue screen when apply Reverse condition with ToDo status and current status of issue is also ToDo
 [
-		'currentStatusCondition_ToDo_inStatus',
+		'SELECT_CURRENT_STATUS_TODO_AND_REVERSE',
 ].each {
 	gint.taskHelper.add([
-			action    : 'transitionIssue', ext: ' : success for ' + it,
-			expected  : 0,
+			action    : 'transitionIssue',
+			ext: ": CURRENT_STATUS_CONDITION_TC_14-Verify transition eg $it tab on issue screen when apply Reverse condition with ToDo status and current status of issue is also ToDo:",
+			expected  : -1,
 			parameters: [
 					transition: it,
 					issue: { -> defaultIssue[] },

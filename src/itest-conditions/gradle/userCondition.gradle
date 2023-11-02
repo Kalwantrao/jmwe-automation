@@ -16,7 +16,7 @@ tearDown()
 addWorkflow()
 
 def functionKey = info?.isCloud? functionKey.userConditionCloud : functionKey.userConditionServer
-
+def testUser = info?.isCloud? cloudUser : serverUser
 def defaultFieldsServer = [
 		"correlationId=",
 ]

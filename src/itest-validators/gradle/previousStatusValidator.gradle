@@ -21,19 +21,19 @@ def defaultFields = [
 		"errorMessage="
 ]
 // Configuration for conditions
-statusListServer.eachWithIndex { status, value, i ->
+statusList.eachWithIndex { status, value, i ->
 	def fields = defaultFields + "status=$value" + "conditionalValidation=no"
 	addTransitionFunction('previousStatusShouldBe' + status, 'validator', fields, functionKey)
 }
-statusListServer.eachWithIndex { status, value, i ->
+statusList.eachWithIndex { status, value, i ->
 	def fields = defaultFields + "status=$value" +"mostRecentOnly=yes" + "conditionalValidation=no"
 	addTransitionFunction('mostRecentOnly' + status, 'validator', fields, functionKey)
 }
-statusListServer.eachWithIndex { status, value, i ->
+statusList.eachWithIndex { status, value, i ->
 	def fields = defaultFields + "status=$value" + "conditionalValidation=yes" + "conditionalValidationScript=$groovyExpression.getIssuetype"
 	addTransitionFunction('conditionalValidation'+status, 'validator', fields, functionKey)
 }
-statusListServer.eachWithIndex { status, value, i ->
+statusList.eachWithIndex { status, value, i ->
 	def fields = defaultFields + "status=$value" +"mostRecentOnly=yes" + "conditionalValidation=yes" + "conditionalValidationScript=$groovyExpression.getIssuetype"
 	addTransitionFunction('mostRecentOnlyConditionalValidation' + status, 'validator', fields, functionKey)
 }
@@ -50,7 +50,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 		'conditionalValidation',
 		'mostRecentOnlyConditionalValidation',
 ].each {
-	statusListServer.eachWithIndex { status, value, i ->
+	statusList.eachWithIndex { status, value, i ->
 		gint.taskHelper.add([
 				action    : 'transitionIssue', ext: " : previous status not in status_$status " + it,
 				expected  : -3,
@@ -73,7 +73,7 @@ gint.taskHelper.add(
 'conditionalValidation',
 'mostRecentOnlyConditionalValidation',
 ].each {
-	statusListServer.eachWithIndex { status, value, i ->
+	statusList.eachWithIndex { status, value, i ->
 		gint.taskHelper.add([
 				action    : 'transitionIssue', ext: " : Conditional validation false status_$status " + it,
 				expected  : 0,
@@ -98,7 +98,7 @@ gint.taskHelper.add(
 		'conditionalValidation',
 		'mostRecentOnlyConditionalValidation',
 ].each {
-	statusListServer.eachWithIndex { status, value, i ->
+	statusList.eachWithIndex { status, value, i ->
 		gint.taskHelper.add([
 				[action    : 'transitionIssue', ext: " : To set previous status to_$status " + it +i,
 				 parameters: [

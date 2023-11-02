@@ -15,34 +15,16 @@ apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 tearDown()
 addWorkflow()
 
-def functionKey = functionKey.separationOfDutiesConditionServer
+def functionKey =  'com.innovalog.jmwe.jira-misc-workflow-extensions:separationofduties-condition'
 
-def defaultFields = [
-               "correlationId=",
-]
-def separationOfDuties = [
-        fromAny_ToDo : [defaultFields + "fromStatus=" + "toStatus=To Do"],
-        fromToDo_Done : [defaultFields + "fromStatus=To Do" + "toStatus=Done"],
-        fromInProgress_ToDo : [defaultFields + "fromStatus=In Progress" + "toStatus=To Do"],
-        fromDone_InProgress : [defaultFields + "fromStatus=Done" + "toStatus=In Progress"]
+def separationOfDutiesConditionOptions = [
+        FROM_ANY_TO_TODO_STATUS : [defaultFieldsServer + "fromStatus=" + "toStatus=To Do"],
+        FROM_INPROGRESS_TO_DONE_STATUS : [defaultFieldsServer + "fromStatus=In Progress" + "toStatus=Done"],
+        FROM_DONE_TO_INPROGRESS_STATUS : [defaultFieldsServer + "fromStatus=Done" + "toStatus=In Progress"],
 ]
 
-// Configuration for conditions
-['fromAny_ToDo'].each {
-    def fields = defaultFields + "fromStatus=" + "toStatus=To Do"
-    addTransitionFunction(it, 'condition', fields, functionKey )
-}
-['fromToDo_Done'].each {
-    def fields = defaultFields + "fromStatus=To Do" + "toStatus=Done"
-    addTransitionFunction(it, 'condition', fields, functionKey )
-}
-['fromInProgress_ToDo'].each {
-    def fields = defaultFields + "fromStatus=In Progress" + "toStatus=To Do"
-    addTransitionFunction(it, 'condition', fields, functionKey )
-}
-['fromDone_InProgress'].each {
-    def fields = defaultFields + "fromStatus=Done" + "toStatus=In Progress"
-    addTransitionFunction(it, 'condition', fields, functionKey )
+separationOfDutiesConditionOptions.eachWithIndex { transitions, fields, i ->
+    addTransitionFunction(transitions, 'condition', fields, functionKey )
 }
 
 createWorkflowScheme()
@@ -50,30 +32,35 @@ createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
-// checking the current status To Do and previous status In Progress
-[
-        'fromAny_ToDo',
-        'fromInProgress_ToDo',
-        'fromDone_InProgress',
-        'fromToDo_Done'
-].each {
+// SEPARATION_OF_DUTIES_CONDITION_TC_10_Case_01-Verify when issue never transitioned FROM status to TO status
+
+separationOfDutiesConditionOptions.eachWithIndex { transition, fields, i->
     gint.taskHelper.add([
-            action    : 'transitionIssue', ext: ' : when issue not transitioned between selected status ' + it,
+            action    : 'transitionIssue',
+            ext: ": SEPARATION_OF_DUTIES_CONDITION_TC_10_Case_01_ $i _Verify when issue never transitioned_ $transition: ",
             expected  : 0,
             parameters: [
-                    transition: it,
+                    transition: transition,
                     issue: { -> defaultIssue[] },
             ],
     ])
 }
+
+// transition issue to check when the issues are transitioned from status to status
 gint.taskHelper.add([
         [action    : 'transitionIssue', ext: ' : To Done',
+         parameters: [
+                 transition: 'In Progress',
+                 issue: { -> defaultIssue[] },
+         ],
+        ],
+        [action    : 'transitionIssue', ext: ' : To In Progress',
          parameters: [
                  transition: 'Done',
                  issue: { -> defaultIssue[] },
          ],
         ],
-        [action    : 'transitionIssue', ext: ' : To In Progress',
+        [action    : 'transitionIssue', ext: ' : again In Progress',
          parameters: [
                  transition: 'In Progress',
                  issue: { -> defaultIssue[] },
@@ -86,20 +73,16 @@ gint.taskHelper.add([
          ],
         ],
 ])
-[
-        'fromToDo_Done',
-        'fromAny_ToDo',
-        'fromInProgress_ToDo',
-        'fromDone_InProgress'
-].each {
+
+//SEPARATION_OF_DUTIES_CONDITION_TC_10_Case_02-Verify when issue transitioned FROM status to TO status
+separationOfDutiesConditionOptions.eachWithIndex { transition, fields, i->
     gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: ' : transition not visible when issue is transitioned between selected statuses ' + it,
-             expected  : -1,
-             parameters: [
-                     transition: it,
-                     issue: { -> defaultIssue[] },
-             ],
+            action    : 'transitionIssue',
+            ext: ": SEPARATION_OF_DUTIES_CONDITION_TC_10_Case_02_ $i _Verify when issue transitioned_ $transition : ",
+            expected  : -1,
+            parameters: [
+                    transition: transition,
+                    issue: { -> defaultIssue[] },
             ],
     ])
 }
-
