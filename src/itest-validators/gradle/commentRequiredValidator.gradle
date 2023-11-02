@@ -39,7 +39,6 @@ def defaultFieldsCloud = [
 ]
 
 def functionKey = info?.isCloud ? functionKey.commentRequiredValidatorCloud : functionKey.commentRequiredValidatorServer
-def testUser =  info?.isCloud ? cloudUser : serverUser
 def fields = info?.isCloud ? defaultFieldsCloud : defaultFieldsServer
 
 // Configuration for validator

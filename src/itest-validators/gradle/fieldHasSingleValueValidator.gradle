@@ -26,7 +26,6 @@ def fieldsList = [
 ]
 def functionKey = functionKey.fieldHasSingleValueValidatorServer
 
-def testUser =  info?.isCloud ? cloudUser : serverUser
 // Configuration for validator
 
 fieldsList.eachWithIndex { field, value, i ->

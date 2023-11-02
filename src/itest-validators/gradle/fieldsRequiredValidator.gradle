@@ -30,7 +30,6 @@ def fieldsList = [
 ]
 def functionKey = info?.isCloud ? functionKey.fieldsRequiredValidatorCloud : functionKey.fieldRequiredValidatorServer
 
-def testUser =  info?.isCloud ? cloudUser : serverUser
 // Configuration for validator
 
 fieldsList.eachWithIndex { field, value, i ->

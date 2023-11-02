@@ -16,7 +16,6 @@ tearDown()
 addWorkflow()
 
 def functionKey = info?.isCloud? functionKey.uservalidatorCloud : functionKey.userValidatorServer
-def testUser = info?.isCloud? cloudUser : serverUser
 def errorMessage = "Check user satisfy the given criteria"
 
 def defaultFieldsServer = [

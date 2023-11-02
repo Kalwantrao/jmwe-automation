@@ -33,37 +33,11 @@ def currentStatusCloud = [
 def currentStatus = info?.isCloud ? currentStatusCloud : currentStatusServer
 // Configuration for conditions
 
-currentStatus.eachWithIndex { transitions , fields, i ->
-	def functionKey = info?.isCloud ? functionKey.currentStatusConditionCloud : functionKey.currentStatusConditionServer
-	gint.taskHelper.addSetUp([
-			[action    : 'addTransition', ext: ':' + transitions,
-			 retry: true,
-			 retrySleep: 5000,
-			 sleep: 3000,
-			 parameters: [
-					 workflow: workflow,
-					 name    : transitions,
-					 step    : info?.isCloud ? startStepCloud : startStepServer,
-					// screen  : screen
-			 ]
-			],
-			[action    : 'addTransitionFunction', ext: ':' + transitions,
-			 retry: true,
-			 retrySleep: 5000,
-			 sleep: 3000,
-			 parameters: [
-					 workflow   : workflow,
-					 transition : transitions,
-					 functionKey: functionKey,
-					 type       : 'condition',
-					 step       : info?.isCloud ? startStepCloud : startStepServer,
-					 field : fields
-			 ]
-			],
-	])
-
-
+currentStatus.eachWithIndex { transitions, fields, i->
+    def functionKey = info?.isCloud ? functionKey.currentStatusConditionCloud : functionKey.currentStatusConditionServer
+    addTransitionFunction(transitions, 'condition', fields, functionKey)
 }
+
 
 createWorkflowScheme()
 createProject()

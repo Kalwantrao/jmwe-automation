@@ -27,7 +27,6 @@ def fieldsList = [
         assignee : 'assignee'
 ]
 def functionKey = functionKey.fieldHasBeenModifiedValidatorServer	//function key for current status condition
-def testUser =  info?.isCloud ? cloudUser : serverUser
 // Configuration for validator
 
 fieldsList.eachWithIndex { field, value, i ->
