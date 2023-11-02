@@ -16,12 +16,7 @@ tearDown()
 addWorkflow()
 
 def functionKey = functionKey.separationOfDutiesConditionServer
-project.ext.statusIds = [ // statusIds.inProgress
-        toDo: 10000,
-        inProgress: 3,
-        inReview : 10103,
-        done : 10001
-]
+
 def defaultFields = [
                "correlationId=",
 ]

@@ -73,14 +73,14 @@ relatedIssue.eachWithIndex { key, value, i ->
 	addTransitionFunction('relatedIssuevalidator_forbidLinks' + i, 'validator', fields, functionKey)
 }
 
-relatedIssue.take(2).eachWithIndex { key, value, i ->
+relatedIssue.eachWithIndex { key, value, i ->
 	def server = defaultFieldsServer + "selectedLinkType=$value" + mode.requireLinks + issueConstraints.atLeastTwoAtMostTwo + verifyAllLinkedIssues.yes
 	def cloud = defaultFieldsCloud.each{element -> element }
 	def fields = info?.isCloud? cloud : server
 	addTransitionFunction('relatedIssuevalidator_issueConstraintsFalse' + i, 'validator', fields, functionKey)
 }
 
-relatedIssue.take(2).eachWithIndex { key, value, i ->
+relatedIssue.eachWithIndex { key, value, i ->
 	def server = defaultFieldsServer + "selectedLinkType=$value" + mode.requireLinks + issueConstraints.atLeastTwoAtMostFive + verifyAllLinkedIssues.yes
 	def cloud = defaultFieldsCloud.each{element -> element }
 	def fields = info?.isCloud? cloud : server
@@ -277,7 +277,7 @@ relatedIssue.remove("returnsFromJqlSearch")
 [
 		'relatedIssuevalidator_issueConstraintsFalse'
 ].collect {
-	relatedIssuesMap.take(2).eachWithIndex { currentIssue, targetIssue, i ->
+	relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
 		gint.taskHelper.add([
 				[action    : 'transitionIssue', ext: ': issue not has linked issues following given constraints_no of Issues :' + it + i,
 				 expected  : -3,
@@ -293,7 +293,7 @@ relatedIssue.remove("returnsFromJqlSearch")
 [
 		'relatedIssuevalidator_issueConstraintsTrue'
 ].collect {
-	relatedIssuesMap.take(2).eachWithIndex { currentIssue, targetIssue, i ->
+	relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
 		gint.taskHelper.add([
 				[action    : 'transitionIssue', ext: ': issue has linked issues following given constraints_no of Issues :' + it + i,
 				 expected  : 0,

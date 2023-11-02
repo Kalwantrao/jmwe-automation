@@ -15,12 +15,7 @@ apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 tearDown()
 addWorkflow()
 
-project.ext.statusIds = [ // statusIds.inProgress
-		toDo: 10000,
-		inProgress: 3,
-		inReview : 10103,
-		done : 10001
-]
+
 def defaultFieldsServer = [
 		"correlationId="
 ]

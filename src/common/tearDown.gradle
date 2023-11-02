@@ -4,6 +4,14 @@ ext.tearDown = {
             parameters: [
                 project: projectName,
                 ],
+             finalClosure:{ Task task->
+                 if(task.result == true){
+                     gint.helper.log("project not found", projectName)
+                 }
+                 else{
+                     gint.helper.log("deleting project", projectName)
+                 }
+             }
             ],
             [action    : 'createProject',ext: ': FOR WORKFLOW',
              onlyIf: createTestProject == "yes",
@@ -73,6 +81,13 @@ ext.tearDown = {
                 parameters: [
                     workflow: workflow
                 ]
+            ],
+            [action: 'deleteWorkflow', ext: "Copy" ,
+             onlyIf: skipSetup != "yes",
+             mustRunAfter: 'deleteWorkflowScheme',
+             parameters: [
+                     workflow: "Copy of $workflow"
+             ]
             ]
     ])
 }

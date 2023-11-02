@@ -21,28 +21,8 @@ def defaultFieldsServer = [
 ]
 
 ['hideTransitionCondition'].each {transitions ->
-    gint.taskHelper.addSetUp([
-            [action    : 'addTransition', ext: ':' + transitions,
-             onlyIf: !isCloud,
-             parameters: [
-                     workflow: workflow,
-                     name    : transitions,
-                     step    : info?.isCloud ? startStepCloud : startStepServer,
-                     //screen  : screen
-             ]
-            ],
-            [action    : 'addTransitionFunction', ext: ':' + transitions,
-             onlyIf: !isCloud,
-             parameters: [
-                     workflow   : workflow,
-                     transition : transitions,
-                     functionKey: functionKey.hideTransitionConditionServer,
-                     type       : 'condition',
-                     step       : info?.isCloud ? startStepCloud : startStepServer,
-             ]
-            ],
-    ])
-
+    def functionKey = functionKey.hideTransitionConditionServer
+    addTransitionFunction(transitions, 'condition', defaultFieldsServer, functionKey)
 }
 
 def previousStatusServer = [
@@ -57,28 +37,7 @@ def previousStatusServer = [
 
 previousStatusServer.eachWithIndex { transitions, fields, i->
     def functionKey = functionKey.previousStatusConditionServer
-    gint.taskHelper.addSetUp([
-            [action    : 'addTransition', ext: ':' + transitions + i,
-             onlyIf: !isCloud,
-             parameters: [
-                     workflow: workflow,
-                     name    : transitions,
-                     step    : info?.isCloud ? startStepCloud : startStepServer,
-                    // screen  : screen
-             ]
-            ],
-            [action    : 'addTransitionFunction', ext: ':' + transitions + i,
-             onlyIf: !isCloud,
-             parameters: [
-                     workflow   : workflow,
-                     transition : transitions,
-                     functionKey: functionKey,
-                     type       : 'condition',
-                     step       : info?.isCloud ? startStepCloud : startStepServer,
-                     field      : fields
-             ]
-            ],
-    ])
+    addTransitionFunction(transitions, 'condition', fields, functionKey)
 }
 
 createWorkflowScheme()

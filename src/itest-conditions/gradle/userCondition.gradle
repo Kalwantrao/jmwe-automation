@@ -63,19 +63,19 @@ userCriteria.eachWithIndex { criteria, userFields, i ->
 
 userCriteria.eachWithIndex { criteria, userFields, i ->
 	def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.${criteria} && user.accountId == issue.${criteria}.accountId))))\"}"
-	def server = defaultFieldsServer + whichUser.userInFieldAssignee + reverse.no + mode.allUsers + fieldEmpty.no
+	def server = defaultFieldsServer + userFields + whichUser.userInFieldAssignee + reverse.no + mode.allUsers + fieldEmpty.no
 	addTransitionFunction('assignee' + criteria, 'condition', info?.isCloud ? cloud : server,  functionKey )
 }
 
 userCriteria.eachWithIndex { criteria, userFields, i ->
 	def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.${criteria} && user.accountId == issue.${criteria}.accountId))))\"}"
-	def server = defaultFieldsServer + whichUser.userInFieldReporter + reverse.no + mode.allUsers + fieldEmpty.no
+	def server = defaultFieldsServer + whichUser.userInFieldReporter + userFields + reverse.no + mode.allUsers + fieldEmpty.no
 	addTransitionFunction('reporter' + criteria, 'condition',info?.isCloud ? cloud : server,  functionKey )
 }
 
 userCriteria.eachWithIndex { criteria, userFields, i ->
 	def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.${criteria} && user.accountId == issue.${criteria}.accountId))))\"}"
-	def server = defaultFieldsServer + whichUser.userInFieldCreator + reverse.no + mode.allUsers + fieldEmpty.no
+	def server = defaultFieldsServer + whichUser.userInFieldCreator + userFields + reverse.no + mode.allUsers + fieldEmpty.no
 	addTransitionFunction('creator' + criteria, 'condition',info?.isCloud ? cloud : server,  functionKey )
 }
 
@@ -116,7 +116,7 @@ userCriteria.eachWithIndex { criteria, userFields, i ->
 }
 ['atleastOneCriteria_assigneeField_OrEmpty'].each {
 	def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
-	def server =  defaultFieldsServer + whichUser.userInFieldAssignee + userCriteria.checkRoles + userCriteria.projectLead + reverse.no + mode.atLeastOne + fieldEmpty.no
+	def server =  defaultFieldsServer + whichUser.userInFieldAssignee + userCriteria.projectLead + reverse.no + mode.atLeastOne + fieldEmpty.no
 	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)
 }
 

@@ -13,7 +13,6 @@ apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 tearDown()
-//tearDownUsers()
 addWorkflow()
 
 def defaultFields = [
@@ -31,12 +30,9 @@ def script = [
         userFromScript : [ "groovyExpression=issue.setFieldValue('Labels','runAsUserFromScript')","scriptDescription=" ],
 ]
 
-
-       def fields =  {\"sendNotifications\":true,\"problems\":[],\"targetIssue\":\"currentIssue:*\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"xxd\"}
-
 def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ScriptedPostFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-function'
 
-// Configuration for validator
+// Configuration
 
 ['setLabelByScript'].each {
     def fields = defaultFields + script.setLabels

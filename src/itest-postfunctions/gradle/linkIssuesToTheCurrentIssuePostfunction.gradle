@@ -13,16 +13,18 @@ apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 tearDown()
-//tearDownUsers()
 addWorkflow()
 
+def jqlExpressionToLinkIssue = "project = $projectName and issueType = Task and summary ~ JMWE_LinkIssue"
 def defaultFields = [
         "correlationId=",
         "throwExceptions=false",
 ]
+
 def issuesToLink = [
-        jql : ["jql=issueType = Task and summary ~ JMWE_Issue"],
+        jql : ["jql=$jqlExpressionToLinkIssue"],
 ]
+
 def maxIssues = [
         zero : [ "maxIssues=0"],
         one : [ "maxIssues=1"],
@@ -31,13 +33,10 @@ def maxIssues = [
 ]
 
 def  selectedLinkType = [
-        block: ["selectedLinkType=$relatedIssue.linkByBlock"],
-        isBlockedBy: ["selectedLinkType=$relatedIssue.linkByisBlockedBy"],
+        blocks: ["selectedLinkType=$relatedIssue.linkByBlock"],
         clones: ["selectedLinkType=$relatedIssue.linkByClones"],
-        isClonedby: ["selectedLinkType=$relatedIssue.linkByIsClonedBy"],
         duplicates: ["selectedLinkType=$relatedIssue.linkByDuplicates"],
-        isDuplicatedBy: ["selectedLinkType=$relatedIssue.linkByIsDuplicatedBy"],
-        relatesTo: ["selectedLinkType=$relatedIssue.linkByRelatesTo"],
+        'relates to': ["selectedLinkType=$relatedIssue.linkByRelatesTo"],
 ]
 def useGroovyFilter = [
         no : ["useGroovyFilter=false"],
@@ -45,155 +44,93 @@ def useGroovyFilter = [
 ]
 def functionKey =	info ?.isCloud ? 'com.innovalog.jmwe.jira-misc-workflow-extensions:link-issues-function' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:link-issues-function'
 
-// Configuration for validator
+// Configuration
 selectedLinkType.eachWithIndex { key,  value, i ->
-        def transition = 'linkIssuesToCurrentIssue'
+        def transition = 'linkIssuesToCurrentIssueByType'
         def fields = defaultFields + value + issuesToLink.jql + maxIssues.one +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.false
-        addTransitionFunction(transition + i, 'postfunction', fields, functionKey )
+        addTransitionFunction(transition + key, 'postfunction', fields, functionKey )
+}
+
+selectedLinkType.eachWithIndex { key,  value, i ->
+    def transition = 'linkIssuesToCurrentIssueIfConditionTrueByType'
+    def fields = defaultFields + value + issuesToLink.jql + maxIssues.one +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.true
+    addTransitionFunction(transition + key, 'postfunction', fields, functionKey )
 }
 
 createWorkflowScheme()
 createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
-def subtask = createIssue([type: 'Task', summary: 'JMWE_Issue',], 'subtask')
-def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue', ], 'defaultIssue1')
-def subtask1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'subtask1')
+def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_LinkIssue'], 'defaultIssue1')
+
+def issue = {-> defaultIssue[]}
+def toIssue = {->defaultIssue1[]}
 
 // checking the current status To Do and previous status In Progress
-selectedLinkType.eachWithIndex { key, value, i ->
-    ['linkIssuesToCurrentIssue',].each {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: " : " + it + key +i ,
+
+
+selectedLinkType.eachWithIndex { linkType, value, i ->
+    [
+            'linkIssuesToCurrentIssueIfConditionTrueByType'
+    ].each {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: " : when issue priority is not high :" + it + linkType +i ,
+                 parameters: [
+                         transition: it + linkType,
+                         issue     : { -> defaultIssue[] },
+                 ],
+                ],
+                [action: 'getFieldValue', ext: ":when issues priority not high: " + it + linkType + i,
+                 parameters: [
+                         issue: {-> defaultIssue[] },
+                         field: "Linked Issues",
+                 ],
+                 failData: [/Linked Issues . . . . . . . . : $toIssue/]
+                ],
+               ],
+        )
+    }
+}
+gint.taskHelper.add(
+        action: 'updateIssue', ext : ": set priority to high: ",
+        parameters: [
+                issue: {-> defaultIssue[]},
+                priority: 'High'
+        ]
+)
+
+
+
+selectedLinkType.eachWithIndex { linkType, value, i ->
+    [
+            'linkIssuesToCurrentIssueByType',
+            'linkIssuesToCurrentIssueIfConditionTrueByType'
+    ].each {
+        gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " : when priority high: " + it + linkType +i ,
              parameters: [
-                     transition: it + i,
+                     transition: it + linkType,
                      issue     : { -> defaultIssue[] },
              ],
             ],
-            [action: 'getFieldValue', ext: ": " + it + key + i,
+            [action: 'getFieldValue', ext: ": when priority high" + it + linkType + i,
              parameters: [
                      issue: {-> defaultIssue[] },
                      field: "Linked Issues",
              ],
-            ]
-    ])
+                    data: [/Linked Issues . . . . . . . . : $toIssue/]
+            ],
+            [action: 'deleteLink',ext: " : unlink issues linked by post function to check next option: " + it+ linkType,
+             parameters:[
+                     issue: issue,
+                     toIssue: toIssue,
+                     link: "$linkType"
+                     ]
+             ]
+             ],
+    )
     }
 }
 
 
 
-/*
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
-buildscript {
-    repositories {
-        maven {
-            url "https://plugins.gradle.org/m2/"
-        }
-    }
-    dependencies {
-        classpath "org.gint:gint-atlassian:3.8.4"
-    }
-}
-
-apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
-
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def transition = 'linkIssuesToTheCurrentIssue'
-def workflow = project
-def screen = project
-def user = info.user
-def userId = 'jmwe_qa'
-gint.xmlReport =	true	//xml report generates in projects root directory
-gint.verbose =	true
-
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/LinkIssuesToTheCurrentIssuePostfunction${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
-def functionKey =	info ?.isCloud ? 'com.innovalog.jmwe.jira-misc-workflow-extensions:link-issues-function' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:link-issues-function'
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
-
-// Create transitions and add transition function for multiple scenarios using json data file from resources
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
-addUsers(userId)
-
-def jqlIssue1 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Task']}, 'jqlIssue1')
-def jqlIssue2 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Task']}, 'jqlIssue2')
-def jqlIssue3 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Task']}, 'jqlIssue3')
-def jqlIssue4 = createIssue(project,{[ type: 'Task', summary: 'JMWE_Task']}, 'jqlIssue4')
-
-// check current issue links
-def blocks = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'blocks')
-transitionIssue(transition+0, {-> blocks[0]}, 0, 'linkIssueByBlocksLink', null, null)
-getLinkedIssueList({-> blocks[0]}, '2', 'linkIssuesOfBlocksType', "Blocks", "blocks")
-
-def isBlockedBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isBlockedBy')
-transitionIssue(transition+1, {-> isBlockedBy[0]}, 0, 'linkIssuesByIsBlockedByLink', null, null)
-getLinkedIssueList({-> isBlockedBy[0]}, '2', 'linkIssuesOfIsBlockByType', "Blocks", "is blocked by")
-
-def clones = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'clones')
-transitionIssue(transition+2, {-> clones[0]}, 0, 'linkIssuesByClonesLink', null, null)
-getLinkedIssueList({-> clones[0]}, '2', 'linkIssuesOfClonesType', "Cloners", "clones")
-
-def isClonedBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isClonedBy')
-transitionIssue(transition+3, {-> isClonedBy[0]}, 0, 'linkIssueOfIsClonedByLink', null, null)
-getLinkedIssueList({-> isClonedBy[0]}, '2', 'linkIssuesOfIsClonedByType', "Cloners", "is cloned by")
-
-def duplicates = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'duplicates')
-transitionIssue(transition+4, {-> duplicates[0]}, 0, 'linkIssueOfDuplicatesLink', null, null)
-getLinkedIssueList({-> duplicates[0]}, '2', 'linkIssueOfDuplicatesLink', "Duplicate", "duplicates")
-
-def isDuplicateBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isDuplicateBy')
-transitionIssue(transition+5, {-> isDuplicateBy[0]}, 0, 'linkIssueOfIsDuplicatesLink', null, null)
-getLinkedIssueList({-> isDuplicateBy[0]}, '2', 'linkIssueOfIsDuplicatesLink', "Duplicate", "is duplicated by")
-
-def causes = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'causes')
-transitionIssue(transition+6, {-> causes[0]}, 0, 'linkIssueOfCausesLink', null, null)
-getLinkedIssueList({-> causes[0]}, '2', 'linkIssueOfCausesLink', "Problem/Incident", "causes")
-
-def isCausedBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isCausedBy')
-transitionIssue(transition+7, {-> isCausedBy[0]}, 0, 'linkIssueOfIsCausedByLink', null, null)
-getLinkedIssueList({-> isCausedBy[0]}, '2', 'linkIssueOfisCausedByLink', "Problem/Incident", "is caused by")
-
-
-def relates = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'relatesTo')
-transitionIssue(transition+8, {-> relates[0]}, 0, 'linkIssueOfrelatesToLink', null, null)
-getLinkedIssueList({-> relates[0]}, '2', 'linkIssueOfrelatesToLink', "Relates", "relates to")
-
-//check groovy filter
-def groovyFilterIssues = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', priority: 'High']}, 'groovyfilterIssues')
-transitionIssue(transition+9, {-> groovyFilterIssues[0]}, 0, 'groovyfilterIssues', null, null)
-getLinkedIssueList({-> groovyFilterIssues[0]}, '1', 'groovyfilterIssues', "Blocks", "blocks")
-
-// check conditional execution
-def condExecTrue = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue']}, 'condExecTrue')
-transitionIssue(transition+10, {-> condExecTrue[0]}, 0, 'conditionalExecutionTrue', null, null)
-getLinkedIssueList({-> condExecTrue[0]}, '2', 'conditionalExecutionTrue', "Blocks", "blocks")
-
-def condExecFalse = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'condExecFalse')
-transitionIssue(transition+10, {-> condExecFalse[0]}, 0, 'conditionalExecutionFalse', null, null)
-getLinkedIssueList({-> condExecFalse[0]}, '0', 'conditionalExecutionFalse', "", "")
-
-// runAsUser - specific user : 'jmwe_qa'
-def runAsUser_specificUser = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue_User']}, 'runAsUser_specificUser')
-transitionIssue(transition+11, {-> runAsUser_specificUser[0]}, 0, 'runAsUser_specificUser', null, null)
-getLinkedIssueList({-> runAsUser_specificUser[0]}, '1', 'runAsUser_specificUser', "Blocks", "Blocks")
-getIssueHistoryList({-> runAsUser_specificUser[0]}, userId, 'runAsUser_specificUser')
-
-//runAsUser - user return by userFromScript:issue.get('reporter')
-def runAsUser_byScript = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue_User', reporter: userId]}, 'runAsUser_byScript')
-transitionIssue(transition+12, {-> runAsUser_byScript[0]}, 0, 'runAsUser_byScript', null, null)
-getLinkedIssueList({-> runAsUser_byScript[0]}, '1', 'runAsUser_byScript', "Blocks", "Blocks")
-getIssueHistoryList({-> runAsUser_byScript[0]}, userId, 'runAsUser_byScript')
-
-
-//runAsUser - user in field : userField:assignee
-def runAsUser_fromField = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue_User', assignee: userId]}, 'runAsUser_fromField')
-transitionIssue(transition+13, {-> runAsUser_fromField[0]}, 0, 'runAsUser_fromField', null, null)
-getLinkedIssueList({-> runAsUser_fromField[0]}, '1', 'runAsUser_fromField', "Blocks", "Blocks")
-getIssueHistoryList({-> runAsUser_fromField[0]}, userId, 'runAsUser_fromField')
-
-*/

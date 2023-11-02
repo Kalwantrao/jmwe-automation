@@ -1,0 +1,7 @@
+[
+        functionKey.copyFieldValueFromParentIssuePostfunctionServer,
+        functionKey.copyFieldValueFromRelatedIssuesPostfunctionServer,
+        functionKey.copyFieldValueToParentIssuePostfunctionServer,
+        functionKey.copyFieldValueToRelatedIssuesPostfunctionServer,
+        functionKey.copyValueFromFieldToFieldPostfunctionServer
+]

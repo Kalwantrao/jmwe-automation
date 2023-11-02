@@ -8,23 +8,502 @@ buildscript {
         classpath "org.gint:gint-atlassian:3.8.3"
     }
 }
-
 apply plugin: "org.gint.atlassian"
 apply from: gint.resourceDirectory + '/src/common/utils.gradle'
-
+tearDown();
+addWorkflow();
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:assigntorolemember'
+def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
+def defaultFields = [
+        "correlationId=",
+        "throwExceptions="
+]
 
-gint.taskHelper.add(
-        action: 'createIssue',
-            parameters: [
-                    issueType: 'Task',
-                    summary: 'test',
-                    project: 'TESTK'
+def projectRole = [
+        admin : ["jira.projectrole.id=$jiraAdminRoleId"],
+        testRole : ["jira.projectrole.id=$testProjectRoleId"],
+        emptyRole : ["jira.projectrole.id=$emptyProjectRoleId"],
+]
+
+def action = [
+        force : ["assigneeMode=default"],
+        ifAutomatic : ["assigneeMode=skipIfAssignee"],
+        ifMemberRequiredRole : ["assigneeMode=useSelectedUser"],
+        ifChangedOnTransitionScreen : ["assigneeMode=forceSelectedUser"],
+]
+['1. assignToAdminRole'].each {
+    def server = defaultFields + projectRole.admin + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['2. assignToTestRole'].each {
+    def server = defaultFields + projectRole.testRole + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['3. issueUnassigned'].each {
+    def server = defaultFields + projectRole.emptyRole + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['4. ifAutomaticAction'].each {
+    def server = defaultFields + projectRole.admin + action.ifAutomatic + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['5. ifAutomaticActionNegative'].each {
+    def server = defaultFields + projectRole.admin + action.ifAutomatic + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['6. ifMemberRequiredRole'].each {
+    def server = defaultFields + projectRole.admin + action.ifMemberRequiredRole + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['7. ifMemberNotRequiredRole'].each {
+    def server = defaultFields + projectRole.admin + action.ifMemberRequiredRole + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['8. ifMemberRequiredRoleAutomatic'].each {
+    def server = defaultFields + projectRole.admin + action.ifMemberRequiredRole + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['9. ifMemberRequiredRoleUnassigned'].each {
+    def server = defaultFields + projectRole.admin + action.ifMemberRequiredRole + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['10. ifChangedOnTransitionScreenRoleMember'].each {
+    def server = defaultFields + projectRole.admin + action.ifChangedOnTransitionScreen + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['11. ifChangedOnTransitionScreenNotRoleMember'].each {
+    def server = defaultFields + projectRole.admin + action.ifChangedOnTransitionScreen + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['12. ifChangedOnTransitionScreenAutomatic'].each {
+    def server = defaultFields + projectRole.admin + action.ifChangedOnTransitionScreen + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['13. ifChangedOnTransitionScreenUnassigned'].each {
+    def server = defaultFields + projectRole.admin + action.ifChangedOnTransitionScreen + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['14. assignToAdminRoleOnlyIfConditionTrue'].each {
+    def server = defaultFields + projectRole.admin + conditionalExecution.true
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+createWorkflowScheme();
+createProject()
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+
+[testUser1,testUser2].collect{
+    gint.taskHelper.add(
+            action: 'removeProjectRoleActors', ext: ": remove user $it from specific role",
+            parameters:[
+                    project: projectName,
+                    role: testRole,
+                    userId: it
+            ]
+    )
+}
+
+[testUser1].collect{
+    gint.taskHelper.add(
+            action: 'addProjectRoleActors', ext: ": add user $it to specific role",
+            parameters:[
+                    project: projectName,
+                    role: testRole,
+                    userId: it
+            ]
+    )
+}
+
+
+[inactiveAdmin, testAdmin].collect{
+    gint.taskHelper.add(
+            action: 'removeProjectRoleActors', ext: ":remove user $it from specific role: ",
+            parameters:[
+                    project: projectName,
+                    role: 'Administrators',
+                    userId: it
+            ]
+    )
+}
+// 1. Assign to default Admin role
+[
+        '1. assignToAdminRole'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it ,
+             ]
             ],
-        data: [~/Issue TESTK-\d+ created with id \d+/]
-)
-
-
-
-
-
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $user/],
+            ],
+    ])
+}
+// 2. Assign to Test role
+[
+        '2. assignToTestRole'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it ,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $testUser1/],
+            ],
+            [action    : 'updateIssue',
+             ext       : it + ': unassigned' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     assignee: " "
+             ],
+            ],
+    ])
+}
+// 3. Keep issue unassigned when there is no user in the selected project role
+[
+        '3. issueUnassigned'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it ,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : /],
+            ],
+    ])
+}
+// 4. Assign to Admin role, if automatic selected in transition screen
+[
+        '4. ifAutomaticAction'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it ,
+                     assignee: -1 , //pass -1 when we need automatic assignee in transition screen
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $user/],
+            ],
+            [action    : 'updateIssue',
+             ext       : it + ': unassigned' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     assignee: " "
+             ],
+            ],
+    ])
+}
+// 5. Assign to selected user in transition screen even if automatic action
+[
+        '5. ifAutomaticActionNegative'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it ,
+                     assignee: testUser1,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $testUser1/],
+            ],
+            [action    : 'updateIssue',
+             ext       : it + ': unassigned' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     assignee: " "
+             ],
+            ],
+    ])
+}
+// 6. If member of the required role is selected on the transition screen, assign issue to them.
+[
+        '6. ifMemberRequiredRole'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it ,
+                     assignee: user,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $user/],
+            ],
+            [action    : 'updateIssue',
+             ext       : it + ': unassigned' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     assignee: " "
+             ],
+            ],
+    ])
+}
+// 7. If selected user on the transition screen is not a role member, assign issue to default role member.
+[
+        '7. ifMemberNotRequiredRole'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it ,
+                     assignee: testUser1,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $user/],
+            ],
+            [action    : 'updateIssue',
+             ext       : it + ': unassigned' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     assignee: " "
+             ],
+            ],
+    ])
+}
+// 8. If automatic assignee selected on the transition screen, assign issue to default role member.
+[
+        '8. ifMemberRequiredRoleAutomatic'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it ,
+                     assignee: -1 , //pass -1 when we need automatic assignee in transition screen
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $user/],
+            ],
+            [action    : 'updateIssue',
+             ext       : it + ': unassigned' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     assignee: " "
+             ],
+            ],
+    ])
+}
+// 9. If unassigned, assignee selected on the transition screen, assign issue to default role member.
+[
+        '9. ifMemberRequiredRoleUnassigned'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it ,
+                     assignee: " " ,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $user/],
+            ],
+            [action    : 'updateIssue',
+             ext       : it + ': unassigned' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     assignee: " "
+             ],
+            ],
+    ])
+}
+// 10. Use the assignee selected on the transition screen if user is a role member.
+[
+        '10. ifChangedOnTransitionScreenRoleMember'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it ,
+                     assignee: user,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $user/],
+            ],
+            [action    : 'updateIssue',
+             ext       : it + ': unassigned' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     assignee: " "
+             ],
+            ],
+    ])
+}
+/*
+// 11. Use the assignee selected on the transition screen if user is not a role member.
+[
+        '11. ifChangedOnTransitionScreenNotRoleMember'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it ,
+                     assignee: testUser1,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $testUser1/],
+            ],
+            [action    : 'updateIssue',
+             ext       : it + ': unassigned' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     assignee: " "
+             ],
+            ],
+    ])
+}
+*/
+// 12. If automatic assignee selected on the transition screen, assign issue to default role member.
+[
+        '12. ifChangedOnTransitionScreenAutomatic'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it ,
+                     assignee: -1 , //pass -1 when we need automatic assignee in transition screen
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $user/],
+            ],
+            [action    : 'updateIssue',
+             ext       : it + ': unassigned' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     assignee: " "
+             ],
+            ],
+    ])
+}
+// 13. If unassigned, assignee selected on the transition screen, assign issue to default role member.
+[
+        '13. ifChangedOnTransitionScreenUnassigned'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it ,
+                     assignee: " " ,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $user/],
+            ],
+            [action    : 'updateIssue',
+             ext       : it + ': unassigned' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     assignee: " "
+             ],
+            ],
+    ])
+}
+[
+        '14. assignToAdminRoleOnlyIfConditionTrue'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it ,
+                     priority:'Medium',
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     field: "Assignee"
+             ],
+             failData      : [/Assignee  . . . . . . . . . . : $user/],
+            ],
+    ])
+}

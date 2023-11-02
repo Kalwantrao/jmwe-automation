@@ -16,11 +16,13 @@ tearDown()
 addWorkflow()
 
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
-def functionKey = info?.isCloud ? functionKey.clearFieldsCloud : functionKey.clearFieldsServer
+relatedIssue.remove("currentIssue")
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ClearFieldsOfLinkedIssuesFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:ClearFieldValueOfLinkedIssues-function'
 
 def clearFieldsPfFields = [
         "correlationId=",
 ]
+
 def fields = [
         labels : [ "fields=labels"],
         components : [ "fields=components"],
@@ -70,6 +72,7 @@ relatedIssue.eachWithIndex { key, value, i ->
 
 createWorkflowScheme()
 createProject()
+
 (1..1).each {
     gint.taskHelper.addSetUp([
             [action: 'addVersion', ext: ': create versions : ' + it,
@@ -89,7 +92,6 @@ createProject()
 
 // set issue status to In Progress
 
-def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
 def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
 def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
@@ -104,12 +106,11 @@ def isClonedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isClonedBy'
 def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
 def isDuplicatedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isDuplicatedBy')
 def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
-def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'relatesTo')
+def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 
 updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
 
 def linkIssuesMap = [
-
         blocks : {->blocks[]},
         'is blocked by' : {->isBlockedBy[]},
         clones : {->clones[]},
@@ -123,9 +124,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
     linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
 }
 
-
 def relatedIssuesMap = [
-        {->current[]} : {->current[]},
         {->parent[]} : {->subtask[]},
         {->subtask[]} : {->parent[]},
          {->epic[]} : {->issueBelongsToEpic[]},
@@ -143,6 +142,7 @@ def relatedIssuesMap = [
          {->issueLinks[]} : {->relatesTo[]},
          {->issueLinks[]} : {->jqlIssue[]},
 ]
+
 def clearLabel = 'test_label'
 def fixVersions = 1
 def affectsVersions = 1
@@ -190,6 +190,7 @@ relatedIssuesMap.eachWithIndex{ key ,value,i ->
         ])
     }
 }
+
 ['clearFieldsIfConditionalExecutionTrue'].each {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
@@ -210,6 +211,7 @@ relatedIssuesMap.eachWithIndex{ key ,value,i ->
         ])
     }
 }
+
 relatedIssuesMap.eachWithIndex{ key ,value,i ->
     gint.taskHelper.add(
             action: 'updateIssue', ext: " : set priority to return condition true for issues: " + i,
@@ -219,6 +221,7 @@ relatedIssuesMap.eachWithIndex{ key ,value,i ->
             ]
     )
 }
+
 ['clearFieldsIfConditionalExecutionTrue'].each {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
@@ -269,6 +272,7 @@ relatedIssuesMap.eachWithIndex{ key ,value,i ->
         ])
     }
 }
+
 def userInFieldAssignee = user
 
 relatedIssuesMap.eachWithIndex { key, value, i ->

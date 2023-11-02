@@ -13,11 +13,11 @@ apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 tearDown()
-//addWorkflow()
+addWorkflow()
 
 def functionKey = functionKey.setIssueFieldsPfServer
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
-def testUser = info?.isCloud? cloudUser : serverUser
+
 def defaultFieldsServer = [
             "throwExceptions=",
             "sendNotifications=",
@@ -40,7 +40,7 @@ def fieldsOptions = [
         runAsUserInFieldCreator : ["fields=[{\"fieldId\":\"labels\",\"value\":\"runAsUserInFieldCreator\",\"options\":[],\"isTemplate\":true}]"],
         runAsUserReturnFromScript : ["fields=[{\"fieldId\":\"labels\",\"value\":\"runAsUserReturnFromScript\",\"options\":[],\"isTemplate\":true}]"],
 ]
-/*
+
 relatedIssue.eachWithIndex { key, value, i ->
     def fields = defaultFieldsServer + conditionalExecution.false +  fieldsOptions.noOption + "selectedLinkType=$value" + runAsUser.currentUser
     addTransitionFunction('setFieldLabelsToTargetIssue' + i, 'postfunction', fields, functionKey)
@@ -107,10 +107,9 @@ relatedIssue.eachWithIndex { key, value, i ->
     addTransitionFunction('runAsUserReturnFromScript' + i, 'postfunction', fields, functionKey)
     moveTransitionFunction('runAsUserReturnFromScript'+ i, 4)
 }
- */
 
-// createWorkflowScheme()
-associateWorkflow(projectKey)
+
+createWorkflowScheme()
 createProject()
 
 (1..2).each {

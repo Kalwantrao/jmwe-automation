@@ -16,11 +16,8 @@ tearDown()
 addWorkflow()
 
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
-def functionKey = info?.isCloud ? functionKey.commentIssuePostfunctionCloud : functionKey.commentIssuePostfunctionServer
-
-def testUser = info?.isCloud ? cloudUser : serverUser
-
-def templateComment = "test comment from template"
+relatedIssue.remove("currentIssue")
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CommentLinkedIssuesFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentLinkedIssues-function'
 def expressionComment = "expression"
 
 def commentIssuePfFields = [
@@ -52,7 +49,7 @@ def commentVisibility = [
 
 def commentTypeOptionServer = [
         template : commentIssuePfFields + commentType.template + commentVisibility.notSelected +  conditionalExecution.false + runAsUser.currentUser,
-        expression: commentIssuePfFields + commentType.expression + commentVisibility.notSelected+ conditionalExecution.false + runAsUser.currentUser
+        //expression: commentIssuePfFields + commentType.expression + commentVisibility.notSelected+ conditionalExecution.false + runAsUser.currentUser
 ]
 def commentTypeOptionCloud = [
         template: defaultFieldsCloud ,
@@ -133,7 +130,6 @@ createProject()
 
 // set issue status to In Progress
 
-def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
 def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
 def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
@@ -168,7 +164,6 @@ linkIssuesMap.eachWithIndex { key, value, i ->
 }
 
 def relatedIssuesMap = [
-        {->current[]} : {->current[]},
         {->parent[]} : {->subtask[]},
         {->subtask[]} : {->parent[]},
         {->epic[]} : {->issueBelongsToEpic[]},
@@ -197,26 +192,47 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
     )
 }
 
+commentTypeOption.eachWithIndex{ type, fieldValues, number ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ": check comment related issue by :" + type + i,
+                 parameters: [
+                         issue     : key,
+                         transition: type + i,
+                 ],
+                ],
+                [action: 'getComments', ext: " : check comment related issue by :" + type + i,
+                 parameters: [
+                         issue: value
+                 ],
+                 data:[   /$user added a comment on/,
+                          /$type/
+                 ],
+                ]
+        ]
+        )
+    }
+}
+
 [
-        'template',
         'runAsUserInFieldReporter',
         'runAsUserInFieldCreator',
         'runAsUserFromScript',
 ].each {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: it + ': add comment by template :' + i,
+                [action    : 'transitionIssue', ext: it + ': check comment related issue for :' + it + i,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
-                [action: 'getComments', ext: " : add comment by template :" + it + i,
+                [action: 'getComments', ext: " : check comment related issue for :" + it + i,
                  parameters: [
                          issue: value
                  ],
                  data:[   /$user added a comment on/,
-                         /$it/
+                          /$it/
                  ],
                 ]
         ])
@@ -228,13 +244,13 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
 ].each {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: it + ': ' + i,
+                [action    : 'transitionIssue', ext: it + ': comment related issue ' + i,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
-                [action: 'getComments', ext: " : " + it + i,
+                [action: 'getComments', ext: " : comment related issue" + it + i,
                  parameters: [
                          issue: value
                  ],
@@ -249,13 +265,13 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
 ].each {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: it + ': ' + i,
+                [action    : 'transitionIssue', ext: it + ': comment related issue' + i,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
-                [action: 'getComments', ext: " : " + it + i,
+                [action: 'getComments', ext: " : comment related issue" + it + i,
                  parameters: [
                          issue: value
                  ],
@@ -268,16 +284,16 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
 ['addCommentIfConditionTrue'].collect {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: it + ': when conditional validation false do not add comment: ' + i,
+                [action    : 'transitionIssue', ext: it + ': when conditional validation false do not add comment to related issues: ' + i,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
-                [action: 'getComments', ext: it +" : when conditional validation false do not add comment :" + i,
-                        parameters: [
-                                issue: value
-                        ],
+                [action: 'getComments', ext: it +" : when conditional validation false do not add comment to related issues:" + i,
+                 parameters: [
+                         issue: value
+                 ],
                  failData:[/$it/],
                 ]
         ])
@@ -287,11 +303,11 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
 relatedIssuesMap.eachWithIndex{ key, value, i ->
     gint.taskHelper.add([
             [action: 'updateIssue' , ext: " : target issue_ to check conditional validation and assignee field : " + i,
-            parameters: [
-                    issue: value,
-                    priority : 'High',
-                    assignee: testUser
-            ],
+             parameters: [
+                     issue: value,
+                     priority : 'High',
+                     assignee: testUser
+             ],
             ],
             [action: 'updateIssue' , ext: " : current issue_ to check conditional validation and assignee field : " + i,
              parameters: [
@@ -300,19 +316,19 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
                      assignee: testUser
              ],
             ],
-            ]
+    ]
     )
 }
 ['addCommentIfConditionTrue'].collect {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: it + ': when conditional validation true do add comment: ' + i,
+                [action    : 'transitionIssue', ext: it + ': when execution validation true add comment: ' + i,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
-                [action: 'getComments', ext: it +" : when conditional validation true do add comment :" + i,
+                [action: 'getComments', ext: it +" : when conditional execution true add comment :" + i,
                  parameters: [
                          issue: value
                  ],
@@ -327,13 +343,13 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
 ].each {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: it + ' :' + i,
+                [action    : 'transitionIssue', ext: it + ': check comment related issue :' + i,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
-                [action: 'getComments', ext: " : " + it + i,
+                [action: 'getComments', ext: " :check comment related issue :" + it + i,
                  parameters: [
                          issue: value
                  ],
@@ -344,8 +360,4 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
         ])
     }
 }
-
-
-
-
 

@@ -19,7 +19,6 @@ ext.addTransitionFunction = { transitions, type, field, functionKey -> // key, t
                 [action    : 'addTransition', ext: ':' + transitions,
                  retry: true,
                  retrySleep: 5000,
-                 sleepAfter: 3000,
                  parameters: [
                          workflow: workflow,
                          name    : transitions,
@@ -30,7 +29,6 @@ ext.addTransitionFunction = { transitions, type, field, functionKey -> // key, t
                 [action    : 'addTransitionFunction', ext: ':' + transitions,
                  retry: true,
                  retrySleep: 5000,
-                 sleepAfter: 3000,
                  parameters: [
                          workflow   : workflow,
                          transition : transitions,
@@ -129,6 +127,7 @@ ext.createIssue = { parameters, ext ->
     def savedIssues = [:]
     gint.taskHelper.addSetUp([
             [action: 'createIssue',
+             mustRunAfter: 'createProject',
              retrySleep: 5000,
              retry: true,
              ext: ': '+ ext ,

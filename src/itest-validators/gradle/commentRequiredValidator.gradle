@@ -44,32 +44,7 @@ def fields = info?.isCloud ? defaultFieldsCloud : defaultFieldsServer
 
 // Configuration for validator
 fields.eachWithIndex { key, value, i ->
-    gint.taskHelper.addSetUp([
-        [action    : 'addTransition', ext: ':' + key,
-         retry: true,
-         retrySleep: 5000,
-         sleep: 4000,
-         parameters: [
-                 workflow: workflow,
-                 name    : key,
-                 step    : info?.isCloud ? startStepCloud : startStepServer,
-                 screen  : screen
-         ]
-        ],
-        [action    : 'addTransitionFunction', ext: ':' + key,
-         retry: true,
-         retrySleep: 5000,
-         sleep: 4000,
-         parameters: [
-                 workflow   : workflow,
-                 transition : key,
-                 functionKey: functionKey,
-                 type       : 'validator',
-                 step       : info?.isCloud ? startStepCloud : startStepServer,
-                 field      : value
-         ]
-        ],
-])
+    addTransitionFunction(key, 'validator', value, functionKey)
 }
 
 createWorkflowScheme()

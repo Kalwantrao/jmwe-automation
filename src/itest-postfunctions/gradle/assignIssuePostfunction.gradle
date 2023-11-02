@@ -13,7 +13,6 @@ apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 tearDown()
-//tearDownUsers()
 addWorkflow()
 
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
@@ -33,9 +32,13 @@ def selectUser = [
         userObjectFieldAssignee:["assignmentType=userFromField", "field=assignee"],
         userObjectFieldReporter:["assignmentType=userFromField", "field=reporter"],
         userObjectFieldCreator:["assignmentType=userFromField", "field=creator"],
-        lastRoleMember: [ "assignmentType=lastRoleMember","role=$testProjectRoleId"],
-        roleMember: ["assignmentType=roleMember","role=$testProjectRoleId"],
+        lastRoleMember: [ "assignmentType=lastRoleMember"],
+        roleMember: ["assignmentType=roleMember"],
         returnFromScript: ["assignmentType=script","script=$groovyExpression.returnsReporter"]
+]
+def selectRole = [
+        testRole : "role=$testProjectRoleId",
+        adminRole: "role=$jiraAdminRoleId"
 ]
 def multipleUser = [
         alphabetical : [ "multipleUserBehavior=alphabetical" ],
@@ -60,79 +63,84 @@ def skipIfAssigned = [
 ]
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'assignIssuePF_currentUser'
+    def transition = 'assignIssueToCurrentUser'
     def fields = defaultFieldsServer + selectUser.current + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
     addTransitionFunction( transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'assignIssuePF_reporter'
+    def transition = 'assignIssueToReporter'
     def fields = defaultFieldsServer + selectUser.reporter + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
     addTransitionFunction( transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def transition ='assignIssuePF_projectLead'
+    def transition ='assignIssueToProjectLead'
     def fields = defaultFieldsServer + selectUser.projectLead + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def transition ='assignIssuePF_returnFromScript'
+    def transition ='assignIssueToUserReturnFromScript'
     def fields = defaultFieldsServer + selectUser.returnFromScript + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def transition ='assignIssuePF_returnFromUserObjectFieldReporter'
+    def transition ='assignIssueToUserReturnFromUserObjectFieldReporter'
     def fields = defaultFieldsServer + selectUser.userObjectFieldReporter + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i -> // here user is jmwe_qa
-    def transition ='assignIssuePF_byUserName'
+    def transition ='assignIssueToUserByUserName'
     def fields = defaultFieldsServer + selectUser.byUserName + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def transition ='assignIssuePF_returnFromUserObjectFieldCreator'
+    def transition ='assignIssueToUserReturnFromUserObjectFieldCreator'
     def fields = defaultFieldsServer + selectUser.userObjectFieldCreator + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def transition ='assignIssuePF_returnFromUserObjectFieldAssignee'
+    def transition ='assignIssueToUserReturnFromUserObjectFieldAssignee'
     def fields = defaultFieldsServer + selectUser.userObjectFieldAssignee + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition ='assignIssueToUserWhoLastCommented'
+    def fields = defaultFieldsServer + selectUser.lastCommented + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
+    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
+relatedIssue.eachWithIndex { key, value, i -> // here role is jira admins
+    def transition ='assignIssueToLastRoleMember'
+    def fields = defaultFieldsServer + selectUser.lastRoleMember + selectRole.testRole + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
+    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
+
+relatedIssue.eachWithIndex { key, value, i -> // here role is jira admins
+    def transition ='assignIssueToRoleMember'
+    def fields = defaultFieldsServer + selectUser.roleMember + selectRole.adminRole + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
+    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'assignIssueToCurrentUserIfConditionTrue'
+    def fields = defaultFieldsServer + selectUser.current + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.true
+    addTransitionFunction( transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
+}
+
 /*
-relatedIssue.take(3).eachWithIndex { key, value, i -> // here role is jira admins
-    def transition ='assignIssuePF_lastRoleMember'
-    def fields = defaultFieldsServer + selectUser.lastRoleMember + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
-    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
-}
-
-relatedIssue.take(3).eachWithIndex { key, value, i -> // here role is jira admins
-    def transition ='assignIssuePF_roleMember'
-    def fields = defaultFieldsServer + selectUser.roleMember + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
-    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
-}
-
 relatedIssue.eachWithIndex { key, value, i -> // here component is 'component1' and component lead is current user
-    def transition = 'assignIssuePF_componentLead'
+    def transition = 'assignIssueToUserWhoIsComponentLead'
     def fields = defaultFieldsServer + selectUser.componentLead + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def transition ='assignIssuePF_lastCommented'
-    def fields = defaultFieldsServer + selectUser.lastCommented + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
-    addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
-}
-
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition ='assignIssuePF_defaultAssigneeOfProject'
+    def transition ='assignIssueToUserWhoIsDefaultAssigneeOfProject'
     def fields = defaultFieldsServer + selectUser.defaultAssigneeOfProject + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
     addTransitionFunction(transition + i, 'postfunction', fields, functionKey.assignIssuePostfunctionServer)
 }
@@ -160,7 +168,7 @@ def isClonedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isClonedBy'
 def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
 def isDuplicatedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isDuplicatedBy')
 def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
-def jqlIssue = createIssue([type: 'Task', summary: 'JMWE_Task'], 'jqlIssue')
+def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 
 updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
 
@@ -188,7 +196,7 @@ def relatedIssuesMap = [
         {->issueBelongsToEpic[]} : {->epic[]},
         {-> initiative[]} : {->epic_initiative[]},
         {->epic_initiative[]} : {-> initiative[]},
-        {->issueLinks[]} : {->blocks[]},
+        {->blocks[]} : {->issueLinks[]},
         {->issueLinks[]} : {->blocks[]},
         {->issueLinks[]} : {->isBlockedBy[]},
         {->issueLinks[]} : {->clones[]},
@@ -196,75 +204,156 @@ def relatedIssuesMap = [
         {->issueLinks[]} : {->duplicates[]},
         {->issueLinks[]} : {->isDuplicatedBy[]},
         {->issueLinks[]} : {->relatesTo[]},
-        {->issueLinks[]} : {->relatesTo[]},
-        {->issueLinks[]} : {->jqlIssue[]},
+        {->issueLinks[]} : {->jqlIssue[]}
 ]
-/*
+
+[inactiveAdmin, testAdmin].collect{
+    gint.taskHelper.add(
+            action: 'removeProjectRoleActors', ext: ":remove user $it from Administrator role to check_ASSIGN_ISSUE_PF: ",
+            parameters:[
+                    project: projectName,
+                    role: 'Administrators',
+                    userId: it
+            ]
+    )
+}
+
+[testUser1,testUser2].collect{
+    gint.taskHelper.add(
+            action: 'removeProjectRoleActors', ext: ": remove user $it from $testRole _to check ASSIGN_ISSUE_PF",
+            parameters:[
+                    project: projectName,
+                    role: testRole,
+                    userId: it
+            ]
+    )
+}
+
+[testUser1,testUser2].collect{
+    gint.taskHelper.add(
+            action: 'addProjectRoleActors', ext: ": add user $it to specific role $testRole _to check ASSIGN_ISSUE_PF",
+            parameters:[
+                    project: projectName,
+                    role: testRole,
+                    userId: it
+            ]
+    )
+}
+
+relatedIssuesMap.eachWithIndex{ key, value, i ->
+    gint.taskHelper.add(
+            action: 'addComment', ext: " : to check ASSIGN_ISSUE_PF_user who last commented option: " + i,
+            parameters:[
+                    issue: value,
+                    comment: 'add comment to  check lastCommentedUserOption'
+            ]
+    )
+}
 [
-        'assignIssuePF_currentUser',
-        'assignIssuePF_reporter',
-        'assignIssuePF_projectLead',
-        'assignIssuePF_returnFromScript',
-        'assignIssuePF_returnFromUserObjectFieldCreator',
-        'assignIssuePF_returnFromUserObjectFieldReporter',
+        'assignIssueToCurrentUserIfConditionTrue'
 ].collect {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ': when default issue' + it + i,
+                [action    : 'transitionIssue', ext:  ': check ASSIGN_ISSUE_PF_when condition false:' + it + i,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ]
                 ],
                 [action    : 'getFieldValue',
-                ext       : 'on default issue'+ it + i,
+                 ext       :  it + ': check ASSIGN_ISSUE_PF_when condition false:'+ i,
+                 parameters: [
+                         issue: value,
+                         field: "Assignee"
+                 ],
+                 failData      : [/Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user}/],
+                ],
+        ])
+    }
+}
+
+relatedIssuesMap.eachWithIndex{ key, value, i ->
+    gint.taskHelper.add(
+            action: 'updateIssue', ext: " : to check ASSIGN_ISSUE_PF_conditionalExecution: " + i,
+            parameters:[
+                    issue: value,
+                    priority: 'High'
+            ]
+    )
+}
+[
+        'assignIssueToCurrentUser',
+        'assignIssueToCurrentUserIfConditionTrue',
+        'assignIssueToReporter',
+        'assignIssueToProjectLead',
+        'assignIssueToUserReturnFromScript',
+        'assignIssueToUserReturnFromUserObjectFieldCreator',
+        'assignIssueToUserReturnFromUserObjectFieldReporter',
+        'assignIssueToUserWhoLastCommented',
+        'assignIssueToRoleMember'
+].collect {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext:  it +': default_issue:' + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                ext       :  it + ': default_issue:'+ i,
                  parameters: [
                          issue: value,
                          field: "Assignee"
                  ],
                  data      : [/Assignee  . . . . . . . . . . : ${info?.isCloud ? info?.userDisplayName : info?.user}/],
                 ],
-                [action: 'updateIssue', ext: ': assign issue back to other user to check next options with same issues' + it + i,
+                [action: 'updateIssue', ext: ': unassign issue to check next options_ASSIGN_ISSUE_PF ' + it + i,
                 parameters: [
                         issue: value,
-                        assignee: serverUser,
+                        assignee: " ",
                 ]
                 ]
         ])
     }
 }
+
 gint.taskHelper.add(
-        [action: 'updateProject', ext: ": change project lead to $serverUser",
+        [action: 'updateProject', ext: ": change project lead to $testUser",
          parameters: [
                  project: projectName,
-                 lead: serverUser,
+                 lead: testUser,
          ]
         ],
 )
+relatedIssuesMap.eachWithIndex { key, value, i ->
+    gint.taskHelper.add(
+            [action    : 'updateIssue', ext: ': change the reporter:' + i,
+             parameters: [
+                     issue   : value,
+                     reporter: testUser,
+             ],
+            ]
+    )
+}
 [
 
-        'assignIssuePF_reporter',
-        'assignIssuePF_projectLead',
-        'assignIssuePF_returnFromScript',
-        'assignIssuePF_returnFromUserObjectFieldReporter',
-        'assignIssuePF_byUserName'
+        'assignIssueToReporter',
+        'assignIssueToProjectLead',
+        'assignIssueToUserReturnFromScript',
+        'assignIssueToUserReturnFromUserObjectFieldReporter',
+        'assignIssueToUserByUserName'
 ].collect {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action: 'updateIssue', ext: ': change the reporter' + it + i,
-                 parameters: [
-                         issue: value,
-                         reporter: serverUser,
-                 ]
-                ],
-                [action    : 'transitionIssue', ext: ':after update issue' + it + i,
+                [action    : 'transitionIssue', ext:  it + ': after updating issue:' + i,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 ext       : 'after issue update'+ it + i,
+                 ext       : it +': after updating issue:'+ i,
                  parameters: [
                          issue: value,
                          field: "Assignee"
@@ -274,40 +363,76 @@ gint.taskHelper.add(
                 [action: 'updateIssue', ext: ': assign issue back to other user to check next options' + it + i,
                  parameters: [
                          issue: value,
-                         assignee: user,
+                         assignee: " ",
                  ]
                 ]
         ])
     }
 }
 
-*/
 // Assign the resp issue to testprojectrole member
-
+relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
+    [testUser1,testUser].collect{
+        gint.taskHelper.add(
+                action: 'assignIssue', ext: ": to user $it to check_ASSIGN_ISSUE_PF_last role member option : + $index",
+                parameters:[
+                        issue: targetIssue,
+                        assignee: it
+                ]
+        )
+    }
+}
 [
-        'assignIssuePF_lastRoleMember',
-        'assignIssuePF_roleMember'
+        'assignIssueToUserReturnFromUserObjectFieldAssignee'
 ].collect {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ':after update issue' + it + key + i,
+                [action    : 'transitionIssue', ext:  it + ': ' + i,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 ext       : 'after issue update'+ it + key + + i,
+                 ext       : it +':'+ i,
                  parameters: [
                          issue: value,
                          field: "Assignee"
                  ],
                  data      : ["Assignee  . . . . . . . . . . : $testUser"],
                 ],
-                [action: 'updateIssue', ext: ': assign issue back to other user to check next options' + it + key + i,
+                [action: 'updateIssue', ext: ': assign issue back to other user to check next options:' + it + i,
                  parameters: [
                          issue: value,
-                         assignee: user,
+                         assignee: " ",
+                 ]
+                ]
+        ])
+    }
+}
+[
+        'assignIssueToLastRoleMember'
+].collect {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': ' + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : ': '+ it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Assignee"
+                 ],
+                 data      : ["Assignee  . . . . . . . . . . : $testUser1"],
+                ],
+                [action: 'updateIssue', ext: ': assign issue back to other user to check next options: ' + it + i,
+                 parameters: [
+                         issue: value,
+                         assignee: " ",
                  ]
                 ]
         ])

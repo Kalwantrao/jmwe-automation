@@ -5,17 +5,9 @@ project.ext.user = info?.isCloud ? info?.userDisplayName : info.user
 project.ext.projectKey = gint.getJiraHelper().getProjectKey()
 project.ext.isServer = info?.isServer
 project.ext.isCloud = info?.isCloud
-project.ext.projectName="AUTOMATION"
+project.ext.workflowScheme = "AUTOMATION"
+project.ext.screen = "AUTOMATION"
 project.ext.workflow = projectKey
-project.ext.screen="AUTOMATION"
-project.ext.workflowScheme="AUTOMATION"
-project.ext.cloudUserId='63973398ff36874b23af74a6'
-project.ext.cloudUser="jmwe_qa"
-project.ext.serverUser="jmwe_qa"
-project.ext.testUser = info?.isCloud ? cloudUser : serverUser
-project.ext.projectRole="testprojectrole"
-project.ext.groupName="testgroup"
-project.ext.groupAdminIdCloud = "e7f578b8-2111-40ff-8117-323d289aa7e0"
 project.ext.startStepCloud=11
 project.ext.startStepServer=11
 project.ext.workflowFile="resources/workflowJ8.xml"
@@ -23,17 +15,16 @@ project.ext.tearDownFile="resources/tearDown.txt"
 project.ext.baseWorkflow="Software Simplified Workflow for Project $TestProject"
 project.ext.projectTemplateCloud="Bug tracking"
 project.ext.projectTemplateServer="Basic software development"
-project.ext.securityLevelId = [
-        lavel1 : 10204,
-        level2 : 10205
-]
+
 project.ext.groovyExpression = [
-        returnsLinkedIssues:"issue.getLinkedIssues()",
         getIssuetype:"issue.get('issuetype')?.name == 'Task'",
         checkPriorityHigh: "issue.get('priority')?.name == 'High'",
         checkPriorityLow: "issue.get('priority')?.name == 'Low'",
         returnsReporter : "issue.get('reporter')",
-        getDescription : "issue.get('description')"
+        getDescription : "issue.get('description')",
+        getEntityValue : "currentUser.getEntityProperty('Name')",
+        getUserProperty: "currentUser.getUserProperty('Name')",
+        checkIssueEntity: "issue.getEntityProperty('Labels')"
 ]
 project.ext.nunjuckExpression = [
         returnsLinkedIssues: "{{ issue | linkedIssues | field('key') }}",
@@ -46,8 +37,11 @@ project.ext.nunjuckExpression = [
 project.ext.jiraExpression = [
         getIssueType : "!!issue.issueType && issue.issueType.name == 'Task'"
 ]
+project.ext.securityLevelId = [
+        lavel1 : securityLevel1Id ,
+        level2 :  securityLevel2Id
+]
 
-project.ext.jqlSearchExpression="issuetype = Task and summary~JQL_ISSUE"
 project.ext.fields = [
         Labels:'labels',
         Components:'components',
@@ -56,29 +50,31 @@ project.ext.fields = [
         FixVersions:'fixVersions',
         Priority: 'priority',
 ]
+
 project.ext.relatedIssueServer = [
-        currentIssue: "currentIssue:*",
-        subtask: "outward:10100",
-        parentIssue: "inward:10100",
-        issueBelongsToEpic: "outward:10201", //10200 for jira9
-        epicOfTheCurrentIssue: "inward:10201", // 10200 for jira9
-        childPortfolio: "outward:-2000",
-        parentPortfolio: "inward:-2000",
-        linkByAnyLink: "*:*",
-        linkByBlock: "outward:10000",
-        linkByisBlockedBy: "inward:10000",
-        linkByClones: "outward:10001",
-        linkByIsClonedBy: "inward:10001",
-        linkByDuplicates: "outward:10002",
-        linkByIsDuplicatedBy: "inward:10002",
-        linkByRelatesTo: "outward:10003",
-        returnsByGroovyExpression: "groovy:$groovyExpression.returnsLinkedIssues",
+        currentIssue: "$currentIssue",
+        subtask: "$subtask",
+        parentIssue: "$parentIssue",
+        issueBelongsToEpic: "$issueBelongsToEpic",
+        epicOfTheCurrentIssue: "$epicOfTheCurrentIssue",
+        childPortfolio: "$childPortfolio",
+        parentPortfolio: "$parentPortfolio",
+        linkByAnyLink: "$linkByAnyLink",
+        linkByBlock: "$linkByBlock",
+        linkByisBlockedBy: "$linkByisBlockedBy",
+        linkByClones: "$linkByClones",
+        linkByIsClonedBy: "$linkByIsClonedBy",
+        linkByDuplicates: "$linkByDuplicates",
+        linkByIsDuplicatedBy: "$linkByIsDuplicatedBy",
+        linkByRelatesTo: "$linkByRelatesTo",
+        returnsByGroovyExpression: "groovy:$returnsLinkedIssues",
         returnsFromJqlSearch: "jql:$jqlSearchExpression"
 ]
+
 project.ext.relatedIssueCloud = [
         currentIssue: "currentIssue:*",
         subtask: "outward:jira_subtask_link",
-        /*parentIssue: "inward:jira_subtask_link",
+        parentIssue: "inward:jira_subtask_link",
         issueBelongsToEpic: "outward:Epic-Story Link",
         epicOfTheCurrentIssue: "inward:Epic-Story Link",
         childPortfolio: "inward:Portfolio Parent Link",
@@ -92,26 +88,37 @@ project.ext.relatedIssueCloud = [
         linkByIsDuplicatedBy: "inward:10002",
         linkByRelatesTo: "outward:10003",
         returnsByNunjucksExpression: "nunjucks:$nunjuckExpression.returnsLinkedIssues",
-        returnsFromJqlSearch: "jql:$jqlSearchExpression"*/
-]
-project.ext.statusIds = [
-        toDo: 10000,
-        inProgress: 3,
-        inReview : 10103,
-        done : 10001
+        returnsFromJqlSearch: "jql:$jqlSearchExpression"
 ]
 
-project.ext.issueType = [
-        subtask  : 10004,
-        epic : 10000,
-        story : 10002, //10001 FOR JIRA9
-        task : 10003,
-        bug : 10006,
-        initiative : 10007
+project.ext.statusIds = [ // statusIds.inProgress
+        toDo: ToDo,
+        inProgress: InProgress,
+        inReview : InReview,
+        done : Done
 ]
+
+project.ext.issueTypeServer = [
+        bug : BugIssueType,
+        task : TaskIssueType,
+        subtask  : SubtaskIssueType,
+        epic : EpicIssueType,
+        story : StoryIssueType, //10001 FOR JIRA9
+        initiative : InitiativeIssueType
+]
+
+project.ext.issueTypeCloud = [
+        subtask : 10008,
+        epic : 10000,
+        story : 10011,
+        task : 10007,
+        bug : 10010,
+        initiative : 10020
+]
+
 project.ext.customFields = [
-        storyPoints : "customfield_10111",
-        originalStoryPoints : "customfield_10104"
+        storyPoints : storyPointFieldId,
+        originalStoryPoints : originalStoryPointsFieldId
 ]
 
 project.ext.conditionalValidation = [
@@ -139,33 +146,33 @@ project.ext.runAsUser = [
                 "runAsUser=userFromScript:$groovyExpression.returnsReporter"
         ]
 ]
+
 project.ext.conditionalExecution = [
-        false : [
-                "useGroovyCondition=false",
-                "groovyExpression=",
-        ],
-        true : [
-                "useGroovyCondition=yes",
-                "groovyExpression=$groovyExpression.checkPriorityHigh",
-        ]
+        false : [ "useGroovyCondition=false", "groovyExpression=" ],
+        true : [ "useGroovyCondition=yes", "groovyExpression=$groovyExpression.checkPriorityHigh" ]
 ]
 
-project.ext.statusListServer = [
+project.ext.statusList = [
         inProgress: "In Progress",
         inReview: "In Review",
         done: "Done"
 ]
-project.ext.statusListCloud = [
-        inProgress: "In Progress",
-        inReview: "In Review",
-        done: "Done"
+
+project.ext.defaultFieldsCloud= [
+        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249"
 ]
-project.ext.transitionIssueFunctionsCloud = [
-        "postFunction.id=d597971e-9524-4881-9edd-577b8b7b84c2",
-        "postFunction.config-d597971e-9524-4881-9edd-577b8b7b84c2={\"conditionalExecution\":\"false\",\"targetIssue\":\"currentIssue:*\",\"transition\":\"Start Progress@@AUTOMATION\",\"runAsType\":\"currentUser\"}"
+
+project.ext.defaultFieldsServer = [
+        "restrictToInternal=no",
+        "sendNotification=no",
+        "throwExceptions=",
+        "correlationId=",
 ]
-ext.relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
-ext.statusList = info?.isCloud ? statusListCloud :  statusListServer
+
+project.ext.issueType = info?.isCloud ? issueTypeCloud : issueTypeServer
+project.ext.defaultFields = info?.isCloud ? defaultFieldsCloud : defaultFieldsServer
+project.ext.relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
+
 project.ext.functionKey = [
         currentStatusConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:currentstatus-condition',
         currentStatusConditionCloud: 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CurrentStatusCondition',
@@ -194,7 +201,6 @@ project.ext.functionKey = [
         assignToRoleMemberCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__AssignToRoleMemberFunction',
         assignToRoleMemberServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:assigntorolemember',
         returnToPreviousStatusServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:return-to-previous-status-function',
-        createIssuePostfunctionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CreateIssueFunction',
         fieldsRequiredValidatorCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__FieldRequiredValidator',
         fieldRequiredValidatorServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldrequired-validator',
         addFieldValueToParentIssuePfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:AddFieldValueToParent-function',
@@ -223,6 +229,10 @@ project.ext.functionKey = [
         assignToRoleMemberPf : 'com.innovalog.jmwe.jira-misc-workflow-extensions:assigntorolemember',
         createIssuePostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CreateIssue-function',
         createIssuePostfunctionCloud : 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CreateIssueFunction',
+        copyFieldValueFromParentIssuePostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CopyFieldValueFromParent-function',
+        copyFieldValueToParentIssuePostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CopyFieldValueToParent-function',
+        copyFieldValueFromRelatedIssuesPostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CopyFieldValueFromLinkedIssue-function',
+        copyFieldValueToRelatedIssuesPostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CopyFieldValueToLinkedIssues-function',
 ]
 
 
