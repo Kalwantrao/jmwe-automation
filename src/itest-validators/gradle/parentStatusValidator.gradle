@@ -15,133 +15,430 @@ apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 tearDown()
 addWorkflow()
 
+def errorMessage = "Check issues parents status"
+
 def defaultFieldsServer = [
 		"correlationId=",
 ]
-def functionKey = functionKey.parentStatusValidatorServer
 
-// Configuration for validator
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:parentstatus-validator'
 
-project.ext.statusListServer = [
-		inProgress: "In Progress",
-		inReview: "In Review",
-		done: "Done"
-]
-
-statusListServer.eachWithIndex { status, value, i ->
-	def fields = defaultFieldsServer +"conditionalValidation=no" + "issue_statuses=$value" + "errorMessage="
-	addTransitionFunction( 'parentStatus'+ status, 'validator', fields, functionKey )
+statusList.eachWithIndex { status, value, i ->
+	def transition = "verify_parent_status_of_the_issue_should_be_" + status
+	def fields = defaultFieldsServer + conditionalValidation.no + "issue_statuses=$value" + "errorMessage="
+	addTransitionFunction( transition, 'validator', fields, functionKey )
 }
 
-['multipleStatus'].each {
-	def fields = defaultFieldsServer +"conditionalValidation=no" + "issue_statuses=$statusListServer.inProgress@@$statusListServer.done@@" + "errorMessage="
+statusList.eachWithIndex { status, value, i ->
+	def transition = "verify_parent_status_of_the_issue_should_be_when_provided_error_message_" + status
+	def fields = defaultFieldsServer + conditionalValidation.no + "issue_statuses=$value" + "errorMessage=$errorMessage"
+	addTransitionFunction( transition, 'validator', fields, functionKey )
+}
+
+['verify_parent_issue_must_in_one_of_the_selected_status'].each {
+	def fields = defaultFieldsServer +"conditionalValidation=no" + "issue_statuses=$statusList.inProgress@@$statusList.done@@" + "errorMessage=$errorMessage"
 	addTransitionFunction( it, 'validator', fields, functionKey )
 }
 
-statusListServer.eachWithIndex { status, value, i ->
-	def fields = defaultFieldsServer +"conditionalValidation=yes" + "issue_statuses=$value" + "errorMessage=" + "conditionalValidationScript=$groovyExpression.checkPriorityHigh"
-	addTransitionFunction('parentStatusConditionalValidation' + status , 'validator', fields, functionKey )
+statusList.eachWithIndex { status, value, i ->
+	def transition = 'verify_parent_status_of_the_issue_only_if_condition_true_should_be_' + status
+	def fields = defaultFieldsServer + conditionalValidation.yes + "issue_statuses=$value" + "errorMessage=$errorMessage"
+	addTransitionFunction(transition , 'validator', fields, functionKey )
 }
 
 createWorkflowScheme()
 createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
-def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->defaultIssue[]}, priority: 'High'], 'subtask')
+def linkedIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'linkedIssue')
+def linkedIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'linkedIssue1')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->defaultIssue[]}], 'subtask')
+def subtask1 = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->defaultIssue[]}], 'subtask1')
 
-['parentStatus','parentStatusConditionalValidation'].each {
-	statusListServer.eachWithIndex { status, value, i ->
-		gint.taskHelper.add(
-				[action    : 'transitionIssue', ext: " : Should throw error when parent status is not in_$status status" + it,
-				 expected  : -3,
-				 parameters: [
-						 transition: it + status,
-						 issue     : { -> subtask[] },
-				 ],
-				],
-		)
-	}
-}
-['multipleStatus'].each {
-		gint.taskHelper.add(
-				[action    : 'transitionIssue', ext: " : Should throw error when parent status is not in one of the selected_status" + it,
-				 expected  : -3,
-				 parameters: [
-						 transition: it ,
-						 issue     : { -> subtask[] },
-				 ],
-				],
-		)
-}
-gint.taskHelper.add(
-		[action: 'updateIssue', ext: ': change priority to low',
-		 parameters: [
-				 issue: {->subtask[]},
-				 priority: 'Low',
-		 ],
-		],
-)
-statusListServer.eachWithIndex { status, value, i ->
-	gint.taskHelper.add(
-			[action    : 'transitionIssue', ext: " : should not throw error when conditional validation false : $status",
-			 expected  : 0,
-			 parameters: [
-					 transition: 'parentStatusConditionalValidation' + status ,
-					 issue: { -> subtask[] },
-			 ],
-			]
-	)
-}
-gint.taskHelper.add(
-		[action: 'updateIssue', ext: ': change priority to High',
-		 parameters: [
-				 issue: {->subtask[]},
-				 priority: 'High',
-		 ],
-		],
-)
-['multipleStatus'].each {
+// PARENT_STATUS_VALIDATOR_TS_19_TC_01-Verify the Status of parent issue without error message and the Conditional validation.
+['verify_parent_status_of_the_issue_should_be_inProgress'].each {
 	gint.taskHelper.add([
-			[action    : 'transitionIssue', ext: " : to change the status of parent issues" + it,
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_19_TC_01_Case_01- $it -Verify the Status of parent issue_when not in selected status:",
+			 expected  : -3,
 			 parameters: [
-					 transition: "Done" ,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			],
-			[action    : 'transitionIssue', ext: " : Should not throw error when parent status is in one of the selected_status" + it,
-			 expected  : 0,
-			 parameters: [
-					 transition: it ,
+					 transition: it,
 					 issue     : { -> subtask[] },
 			 ],
+			 data:["Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [In Progress]"]
 			],
-			[action    : 'transitionIssue', ext: " : to change the status of parent issues to To Do" + it,
+			[action    : 'transitionIssue',
+			 ext: " : change the parent issues status to in progress to check_ $it:",
 			 parameters: [
-					 transition: "To Do" ,
 					 issue     : { -> defaultIssue[] },
+					 transition: "In Progress",
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_19_TC_01_Case_02- $it -Verify the Status of parent issue_when in selected status:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask[] },
+			 ],
+			 failData:["Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [In Progress]"]
+			],
+	])
+}
+
+// PARENT_STATUS_VALIDATOR_TS_19_TC_02-Verify the Status of parent issue without error message and the Conditional validation.
+['verify_parent_status_of_the_issue_should_be_inReview'].each {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_19_TC_02_Case_01- $it -Verify the Status of parent issue_when not in selected status:",
+			 expected  : -3,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask[] },
+			 ],
+			 data:["Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [In Review]"]
+			],
+			[action    : 'transitionIssue',
+			 ext: " : change the parent issues status to in review to check_ $it:",
+			 parameters: [
+					 issue     : { -> defaultIssue[] },
+					 transition: "In Review",
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_19_TC_02_Case_02- $it -Verify the Status of parent issue_when in selected status:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask[] },
+			 ],
+			 failData:["Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [In review]"]
+			],
+	])
+}
+
+// PARENT_STATUS_VALIDATOR_TS_19_TC_03-Verify the Status of parent issue without error message and the Conditional validation.
+['verify_parent_status_of_the_issue_should_be_done'].each {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_19_TC_03_Case_01- $it -Verify the Status of parent issue_when not in selected status:",
+			 expected  : -3,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask[] },
+			 ],
+			 data:["Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [Done]"]
+			],
+			[action    : 'transitionIssue',
+			 ext: " : change the parent issues status to Done to check_ $it:",
+			 parameters: [
+					 issue     : { -> defaultIssue[] },
+					 transition: "Done",
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_19_TC_03_Case_02- $it -Verify the Status of parent issue_when in selected status:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask[] },
+			 ],
+			 failData:["Transition is not authorized because current Issue's parent Issue should be in one of the following statuses: [Done]"]
+			],
+			[action    : 'transitionIssue',
+			 ext: " : change the parent issues status to_To Do to check_ $it:",
+			 parameters: [
+					 issue     : { -> defaultIssue[] },
+					 transition: "To Do",
 			 ],
 			],
 	])
 }
 
-['parentStatus','parentStatusConditionalValidation'].each {
-	statusListServer.eachWithIndex { status, value, i ->
+// PARENT_STATUS_VALIDATOR_TS_20_TC_01-Verify the Status of the parent issue with an error message.
+['verify_parent_status_of_the_issue_should_be_when_provided_error_message_inProgress'].each {
 		gint.taskHelper.add([
-				[action    : 'transitionIssue', ext: " : change the parent issue status to $value" + it,
+				[action    : 'transitionIssue',
+				 ext: " : PARENT_STATUS_VALIDATOR_TS_20_TC_01_Case_01- $it -Verify the Status of parent issue_when not in selected status:",
+				 expected  : -3,
 				 parameters: [
-						 transition: value,
-						 issue     : { -> defaultIssue[] },
-				 ],
-				],
-				[action    : 'transitionIssue', ext: " : Should not throw error when parent issue in selected status_$status" + it,
-				 expected  : 0,
-				 parameters: [
-						 transition: it + status,
+						 transition: it,
 						 issue     : { -> subtask[] },
 				 ],
+				 data:["$errorMessage"]
+				],
+				[action    : 'transitionIssue',
+				 ext: " : change the parent issues status to in progress to check_ $it:",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: "In Progress",
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext: " : PARENT_STATUS_VALIDATOR_TS_20_TC_01_Case_02- $it -Verify the Status of parent issue_when in selected status:",
+				 expected  : 0,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> subtask[] },
+				 ],
+				 failData:["$errorMessage"]
 				],
 		])
-	}
+}
+
+// PARENT_STATUS_VALIDATOR_TS_20_TC_02-Verify the Status of the parent issue with an error message
+['verify_parent_status_of_the_issue_should_be_when_provided_error_message_inReview'].each {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_20_TC_02_Case_01- $it -Verify the Status of parent issue_when not in selected status:",
+			 expected  : -3,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask[] },
+			 ],
+			 data:["$errorMessage"]
+			],
+			[action    : 'transitionIssue',
+			 ext: " : change the parent issues status to in review to check_ $it:",
+			 parameters: [
+					 issue     : { -> defaultIssue[] },
+					 transition: "In Review",
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_20_TC_02_Case_02- $it -Verify the Status of parent issue_when in selected status:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask[] },
+			 ],
+			 failData:["$errorMessage"]
+			],
+	])
+}
+
+// PARENT_STATUS_VALIDATOR_TS_20_TC_03-Verify the Status of the parent issue with an error message
+['verify_parent_status_of_the_issue_should_be_when_provided_error_message_done'].each {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_20_TC_03_Case_01- $it -Verify the Status of parent issue_when not in selected status:",
+			 expected  : -3,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask[] },
+			 ],
+			 data:["$errorMessage"]
+			],
+			[action    : 'transitionIssue',
+			 ext: " : change the parent issues status to Done to check_ $it:",
+			 parameters: [
+					 issue     : { -> defaultIssue[] },
+					 transition: "Done",
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_20_TC_03_Case_02- $it -Verify the Status of parent issue_when in selected status:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask[] },
+			 ],
+			 failData:["$errorMessage"]
+			],
+			[action    : 'transitionIssue',
+			 ext: " : change the parent issues status to_To Do to check_ $it:",
+			 parameters: [
+					 issue     : { -> defaultIssue[] },
+					 transition: "To Do",
+			 ],
+			],
+	])
+}
+
+// PARENT_STATUS_VALIDATOR_TS_21_TC_01-Verify the Status of the parent issue with an error message and Conditional validation
+['verify_parent_status_of_the_issue_only_if_condition_true_should_be_inProgress'].each {
+	gint.taskHelper.add([
+			[action: 'updateIssue',
+			 ext: ":change priority of subtask to low to check _$it :",
+			 parameters: [
+					 issue: {->subtask[]},
+					 priority: 'Low',
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_21_TC_01_Case_01- $it -Verify the Status of parent issue_when not in selected status_condition not true:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask[] },
+			 ],
+			 failData:["$errorMessage"]
+			],
+			[action: 'updateIssue',
+			 ext: ":change priority of subtask to high to check _$it :",
+			 parameters: [
+					 issue: {->subtask[]},
+					 priority: 'High',
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_21_TC_01_Case_02- $it -Verify the Status of parent issue_when not in selected status_condition true:",
+			 expected  : -3,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask[] },
+			 ],
+			 data:["$errorMessage"]
+			],
+	])
+}
+
+// PARENT_STATUS_VALIDATOR_TS_21_TC_02-Verify the Status of the parent issue with an error message and Conditional validation
+['verify_parent_status_of_the_issue_only_if_condition_true_should_be_inReview'].each {
+	gint.taskHelper.add([
+			[action: 'updateIssue',
+			 ext: ":change priority of subtask to low to check _$it :",
+			 parameters: [
+					 issue: {->subtask[]},
+					 priority: 'Low',
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_21_TC_02_Case_01- $it -Verify the Status of parent issue_when not in selected status_condition not true:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask[] },
+			 ],
+			 failData:["$errorMessage"]
+			],
+			[action: 'updateIssue',
+			 ext: ":change priority of subtask to high to check _$it :",
+			 parameters: [
+					 issue: {->subtask[]},
+					 priority: 'High',
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_21_TC_02_Case_02- $it -Verify the Status of parent issue_when not in selected status_condition true:",
+			 expected  : -3,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask[] },
+			 ],
+			 data:["$errorMessage"]
+			],
+	])
+}
+
+// PARENT_STATUS_VALIDATOR_TS_21_TC_03-Verify the Status of the parent issue with an error message and Conditional validation
+['verify_parent_status_of_the_issue_only_if_condition_true_should_be_done'].each {
+	gint.taskHelper.add([
+			[action: 'updateIssue',
+			 ext: ":change priority of subtask to low to check _$it :",
+			 parameters: [
+					 issue: {->subtask[]},
+					 priority: 'Low',
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_21_TC_03_Case_01- $it -Verify the Status of parent issue_when not in selected status_condition not true:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask[] },
+			 ],
+			 failData:["$errorMessage"]
+			],
+			[action: 'updateIssue',
+			 ext: ":change priority of subtask to high to check _$it :",
+			 parameters: [
+					 issue: {->subtask[]},
+					 priority: 'High',
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_21_TC_03_Case_02- $it -Verify the Status of parent issue_when not in selected status_condition true:",
+			 expected  : -3,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask[] },
+			 ],
+			 data:["$errorMessage"]
+			],
+	])
+}
+
+// PARENT_STATUS_VALIDATOR_TS_31_TC_01-Verify for Parent Status Validator from multiple Sub-tasks
+['verify_parent_status_of_the_issue_should_be_when_provided_error_message_inProgress'].each {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_31_TC_01_Case_01- $it -Verify for Parent Status Validator from multiple Sub-tasks_when not in selected status:",
+			 expected  : -3,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask1[] },
+			 ],
+			 data:["$errorMessage"]
+			],
+			[action    : 'transitionIssue',
+			 ext: " : change the parent issues status to in progress to check_ $it _for multiple subtasks:",
+			 parameters: [
+					 issue     : { -> defaultIssue[] },
+					 transition: "In Progress",
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_31_TC_01_Case_02- $it -Verify for Parent Status Validator from multiple Sub-tasks_when in selected status:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> subtask1[] },
+			 ],
+			 failData:["$errorMessage"]
+			],
+	])
+}
+
+gint.taskHelper.add(
+		action: 'linkIssue',
+		ext: ": link issues to check impact of parent status validator on linked issues:",
+		parameters:[
+		        issue: {->linkedIssue1[]},
+				toIssue: {->linkedIssue[]},
+				link: "blocks"
+		]
+)
+
+// PARENT_STATUS_VALIDATOR_TS_32_TC_01-Verify for Parent Status Validator from linked issue
+['verify_parent_status_of_the_issue_should_be_when_provided_error_message_inProgress'].each {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_32_TC_01_Case_01- $it -Verify for Parent Status Validator from linked issue_when not in selected status:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> linkedIssue1[] },
+			 ],
+			 failData:["$errorMessage"]
+			],
+			[action    : 'transitionIssue',
+			 ext: " : change the parent issues status to in progress to check_ $it _for linked issues:",
+			 parameters: [
+					 issue     : { -> linkedIssue[] },
+					 transition: "In Progress",
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: " : PARENT_STATUS_VALIDATOR_TS_32_TC_01_Case_02- $it -Verify for Parent Status Validator from linked issues_when in selected status:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> linkedIssue1[] },
+			 ],
+			 failData:["$errorMessage"]
+			],
+	])
 }
 
 /*

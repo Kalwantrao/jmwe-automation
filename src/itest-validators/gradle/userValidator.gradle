@@ -15,8 +15,7 @@ apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 tearDown()
 addWorkflow()
 
-def functionKey = info?.isCloud? functionKey.uservalidatorCloud : functionKey.userValidatorServer
-def testUser = info?.isCloud? cloudUser : serverUser
+def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__UserValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-validator'
 def errorMessage = "Check user satisfy the given criteria"
 
 def defaultFieldsServer = [
@@ -24,133 +23,295 @@ def defaultFieldsServer = [
         "correlationId=",
 ]
 def defaultFieldsCloud = [
-        "validator.id=e92924ef-17fc-4863-809d-add6da80b9e7"
+        "validator.id=e92924ef-37fc-4863-809d-add6da80b9e7"
 ]
-def whichUser = [
-        current : [ "fromUserType=currentUser" ],
-        userInFieldAssignee : [ "fromUserType=userInField", "userField=assignee" ],
-        userInFieldReporter : [  "fromUserType=userInField", "userField=reporter"],
-        userInFieldCreator : [  "fromUserType=userInField", "userField=creator"],
-]
-def fieldEmpty = [
-        no : [ "fieldEmpty=no" ],
-        yes : [ "fieldEmpty=yes" ],
-]
-def mode = [
-        allUsers : [ "conditionMode=all-user-condition" ],
-        atLeastOne : [ "conditionMode=any-user-condition" ],
-]
-def userCriteria = [
-        reporter : "isReporter=yes",
-        assignee : "isAssignee=yes",
-        checkFields : "userFieldsToCheck=labels",
-        checkScript : "usersConditionScript=$groovyExpression.returnsReporter",
-        projectLead : "isProjectLead=yes",
-        checkRoles : "rolesToCheck=$jiraAdminRoleId",
-        checkGroup : "groupsToCheck=jira-administrators",
-        checkUser : "usersToCheck=$user",
-        watcher : "isWatcher=yes",
-]
-def reverse = [
-        no : [ "reverse=" ],
-        yes : [ "reverse=yes" ]
-]
-// Configuration for conditions
-
 userCriteria.eachWithIndex { criteria, userFields, i ->
-    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
-    def server = defaultFieldsServer + userFields + whichUser.current +  mode.allUsers + fieldEmpty.no + reverse.no + conditionalValidation.no
-    addTransitionFunction('currentUser' + criteria, 'validator',info ?.isCloud ? cloud : server, functionKey )
+    def transition = "verify_current_user_should_be_" + criteria //verify_current_user_should_be_inTestGroup
+    def server = defaultFieldsServer + userFields +  whichUser.currentUser + reverse.no + userMode.allUsers + fieldEmpty.no
+    addTransitionFunction(transition, 'validator', server, functionKey )
 }
 
 userCriteria.eachWithIndex { criteria, userFields, i ->
- // ToDo for cloud fields should be checked and have to change
-    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
-    def server = defaultFieldsServer + userFields + whichUser.userInFieldAssignee +  mode.allUsers + fieldEmpty.no + reverse.no + conditionalValidation.no
-    addTransitionFunction('assignee' + criteria, 'validator',info ?.isCloud ? cloud : server,  functionKey )
+    def transition = "verify_user_in_field_assignee_should_be_" + criteria
+    def server = defaultFieldsServer + userFields + whichUser.userInFieldAssignee + reverse.no + userMode.allUsers + fieldEmpty.no
+    addTransitionFunction(transition, 'validator', server,  functionKey )
 }
 
 userCriteria.eachWithIndex { criteria, userFields, i ->
-    // ToDo for cloud fields should be checked and have to change
-    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
-    def server = defaultFieldsServer + userFields + whichUser.userInFieldReporter +  mode.allUsers + fieldEmpty.no + reverse.no + conditionalValidation.no
-    addTransitionFunction('reporter' + criteria, 'validator',info ?.isCloud ? cloud : server,  functionKey )
+    def transition = "verify_user_in_field_reporter_should_be_" + criteria
+    def server = defaultFieldsServer + whichUser.userInFieldReporter + userFields + reverse.no + userMode.allUsers + fieldEmpty.no
+    addTransitionFunction(transition, 'validator', server,  functionKey )
 }
 
 userCriteria.eachWithIndex { criteria, userFields, i ->
-    // ToDo for cloud fields should be checked and have to change
-    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
-    def server = defaultFieldsServer + userFields + whichUser.userInFieldCreator +  mode.allUsers + fieldEmpty.no + reverse.no + conditionalValidation.no
-    addTransitionFunction('creator' + criteria, 'validator',info ?.isCloud ? cloud : server,  functionKey )
+    def transition = "verify_user_in_field_creator_should_be_" + criteria
+    def server = defaultFieldsServer + whichUser.userInFieldCreator + userFields + reverse.no + userMode.allUsers + fieldEmpty.no
+    addTransitionFunction(transition, 'validator', server,  functionKey )
 }
 
-['currentUser_assignee_reporter_field'].each {
-    // ToDo for cloud fields should be checked and have to change
-    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
-    def server = defaultFieldsServer + userCriteria.assignee + userCriteria.reporter +userCriteria.checkFields + whichUser.current +  mode.allUsers + fieldEmpty.no + reverse.no + conditionalValidation.no
-    addTransitionFunction(it, 'validator',info ?.isCloud ? cloud : server,  functionKey )
-}
-['assignee_reporter_field'].each {
-    // ToDo for cloud fields should be checked and have to change
-    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
-    def server = defaultFieldsServer + userCriteria.reporter +userCriteria.checkFields + whichUser.userInFieldAssignee +  mode.allUsers + fieldEmpty.no + reverse.no + conditionalValidation.no
-    addTransitionFunction(it, 'validator',info ?.isCloud ? cloud : server,  functionKey )
-}
-['atleastOneCriteria_currentUser'].each {
-    // ToDo for cloud fields should be checked and have to change
-    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
-    def server = defaultFieldsServer + userCriteria.assignee + userCriteria.reporter +userCriteria.checkFields + whichUser.current + mode.atLeastOne + fieldEmpty.no + reverse.no + conditionalValidation.no
-    addTransitionFunction(it, 'validator', info ?.isCloud ? cloud : server, functionKey)
-}
-['atleastOneCriteria_assigneeField'].each {
-    // ToDo for cloud fields should be checked and have to change
-    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
-    def server = defaultFieldsServer + whichUser.userInFieldAssignee + userCriteria.checkRoles +userCriteria.projectLead +  mode.atLeastOne + fieldEmpty.no + reverse.no + conditionalValidation.no
-    addTransitionFunction(it, 'validator', info ?.isCloud ? cloud : server, functionKey)
-}
-['atleastOneCriteria_reporterField'].each {
-    // ToDo for cloud fields should be checked and have to change
-    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
-    def server = defaultFieldsServer + whichUser.userInFieldReporter + userCriteria.checkRoles +userCriteria.projectLead +  mode.atLeastOne + fieldEmpty.no + reverse.no + conditionalValidation.no
-    addTransitionFunction(it, 'validator', info ?.isCloud ? cloud : server, functionKey)
-}
-['atleastOneCriteria_creatorField'].each {
-    // ToDo for cloud fields should be checked and have to change
-    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
-    def server = defaultFieldsServer + whichUser.userInFieldCreator + userCriteria.checkFields +userCriteria.projectLead +  mode.atLeastOne + fieldEmpty.no + reverse.no + conditionalValidation.no
-    addTransitionFunction(it, 'validator', info ?.isCloud ? cloud : server, functionKey)
-}
-['currentUser_assignee_reporter_field_reverse'].each {
-    def server = defaultFieldsServer + whichUser.current + userCriteria.assignee + userCriteria.reporter +userCriteria.checkFields +  mode.atLeastOne + fieldEmpty.no + reverse.yes + conditionalValidation.no
-    // ToDo for cloud fields should be checked and have to change
-    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
-    addTransitionFunction(it, 'validator',info ?.isCloud ? cloud : server,  functionKey )
-}
-['atleastOneCriteria_assigneeField_OrEmpty'].each {
-    def server = defaultFieldsServer + whichUser.userInFieldAssignee + userCriteria.checkRoles + userCriteria.projectLead +  mode.atLeastOne + fieldEmpty.yes + reverse.no + conditionalValidation.no
-    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
-    addTransitionFunction(it, 'validator', info ?.isCloud ? cloud : server, functionKey)
+['verify_current_user_should_be_in_assignee_reporter_labels'].each {
+    def server =  defaultFieldsServer + whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + userCriteria.inFieldLabels + reverse.no + userMode.allUsers + fieldEmpty.no
+    addTransitionFunction(it, 'validator',info?.isCloud ? cloud : server,  functionKey )
 }
 
-['checkUser_ifConditionTrue'].each {
-    def server = defaultFieldsServer + whichUser.current + userCriteria.reporter + userCriteria.checkFields + userCriteria.assignee +  mode.allUsers + fieldEmpty.no + reverse.no + conditionalValidation.yes
-    def cloud = defaultFieldsCloud + "validator.config-e92924ef-17fc-4863-809d-add6da80b9e7={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"errorMessage\":\"error\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
-    addTransitionFunction(it, 'validator', info ?.isCloud ? cloud : server, functionKey)
+['verify_user_in_field_assignee_should_be_in_reporter_labels'].each {
+    def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server =  defaultFieldsServer + whichUser.userInFieldAssignee + userCriteria.reporter + userCriteria.inFieldLabels + reverse.no + userMode.allUsers + fieldEmpty.no
+    addTransitionFunction(it, 'validator',info?.isCloud ? cloud : server,  functionKey )
 }
+
+['verify_user_in_field_reporter_should_be_in_assignee_labels'].each {
+    def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server =  defaultFieldsServer + whichUser.userInFieldReporter + userCriteria.assignee + userCriteria.inFieldLabels + reverse.no + userMode.allUsers + fieldEmpty.no
+    addTransitionFunction(it, 'validator',info?.isCloud ? cloud : server,  functionKey )
+}
+
+['verify_user_in_field_creator_should_be_in_reporter_assignee_labels'].each {
+    def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server =  defaultFieldsServer + whichUser.userInFieldCreator + userCriteria.reporter + userCriteria.assignee + userCriteria.inFieldLabels + reverse.no + userMode.allUsers + fieldEmpty.no
+    addTransitionFunction(it, 'validator',info?.isCloud ? cloud : server,  functionKey )
+}
+
+['verify_current_user_should_be_in_at_least_one_field_assignee_reporter_labels'].each {
+    def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server =  defaultFieldsServer + whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + userCriteria.inFieldLabels + reverse.no + userMode.atLeastOne + fieldEmpty.no
+    addTransitionFunction(it, 'validator', info?.isCloud ? cloud : server, functionKey)
+}
+
+['verify_user_in_field_assignee_should_be_in_at_least_one_field_reporter_labels'].each {
+    def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server =  defaultFieldsServer + whichUser.userInFieldAssignee + userCriteria.inFieldLabels + userCriteria.reporter + reverse.no + userMode.atLeastOne + fieldEmpty.no
+    addTransitionFunction(it, 'validator', info?.isCloud ? cloud : server, functionKey)
+}
+
+['verify_user_in_field_reporter_should_be_in_at_least_one_field_assignee_labels'].each {
+    def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server =  defaultFieldsServer + whichUser.userInFieldReporter + userCriteria.inFieldLabels + userCriteria.assignee + reverse.no + userMode.atLeastOne + fieldEmpty.no
+    addTransitionFunction(it, 'validator', info?.isCloud ? cloud : server, functionKey)
+}
+
+['verify_user_in_field_creator_should_be_in_at_least_one_field_reporter_assignee_labels'].each {
+    def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server =  defaultFieldsServer + whichUser.userInFieldCreator + userCriteria.inFieldLabels + userCriteria.reporter + userCriteria.assignee + reverse.no + userMode.atLeastOne + fieldEmpty.no
+    addTransitionFunction(it, 'validator', info?.isCloud ? cloud : server, functionKey)
+}
+
+['currentUser_should_not_be_in_fields_assignee_reporter_field_reverse'].each {
+    def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server =  defaultFieldsServer + whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + userCriteria.inFieldLabels + reverse.yes + userMode.atLeastOne + fieldEmpty.no
+    addTransitionFunction(it, 'validator',info?.isCloud ? cloud : server,  functionKey )
+}
+
+['user_in_field_assignee_should_be_in_field_labels_or_field_empty'].each {
+    def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))\"}"
+    def server =  defaultFieldsServer + whichUser.userInFieldAssignee + userCriteria.inFieldLabels + reverse.no + userMode.atLeastOne + fieldEmpty.yes
+    addTransitionFunction(it, 'validator', info?.isCloud ? cloud : server, functionKey)
+}
+
 
 createWorkflowScheme()
 createProject()
-//addProjectRole()
-//addProjectRoleActors()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
+// USER_VALIDATOR_TS_34_TC_01_Verify the User validator by the assignee.
 [
-        'atleastOneCriteria_assigneeField_OrEmpty',
-        'checkUser_ifConditionTrue'
+        'verify_current_user_should_be_assignee',
 ].each {
     gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: ": WHEN $it field is empty: ",
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_26_TC_02_Case_01_ $it _when satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'updateIssue',
+             ext: ":Change the assignee of issue before checking_ $it: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     assignee: user,
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_26_TC_02_Case_02_ $it _when  not satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+            [action    : 'updateIssue',
+             ext: ":Change the assignee of issue after checking_ $it: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     assignee: " ",
+             ],
+            ],
+    ])
+}
+
+
+// USER_VALIDATOR_TS_34_TC_01_Verify the current user should be reporter
+[
+        'verify_current_user_should_be_reporter', //returnFromScript
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_34_TC_01_Case_01_ $it _when  satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+            [action    : 'updateIssue',
+             ext: ":Change the reporter of issue before checking_ $it _satisfy the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     reporter: testUser,
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_34_TC_01_Case_02_ $it _when  not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'updateIssue',
+             ext: ":Change the reporter of issue after checking_ $it _satisfy the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     reporter: user,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_34_TC_03_Verify the current user should be in field labels
+[
+        'verify_current_user_should_be_inFieldLabels',
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_34_TC_03_Case_01_ $it _when  satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'updateIssue',
+             ext: ":Change the labels of issue before checking_ $it _satisfy the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     labels: user,
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_34_TC_03_Case_02_ $it _when  not satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":remove the labels of issue after checking_ $it _satisfy the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: " "
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_34_TC_04_Verify the current user should be return from script
+[
+        'verify_current_user_should_be_returnFromScript',
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_34_TC_04_Case_01_ $it _when  satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+            [action    : 'updateIssue',
+             ext: ":Change the reporter of issue before checking_ $it _satisfy the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     reporter: testUser,
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_34_TC_04_Case_02_ $it _when  not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'updateIssue',
+             ext: ":Change the reporter of issue after checking_ $it _satisfy the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     reporter: user,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_34_TC_05_Verify the current user should be project lead
+[
+        'verify_current_user_should_be_projectLead',
+].each {
+    gint.taskHelper.add([
+            [action    : 'updateProject',
+             ext: ":change the project lead to $testUser _to check_ $it: ",
+             expected  : 0,
+             parameters: [
+                     project     : projectName,
+                     lead: testUser,
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_34_TC_05_Case_01_ $it _when  not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'updateProject',
+             ext: ":change the project lead to $user _to check_ $it: ",
+             expected  : 0,
+             parameters: [
+                     project     : projectName,
+                     lead: user,
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_34_TC_05_Case_02_ $it _when  satisfies the criteria: ",
              expected  : 0,
              parameters: [
                      issue     : {->defaultIssue[]},
@@ -159,251 +320,1843 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
             ],
     ])
 }
-gint.taskHelper.add(
-        [action: 'updateIssue',ext: ': set priority High ',sleep: 1000,
-         parameters:[issue: {->defaultIssue[]}, priority: 'High']])
 
-['checkUser_ifConditionTrue'].each {
-    gint.taskHelper.add(
-            [action : 'transitionIssue',ext: ": when condition true and user not satisfies the given criteria_ $it : ",
-             expected: -3,
-             parameters:[
-                     issue: {->defaultIssue[]},
-                     transition:  it ,
-             ],
-             data : [/$errorMessage/],
-            ]
-    )
-}
-// update issue so that respective user satisfies all the criteria
-gint.taskHelper.add(
-        [action: 'assignIssue',ext: ': to current user',sleep: 1000,
-         parameters:[issue: {->defaultIssue[]}, userId: user]])
-
-gint.taskHelper.add( action: 'addLabels',ext: 'current user in label', parameters:[ issue : { ->defaultIssue[] }, labels: user])
-
+// USER_VALIDATOR_TS_35_TC_01_Verify the User validator by the assignee from the transition screen_Assign to me
 [
-        'currentUser',
-        'assignee',
-        'reporter',
-        'creator'
-].collect {
-    userCriteria.eachWithIndex { criteria, userFields, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ": WHEN $it IS: " + criteria,
-                 expected  : 0,
-                 parameters: [
-                         issue     : {->defaultIssue[]},
-                         transition: it + criteria,
-                 ],
-                ],
-        ])
-    }
-}
-
-// when specific user(current and user in selected field) satisfies all the selected criteria
-[
-        'currentUser_assignee_reporter_field',
-        'assignee_reporter_field',
-        'atleastOneCriteria_currentUser',
-        'atleastOneCriteria_assigneeField',
-        'atleastOneCriteria_reporterField',
-        'atleastOneCriteria_creatorField',
-        'checkUser_ifConditionTrue',
+        'verify_current_user_should_be_assignee',
 ].each {
-    gint.taskHelper.add(
-            [action : 'transitionIssue',ext: ": satisfies all the criteria_ $it : ",
-             expected: 0,
-             parameters:[
-                     issue: {->defaultIssue[]},
-                     transition:  it ,
-             ],
-                    failData: [/$errorMessage/],
-            ]
-    )
-}
-[
-        'currentUser_assignee_reporter_field_reverse',
-].each {
-    gint.taskHelper.add(
-            [action : 'transitionIssue',ext: ": satisfies all the criteria_ $it : ",
-             expected: -3,
-             parameters:[
-                     issue: {->defaultIssue[]},
-                     transition:  it ,
-             ],
-                    data : [/$errorMessage/],
-            ]
-    )
-}
-
-// change assignee, reporter, projectLead, field value, watcher, user from script to check error
-
-gint.taskHelper.add(
-        action: 'updateIssue',
-        parameters:[
-                issue: {->defaultIssue[]},
-                assignee: testUser,
-                reporter: testUser,
-                labels: testUser
-        ]
-)
-
-// ToDo this is not working -> removeWatcher
-gint.taskHelper.add(action: 'removeWatchers', ext: ': stop current user from watching issue',
-        parameters: [
-                issue: {-> defaultIssue[]} ]
-)
-
-gint.taskHelper.add( action: 'updateProject',parameters: [project: projectName, lead: testUser ] )
-
-[
-        'reporter',
-        'checkFields',
-        'projectLead',
-        'assignee'
-].collect {
-    gint.taskHelper.add(
-            [action : 'transitionIssue',ext: ": WHEN current user is NOT $it: ",
-             expected: -3,
-             parameters:[
-                     issue: {->defaultIssue[]},
-                     transition: 'currentUser' + it,
-             ],
-                    data : [/$errorMessage/]
-            ]
-    )
-}
-
-gint.taskHelper.add(
-        action: 'updateIssue', ext: ': check user in field assignee',
-        parameters:[
-                issue: {->defaultIssue[]},
-                assignee: user,
-                reporter: testUser,
-                labels: testUser
-        ]
-)
-[
-        'reporter',
-        'checkFields',
-        'projectLead'
-].each{
-    gint.taskHelper.add(
-            [action : 'transitionIssue',ext: ": WHEN assignee is NOT $it : ",
-             expected: -3,
-             parameters:[
-                     issue: {->defaultIssue[]},
-                     transition: 'assignee'+ it ,
-             ],
-                    data :[ /$errorMessage/ ],
-            ]
-    )
-}
-gint.taskHelper.add(
-        action: 'updateIssue', ext: ': check user in field reporter',
-        parameters:[
-                issue: {->defaultIssue[]},
-                assignee: testUser,
-                reporter: user,
-                labels: testUser
-        ]
-)
-[
-        'assignee',
-        'checkFields',
-        'projectLead'
-].each{
-    gint.taskHelper.add(
-            [action : 'transitionIssue',ext: ": WHEN reporter is NOT $it : ",
-             expected: -3,
-             parameters:[
-                     issue: {->defaultIssue[]},
-                     transition: 'reporter'+ it ,
-             ],
-                    data : [/$errorMessage/],
-            ]
-    )
-}
-[
-        'assignee',
-        'checkFields',
-        'projectLead'
-].each{
-    gint.taskHelper.add(
-            [action : 'transitionIssue',ext: ": WHEN creator is NOT $it : ",
-             expected: -3,
-             parameters:[
-                     issue: {->defaultIssue[]},
-                     transition: 'creator'+ it ,
-             ],
-                    data:[/$errorMessage/]
-            ]
-    )
-}
-// when specific user(current and user in selected field) not satisfies all the selected criteria
-[
-        'currentUser_assignee_reporter_field',
-        'assignee_reporter_field'
-].each {
-    gint.taskHelper.add(
-            [action : 'transitionIssue',ext: ": not satisfies all the criteria_ $it : ",
-             expected: -3,
-             parameters:[
-                     issue: {->defaultIssue[]},
-                     transition:  it ,
-             ],
-                    data:[/$errorMessage/],
-            ]
-    )
-}
-[
-        'currentUser_assignee_reporter_field_reverse'
-].each {
-    gint.taskHelper.add(
-            [action : 'transitionIssue',ext: ": not satisfies all the criteria_ $it : ",
-             expected: 0,
-             parameters:[
-                     issue: {->defaultIssue[]},
-                     transition:  it ,
-             ]
-            ]
-    )
-}
-[
-        'atleastOneCriteria_currentUser',
-].each {
-    gint.taskHelper.add(
-            [action: 'transitionIssue', ext: ": When $it satisfies",
-             expected: 0,
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_26_TC_02_Case_01_ $it _change from transition screen_current user: ",
+             expected  : -3,
              parameters: [
-                     issue: {->defaultIssue[]},
-                     transition: it
-             ]
-            ]
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_26_TC_02_Case_02_ $it _change from transition screen_current user: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+                     assignee: user
+             ],
+            ],
+            [action    : 'updateIssue',
+             ext: ":Change the assignee of issue after checking_ $it _change from transition screen_current user: ",
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     assignee: " ",
+             ],
+            ],
+    ])
+}
+
+
+// USER_VALIDATOR_TS_35_TC_02_Verify the current user should be reporter_change from transition screen_current user
+[
+        'verify_current_user_should_be_reporter', //returnFromScript
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_35_TC_02_Case_01_ $it _change from transition screen_current user: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_35_TC_02_Case_02_ $it _change from transition screen_current user: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+                     reporter: testUser,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'updateIssue',
+             ext: ":Change the reporter of issue after checking_ $it _change from transition screen_current user: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     reporter: user,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_35_TC_03_Verify the current user should be in field labels_ change from transition screen_current user
+[
+        'verify_current_user_should_be_inFieldLabels',
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_35_TC_03_Case_01_ $it _change from transition screen_current user: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_35_TC_03_Case_02_ $it _change from transition screen_current user: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+                     labels: user
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":remove the labels of issue after checking_ $it _change from transition screen_current user: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: " "
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_35_TC_04_Verify the current user should be return from script_change from transition screen_current user
+[
+        'verify_current_user_should_be_returnFromScript',
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_35_TC_04_Case_01_ $it _change from transition screen_current user: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_35_TC_04_Case_02_ $it _change from transition screen_current user: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+                     reporter: testUser,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'updateIssue',
+             ext: ":Change the reporter of issue after checking_ $it _change from transition screen_current user: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     reporter: user,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_36_TC_01_Verify the User validator by the assignee from the transition screen_Assign to different user
+[
+        'verify_current_user_should_be_assignee',
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_26_TC_02_Case_01_ $it _when change assignee from the transition screen_Assign to different user: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_26_TC_02_Case_02_ $it _when change assignee from the transition screen_Assign to different user: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+                     assignee: testUser
+             ],
+            ],
+            [action    : 'updateIssue',
+             ext: ":Change the assignee of issue after checking_ $it _when change assignee from the transition screen_Assign to different user: ",
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     assignee: " ",
+             ],
+            ],
+    ])
+}
+
+
+// USER_VALIDATOR_TS_36_TC_02_Verify the current user should be reporter_set from the transition screen_to different user
+[
+        'verify_current_user_should_be_reporter',
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_36_TC_02_Case_01_ $it _reporter_set from the transition screen_to different user: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_36_TC_02_Case_02_ $it _reporter_set from the transition screen_to different user: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+                     reporter: testUser,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'updateIssue',
+             ext: ":Change the reporter of issue after checking_ $it _reporter_set from the transition screen_to different user: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     reporter: user,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_36_TC_03_Verify the current user should be in field labels_set from the transition screen_to different user
+[
+        'verify_current_user_should_be_inFieldLabels',
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_36_TC_03_Case_01_ $it _labels_set from the transition screen_to different user: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_36_TC_03_Case_02_ $it _labels_set from the transition screen_to different user: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+                     labels: testUser
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":remove the labels of issue after checking_ $it _labels_set from the transition screen_to different user: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: " "
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_36_TC_04_Verify the current user should be return from script_set from the transition screen_to different user
+[
+        'verify_current_user_should_be_returnFromScript',
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_36_TC_04_Case_01_ $it _return from script_set from the transition screen_to different user: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_36_TC_04_Case_02_ $it _return from script_set from the transition screen_to different user: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+                     reporter: testUser,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'updateIssue',
+             ext: ":Change the reporter of issue after checking_ $it _return from script_set from the transition screen_to different user: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     reporter: user,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TC_38_Verify the User validator by Group
+['verify_current_user_should_be_inTestGroup'].each {
+    gint.taskHelper.add(
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TC_38_ $it _verify the user validator by group_when current user is not in selected group:",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
     )
 }
-gint.taskHelper.add(
-        [action: 'updateIssue', ext: "least one criteria for current user",
-         parameters: [
-                 issue: {->defaultIssue[]},
-                 assignee: testUser,
-                 reporter: testUser,
-         ]
-        ]
-)
 
-[
-        'atleastOneCriteria_currentUser',
-].each {
+// USER_VALIDATOR_TC_39_Verify the User validator by Group with the valid configured group user
+['verify_current_user_should_be_inAdminGroup'].each {
     gint.taskHelper.add(
-            [action: 'transitionIssue', ext: "When $it not satisfies ",
-             expected: -3,
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TC_39_ $it _verify the user validator by group_when current user is in selected group:",
+             expected  : 0,
              parameters: [
-                     issue: {->defaultIssue[]},
-                     transition: it
+                     issue     : {->defaultIssue[]},
+                     transition: it,
              ],
-                    data:[/$errorMessage/],
-            ]
+            ],
     )
+}
+
+// USER_VALIDATOR_TC_40_Verify the User validator by Group_by adding the user to group
+['verify_current_user_should_be_inTestGroup'].each {
+    gint.taskHelper.add([
+            [action: 'addUserToGroup',
+             ext: ": to check_ $it _after adding the user to selected group :" ,
+             parameters: [
+                     userId: "@self",
+                     group: testGroup
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TC_40_ $it _verify the user validator by group_when current user is added in selected group:",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+            [action: 'removeUserFromGroup',
+             ext: ": after checking_ $it _after adding the user to selected group :" ,
+             parameters: [
+                     userId: "@self",
+                     group: testGroup
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TC_41_ $it _verify the user validator by group_when current user is removed from selected group:",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_01_Verify the user in field assignee should be reporter
+[
+        'verify_user_in_field_assignee_should_be_reporter',
+].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":asign to $testUser _ $it _to check criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_01_Case_01_ $it _when  not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":asign to $user _ $it _to check criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_01_Case_02_ $it _when  not satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_02_Verify the user in field assignee should be in field labels
+[
+        'verify_user_in_field_assignee_should_be_inFieldLabels',
+].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":of assignee value to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_02_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_02_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_03_Verify the user in field assignee should be return from script
+[
+        'verify_user_in_field_assignee_should_be_returnFromScript',
+].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_03_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_03_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_04_Verify the user in field assignee should be projectLead
+[
+        'verify_user_in_field_assignee_should_be_projectLead',
+].each {
+    gint.taskHelper.add([
+            [action    : 'updateProject',
+             ext: ":project lead value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     project     : projectName,
+                     lead: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_04_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'updateProject',
+             ext: ":project lead value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     project     : projectName,
+                     lead: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_04_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_05_Verify the user in field assignee should be of admin role
+[
+        'verify_user_in_field_assignee_should_be_inAdminRole',
+].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ": assignee to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : { ->defaultIssue[] },
+                     field: "Assignee",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_05_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ": assignee to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : { ->defaultIssue[] },
+                     field: "Assignee",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_05_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_06_Verify the user in field assignee should be in admin group
+[
+        'verify_user_in_field_assignee_should_be_inAdminGroup',
+].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ": of assignee to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : { ->defaultIssue[] },
+                     field: "Assignee",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_06_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ": of assignee to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : { ->defaultIssue[] },
+                     field: "Assignee",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_06_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_07_Verify the user in field assignee should specific user_checkUser
+[
+        'verify_user_in_field_assignee_should_be_checkUser',
+].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ": of assignee to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : { ->defaultIssue[] },
+                     field: "Assignee",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_07_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ": of assignee to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : { ->defaultIssue[] },
+                     field: "Assignee",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_07_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_08_Verify the user in field reporter should be
+[
+        'verify_user_in_field_reporter_should_be_assignee',
+].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":asign to $testUser _ $it _to check criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_08_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":asign to $user _ $it _to check criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_08_Case_02_ $it _when  not satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_09_Verify the user in field assignee should be in field labels
+[
+        'verify_user_in_field_reporter_should_be_inFieldLabels',
+].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":of reporter to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: user
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":of labels to empty _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: " "
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_09_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_09_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_10_Verify the user in field reporter should be return from script
+[
+        'verify_user_in_field_reporter_should_be_returnFromScript',
+].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_10_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_10_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_11_Verify the user in field reporter should be projectLead
+[
+        'verify_user_in_field_reporter_should_be_projectLead',
+].each {
+    gint.taskHelper.add([
+            [action    : 'updateProject',
+             ext: ":project lead value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     project     : projectName,
+                     lead: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_11_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'updateProject',
+             ext: ":project lead value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     project     : projectName,
+                     lead: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_11_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_12_Verify the user in field reporter should be of admin role
+[
+        'verify_user_in_field_reporter_should_be_inAdminRole',
+].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ": reporter to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : { ->defaultIssue[] },
+                     field: "Reporter",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_12_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ": reporter to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : { ->defaultIssue[] },
+                     field: "Reporter",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_12_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_13_Verify the user in field reporter should be in admin group
+[
+        'verify_user_in_field_reporter_should_be_inAdminGroup',
+].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ": of reporter to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : { ->defaultIssue[] },
+                     field: "Reporter",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_13_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ": of reporter to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : { ->defaultIssue[] },
+                     field: "Reporter",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_13_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_14_Verify the user in field reporter should be specific user_checkUser
+[
+        'verify_user_in_field_reporter_should_be_checkUser',
+].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ": of reporter to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : { ->defaultIssue[] },
+                     field: "Reporter",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_14_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ": of reporter to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : { ->defaultIssue[] },
+                     field: "Reporter",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_14_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_15_Verify the user in field creator should be reporter
+[
+        'verify_user_in_field_creator_should_be_reporter',
+].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":reporter to $testUser _ $it _to check criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_15_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":reporter to $user _ $it _to check criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_15_Case_02_ $it _when  not satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_16_Verify the user in field creator should be assignee
+[
+        'verify_user_in_field_creator_should_be_assignee',
+].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":assign to $testUser _ $it _to check criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_08_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":asign to $user _ $it _to check criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_08_Case_02_ $it _when  not satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_17_Verify the user in field creator should be in field labels
+[
+        'verify_user_in_field_creator_should_be_inFieldLabels',
+].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":of labels to empty _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: " "
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_17_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_17_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_18_Verify the user in field creator should be return from script
+[
+        'verify_user_in_field_creator_should_be_returnFromScript',
+].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_18_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_18_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_19_Verify the user in field creator should be projectLead
+[
+        'verify_user_in_field_creator_should_be_projectLead',
+].each {
+    gint.taskHelper.add([
+            [action    : 'updateProject',
+             ext: ":project lead value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     project     : projectName,
+                     lead: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_19_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'updateProject',
+             ext: ":project lead value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     project     : projectName,
+                     lead: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_19_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_20_Verify the user in field creator should be of admin role
+[
+        'verify_user_in_field_creator_should_be_inAdminRole',
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_20_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_21_Verify the user in field creator should be in admin group
+[
+        'verify_user_in_field_creator_should_be_inAdminGroup',
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_21_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_40_TC_22_Verify the user in field creator should specific user_checkUser
+[
+        'verify_user_in_field_creator_should_be_checkUser',
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_40_TC_22_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+
+// USER_VALIDATOR_TS_49_TC_01_Verify the mode: all the criteria configured below_current user
+['verify_current_user_should_be_in_assignee_reporter_labels'].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":assignee value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: testUser
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: testUser
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels value set to empty _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: " "
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_49_TC_01_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":assignee value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: user
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: user
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_49_TC_01_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_49_TC_02_Verify the mode: all the criteria configured below_user in field assignee
+['verify_user_in_field_assignee_should_be_in_reporter_labels'].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":assignee value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_49_TC_02_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: testUser
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_49_TC_02_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_49_TC_03_Verify the mode: all the criteria configured below_user in field reporter
+['verify_user_in_field_reporter_should_be_in_assignee_labels'].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $user _after check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: user
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels value set to empty _after check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: " "
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":assignee value set to empty _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: " "
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_49_TC_03_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: user
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":assignee value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_49_TC_03_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_49_TC_04_Verify the mode: all the criteria configured below_user in field creator
+['verify_user_in_field_creator_should_be_in_reporter_assignee_labels'].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":assignee value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: testUser
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: testUser
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels value set to empty _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: " "
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_49_TC_04_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":assignee value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: user
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: user
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_49_TC_04_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_50_TC_01_Verify the mode: at least one of the criteria configured below_ current user
+['verify_current_user_should_be_in_at_least_one_field_assignee_reporter_labels'].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":assignee value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: testUser
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: testUser
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels value set to empty _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: " "
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_50_TC_01_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":assignee value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_50_TC_01_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_50_TC_02_Verify the mode: at least one of the criteria configured below_ user in field assignee
+['verify_user_in_field_assignee_should_be_in_at_least_one_field_reporter_labels'].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":assignee value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: user
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: testUser
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels value set to empty _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: " "
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_50_TC_02_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_50_TC_02_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_50_TC_03_Verify the mode: at least one of the criteria configured below_ user in field reporter
+['verify_user_in_field_reporter_should_be_in_at_least_one_field_assignee_labels'].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: user
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":assignee value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: testUser
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels value set to empty _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: " "
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_50_TC_03_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":assignee value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_50_TC_03_Case_04_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_50_TC_04_Verify the mode: at least one of the criteria configured below_ user in field creator
+['verify_user_in_field_creator_should_be_in_at_least_one_field_reporter_assignee_labels'].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":assignee value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: testUser
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: testUser
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels value set to empty _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: " "
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_50_TC_04_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":assignee value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_50_TC_04_Case_02_ $it _when satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_22_TC_04_Verify for the Reverse condition checkbox under the current user Condition configuration page
+['currentUser_should_not_be_in_fields_assignee_reporter_field_reverse'].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":assignee value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: testUser
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $testUser _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: testUser
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels value set to empty _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: " "
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_22_TC_01_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":assignee value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: user
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":reporter value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Reporter",
+                     value: user
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels value set to $user _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_22_TC_01_Case_02_ $it _when satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+    ])
+}
+
+// USER_VALIDATOR_TS_51_TC_01_Verify the mode: at least one of the criteria configured below with or the field can be empty oprion.
+['user_in_field_assignee_should_be_in_field_labels_or_field_empty'].each {
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":assignee set to $testUser _to check $it : ",
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: user
+             ],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":labels set to $testUser _to check $it : ",
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Labels",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_51_TC_01_Case_01_ $it _when not satisfies the criteria: ",
+             expected  : -3,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+             data: ["$errorMessage"],
+            ],
+            [action    : 'setFieldValue',
+             ext: ":Assignee value set to empty _to check $it : ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     field: "Assignee",
+                     value: " "
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":USER_VALIDATOR_TS_51_TC_01_Case_02_ $it _when satisfies the criteria_field is empty: ",
+             expected  : 0,
+             parameters: [
+                     issue     : {->defaultIssue[]},
+                     transition: it,
+             ],
+            ],
+    ])
 }

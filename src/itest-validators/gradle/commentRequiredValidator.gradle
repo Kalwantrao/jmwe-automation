@@ -17,28 +17,30 @@ addWorkflow()
 
 def customErrorMessage = "custom error message"
 def systemErrorMessage = "You must provide a Comment"
+
 def defaultFieldsServer = [
-        commentRequired_customError: ["errorMessage=$customErrorMessage","groups=","showAsterisk=no","correlationId="],
-        commentRequired_systemError: ["errorMessage=","groups=","showAsterisk=no","correlationId="],
-        commentRequired_conditionalValidation : ["conditionalValidation=yes","conditionalValidationScript=$groovyExpression.getIssuetype","errorMessage=","groups=","showAsterisk=no","correlationId="],
-        commentRequired_ommitGroups : ["errorMessage=","groups=jira-administrators","showAsterisk=no","correlationId="]
+        verify_the_error_message: ["errorMessage=$customErrorMessage","groups=","showAsterisk=no","correlationId="],
+        verify_the_system_error_message: ["errorMessage=","groups=","showAsterisk=no","correlationId="],
+        verify_the_condition_groovy_expression : ["conditionalValidation=yes","conditionalValidationScript=$groovyExpression.getIssuetype","errorMessage=","groups=","showAsterisk=no","correlationId="],
+        comment_required_if_not_from_selectedGroup : ["errorMessage=","groups=jira-administrators","showAsterisk=no","correlationId="]
 ]
+
 def defaultFieldsCloud = [
-        commentRequired_customError : [
+        verify_the_error_message : [
                 "validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a",
                 "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"problems\":[],\"errorMessage\":\"$customErrorMessage\",\"expression\": \"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}"
         ],
-        commentRequired_systemError : [
+        verify_the_system_error_message : [
                 "validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a",
                 "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"problems\":[],\"expression\":\"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}"
         ],
-        commentRequired_conditionalValidation : [
+        verify_the_condition_groovy_expression : [
                 "validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a",
                 "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"problems\":[],\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.issueType && issue.issueType.name == 'Task'\",\"expression\":\"!(!!issue.issueType && issue.issueType.name == 'Task') || !!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}"
         ]
 ]
 
-def functionKey = info?.isCloud ? functionKey.commentRequiredValidatorCloud : functionKey.commentRequiredValidatorServer
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CommentRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentrequired-validator'
 def fields = info?.isCloud ? defaultFieldsCloud : defaultFieldsServer
 
 // Configuration for validator
@@ -51,12 +53,13 @@ createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
-// checking the current status To Do and previous status In Progress
+// COMMENT_REQUIRED_VALIDATOR_TC_09_Verify the Error message_On the issue transition_if the user did not add a comment_added error message must be displayed to the user
 [
-        'commentRequired_customError',
+        'verify_the_error_message',
 ].each {
     gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: ' : custom error when comment not provided ' + it,
+            [action    : 'transitionIssue',
+             ext: ":COMMENT_REQUIRED_VALIDATOR_TC_09_Case_ 01-Verify the Error message_On the issue transition_if the user did not add a comment_added error message must be displayed to the user_when comment not provided:",
              expected  : -3,
              parameters: [
                      transition: it,
@@ -64,7 +67,8 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
              ],
              data: [ /$customErrorMessage/ ]
             ],
-            [action    : 'transitionIssue', ext: ' : when comment provided ' + it,
+            [action    : 'transitionIssue',
+             ext: ":COMMENT_REQUIRED_VALIDATOR_TC_09_Case_02-Verify the Error message_On the issue transition_if the user did not add a comment_added error message must be displayed to the user_when comment provided:",
              expected  : 0,
              parameters: [
                      transition: it,
@@ -76,12 +80,14 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
     ]
     )
 }
+
+// COMMENT_REQUIRED_VALIDATOR_TC_09_Case_02_Verify the system error message
 [
-        'commentRequired_systemError',
-        'commentRequired_conditionalValidation',
+        'verify_the_system_error_message',
 ].each {
     gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: ' : custom error when comment not provided ' + it,
+            [action    : 'transitionIssue',
+             ext: ":COMMENT_REQUIRED_VALIDATOR_TC_9_Case_02_A_Verify the system error message_when comment not provided:",
              expected  : -3,
              parameters: [
                      transition: it,
@@ -89,37 +95,8 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
              ],
              data: [ /$systemErrorMessage/ ]
             ],
-            [action    : 'transitionIssue', ext: ' : when comment provided ' + it,
-             expected  : 0,
-             parameters: [
-                     transition: it,
-                     issue: { -> defaultIssue[] },
-                     comment: 'test_Comment'
-             ],
-             failData: [ /$systemErrorMessage/ ]
-            ]
-    ]
-    )
-}
-[
-        'commentRequired_conditionalValidation',
-].each {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: ' :  error when conditional validation true ' + it,
-             expected  : -3,
-             parameters: [
-                     transition: it,
-                     issue: { -> defaultIssue[] },
-             ],
-             data: [ /$systemErrorMessage/ ]
-            ],
-            [action: 'updateIssue', ext: ': change issue type',
-             parameters: [
-                     issue: {->defaultIssue[]},
-                     issueType: 'Story'
-             ]
-            ],
-            [action    : 'transitionIssue', ext: ' : should not throw error when conditional validation false ' + it,
+            [action    : 'transitionIssue',
+             ext: ":COMMENT_REQUIRED_VALIDATOR_TC_9_Case_02_B_Verify the system error message_when comment provided:",
              expected  : 0,
              parameters: [
                      transition: it,
@@ -132,11 +109,57 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
     )
 }
 
-['commentRequired_ommitGroups'].each {
+// COMMENT_REQUIRED_VALIDATOR_TC_09_Verify the Condition groovy expression
+[
+        'verify_the_condition_groovy_expression',
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":COMMENT_REQUIRED_VALIDATOR_TC_13_Case_01-Verify the Condition groovy expression_when condition returns true and comment not provided:",
+             expected  : -3,
+             parameters: [
+                     transition: it,
+                     issue: { -> defaultIssue[] },
+             ],
+             data: [ /$systemErrorMessage/ ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ":COMMENT_REQUIRED_VALIDATOR_TC_13_Case_02-Verify the Condition groovy expression_when condition returns true and comment provided:",
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue: { -> defaultIssue[] },
+                     comment: 'test_Comment'
+             ],
+             failData: [ /$systemErrorMessage/ ]
+            ],
+            [action: 'updateIssue',
+             ext: ': change issue type',
+             parameters: [
+                     issue: {->defaultIssue[]},
+                     issueType: 'Story'
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ":COMMENT_REQUIRED_VALIDATOR_TC_13_Case_03-Verify the Condition groovy expression_when condition returns false and comment not provided:",
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue: { -> defaultIssue[] },
+             ],
+             failData: [ /$systemErrorMessage/ ]
+            ]
+
+    ]
+    )
+}
+
+// COMMENT_REQUIRED_VALIDATOR_TC_10_Verify the Groups allowed to omit the comment dropdown_On selecting the group from the drop-down_that group will be omitted from the validator
+['comment_required_if_not_from_selectedGroup'].each {
     gint.taskHelper.add([
             [action: 'transitionIssue',
              onlyIf: info?.isServer?
-             ext: ': trigger transition by user which is in selected group',
+             ext: ":COMMENT_REQUIRED_VALIDATOR_TC_10_Verify the Groups allowed to omit the comment dropdown_On selecting the group from the drop-down_that group will be omitted from the validator:",
              expected: 0,
              parameters:[
                      issue:  {defaultIssue[]},
@@ -159,7 +182,7 @@ def transitionByUserTask =  { transition, userId, issue, data, expected ->
             ]
     )
 }
-transitionByUserTask('commentRequired_ommitGroups', testUser, {->defaultIssue[]}, null, -3)
+//transitionByUserTask('comment_required_if_not_from_selectedGroup', testUser, {->defaultIssue[]}, null, -3)
 /*
 DONE : 1. If a Comment is not provided, report the following error: You must provide a Comment. - positive and negatives = "Done"
 DONE:  2. If a Comment is not provided, report the following error: customError msg. - positive and negatives = "Done"

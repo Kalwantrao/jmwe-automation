@@ -15,9 +15,9 @@ apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 tearDown()
 addWorkflow()
 def errorMessage = "Check the scripted groovy returns true"
-def defaultsFields = [
+def defaultFieldsServer = [
         "scriptDescription=",
-        "errorMessage=",
+        "errorMessage=$errorMessage",
         "field=",
         "correlationId=",
 ]
@@ -25,11 +25,11 @@ def cloudFields = [
         "validator.id=07ce5526-68d4-42ad-8be6-f0a788113a55",
         "validator.config-07ce5526-68d4-42ad-8be6-f0a788113a55={\"expression\":\"!! issue.assignee && !! issue.assignee.accountId\",\"errorMessage\":\"$errorMessage\"}"
 ]
-def functionKey = info?.isCloud ? functionKey.scriptedGroovyValidatorCloud : functionKey.scriptedGroovyValidatorServer
 
-// Configuration for conditions
-['issueMustHaveAssignee'].each {
-    def fields = info?.isCloud ? cloudFields : defaultsFields + "groovyExpression=!!issue.get('assignee')"
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ScriptedValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-validator'
+
+['verify_issue_must_assigned_to_specific_user'].each {
+    def fields = info?.isCloud ? cloudFields : defaultFieldsServer + "groovyExpression=issue.getAsString(\"assignee\") == \"$user\""
     addTransitionFunction(it, 'validator', fields, functionKey )
 }
 
@@ -37,32 +37,135 @@ createWorkflowScheme()
 createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->defaultIssue[]}], 'subtask')
 
-// checking the current status To Do and previous status In Progress
+// SCRIPTED_GROOVY_VALIDATOR -Verify for the Groovy script_The system should display error message
 [
-        'issueMustHaveAssignee',
+        'verify_issue_must_assigned_to_specific_user'
 ].each {
     gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: ' : when condition false ' + it,
+            [action    : 'transitionIssue',
+             ext: ":SCRIPTED_GROOVY_VALIDATOR_TC_24_ $it _when issue not having assignee _the system should display error message",
              expected  : -3,
              parameters: [
                      transition: it,
                      issue: { -> defaultIssue[] },
              ],
+             data: ["$errorMessage"],
             ],
-            [action    : 'updateIssue', ext: ' : to check next condition ' + it,
+            [action    : 'updateIssue',
+             ext: "assign issue to $user _to check success _ $it:",
              sleepAfter: 2000,
              parameters: [
                      assignee: user,
                      issue: { -> defaultIssue[] },
              ],
             ],
-            [action    : 'transitionIssue', ext: ' : when condition true ' + it,
+            [action    : 'transitionIssue',
+             ext: ":SCRIPTED_GROOVY_VALIDATOR_TC_25_$it _when assignee is selected user _the system should not display error message",
              sleep: 2000,
              expected  : 0,
              parameters: [
                      transition: it,
                      issue: { -> defaultIssue[] },
+             ],
+             failData: ["$errorMessage"],
+            ],
+            [action    : 'updateIssue',
+             ext: "assign issue to $testUser _to check success _ $it:",
+             sleepAfter: 2000,
+             parameters: [
+                     assignee: testUser,
+                     issue: { -> defaultIssue[] },
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":SCRIPTED_GROOVY_VALIDATOR_TC_36_ $it _when assignee is not selected user _the system should display error message",
+             sleep: 2000,
+             expected  : -3,
+             parameters: [
+                     transition: it,
+                     issue: { -> defaultIssue[] },
+             ],
+             data: ["$errorMessage"],
+            ],
+    ])
+}
+
+// SCRIPTED_GROOVY_VALIDATOR TC_37-Verify for the Groovy script_The system should display error message_on subtask
+[
+        'verify_issue_must_assigned_to_specific_user'
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext       : ":SCRIPTED_GROOVY_VALIDATOR_TC_37_Case_01_ $it _when subtask not having assignee _the system should display error message",
+             expected  : -3,
+             parameters: [
+                     transition: it,
+                     issue     : { -> subtask[] },
+             ],
+             data      : ["$errorMessage"],
+            ],
+            [action    : 'updateIssue',
+             ext       : "assign subtask to $user _to check success _ $it:",
+             sleepAfter: 2000,
+             parameters: [
+                     assignee: user,
+                     issue   : { -> subtask[] },
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext       : ":SCRIPTED_GROOVY_VALIDATOR_TC_37_Case_02 _$it _when subatsks assignee is selected user _the system should not display error message",
+             sleep     : 2000,
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue     : { -> subtask[] },
+             ],
+             failData  : ["$errorMessage"],
+            ],
+    ])
+}
+
+// SCRIPTED_GROOVY_VALIDATOR TC_38-Verify for the Scripted_Groovy from the issue transition screen.
+[
+        'verify_issue_must_assigned_to_specific_user'
+].each {
+    gint.taskHelper.add([
+            [action    : 'updateIssue',
+             ext       : "unassign issue to check_ $it _adding the assignee on transition screen:",
+             sleepAfter: 2000,
+             parameters: [
+                     issue   : { -> defaultIssue[] },
+                     assignee: " ",
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext       : ":SCRIPTED_GROOVY_VALIDATOR TC_38_Case_01_ $it _added the selected assignee_from the issue transition screen",
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+                     assignee: user,
+             ],
+             failData      : ["$errorMessage"],
+            ],
+            [action    : 'transitionIssue',
+             ext       : ":SCRIPTED_GROOVY_VALIDATOR TC_38_Case_02_ $it _added the different assignee_from the issue transition screen",
+             expected  : -3,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+                     assignee: testUser,
+             ],
+             data  : ["$errorMessage"],
+            ],
+            [action    : 'updateIssue',
+             ext       : "unassign issue to $user _after checking_ $it _adding the assignee on transition screen:",
+             sleepAfter: 2000,
+             parameters: [
+                     issue   : { -> defaultIssue[] },
+                     assignee: " ",
              ],
             ],
     ])

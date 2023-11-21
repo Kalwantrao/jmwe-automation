@@ -15,134 +15,64 @@ apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 tearDown()
 addWorkflow()
 
-def fieldsToRemoveServer = [
-        "currentIssue",
-]
-fieldsToRemoveServer.each { key ->
-    relatedIssueServer.remove(key)
-}
-project.ext.statusIds = [ // statusIds.inProgress
-      toDo: 10000,
-      inProgress: 3,
-      inReview : 10103,
-      done : 10001
-]
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssueStatusCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-condition'
 
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
-def functionKey = info?.isCloud? functionKey.relatedIssuesStatusConditionCloud : functionKey.relatedIssuesStatusConditionServer
+relatedIssue.remove("currentIssue")
+
 def defaultFieldsCloud = ["condition.id=7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f"]
 
-def defaultFields = [ "correlationId=" ]
-
-def issueType = [
-        any : [ "selectedIssueType=" ],
-        story : [ "selectedIssueType=$issueType.story" ],
-        task : [ "selectedIssueType=$issueType.task" ],
-        bug : [ "selectedIssueType=$issueType.bug" ],
-        initiative: [ "selectedIssueType=$issueType.initiative" ]
-]
-def mode = [
-        all : [ "conditionMode=all-in-status" ],
-        one : ["conditionMode=one-in-status"],
-        none : ["conditionMode=none-in-status"],
-        oneNot : ["conditionMode=one-not-in-status"]
-]
-def statuses = [
-        inProgress : ["issue_statuses=$statusIds.inProgress" ],
-        toDo : [ "issue_statuses=$statusIds.toDo" ],
-        inReview : [ "issue_statuses=$statusIds.inReview" ],
-        done : [ "issue_statuses=$statusIds.done" ]
-]
-
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'allIssuesMustBe_InProgress'
-    def server = defaultFields + issueType.any + "selectedLinkType=$value" + mode.all + statuses.inProgress
-    addTransitionFunction(transition + i, 'condition', server, functionKey)
+relatedIssue.eachWithIndex { linkedIssue, fieldValues, i ->
+    def transition = "verify_status_in_progress_of_all_issues_which_are_" + linkedIssue
+    def server = defaultFieldsServer + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.all + statuses.inProgress
+    addTransitionFunction(transition, 'condition', server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'atLeastOneIssueMustBe_InProgress'
-    def server = defaultFields + issueType.any + "selectedLinkType=$value" + mode.one + statuses.inProgress
-    addTransitionFunction( transition + i, 'condition', server, functionKey)
-}
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'noIssueMustBe_InProgress'
-    def server = defaultFields + issueType.any + "selectedLinkType=$value" + mode.none + statuses.inProgress
-    addTransitionFunction(transition + i, 'condition', server, functionKey)
-}
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'oneIssueMustNotBe_InProgress'
-    def server = defaultFields + issueType.any + "selectedLinkType=$value" + mode.oneNot + statuses.inProgress
-    addTransitionFunction(transition + i, 'condition', server, functionKey)
-}
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'allIssuesMustBe_ToDo'
-    def server = defaultFields + issueType.any + "selectedLinkType=$value" + mode.all + statuses.toDo
-    addTransitionFunction(transition + i, 'condition', server, functionKey)
+relatedIssue.eachWithIndex { linkedIssue, fieldValues, i ->
+    def transition = 'verify_status_in_progress_of_at_least_one_issues_which_is_' + linkedIssue
+    def server = defaultFieldsServer + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.one + statuses.inProgress
+    addTransitionFunction( transition, 'condition', server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
-    def server = defaultFields + issueType.any + "selectedLinkType=$value" + mode.one + statuses.toDo
-    def transition = 'atLeastOneIssueMustBe_ToDo'
-    addTransitionFunction( transition + i, 'condition', server, functionKey)
+relatedIssue.eachWithIndex { linkedIssue, fieldValues, i ->
+    def transition = 'verify_status_in_progress_none_of_the_issues_which_are_' + linkedIssue
+    def server = defaultFieldsServer + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.none + statuses.inProgress
+    addTransitionFunction(transition, 'condition', server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'noIssueMustBe_ToDo'
-    def server = defaultFields + issueType.any + "selectedLinkType=$value" + mode.none + statuses.toDo
-    addTransitionFunction(transition + i, 'condition', server, functionKey)
-}
-relatedIssue.eachWithIndex { key, value, i ->
-    def server = defaultFields + issueType.any + "selectedLinkType=$value" + mode.oneNot + statuses.toDo
-    def transition = 'oneIssueMustNotBe_ToDo'
-    addTransitionFunction(transition + i, 'condition', server, functionKey)
+relatedIssue.eachWithIndex { linkedIssue, fieldValues, i ->
+    def transition = 'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_' + linkedIssue
+    def server = defaultFieldsServer + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.oneNot + statuses.inProgress
+    addTransitionFunction(transition, 'condition', server, functionKey)
 }
 
-['allIssuesInProgress_Task'].each {
-    def server = defaultFields + issueType.task + "selectedLinkType=$relatedIssueServer.parentIssue" + mode.all + statuses.inProgress
+['verify_the_issue_type_dropdwn_Task'].each {
+    def server = defaultFieldsServer + issueType.task + "selectedLinkType=$relatedIssue.parentIssue" + linkedIssuesStatusMode.all + statuses.inProgress
     addTransitionFunction(it, 'condition', server, functionKey)
 }
-['allIssuesInProgress_Story'].each {
-    def server = defaultFields + issueType.story + "selectedLinkType=$relatedIssueServer.parentIssue" + mode.all + statuses.inProgress
+
+['verify_the_issue_type_dropdwn_Story'].each {
+    def server = defaultFieldsServer + issueType.story + "selectedLinkType=$relatedIssue.parentIssue" + linkedIssuesStatusMode.all + statuses.inProgress
     addTransitionFunction(it, 'condition', server, functionKey)
 }
 
 createWorkflowScheme()
 createProject()
 
-def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
 def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[] }], 'Sub-task')
-def subtask2 = createIssue([type: 'Sub-task', summary: 'Subtask2', parent: { -> parent[] }], 'Sub-task2')
-def subtask3 = createIssue([type: 'Sub-task', summary: 'Subtask3', parent: { -> parent[] }], 'Sub-task3')
 def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
 def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {->epic[]}], 'BelongsToEpic')
-def issueBelongsToEpic2 = createIssue([type: 'Task', summary: 'issueBelongsToEpic2', field: "Epic Link", value: {->epic[]}], 'BelongsToEpic2')
-def issueBelongsToEpic3 = createIssue([type: 'Task', summary: 'issueBelongsToEpic3', field: "Epic Link", value: {->epic[]}], 'BelongsToEpic3')
 def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue'], 'Initiative')
 def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
-def epic_initiative2 = createIssue([type: 'Epic', summary: 'epic_initiative2', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative2')
-def epic_initiative3 = createIssue([type: 'Epic', summary: 'epic_initiative3', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative3')
 def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
 def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
-def blocks2 = createIssue([type: 'Task', summary: 'blocks2'], 'blocks2')
-def blocks3 = createIssue([type: 'Task', summary: 'blocks3'], 'blocks3')
 def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
-def clones2 = createIssue([type: 'Task', summary: 'clones2'], 'clones2')
-def clones3 = createIssue([type: 'Task', summary: 'clones3'], 'clones3')
 def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
-def duplicates2 = createIssue([type: 'Task', summary: 'duplicates2'], 'duplicates2')
-def duplicates3 = createIssue([type: 'Task', summary: 'duplicates3'], 'duplicates3')
 def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesTo')
-def relatesTo2 = createIssue([type: 'Task', summary: 'relatesTo2'], 'relatesTo2')
-def relatesTo3 = createIssue([type: 'Task', summary: 'relatesTo3'], 'relatesTo3')
 def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
-def jqlIssue2 = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue2')
-def jqlIssue3 = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue3')
 
 updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
-updateIssue([issue: {->epic_initiative2[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic2")
-updateIssue([issue: {->epic_initiative3[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic3")
 
 def linkIssuesMap = [
         blocks : {->blocks[]},
@@ -153,164 +83,2567 @@ def linkIssuesMap = [
 linkIssuesMap.eachWithIndex { key, value, i ->
     linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
 }
-def linkIssuesMap2 = [
-        blocks : {->blocks2[]},
-        clones : {->clones2[]},
-        duplicates : {->duplicates2[]},
-        'relates to': {->relatesTo2[]}
-]
-linkIssuesMap2.eachWithIndex { key, value, i ->
-    linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key + 2)
-}
-
-def linkIssuesMap3 = [
-        blocks : {->blocks3[]},
-        clones : {->clones3[]},
-        duplicates : {->duplicates3[]},
-        'relates to': {->relatesTo3[]}
-]
-linkIssuesMap3.eachWithIndex { key, value, i ->
-    linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key + 3)
-}
-
-def relatedIssuesMapCloud = [
-        {->issueLinks[]} : {->blocks[]},
-        {->issueLinks[]} : {->blocks[]},
-        {->blocks[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->clones[]},
-        {->clones[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->duplicates[]},
-        {->duplicates[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->relatesTo[]},
-]
 
 
-def relatedIssuesMapServer = [
-       {->parent[]} : {->subtask[]},
-        {->subtask[]} : {->parent[]},
-        {->epic[]} : {->issueBelongsToEpic[]},
-        {->issueBelongsToEpic[]} : {->epic[]},
-        {-> initiative[]} : {->epic_initiative[]},
-        {-> epic_initiative[]} : {->initiative[]},
-       {->issueLinks[]} : {->blocks[]},
-        {->issueLinks[]} : {->blocks[]},
-        {->blocks[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->clones[]},
-        {->clones[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->duplicates[]},
-        {->duplicates[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->relatesTo[]},
-        {->issueLinks[]} : {->relatesTo[]},
-        {->issueLinks[]} : {->jqlIssue[]},
-]
-
-def relatedIssuesMap = info?.isCloud ? relatedIssuesMapCloud : relatedIssuesMapServer
-
-['oneIssueMustNotBe_InProgress','noIssueMustBe_InProgress'].collect {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+// RELATED_ISSUES_STATUS_CONDITION_TC_10-Verify Sub_task of the current issue
+[
+        'verify_status_in_progress_of_all_issues_which_are_subtask'
+].collect {
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ': when linked issues not in selected status ie In Progress_checkSuccess :'+ it + i,
-                 parameters: [
-                         issue     : key,
-                         transition: it + i,
-                 ]
-                ],
-        ])
-    }
-}
-
-['allIssuesMustBe_InProgress','atLeastOneIssueMustBe_InProgress'].collect {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ': when linked issues not in selected status ie In Progress_check error :' + it +i,
-                 expected  : -1,
-                 parameters: [
-                         issue     : key,
-                         transition: it + i,
-                 ],
-                ],
-        ])
-    }
-}
-
-['oneIssueMustNotBe_ToDo','noIssueMustBe_ToDo'].collect {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ': when all linked issues in selected status ie To Do_checkError :'+ it + i,
+                [action    : 'transitionIssue',
+                 ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_10_Case_01- $it _when Sub_task of the current issue not in selected status:",
                  expected: -1,
                  parameters: [
-                         issue     : key,
-                         transition: it + i,
+                         issue     : { ->parent[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext: ": transition issue to IN_PROGRESS to verify_ $it _when Sub_task of the current issue in selected status:",
+                 expected: 0,
+                 parameters: [
+                         issue     : { ->subtask[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_10_Case_02- $it _when Sub_task of the current issue not in selected status:",
+                 expected: 0,
+                 parameters: [
+                         issue     : { ->parent[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext: ": transition issue to TO_DO after verifying_ $it _when Sub_task of the current issue in selected status:",
+                 expected: 0,
+                 parameters: [
+                         issue     : { ->subtask[] },
+                         transition: "To Do",
                  ]
                 ],
         ])
-    }
 }
 
-['allIssuesMustBe_ToDo','atLeastOneIssueMustBe_ToDo'].collect {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ': when all linked issues in selected status ie To Do_check success :' + it +i,
-                 expected  : 0,
-                 parameters: [
-                         issue     : key,
-                         transition: it + i,
-                 ],
-                ],
-        ])
-    }
-}
-
-['allIssuesInProgress_Task'].each {
+// RELATED_ISSUES_STATUS_CONDITION_TC_11-Verify Sub_task of the current issue
+[
+        'verify_status_in_progress_of_all_issues_which_are_parentIssue'
+].collect {
     gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: ': when issueType is task type :' + it,
-             expected  : -1,
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_11_Case_01- $it _when parent issue of the current subtask not in selected status:",
+             expected: -1,
              parameters: [
-                     issue     : {->subtask[]},
+                     issue     : { ->subtask[] },
                      transition: it,
-             ],
-            ],
-            [action: 'updateIssue',ext: it,
-                parameters: [
-                        issue: {->parent[]},
-                        issueType: 'Story'
-                ]
-            ],
-            [action    : 'transitionIssue', ext: ': when issueType is story type :' + it,
-             expected  : 0,
-             parameters: [
-                     issue     : {->subtask[]},
-                     transition: it,
-             ],
-            ],
-    ]
-    )
-}
-['allIssuesInProgress_Story'].each {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: ': when issueType is story type :' + it,
-             expected  : -1,
-             parameters: [
-                     issue     : {->subtask[]},
-                     transition: it,
-             ],
-            ],
-            [action: 'updateIssue',ext: it,
-             parameters: [
-                     issue: {->parent[]},
-                     issueType: 'Task'
              ]
             ],
-            [action    : 'transitionIssue', ext: ': when issueType is task type :' + it,
-             expected  : 0,
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when parent issue of the current subtask in selected status:",
+             expected: 0,
              parameters: [
-                     issue     : {->subtask[]},
-                     transition: it,
-             ],
+                     issue     : { ->parent[] },
+                     transition: "In Progress",
+             ]
             ],
-    ]
-    )
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_11_Case_02- $it _when parent issue of the current subtask in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when parent issue of the current subtask in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->parent[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
 }
+// RELATED_ISSUES_STATUS_CONDITION_TC_13-Verify Issues that belong to the current Epic
+[
+        'verify_status_in_progress_of_all_issues_which_are_issueBelongsToEpic'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_13_Case_01- $it _when Issues that belong to the current Epic _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->epic[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues that belong to the current Epic _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueBelongsToEpic[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_13_Case_02- $it _when Issues that belong to the current Epic _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->epic[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issues that belong to the current Epic _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueBelongsToEpic[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TC_15-Verify Epic of the current issue
+[
+        'verify_status_in_progress_of_all_issues_which_are_epicOfTheCurrentIssue'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_15_Case_01- $it _when Epic of the current issue _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueBelongsToEpic[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Epic of the current issue _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->epic[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_15_Case_02- $it _when Epic of the current issue _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueBelongsToEpic[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Epic of the current issue _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->epic[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TC_16-Verify Issue link to the current issue through any link type
+[
+        'verify_status_in_progress_of_all_issues_which_are_linkByAnyLink'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_16_Case_01- $it _when Issue link to the current issue throgh any link type _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue throgh any link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_16_Case_02- $it _when Issue link to the current issue throgh any link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue throgh any link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_01-Verify Issue link to the current issue through any link type
+[
+        'verify_status_in_progress_of_all_issues_which_are_linkByBlock'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_01_Case_01- $it _when Issue link to the current issue throgh any link type _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through blocks link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_01_Case_02- $it _when Issue link to the current issue through blocks link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through blocks link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_02-Verify Issue link to the current issue through is blocked by link type
+[
+        'verify_status_in_progress_of_all_issues_which_are_linkByisBlockedBy'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_02_Case_01- $it _when Issue link to the current issue throgh is blocked by link type _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is blocked by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_02_Case_02- $it _when Issue link to the current issue through is blocked by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is blocked by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_03-Verify Issue link to the current issue through clones link type
+[
+        'verify_status_in_progress_of_all_issues_which_are_linkByClones'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_03_Case_01- $it _when Issue link to the current issue throgh clones link type _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through clones link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->clones[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_03_Case_02- $it _when Issue link to the current issue through clones link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through clones link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->clones[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_04-Verify Issue link to the current issue through by is cloned by link type
+[
+        'verify_status_in_progress_of_all_issues_which_are_linkByIsClonedBy'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_04_Case_01- $it _when Issue link to the current issue throgh is cloned by link type _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->clones[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is cloned by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_04_Case_02- $it _when Issue link to the current issue through is cloned by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->clones[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is cloned by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_05-Verify Issue link to the current issue through by duplicates link type
+[
+        'verify_status_in_progress_of_all_issues_which_are_linkByDuplicates'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_05_Case_01- $it _when Issue link to the current issue throgh duplicates link type _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through duplicates link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->duplicates[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_05_Case_02- $it _when Issue link to the current issue through duplicates link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through duplicates link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->duplicates[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_06-Verify Issue link to the current issue through by is duplicated by link type
+[
+        'verify_status_in_progress_of_all_issues_which_are_linkByIsDuplicatedBy'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_06_Case_01- $it _when Issue link to the current issue through is duplicated by link type _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->duplicates[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_06_Case_02- $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->duplicates[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_07-Verify Issue link to the current issue through by relates to link type
+[
+        'verify_status_in_progress_of_all_issues_which_are_linkByRelatesTo'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_07_Case_01- $it _when Issue link to the current issue through is relates to link type _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through relates to link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->relatesTo[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_07_Case_02- $it _when Issue link to the current issue through relates to link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through relates to link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->relatesTo[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TC_19-Verify Child issues of the current issue in the Portfolio hierarchy
+[
+        'verify_status_in_progress_of_all_issues_which_are_childPortfolio'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_19_Case_01- $it _when Child issues of the current issue in the Portfolio hierarchy _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->initiative[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->epic_initiative[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_19_Case_02- $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->initiative[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Child issues of the current issue in the Portfolio hierarchy_in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->epic_initiative[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TC_20-Verify Parent issues of the current issue in the Portfolio hierarchy
+[
+        'verify_status_in_progress_of_all_issues_which_are_parentPortfolio'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_20_Case_01- $it _when Parent issues of the current issue in the Portfolio hierarchy _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->epic_initiative[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Parent issues of the current issue in the Portfolio hierarchy _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->initiative[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_20_Case_02- $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->epic_initiative[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->initiative[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TC_23-Verify Issues returned by a Groovy script
+[
+        'verify_status_in_progress_of_all_issues_which_are_returnsByGroovyExpression'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_23_Case_01- $it _when Issues returned by a Groovy script _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->relatesTo[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a Groovy script _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_23_Case_02- $it _when Issues returned by a Groovy script_in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->relatesTo[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issues returned by a Groovy script_in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TC_25-Verify Issues returned by a JQL search
+[
+        'verify_status_in_progress_of_all_issues_which_are_returnsFromJqlSearch'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_23_Case_01- $it _when Issues returned by a JQL search _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a JQL search _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->jqlIssue[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_23_Case_02- $it _when Issues returned by a JQL search_in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issues returned by a JQL search_in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->jqlIssue[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_01-Verify Sub_task of the current issue
+[
+        'verify_status_in_progress_of_at_least_one_issues_which_is_subtask'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_01_Case_01- $it _when Sub_task of the current issue not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->parent[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS to verify_ $it _when Sub_task of the current issue in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_01_Case_02- $it _when Sub_task of the current issue not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->parent[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after verifying_ $it _when Sub_task of the current issue in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_02-Verify Sub_task of the current issue
+// Invalid use case as child issue has only one parent issue - can't check invalid configuration
+[
+        //'verify_status_in_progress_of_at_least_one_issues_which_is_parentIssue'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_02_Case_01- $it _when parent issue of the current subtask not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when parent issue of the current subtask in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->parent[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_02_Case_02- $it _when parent issue of the current subtask in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when parent issue of the current subtask in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->parent[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+// RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_03-Verify Issues that belong to the current Epic
+[
+        'verify_status_in_progress_of_at_least_one_issues_which_is_issueBelongsToEpic'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_03_Case_01- $it _when Issues that belong to the current Epic _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->epic[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues that belong to the current Epic _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueBelongsToEpic[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_03_Case_02- $it _when Issues that belong to the current Epic _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->epic[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issues that belong to the current Epic _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueBelongsToEpic[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_04-Verify Epic of the current issue
+// Invalid use case as child issue has only one parent issue - can't check invalid configuration
+[
+        //'verify_status_in_progress_of_at_least_one_issues_which_is_epicOfTheCurrentIssue'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_04_Case_01- $it _when Epic of the current issue _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueBelongsToEpic[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Epic of the current issue _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->epic[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_04_Case_02- $it _when Epic of the current issue _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueBelongsToEpic[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Epic of the current issue _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->epic[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_05-Verify Issue link to the current issue through any link type
+[
+        'verify_status_in_progress_of_at_least_one_issues_which_is_linkByAnyLink'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_04_Case_01- $it _when Issue link to the current issue throgh any link type _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue throgh any link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_05_Case_02- $it _when Issue link to the current issue throgh any link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue throgh any link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06A-Verify Issue link to the current issue through any link type
+[
+        'verify_status_in_progress_of_at_least_one_issues_which_is_linkByBlock'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06A_TC_01_Case_01- $it _when Issue link to the current issue throgh any link type _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through blocks link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06A_TC_01_Case_02- $it _when Issue link to the current issue through blocks link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through blocks link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06B-Verify Issue link to the current issue through is blocked by link type
+[
+        'verify_status_in_progress_of_at_least_one_issues_which_is_linkByisBlockedBy'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06B_Case_01- $it _when Issue link to the current issue throgh is blocked by link type _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is blocked by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06B_Case_02- $it _when Issue link to the current issue through is blocked by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is blocked by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06C-Verify Issue link to the current issue through clones link type
+[
+        'verify_status_in_progress_of_at_least_one_issues_which_is_linkByClones'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06C_Case_01- $it _when Issue link to the current issue throgh clones link type _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through clones link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->clones[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06C_Case_02- $it _when Issue link to the current issue through clones link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through clones link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->clones[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06D-Verify Issue link to the current issue through by is cloned by link type
+[
+        'verify_status_in_progress_of_at_least_one_issues_which_is_linkByIsClonedBy'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06D_Case_01- $it _when Issue link to the current issue throgh is cloned by link type _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->clones[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is cloned by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06D_Case_02- $it _when Issue link to the current issue through is cloned by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->clones[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is cloned by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06E-Verify Issue link to the current issue through by duplicates link type
+[
+        'verify_status_in_progress_of_at_least_one_issues_which_is_linkByDuplicates'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06E_Case_01- $it _when Issue link to the current issue throgh duplicates link type _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through duplicates link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->duplicates[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06E_Case_02- $it _when Issue link to the current issue through duplicates link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through duplicates link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->duplicates[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06F-Verify Issue link to the current issue through by is duplicated by link type
+[
+        'verify_status_in_progress_of_at_least_one_issues_which_is_linkByIsDuplicatedBy'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06F_Case_01- $it _when Issue link to the current issue through is duplicated by link type _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->duplicates[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06F_Case_02- $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->duplicates[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06G-Verify Issue link to the current issue through by relates to link type
+[
+        'verify_status_in_progress_of_at_least_one_issues_which_is_linkByRelatesTo'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06G_Case_01- $it _when Issue link to the current issue through is relates to link type _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through relates to link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->relatesTo[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06G_Case_02- $it _when Issue link to the current issue through relates to link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through relates to link type _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->relatesTo[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_07-Verify Child issues of the current issue in the Portfolio hierarchy
+[
+        'verify_status_in_progress_of_at_least_one_issues_which_is_childPortfolio'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_07_Case_01- $it _when Child issues of the current issue in the Portfolio hierarchy _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->initiative[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->epic_initiative[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_07_Case_02- $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->initiative[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Child issues of the current issue in the Portfolio hierarchy_in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->epic_initiative[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_08-Verify Parent issues of the current issue in the Portfolio hierarchy
+// Invalid use case as child issue has only one parent issue - can't check invalid configuration
+[
+        // 'verify_status_in_progress_of_at_least_one_issues_which_is_parentPortfolio'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_08_Case_01- $it _when Parent issues of the current issue in the Portfolio hierarchy _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->epic_initiative[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Parent issues of the current issue in the Portfolio hierarchy _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->initiative[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_08_Case_02- $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->epic_initiative[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->initiative[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_09-Verify Issues returned by a Groovy script
+[
+        'verify_status_in_progress_of_at_least_one_issues_which_is_returnsByGroovyExpression'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_09_Case_01- $it _when Issues returned by a Groovy script _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->relatesTo[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a Groovy script _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_09_Case_02- $it _when Issues returned by a Groovy script_in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->relatesTo[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issues returned by a Groovy script_in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_10-Verify Issues returned by a JQL search
+[
+        'verify_status_in_progress_of_at_least_one_issues_which_is_returnsFromJqlSearch'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_10_Case_01- $it _when Issues returned by a JQL search _not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a JQL search _in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->jqlIssue[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_10_Case_02- $it _when Issues returned by a JQL search_in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issues returned by a JQL search_in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->jqlIssue[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_01-Verify Sub_task of the current issue
+[
+        'verify_status_in_progress_none_of_the_issues_which_are_subtask'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_01_Case_01- $it _when Sub_task of the current issue not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->parent[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS to verify_ $it _when Sub_task of the current issue in selected status:",
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_01_Case_02- $it _when Sub_task of the current issue not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->parent[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after verifying_ $it _when Sub_task of the current issue in selected status:",
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_02-Verify parent issue of the current subtask
+[
+        'verify_status_in_progress_none_of_the_issues_which_are_parentIssue'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_02_Case_01- $it _when parent issue of the current subtask not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when parent issue of the current subtask in selected status:",
+             parameters: [
+                     issue     : { ->parent[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_02_Case_02- $it _when parent issue of the current subtask in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when parent issue of the current subtask in selected status:",
+             parameters: [
+                     issue     : { ->parent[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+// RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_03-Verify Issues that belong to the current Epic
+[
+        'verify_status_in_progress_none_of_the_issues_which_are_issueBelongsToEpic'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_03_Case_01- $it _when Issues that belong to the current Epic _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->epic[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues that belong to the current Epic _in selected status:",
+             parameters: [
+                     issue     : { ->issueBelongsToEpic[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_03_Case_02- $it _when Issues that belong to the current Epic _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->epic[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issues that belong to the current Epic _in selected status:",
+             parameters: [
+                     issue     : { ->issueBelongsToEpic[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_04-Verify Epic of the current issue
+// Invalid use case as child issue has only one parent issue - can't check invalid configuration
+[
+        'verify_status_in_progress_none_of_the_issues_which_are_epicOfTheCurrentIssue'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_04_Case_01- $it _when Epic of the current issue _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueBelongsToEpic[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Epic of the current issue _in selected status:",
+             parameters: [
+                     issue     : { ->epic[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_04_Case_02- $it _when Epic of the current issue _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueBelongsToEpic[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Epic of the current issue _in selected status:",
+             parameters: [
+                     issue     : { ->epic[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_05-Verify Issue link to the current issue through any link type
+[
+        'verify_status_in_progress_none_of_the_issues_which_are_linkByAnyLink'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_04_Case_01- $it _when Issue link to the current issue throgh any link type _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue throgh any link type _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_05_Case_02- $it _when Issue link to the current issue throgh any link type _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue throgh any link type _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06A-Verify Issue link to the current issue through any link type
+[
+        'verify_status_in_progress_none_of_the_issues_which_are_linkByBlock'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06A_TC_01_Case_01- $it _when Issue link to the current issue throgh any link type _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through blocks link type _in selected status:",
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06A_TC_01_Case_02- $it _when Issue link to the current issue through blocks link type _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through blocks link type _in selected status:",
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06B-Verify Issue link to the current issue through is blocked by link type
+[
+        'verify_status_in_progress_none_of_the_issues_which_are_linkByisBlockedBy'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06B_Case_01- $it _when Issue link to the current issue throgh is blocked by link type _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is blocked by link type _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06B_Case_02- $it _when Issue link to the current issue through is blocked by link type _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is blocked by link type _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06C-Verify Issue link to the current issue through clones link type
+[
+        'verify_status_in_progress_none_of_the_issues_which_are_linkByClones'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06C_Case_01- $it _when Issue link to the current issue throgh clones link type _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through clones link type _in selected status:",
+             parameters: [
+                     issue     : { ->clones[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06C_Case_02- $it _when Issue link to the current issue through clones link type _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through clones link type _in selected status:",
+             parameters: [
+                     issue     : { ->clones[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06D-Verify Issue link to the current issue through by is cloned by link type
+[
+        'verify_status_in_progress_none_of_the_issues_which_are_linkByIsClonedBy'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06D_Case_01- $it _when Issue link to the current issue throgh is cloned by link type _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->clones[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is cloned by link type _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06D_Case_02- $it _when Issue link to the current issue through is cloned by link type _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->clones[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is cloned by link type _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06E-Verify Issue link to the current issue through by duplicates link type
+[
+        'verify_status_in_progress_none_of_the_issues_which_are_linkByDuplicates'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06E_Case_01- $it _when Issue link to the current issue throgh duplicates link type _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through duplicates link type _in selected status:",
+             parameters: [
+                     issue     : { ->duplicates[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06E_Case_02- $it _when Issue link to the current issue through duplicates link type _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through duplicates link type _in selected status:",
+             parameters: [
+                     issue     : { ->duplicates[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06F-Verify Issue link to the current issue through by is duplicated by link type
+[
+        'verify_status_in_progress_none_of_the_issues_which_are_linkByIsDuplicatedBy'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06F_Case_01- $it _when Issue link to the current issue through is duplicated by link type _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->duplicates[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06F_Case_02- $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->duplicates[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06G-Verify Issue link to the current issue through by relates to link type
+[
+        'verify_status_in_progress_none_of_the_issues_which_are_linkByRelatesTo'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06G_Case_01- $it _when Issue link to the current issue through is relates to link type _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through relates to link type _in selected status:",
+             parameters: [
+                     issue     : { ->relatesTo[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06G_Case_02- $it _when Issue link to the current issue through relates to link type _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through relates to link type _in selected status:",
+             parameters: [
+                     issue     : { ->relatesTo[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_07-Verify Child issues of the current issue in the Portfolio hierarchy
+[
+        'verify_status_in_progress_none_of_the_issues_which_are_childPortfolio'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_07_Case_01- $it _when Child issues of the current issue in the Portfolio hierarchy _not in selected status:",
+             expected:0,
+             parameters: [
+                     issue     : { ->initiative[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
+             parameters: [
+                     issue     : { ->epic_initiative[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_07_Case_02- $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->initiative[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Child issues of the current issue in the Portfolio hierarchy_in selected status:",
+             parameters: [
+                     issue     : { ->epic_initiative[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_08-Verify Parent issues of the current issue in the Portfolio hierarchy
+// Invalid use case as child issue has only one parent issue - can't check invalid configuration
+[
+         'verify_status_in_progress_none_of_the_issues_which_are_parentPortfolio'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_08_Case_01- $it _when Parent issues of the current issue in the Portfolio hierarchy _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->epic_initiative[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Parent issues of the current issue in the Portfolio hierarchy _in selected status:",
+             parameters: [
+                     issue     : { ->initiative[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_08_Case_02- $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->epic_initiative[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
+             parameters: [
+                     issue     : { ->initiative[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_09-Verify Issues returned by a Groovy script
+[
+        'verify_status_in_progress_none_of_the_issues_which_are_returnsByGroovyExpression'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_09_Case_01- $it _when Issues returned by a Groovy script _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->relatesTo[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a Groovy script _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_09_Case_02- $it _when Issues returned by a Groovy script_in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->relatesTo[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issues returned by a Groovy script_in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_10-Verify Issues returned by a JQL search
+[
+        'verify_status_in_progress_none_of_the_issues_which_are_returnsFromJqlSearch'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_10_Case_01- $it _when Issues returned by a JQL search _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a JQL search _in selected status:",
+             parameters: [
+                     issue     : { ->jqlIssue[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_10_Case_02- $it _when Issues returned by a JQL search_in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issues returned by a JQL search_in selected status:",
+             parameters: [
+                     issue     : { ->jqlIssue[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_01-Verify Sub_task of the current issue
+[
+        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_subtask'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_01_Case_01- $it _when Sub_task of the current issue not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->parent[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS to verify_ $it _when Sub_task of the current issue in selected status:",
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_01_Case_02- $it _when Sub_task of the current issue not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->parent[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after verifying_ $it _when Sub_task of the current issue in selected status:",
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_02-Verify Sub_task of the current issue
+[
+        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_parentIssue'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_02_Case_01- $it _when parent issue of the current subtask not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when parent issue of the current subtask in selected status:",
+             parameters: [
+                     issue     : { ->parent[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_02_Case_02- $it _when parent issue of the current subtask in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when parent issue of the current subtask in selected status:",
+             parameters: [
+                     issue     : { ->parent[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+// RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_03-Verify Issues that belong to the current Epic
+[
+        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_issueBelongsToEpic'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_03_Case_01- $it _when Issues that belong to the current Epic _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->epic[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues that belong to the current Epic _in selected status:",
+             parameters: [
+                     issue     : { ->issueBelongsToEpic[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_03_Case_02- $it _when Issues that belong to the current Epic _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->epic[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issues that belong to the current Epic _in selected status:",
+             parameters: [
+                     issue     : { ->issueBelongsToEpic[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_04-Verify Epic of the current issue
+// Invalid use case as child issue has only one parent issue - can't check invalid configuration
+[
+        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_epicOfTheCurrentIssue'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_04_Case_01- $it _when Epic of the current issue _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueBelongsToEpic[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Epic of the current issue _in selected status:",
+             parameters: [
+                     issue     : { ->epic[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_04_Case_02- $it _when Epic of the current issue _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueBelongsToEpic[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Epic of the current issue _in selected status:",
+             parameters: [
+                     issue     : { ->epic[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_05-Verify Issue link to the current issue through any link type
+[
+        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_linkByAnyLink'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_04_Case_01- $it _when Issue link to the current issue throgh any link type _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue throgh any link type _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_05_Case_02- $it _when Issue link to the current issue throgh any link type _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue throgh any link type _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06A-Verify Issue link to the current issue through any link type
+[
+        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_linkByBlock'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06A_TC_01_Case_01- $it _when Issue link to the current issue throgh any link type _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through blocks link type _in selected status:",
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06A_TC_01_Case_02- $it _when Issue link to the current issue through blocks link type _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through blocks link type _in selected status:",
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06B-Verify Issue link to the current issue through is blocked by link type
+[
+        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_linkByisBlockedBy'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06B_Case_01- $it _when Issue link to the current issue throgh is blocked by link type _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is blocked by link type _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06B_Case_02- $it _when Issue link to the current issue through is blocked by link type _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->blocks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is blocked by link type _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06C-Verify Issue link to the current issue through clones link type
+[
+        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_linkByClones'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06C_Case_01- $it _when Issue link to the current issue throgh clones link type _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through clones link type _in selected status:",
+             parameters: [
+                     issue     : { ->clones[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06C_Case_02- $it _when Issue link to the current issue through clones link type _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through clones link type _in selected status:",
+             parameters: [
+                     issue     : { ->clones[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06D-Verify Issue link to the current issue through by is cloned by link type
+[
+        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_linkByIsClonedBy'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06D_Case_01- $it _when Issue link to the current issue throgh is cloned by link type _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->clones[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is cloned by link type _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06D_Case_02- $it _when Issue link to the current issue through is cloned by link type _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->clones[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is cloned by link type _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06E-Verify Issue link to the current issue through by duplicates link type
+[
+        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_linkByDuplicates'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06E_Case_01- $it _when Issue link to the current issue throgh duplicates link type _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through duplicates link type _in selected status:",
+             parameters: [
+                     issue     : { ->duplicates[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06E_Case_02- $it _when Issue link to the current issue through duplicates link type _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through duplicates link type _in selected status:",
+             parameters: [
+                     issue     : { ->duplicates[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06F-Verify Issue link to the current issue through by is duplicated by link type
+[
+        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_linkByIsDuplicatedBy'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06F_Case_01- $it _when Issue link to the current issue through is duplicated by link type _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->duplicates[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06F_Case_02- $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->duplicates[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06G-Verify Issue link to the current issue through by relates to link type
+[
+        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_linkByRelatesTo'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06G_Case_01- $it _when Issue link to the current issue through is relates to link type _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through relates to link type _in selected status:",
+             parameters: [
+                     issue     : { ->relatesTo[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06G_Case_02- $it _when Issue link to the current issue through relates to link type _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through relates to link type _in selected status:",
+             parameters: [
+                     issue     : { ->relatesTo[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_07-Verify Child issues of the current issue in the Portfolio hierarchy
+[
+        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_childPortfolio'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_07_Case_01- $it _when Child issues of the current issue in the Portfolio hierarchy _not in selected status:",
+             expected:0,
+             parameters: [
+                     issue     : { ->initiative[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
+             parameters: [
+                     issue     : { ->epic_initiative[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_07_Case_02- $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->initiative[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Child issues of the current issue in the Portfolio hierarchy_in selected status:",
+             parameters: [
+                     issue     : { ->epic_initiative[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_08-Verify Parent issues of the current issue in the Portfolio hierarchy
+// Invalid use case as child issue has only one parent issue - can't check invalid configuration
+[
+        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_parentPortfolio'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_08_Case_01- $it _when Parent issues of the current issue in the Portfolio hierarchy _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->epic_initiative[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Parent issues of the current issue in the Portfolio hierarchy _in selected status:",
+             parameters: [
+                     issue     : { ->initiative[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_08_Case_02- $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->epic_initiative[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
+             parameters: [
+                     issue     : { ->initiative[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_09-Verify Issues returned by a Groovy script
+[
+        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_returnsByGroovyExpression'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_09_Case_01- $it _when Issues returned by a Groovy script _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->relatesTo[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a Groovy script _in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_09_Case_02- $it _when Issues returned by a Groovy script_in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->relatesTo[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issues returned by a Groovy script_in selected status:",
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_10-Verify Issues returned by a JQL search
+[
+        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_returnsFromJqlSearch'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_10_Case_01- $it _when Issues returned by a JQL search _not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a JQL search _in selected status:",
+             parameters: [
+                     issue     : { ->jqlIssue[] },
+                     transition: "In Progress",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_10_Case_02- $it _when Issues returned by a JQL search_in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->issueLinks[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": transition issue to TO_DO after_ $it _when Issues returned by a JQL search_in selected status:",
+             parameters: [
+                     issue     : { ->jqlIssue[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_28_TC_01-Verify issue type dropdown_ check only if Task issue type
+[
+        'verify_the_issue_type_dropdwn_Task'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_28_TC_01_Case_01- $it _when parent issue is of task type of the current subtask not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it,
+             ]
+            ],
+            [action: 'updateIssue', ext: ":  change issue priority to high satisfy the criteria to check: $it",
+             parameters: [
+                     issue: {->parent[]},
+                     issueType: "Story",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_28_TC_01_Case_02- $it _when parent issue is of task type of the current subtask not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it,
+             ]
+            ],
+    ])
+}
+
+// RELATED_ISSUES_STATUS_CONDITION_TS_28_TC_02-Verify issue type dropdown_check only if Story issue type
+[
+        'verify_the_issue_type_dropdwn_Story'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_28_TC_02_Case_01- $it _when parent issue is of story type of the current subtask not in selected status:",
+             expected: -1,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it,
+             ]
+            ],
+            [action: 'updateIssue', ext: ":  change issue priority to high satisfy the criteria to check: $it",
+             parameters: [
+                     issue: {->parent[]},
+                     issueType: "Bug",
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_28_TC_02_Case_02- $it _when parent issue is not of story type of the current subtask not in selected status:",
+             expected: 0,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it,
+             ]
+            ],
+    ])
+}
+
 
 /*
 1. Each sub-task of the current issue must be in one of the following statuses: IN PROGRESS - positives and negatives = "DONE"

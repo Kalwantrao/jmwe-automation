@@ -15,120 +15,94 @@ apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 tearDown()
 addWorkflow()
 
-def functionKey = functionKey.copyIssueFieldsPfServer
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:copy-fields-function'
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
-def testUser = info?.isCloud? cloudUser : serverUser
-def defaultFieldsServer = [
-        "throwExceptions=",
-        "sendNotifications=",
-        "correlationId=",
+
+def oldValue = [
+        no : ["oldValue="],
+        yes : ["oldValue=yes"]
 ]
 
-def fieldsOptions = [
-        noOption : ["fields=[{\"fieldId\":\"labels\",\"value\":\"default_value\",\"options\":[],\"isTemplate\":true}]"],
-        ifEmpty : ["fields=[{\"fieldId\":\"labels\",\"value\":\"ifEmpty\",\"options\":[\"copyOnlyIfNotSet\"],\"isTemplate\":true}]"],
-        createMissingValues : ["fields=[{\"fieldId\":\"components\",\"value\":\"createMissingValues\",\"options\":[\"createMissingValues\"],\"isTemplate\":true}]"],
-        ignoreEmptyValue : ["fields=[{\"fieldId\":\"labels\",\"value\":\"\",\"options\":[\"ignoreEmptyValue\"],\"isTemplate\":true}]"],
-        appendValues : ["fields=[{\"fieldId\":\"labels\",\"value\":\"appendValues\",\"options\":[\"appendValues\"],\"isTemplate\":true}]"],
-        allOptions : ["fields=[{\"fieldId\":\"labels\",\"value\":\"test_label\",\"options\":[\"copyOnlyIfNotSet\",\"createMissingValues\",\"ignoreEmptyValue\",\"appendValues\"],\"isTemplate\":true}]"],
-        removeValues : ["fields=[{\"fieldId\":\"components\",\"value\":\"createMissingValues\",\"options\":[\"removeValues\"],\"isTemplate\":true}]"],
-        conditionalExecution : ["fields=[{\"fieldId\":\"labels\",\"value\":\"conditionalExecution\",\"options\":[],\"isTemplate\":true}]"],
-        runAsCurrentUser : ["fields=[{\"fieldId\":\"labels\",\"value\":\"runAsCurrentUser\",\"options\":[],\"isTemplate\":true}]"],
-        runAsSpecificUser : ["fields=[{\"fieldId\":\"labels\",\"value\":\"runAsSpecificUser\",\"options\":[],\"isTemplate\":true}]"],
-        runAsUserInFieldAssignee : ["fields=[{\"fieldId\":\"labels\",\"value\":\"runAsUserInFieldAssignee\",\"options\":[],\"isTemplate\":true}]"],
-        runAsUserInFieldReporter : ["fields=[{\"fieldId\":\"labels\",\"value\":\"runAsUserInFieldReporter\",\"options\":[],\"isTemplate\":true}]"],
-        runAsUserInFieldCreator : ["fields=[{\"fieldId\":\"labels\",\"value\":\"runAsUserInFieldCreator\",\"options\":[],\"isTemplate\":true}]"],
-        runAsUserReturnFromScript : ["fields=[{\"fieldId\":\"labels\",\"value\":\"runAsUserReturnFromScript\",\"options\":[],\"isTemplate\":true}]"],
+def fieldOptions = [
+        assigneeToLabels : [ "copyFieldsConfig=[{\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}]" ],
+        copyOnlyIfNotSet : ["copyFieldsConfig=[{\"options\":{\"copyOnlyIfNotSet\":true},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}]"],
+        createMissingValues : ["copyFieldsConfig=[{\"options\":{\"createMissingValues\":true},\"sourceField\":\"assignee\",\"destinationField\":\"components\"}]"],
+        labelsToComponent : ["copyFieldsConfig=[{\"options\":{\"createMissingValues\":true},\"sourceField\":\"labels\",\"destinationField\":\"components\"}]"],
+        ignoreEmptyValue : ["copyFieldsConfig=[{\"options\":{\"ignoreEmptyValue\":true},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}]"],
+        appendValues : ["copyFieldsConfig=[{\"options\":{\"appendValues\":true},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}]"],
+        removeValues : ["copyFieldsConfig=[{\"options\":{\"removeValues\":true},\"sourceField\":\"fixVersions\",\"destinationField\":\"versions\"}]"],
+        useOldValue : ["copyFieldsConfig=[{\"options\":{\"useOldValue\":true},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}]"],
 ]
 
-relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + conditionalExecution.false +  fieldsOptions.noOption + "selectedLinkType=$value" + runAsUser.currentUser
-    addTransitionFunction('setFieldLabelsToTargetIssue' + i, 'postfunction', fields, functionKey)
+relatedIssue.eachWithIndex { targetIssue, fields, i ->
+    def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_' + i
+    def server = defaultFieldsServer + fieldOptions.assigneeToLabels+ "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
+    addTransitionFunction(transition, 'postfunction', server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + conditionalExecution.false+ fieldsOptions.ifEmpty + "selectedLinkType=$value" + runAsUser.currentUser
-    addTransitionFunction('ifEmpty' + i, 'postfunction', fields, functionKey)
+relatedIssue.eachWithIndex { targetIssue, fields, i ->
+    def transition = 'verify_current_issue_from_source_and_all_target_issue_options_to_destination_issue_' + i
+    def server = defaultFieldsServer + fieldOptions.assigneeToLabels+ "selectedLinkTypeSource=$currentIssue" + "selectedLinkTypeDestination=$fields" + conditionalExecution.false + runAsUser.currentUser
+    addTransitionFunction(transition, 'postfunction', server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + conditionalExecution.false + fieldsOptions.createMissingValues + "selectedLinkType=$value" + runAsUser.currentUser
-    addTransitionFunction('createMissingValueComponent' + i, 'postfunction', fields, functionKey)
+relatedIssue.eachWithIndex { targetIssue, fields, i ->
+    def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_copyOnlyIfNotSet_' + i
+    def server = defaultFieldsServer + fieldOptions.copyOnlyIfNotSet + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
+    addTransitionFunction(transition, 'postfunction', server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + conditionalExecution.false + fieldsOptions.ignoreEmptyValue + "selectedLinkType=$value" + runAsUser.currentUser
-    addTransitionFunction('ignoreEmptyValue' + i, 'postfunction', fields, functionKey)
+relatedIssue.eachWithIndex { targetIssue, fields, i ->
+    def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_ignoreEmptyValue_' + i
+    def server = defaultFieldsServer + fieldOptions.ignoreEmptyValue + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
+    addTransitionFunction(transition, 'postfunction', server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + conditionalExecution.false + fieldsOptions.appendValues + "selectedLinkType=$value" + runAsUser.currentUser
-    addTransitionFunction('appendValues' + i, 'postfunction', fields, functionKey)
+relatedIssue.eachWithIndex { targetIssue, fields, i ->
+    def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_appendValues_' + i
+    def server = defaultFieldsServer + fieldOptions.appendValues + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
+    addTransitionFunction(transition, 'postfunction', server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + conditionalExecution.false + fieldsOptions.removeValues + "selectedLinkType=$value" + runAsUser.currentUser
-    addTransitionFunction('removeValues' + i, 'postfunction', fields, functionKey)
+relatedIssue.eachWithIndex { targetIssue, fields, i ->
+    def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_removeValues_' + i
+    def server = defaultFieldsServer + fieldOptions.removeValues + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
+    addTransitionFunction(transition, 'postfunction', server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + conditionalExecution.true +  fieldsOptions.conditionalExecution + "selectedLinkType=$value" + runAsUser.currentUser
-    addTransitionFunction('conditionalExecution' + i, 'postfunction', fields, functionKey)
+relatedIssue.eachWithIndex { targetIssue, fields, i ->
+    def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_useOldValue_' + i
+    def server = defaultFieldsServer + fieldOptions.useOldValue + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
+    addTransitionFunction(transition, 'postfunction', server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + runAsUser.currentUser +  conditionalExecution.false +  fieldsOptions.runAsCurrentUser + "selectedLinkType=$value"
-    addTransitionFunction('runAsCurrentUser' + i, 'postfunction', fields, functionKey)
-    moveTransitionFunction('runAsCurrentUser'+ i, 3)
+relatedIssue.eachWithIndex { targetIssue, fields, i ->
+    def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_onlyIfConditionTrue' + i
+    def server = defaultFieldsServer + fieldOptions.assigneeToLabels+ "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.true + runAsUser.currentUser
+    addTransitionFunction(transition, 'postfunction', server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + runAsUser.specificUser +  conditionalExecution.false +  fieldsOptions.runAsSpecificUser + "selectedLinkType=$value"
-    addTransitionFunction('runAsSpecificUser' + i, 'postfunction', fields, functionKey)
-    moveTransitionFunction('runAsSpecificUser'+ i, 4)
+runAsUser.eachWithIndex { user, fieldsValue, index ->
+    relatedIssue.eachWithIndex { targetIssue, fields, i ->
+        def transition = 'verify_current_issue_from_source_and_all_target_issue_options_to_destination_issue_run_as_' + user + i
+        def server = defaultFieldsServer + fieldOptions.labelsToComponent + "selectedLinkTypeSource=$currentIssue" + "selectedLinkTypeDestination=$fields" + fieldsValue + conditionalExecution.false
+        addTransitionFunction(transition, 'postfunction', server, functionKey)
+        moveTransitionFunction(transition, 4)
+    }
 }
-relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + runAsUser.userInFieldAssignee +  conditionalExecution.false +  fieldsOptions.runAsUserInFieldAssignee + "selectedLinkType=$value"
-    addTransitionFunction('runAsUserInFieldAssignee' + i, 'postfunction', fields, functionKey)
-    moveTransitionFunction('runAsUserInFieldAssignee'+ i, 4)
-}
-relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + runAsUser.userInFieldReporter +  conditionalExecution.false +  fieldsOptions.runAsUserInFieldReporter + "selectedLinkType=$value"
-    addTransitionFunction('runAsUserInFieldReporter' + i, 'postfunction', fields, functionKey)
-    moveTransitionFunction('runAsUserInFieldReporter'+ i, 4)
-}
-relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + runAsUser.userInFieldCreator +  conditionalExecution.false +  fieldsOptions.runAsUserInFieldCreator + "selectedLinkType=$value"
-    addTransitionFunction('runAsUserInFieldCreator' + i, 'postfunction', fields, functionKey)
-    moveTransitionFunction('runAsUserInFieldCreator'+ i, 4)
-}
-relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + runAsUser.userFromScript +  conditionalExecution.false +  fieldsOptions.runAsUserReturnFromScript + "selectedLinkType=$value"
-    addTransitionFunction('runAsUserReturnFromScript' + i, 'postfunction', fields, functionKey)
-    moveTransitionFunction('runAsUserReturnFromScript'+ i, 4)
-}
-
 
 createWorkflowScheme()
 createProject()
 
-(1..2).each {
-    gint.taskHelper.addSetUp([
-            [action: 'addVersion', ext: ': create versions : ' + it,
-             parameters: [
-                     project: projectName,
-                     version: it
-             ]
-            ],
-            [action: 'addComponent', ext: ': create Component : ' + it,
-             parameters: [
-                     project: projectName,
-                     component: 'component' + it
-             ],
+float testVersion = 1.0
+
+gint.taskHelper.add(
+        action: 'addVersion', ext: ": ",
+            parameters: [
+                    project: projectName,
+                    version : testVersion
             ]
-    ])
-}
-// set issue status to In Progress
+)
 
 def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
@@ -139,11 +113,8 @@ def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Init
 def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
 def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
 def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
-def isBlockedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isBlockedBy')
 def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
-def isClonedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isClonedBy')
 def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
-def isDuplicatedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isDuplicatedBy')
 def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesTo')
 def jqlIssue = createIssue([type: 'Task', summary: "JQL_ISSUE"], 'jqlIssue')
 
@@ -151,11 +122,8 @@ updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initi
 
 def linkIssuesMap = [
         blocks : {->blocks[]},
-        'is blocked by' : {->isBlockedBy[]},
         clones : {->clones[]},
-        'is cloned by' : {->isClonedBy[]},
         duplicates : {->duplicates[]},
-        'is duplicated by' : {->isDuplicatedBy[]},
         'relates to': {->relatesTo[]}
 ]
 
@@ -173,53 +141,703 @@ def relatedIssuesMap = [
         {->epic_initiative[]} : {-> initiative[]},
         {->blocks[]} : {->issueLinks[]},
         {->issueLinks[]} : {->blocks[]},
-        {->issueLinks[]} : {->isBlockedBy[]},
+        {->blocks[]} : {->issueLinks[]},
         {->issueLinks[]} : {->clones[]},
-        {->issueLinks[]} : {->isClonedBy[]},
+        {->clones[]} : {->issueLinks[]},
         {->issueLinks[]} : {->duplicates[]},
-        {->issueLinks[]} : {->isDuplicatedBy[]},
+        {->duplicates[]} : {->issueLinks[]},
         {->issueLinks[]} : {->relatesTo[]},
-        {->issueLinks[]} : {->relatesTo[]},
-        {->issueLinks[]} : {->jqlIssue[]},
+        {->blocks[]} : {->issueLinks[]},
+        {->jqlIssue[]} : {->jqlIssue[]},
 ]
 
-['ifEmpty'].collect {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+
+def testLabel = "label1"
+
+// COPY_ISSUE_FIELDS_Postfunction_-Verify all target issue Options from Source issues_user should be able to copy the value of the selected field from the target issue to current issue
+[
+        'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_',
+].collect {
+    relatedIssuesMap.eachWithIndex { key, value, int i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ': Set only if field is empty_when  empty' + it + i,
-                 parameters: [
-                         issue     : key,
-                         transition: it + i,
+                [action: 'setFieldValue',
+                 ext: ": unassign current issues if already assigned to check COPY_ISSUE_FIELDS_Postfunction_$it : " + i,
+                 parameters : [
+                         issue: key,
+                         field: "Assignee",
+                         value: " "
                  ]
                 ],
-                [action    : 'getFieldValue',
-                 ext       : "Set only if field is empty_when empty" + it + i,
-                 parameters: [
+                [action: 'setFieldValue',
+                 ext: ": unassign target issues if already assigned to check COPY_ISSUE_FIELDS_Postfunction_$it  : " + i,
+                 parameters : [
                          issue: value,
+                         field: "Assignee",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": set Assignee to target issues to check COPY_ISSUE_FIELDS_Postfunction_ $it : " + i,
+                 parameters : [
+                         issue: value,
+                         field: "Assignee",
+                         value: testUser
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": remove the labels added by postfunction by previous transition to next_COPY_ISSUE_FIELDS_Postfunction_ $it : " + i,
+                 parameters : [
+                         issue: key,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+                [action: 'transitionIssue',
+                 ext: ": COPY_ISSUE_FIELDS_Postfunction_transition issue to check :" + it + i,
+                         parameters: [
+                                 issue     : key,
+                                 transition: it + i,
+                         ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : ": COPY_ISSUE_FIELDS_Postfunction_ $it _user should be able to copy the value of the selected field to the current issue from linked issue:" + it+ i,
+                 parameters: [
+                         issue: key,
                          field: "Labels"
                  ],
-                 data      : [/Labels  . . . . . . . . . . . : ifEmpty/],
+                 data      : [/Labels  . . . . . . . . . . . : $testUser/],
                 ],
         ])
     }
 }
-['setFieldLabelsToTargetIssue'].collect {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+
+// COPY_ISSUE_FIELDS_Postfunction_-Verify all target issue Options from Source issues_user should be able to copy the value of the selected field from the target issue to current issue
+[
+        'verify_current_issue_from_source_and_all_target_issue_options_to_destination_issue_'
+].collect {
+    relatedIssuesMap.eachWithIndex { key, value, int i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ':default configuration' + it + i,
+                [action: 'setFieldValue',
+                 ext: ": unassign current issues if already assigned to check COPY_ISSUE_FIELDS_Postfunction_$it : " + i,
+                 parameters : [
+                         issue: key,
+                         field: "Assignee",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": unassign target issues if already assigned to check COPY_ISSUE_FIELDS_Postfunction_$it  : " + i,
+                 parameters : [
+                         issue: value,
+                         field: "Assignee",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": set Assignee to target issues to check COPY_ISSUE_FIELDS_Postfunction_ $it : " + i,
+                 parameters : [
+                         issue: key,
+                         field: "Assignee",
+                         value: testUser
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": remove the labels added by postfunction by previous transition to next_COPY_ISSUE_FIELDS_Postfunction_ $it : " + i,
+                 parameters : [
+                         issue: value,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+                [action: 'transitionIssue',
+                 ext: ": COPY_ISSUE_FIELDS_Postfunction_transition issue to check :" + it + i,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 ext       : it + i,
+                 ext       : ": COPY_ISSUE_FIELDS_Postfunction_ $it _user should be able to copy the value of the selected field from the current issue to linked issue:" + it+ i,
                  parameters: [
                          issue: value,
                          field: "Labels"
                  ],
-                 data      : [/Labels  . . . . . . . . . . . : default_value/],
+                 data      : [/Labels  . . . . . . . . . . . : $testUser/],
                 ],
         ])
+    }
+}
+
+// COPY_ISSUE_FIELDS_Postfunction_-Verify all target issue Options from Source issues_user should be able to copy the value of the selected field from the target issue to current issue_when target field is empty
+[
+        'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_copyOnlyIfNotSet_',
+].collect {
+    relatedIssuesMap.eachWithIndex { key, value, int i ->
+        gint.taskHelper.add([
+                [action: 'setFieldValue',
+                 ext: ": unassign current issues if already assigned to check COPY_ISSUE_FIELDS_Postfunction_$it : " + i + ":when field is set",
+                 parameters : [
+                         issue: key,
+                         field: "Assignee",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": unassign target issues if already assigned to check COPY_ISSUE_FIELDS_Postfunction_$it  : " + i + ":when field is set",
+                 parameters : [
+                         issue: value,
+                         field: "Assignee",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": set Assignee to target issues to check COPY_ISSUE_FIELDS_Postfunction_ $it : " + i + ":when field is set",
+                 parameters : [
+                         issue: value,
+                         field: "Assignee",
+                         value: testUser
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": remove the labels added by postfunction during previous transition to check COPY_ISSUE_FIELDS_Postfunction_$it  : " + i + ":when field is set",
+                 parameters : [
+                         issue: key,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": labels added by user to check copy f not set option next_COPY_ISSUE_FIELDS_Postfunction_ $it : " + i +":when field is set",
+                 parameters : [
+                         issue: key,
+                         field: "Labels",
+                         value: testLabel
+                 ]
+                ],
+                [action: 'transitionIssue',
+                 ext: ": COPY_ISSUE_FIELDS_Postfunction_transition issue to check :" + it + i + ":when field is set",
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : ": COPY_ISSUE_FIELDS_Postfunction_ $it _user should be able to copy the value of the selected field to the current issue from linked issue_when the target field is set:" + it + i,
+                 parameters: [
+                         issue: key,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : $testLabel/],
+                ],
+        ])
+    }
+}
+
+// COPY_ISSUE_FIELDS_Postfunction_-Verify all target issue Options from Source issues_user should be able to copy the value of the selected field from the target issue to current issue_when target field is empty
+[
+        'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_copyOnlyIfNotSet_',
+].collect {
+    relatedIssuesMap.eachWithIndex { key, value, int i ->
+        gint.taskHelper.add([
+                [action: 'setFieldValue',
+                 ext: ": unassign current issues if already assigned to check COPY_ISSUE_FIELDS_Postfunction_$it _when not set : " + i,
+                 parameters : [
+                         issue: key,
+                         field: "Assignee",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": unassign target issues if already assigned to check COPY_ISSUE_FIELDS_Postfunction_$it _when not set : " + i,
+                 parameters : [
+                         issue: value,
+                         field: "Assignee",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": set Assignee to target issues to check COPY_ISSUE_FIELDS_Postfunction_ $it _when not set: " + i,
+                 parameters : [
+                         issue: value,
+                         field: "Assignee",
+                         value: testUser
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": remove the labels added by postfunction by previous transition to next_COPY_ISSUE_FIELDS_Postfunction_ $it _when not set: " + i,
+                 parameters : [
+                         issue: key,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+                [action: 'transitionIssue',
+                 ext: ": COPY_ISSUE_FIELDS_Postfunction_transition issue to check :" + it + i + ":_when field is not set",
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : ": COPY_ISSUE_FIELDS_Postfunction_ $it _user should be able to copy the value of the selected field to the current issue from linked issue_when the target field is not set:" + it+ i,
+                 parameters: [
+                         issue: key,
+                         field: "Labels"
+                 ],
+                 failData      : [/Labels  . . . . . . . . . . . : $testLabel/],
+                 data      : [/Labels  . . . . . . . . . . . : $testUser/],
+                ],
+        ])
+    }
+}
+
+
+// COPY_ISSUE_FIELDS_Postfunction_-Verify all target issue Options from Source issues_user should be able to copy the value of the selected field from the target issue to current issue_when source field is empty
+[
+        'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_ignoreEmptyValue_',
+].collect {
+    relatedIssuesMap.eachWithIndex { key, value, int i ->
+        gint.taskHelper.add([
+                [action: 'setFieldValue',
+                 ext: ": unassign current issues if already assigned to check COPY_ISSUE_FIELDS_Postfunction_$it : " + i,
+                 parameters : [
+                         issue: key,
+                         field: "Assignee",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": unassign the target issues to check COPY_ISSUE_FIELDS_Postfunction_ $it : " + i,
+                 parameters : [
+                         issue: value,
+                         field: "Assignee",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": remove the labels added by postfunction by previous transition to next_COPY_ISSUE_FIELDS_Postfunction_ $it : " + i,
+                 parameters : [
+                         issue: key,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": set the labels to check ignore empty value_COPY_ISSUE_FIELDS_Postfunction_ $it : " + i,
+                 parameters : [
+                         issue: key,
+                         field: "Labels",
+                         value: testLabel
+                 ]
+                ],
+                [action: 'transitionIssue',
+                 ext: ": COPY_ISSUE_FIELDS_Postfunction_transition issue to check :" + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : ": COPY_ISSUE_FIELDS_Postfunction_ $it _user should be able to copy the value of the selected field to the current issue from linked issue_when the source field is empty:" + it+ i,
+                 parameters: [
+                         issue: key,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : $testLabel/],
+                ],
+        ])
+    }
+}
+
+// COPY_ISSUE_FIELDS_Postfunction_-Verify all target issue Options from Source issues_user should be able to copy the value of the selected field from the target issue to current issue_when postfunction apppend values with existing
+[
+        'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_appendValues_',
+].collect {
+    relatedIssuesMap.eachWithIndex { key, value, int i ->
+        gint.taskHelper.add([
+                [action: 'setFieldValue',
+                 ext: ": unassign current issues if already assigned to check COPY_ISSUE_FIELDS_Postfunction_$it : " + i,
+                 parameters : [
+                         issue: key,
+                         field: "Assignee",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": unassign target issues if already assigned to check COPY_ISSUE_FIELDS_Postfunction_$it  : " + i,
+                 parameters : [
+                         issue: value,
+                         field: "Assignee",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": set Assignee to target issues to check COPY_ISSUE_FIELDS_Postfunction_ $it : " + i,
+                 parameters : [
+                         issue: value,
+                         field: "Assignee",
+                         value: testUser
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": remove the labels added by postfunction by previous transition to next_COPY_ISSUE_FIELDS_Postfunction_ $it : " + i,
+                 parameters : [
+                         issue: key,
+                         field: "Labels",
+                         value: testLabel
+                 ]
+                ],
+                [action: 'transitionIssue',
+                 ext: ": COPY_ISSUE_FIELDS_Postfunction_transition issue to check :" + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : ": COPY_ISSUE_FIELDS_Postfunction_ $it _user should be able to copy the value of the selected field to the current issue from linked issue_when postfunction append values with existing value:" + it+ i,
+                 parameters: [
+                         issue: key,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : $testUser $testLabel/],
+                ],
+        ])
+    }
+}
+
+// COPY_ISSUE_FIELDS_Postfunction_-Verify all target issue Options from Source issues_user should be able to copy the value of the selected field from the target issue to current issue_when postfunction removes values
+[
+        'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_removeValues_',
+].collect {
+    relatedIssuesMap.eachWithIndex { key, value, int i ->
+        gint.taskHelper.add([
+                [action: 'setFieldValue',
+                 ext: ": clear fix version of current issue to check COPY_ISSUE_FIELDS_Postfunction_$it : " + i,
+                 parameters : [
+                         issue: key,
+                         field: "Fix Version/s",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": clear fix version of target issue to check COPY_ISSUE_FIELDS_Postfunction_$it  : " + i,
+                 parameters : [
+                         issue: value,
+                         field: "Fix Version/s",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": set fix version to target issue to check remove values option_COPY_ISSUE_FIELDS_Postfunction_ $it : " + i,
+                 parameters : [
+                         issue: value,
+                         field: "Fix Version/s",
+                         value: testVersion
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": set affects version to current issue to check remove values option_COPY_ISSUE_FIELDS_Postfunction_ $it : " + i,
+                 parameters : [
+                         issue: key,
+                         field: "Affects Version/s",
+                         value: testVersion
+                 ]
+                ],
+                [action: 'transitionIssue',
+                 ext: ": COPY_ISSUE_FIELDS_Postfunction_transition issue to check :" + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : ": COPY_ISSUE_FIELDS_Postfunction_ $it _user should be able to copy the value of the selected field to the current issue from linked issue_remove the value if having before transition:" + it+ i,
+                 parameters: [
+                         issue: key,
+                         field: "Affects Version/s"
+                 ],
+                 failData      : [/Fix Version\/s . . . . . . . . : $testVersion/],
+                ],
+        ])
+    }
+}
+
+// COPY_ISSUE_FIELDS_Postfunction_-Verify all target issue Options from Source issues_user should be able to copy the value of the selected field from the target issue to current issue_when postfunction uses old values
+[
+        'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_useOldValue_'
+].collect {
+    relatedIssuesMap.eachWithIndex { key, value, int i ->
+        gint.taskHelper.add([
+                [action: 'setFieldValue',
+                 ext: ": unassign current issues if already assigned to check COPY_ISSUE_FIELDS_Postfunction_$it : " + i,
+                 parameters : [
+                         issue: key,
+                         field: "Assignee",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": unassign target issues if already assigned to check COPY_ISSUE_FIELDS_Postfunction_$it  : " + i,
+                 parameters : [
+                         issue: value,
+                         field: "Assignee",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": set Assignee to target issues to check COPY_ISSUE_FIELDS_Postfunction_ $it : " + i,
+                 parameters : [
+                         issue: value,
+                         field: "Assignee",
+                         value: testUser
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": remove the labels added by postfunction by previous transition to next_COPY_ISSUE_FIELDS_Postfunction_ $it : " + i,
+                 parameters : [
+                         issue: key,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+                [action: 'transitionIssue',
+                 ext: ": COPY_ISSUE_FIELDS_Postfunction_transition issue to check :" + it + i,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                         assignee: user
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : ": COPY_ISSUE_FIELDS_Postfunction_ $it _user should be able to copy the value of the selected field to the current issue from linked issue_when postfunction set old value:" + it+ i,
+                 parameters: [
+                         issue: key,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : $testUser/],
+                ],
+        ])
+    }
+}
+
+// COPY_ISSUE_FIELDS_Postfunction_-Verify all target issue Options from Source issues_user should be able to copy the value of the selected field from the target issue to current issue_when postfunction uses old values
+[
+        'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_onlyIfConditionTrue'
+].collect {
+    relatedIssuesMap.eachWithIndex { key, value, int i ->
+        gint.taskHelper.add([
+                [action: 'setFieldValue',
+                 ext: ": unassign current issues if already assigned to check COPY_ISSUE_FIELDS_Postfunction_$it : " + i + ': when condition false',
+                 parameters : [
+                         issue: key,
+                         field: "Assignee",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": set the priority to High_to check COPY_ISSUE_FIELDS_Postfunction_$it : " + i + ': when condition false',
+                 parameters : [
+                         issue: key,
+                         field: "Priority",
+                         value: "Low"
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": unassign target issues if already assigned to check COPY_ISSUE_FIELDS_Postfunction_$it  : " + i + ': when condition false',
+                 parameters : [
+                         issue: value,
+                         field: "Assignee",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": set Assignee to target issues to check COPY_ISSUE_FIELDS_Postfunction_ $it : " + i + ': when condition false',
+                 parameters : [
+                         issue: value,
+                         field: "Assignee",
+                         value: testUser
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": remove the labels added by postfunction by previous transition to next_COPY_ISSUE_FIELDS_Postfunction_ $it : " + i + ': when condition false',
+                 parameters : [
+                         issue: key,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+                [action: 'transitionIssue',
+                 ext: ": COPY_ISSUE_FIELDS_Postfunction_transition issue to check :" + it + i + ': when condition false',
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : ": COPY_ISSUE_FIELDS_Postfunction_ $it _user should be able to copy the value of the selected field to the current issue from linked issue:" + it+ i + ': when condition false',
+                 parameters: [
+                         issue: key,
+                         field: "Labels"
+                 ],
+                 failData      : [/Labels  . . . . . . . . . . . : $testUser/],
+                ],
+                [action: 'setFieldValue',
+                 ext: ": set the priority to High_to check COPY_ISSUE_FIELDS_Postfunction_$it : " + i + ': when condition true',
+                 parameters : [
+                         issue: key,
+                         field: "Priority",
+                         value: "High"
+                 ]
+                ],
+                [action: 'transitionIssue',
+                 ext: ": COPY_ISSUE_FIELDS_Postfunction_transition issue to check :" + it + i + ': when condition true',
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : ": COPY_ISSUE_FIELDS_Postfunction_ $it _user should be able to copy the value of the selected field to the current issue from linked issue:" + it+ i + ': when condition true',
+                 parameters: [
+                         issue: key,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : $testUser/],
+                ],
+        ])
+    }
+}
+
+
+[
+        'currentUser',
+        'userInFieldReporter',
+        'userInFieldCreator',
+        'userFromScript'
+].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        def transition = 'verify_current_issue_from_source_and_all_target_issue_options_to_destination_issue_run_as_' + it + i
+        gint.taskHelper.add([
+                [action: 'setFieldValue',
+                 ext: ": clear the labels value_current issue_to check COPY_ISSUE_FIELDS_Postfunction_$transition : " ,
+                 parameters : [
+                         issue: key,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": clear the labels value_target issues_to check COPY_ISSUE_FIELDS_Postfunction_$transition  : " ,
+                 parameters : [
+                         issue: value,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": set Assignee to target issues to check COPY_ISSUE_FIELDS_Postfunction_ $transition : ",
+                 parameters : [
+                         issue: key,
+                         field: "Labels",
+                         value: it + i
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": remove the labels added by postfunction by previous transition to next_COPY_ISSUE_FIELDS_Postfunction_ $transition : ",
+                 parameters : [
+                         issue: value,
+                         field: "Component/s",
+                         value: " "
+                 ]
+                ],
+                [action: 'transitionIssue',
+                 ext: ": COPY_ISSUE_FIELDS_Postfunction_transition issue to check :" + transition,
+                 parameters: [
+                         issue     : key,
+                         transition: transition,
+                 ]
+                ],
+                [action    : 'getIssueHistoryList',
+                 ext       : ": COPY_ISSUE_FIELDS_Postfunction_ $transition _user should be able to copy the value of the selected field from the current issue to linked issue:" + transition,
+                 parameters: [
+                         issue: value,
+                         outputType: "text",
+                         select: ["Author:$user","Field:Component"],
+                         columns: "Author,Field,'To String'"
+                 ],
+                 data      : ["$user", "Component", "$it$i"],
+                ],
+        ])
+
+    }
+}
+
+[
+        'specificUser',
+        'userInFieldAssignee',
+].each {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        def transition = 'verify_current_issue_from_source_and_all_target_issue_options_to_destination_issue_run_as_' + it
+        gint.taskHelper.add([
+                [action: 'setFieldValue',
+                 ext: ": clear the labels value_current issue_to check COPY_ISSUE_FIELDS_Postfunction_$transition : ",
+                 parameters : [
+                         issue: key,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": clear the labels value_target issues_to check COPY_ISSUE_FIELDS_Postfunction_$transition  : ",
+                 parameters : [
+                         issue: value,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": set labels to target issues to check COPY_ISSUE_FIELDS_Postfunction_ $transition : " ,
+                 parameters : [
+                         issue: key,
+                         field: "Labels",
+                         value: it + i
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": set Assignee to target issues to check COPY_ISSUE_FIELDS_Postfunction_ $transition : ",
+                 parameters : [
+                         issue: key,
+                         field: "Assignee",
+                         value: testUser
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 ext: ": remove the labels added by postfunction by previous transition to next_COPY_ISSUE_FIELDS_Postfunction_ $transition : " ,
+                 parameters : [
+                         issue: value,
+                         field: "Component/s",
+                         value: " "
+                 ]
+                ],
+                [action: 'transitionIssue',
+                 ext: ": COPY_ISSUE_FIELDS_Postfunction_transition issue to check :" + transition ,
+                 parameters: [
+                         issue     : key,
+                         transition: transition,
+                 ]
+                ],
+                [action    : 'getIssueHistoryList',
+                 ext       : ": COPY_ISSUE_FIELDS_Postfunction_ $transition _user should be able to copy the value of the selected field from the current issue to linked issue:" + transition,
+                 parameters: [
+                         issue: value,
+                         outputType: "text",
+                         select: ["Author:$testUser","Field:Component"],
+                         columns: "Author,Field,'To String'"
+                 ],
+                 data      : ["$testUser", "Component", "$it$i"],
+                ],
+        ])
+
     }
 }

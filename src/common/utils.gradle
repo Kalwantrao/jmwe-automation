@@ -37,6 +37,7 @@ project.ext.nunjuckExpression = [
 project.ext.jiraExpression = [
         getIssueType : "!!issue.issueType && issue.issueType.name == 'Task'"
 ]
+
 project.ext.securityLevelId = [
         lavel1 : securityLevel1Id ,
         level2 :  securityLevel2Id
@@ -127,24 +128,12 @@ project.ext.conditionalValidation = [
 ]
 
 project.ext.runAsUser = [
-        currentUser : [
-                "runAsUser=",
-        ],
-        specificUser: [
-                "runAsUser=userByKey:$jmwe_qaUserId",
-        ],
-        userInFieldAssignee : [
-                "runAsUser=userField:assignee",
-        ],
-        userInFieldReporter : [
-                "runAsUser=userField:reporter",
-        ],
-        userInFieldCreator : [
-                "runAsUser=userField:creator",
-        ],
-        userFromScript : [
-                "runAsUser=userFromScript:$groovyExpression.returnsReporter"
-        ]
+        currentUser : "runAsUser=",
+        specificUser: "runAsUser=userByKey:$jmwe_qaUserId",
+        userInFieldAssignee : "runAsUser=userField:assignee",
+        userInFieldReporter : "runAsUser=userField:reporter",
+        userInFieldCreator : "runAsUser=userField:creator",
+        userFromScript : "runAsUser=userFromScript:$groovyExpression.returnsReporter"
 ]
 
 project.ext.conditionalExecution = [
@@ -159,7 +148,9 @@ project.ext.statusList = [
 ]
 
 project.ext.defaultFieldsCloud= [
-        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249"
+        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
+        "condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9",
+        "validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a",
 ]
 
 project.ext.defaultFieldsServer = [
@@ -173,23 +164,77 @@ project.ext.issueType = info?.isCloud ? issueTypeCloud : issueTypeServer
 project.ext.defaultFields = info?.isCloud ? defaultFieldsCloud : defaultFieldsServer
 project.ext.relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
 
+
+project.ext.whichUser = [
+        currentUser : ["fromUserType=currentUser"],
+        userInFieldAssignee : [ "fromUserType=userInField", "userField=assignee" ],
+        userInFieldReporter : [  "fromUserType=userInField", "userField=reporter"],
+        userInFieldCreator : [  "fromUserType=userInField", "userField=creator"],
+]
+
+project.ext.userMode = [
+        allUsers : [ "conditionMode=all-user-condition" ],
+        atLeastOne : [ "conditionMode=any-user-condition" ],
+]
+
+project.ext.fieldEmpty = [
+        no : [ "fieldEmpty=no" ],
+        yes : [ "fieldEmpty=yes" ],
+]
+
+project.ext.userCriteria = [
+        reporter : "isReporter=yes",
+        assignee : "isAssignee=yes",
+        inFieldLabels : "userFieldsToCheck=labels",
+        returnFromScript : /usersConditionScript=issue.get('reporter')?.name == "$user"/,
+        projectLead : "isProjectLead=yes",
+        inAdminRole : "rolesToCheck=$jiraAdminRoleId",
+        inAdminGroup : "groupsToCheck=jira-administrators",
+        inTestGroup : "groupsToCheck=$testGroup",
+        watcher : "isWatcher=yes",
+        checkUser : "usersToCheck=$currentUserKey",
+]
+
+project.ext.reverse = [
+        no : [ "reverse=" ],
+        yes : [ "reverse=yes" ]
+]
+
+project.ext.issueConstraints = [
+        atLeastOne : [  "minLinkedIssues=1","maxLinkedIssues=" ],
+        minTwo : [ "minLinkedIssues=2", "maxLinkedIssues=" ],
+        maxTwo : [ "minLinkedIssues=", "maxLinkedIssues=2" ],
+        atLeastThreeAndAtMostSix : [ "minLinkedIssues=3", "maxLinkedIssues=6" ]
+]
+
+project.ext.verifyAllLinkedIssues = [
+        yes : [	"checkAllLinkedIssues=yes" ],
+        no : [ "checkAllLinkedIssues=no" ]
+]
+
+project.ext.issueType = [
+        any : [ "selectedIssueType=" ],
+        story : [ "selectedIssueType=$StoryIssueType" ],
+        task : [ "selectedIssueType=$TaskIssueType" ],
+        bug : [ "selectedIssueType=$BugIssueType" ],
+        initiative: [ "selectedIssueType=$InitiativeIssueType" ]
+]
+project.ext.linkedIssuesStatusMode = [
+        all : [ "conditionMode=all-in-status" ],
+        one : ["conditionMode=one-in-status"],
+        none : ["conditionMode=none-in-status"],
+        oneNot : ["conditionMode=one-not-in-status"]
+]
+
+project.ext.statuses = [
+        inProgress : ["issue_statuses=$InProgress" ],
+        toDo : [ "issue_statuses=$ToDo" ],
+        inReview : [ "issue_statuses=$InReview" ],
+        done : [ "issue_statuses=$Done" ]
+]
+
 project.ext.functionKey = [
-        currentStatusConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:currentstatus-condition',
-        currentStatusConditionCloud: 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CurrentStatusCondition',
-        hideTransitionConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:non-interactive-condition',
-        previousStatusConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:previousstatus-condition',
-        scriptedGroovyConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-condition',
-        scriptedGroovyConditionCloud: 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ScriptedCondition',
-        relatedIssuesConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:linked-issues-condition',
-        relatedIssuesConditionCloud: 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssuesCondition',
-        relatedIssuesStatusConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-condition',
-        relatedIssuesStatusConditionCloud: 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssueStatusCondition',
         sharedConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:shared-condition',
-        relatedIssuesStatusValidatorServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-validator',
-        userConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition',
-        userConditionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__UserCondition',
-        userValidatotCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__UserValidator',
-        userValidatorServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-validator',
         transitionIssuePostfunctionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionIssue-function',
         transitionIssuePostfunctionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__TransitionIssueFunction',
         transitionRelatedIssuesPostfunctionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__TransitionLinkedIssuesFunction',
@@ -201,25 +246,12 @@ project.ext.functionKey = [
         assignToRoleMemberCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__AssignToRoleMemberFunction',
         assignToRoleMemberServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:assigntorolemember',
         returnToPreviousStatusServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:return-to-previous-status-function',
-        fieldsRequiredValidatorCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__FieldRequiredValidator',
-        fieldRequiredValidatorServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldrequired-validator',
         addFieldValueToParentIssuePfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:AddFieldValueToParent-function',
-        scriptedGroovyValidatorServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-validator',
-        scriptedGroovyValidatorCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ScriptedValidator',
-        relatedIssuesValidatorServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:issue-linking-validator',
-        relatedIssuesValidatorCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssuesValidator',
         assignIssuePostfunctionServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:AssignIssue-function',
         transitionParentIssuePfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionParentIssue-function',
         transitionRelatedIssuePfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionParentIssue-function',
         setFieldValueOfRelatedIssuesPfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:SetFieldValueOfLinkedIssues-function',
         setFieldValuePfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:SetFieldValue-function',
-        copyValueFromFieldToFieldPfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:copyValueFromFieldToField-function',
-        separationOfDutiesConditionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:separationofduties-condition',
-        commentRequiredValidatorServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentrequired-validator',
-        commentRequiredValidatorCloud : 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CommentRequiredValidator',
-        fieldHasBeenModifiedValidatorServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldchanged-validator',
-        fieldHasSingleValueValidatorServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldhassinglevalue-validator',
-        fieldHasSingleValueValidatorCloud : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldhassinglevalue-validator',
         parentStatusValidatorServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:parentstatus-validator',
         previousStatusvalidatorServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:previousstatus-validator',
         setIssueFieldsPfServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:set-issue-fields-function',

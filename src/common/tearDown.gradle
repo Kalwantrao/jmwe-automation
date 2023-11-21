@@ -14,7 +14,7 @@ ext.tearDown = {
              }
             ],
             [action    : 'createProject',ext: ': FOR WORKFLOW',
-             onlyIf: createTestProject == "yes",
+             onlyIf: createTestProject == "true",
              parameters: [
                      project: TestProject,
                      lead: '@Self',
@@ -69,26 +69,28 @@ ext.tearDown = {
                     ]
             ],
             [action: 'deleteWorkflowScheme',
-            onlyIf: skipSetup != "yes",
+            onlyIf: skipSetup != "true",
             mustRunAfter: 'deleteProject',
             parameters: [
                 workflowScheme: workflowScheme
                   ]
             ],
-            [action: 'deleteWorkflow',
-            onlyIf: skipSetup != "yes",
-            mustRunAfter: 'deleteWorkflowScheme',
-                parameters: [
-                    workflow: workflow
-                ]
-            ],
-            [action: 'deleteWorkflow', ext: "Copy" ,
-             onlyIf: skipSetup != "yes",
-             mustRunAfter: 'deleteWorkflowScheme',
-             parameters: [
-                     workflow: "Copy of $workflow"
-             ]
-            ]
     ])
+    if(skipSetup != "true"){
+        gint.taskHelper.addTearDown([
+                [action: 'deleteWorkflow',
+                        mustRunAfter: 'deleteWorkflowScheme',
+                        parameters: [
+                                workflow: workflow
+                                ]
+                        ],
+                [action: 'deleteWorkflow', ext: "Copy" ,
+                        mustRunAfter: 'deleteWorkflowScheme',
+                        parameters: [
+                                workflow: "Copy of $workflow"
+                                ]
+                        ]
+        ])
+    }
 }
 

@@ -15,28 +15,18 @@ apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 tearDown()
 addWorkflow()
 
-def defaultFieldsServer = [
-        "correlationId=",
-]
-def fieldsList = [
-        labels : 'labels',
-        fixVersions : 'fixVersions',
-        affectsVersions : 'versions',
-        components : 'components',
-        priority : 'priority',
-        assignee : 'assignee'
-]
-def functionKey = functionKey.fieldHasBeenModifiedValidatorServer	//function key for current status condition
-// Configuration for validator
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldchanged-validator'
 
-fieldsList.eachWithIndex { field, value, i ->
-    def fields = defaultFieldsServer +"conditionalValidation=no" + "field=$value"
-    addTransitionFunction( field  + 'ShouldModified', 'validator', fields, functionKey )
+fields.eachWithIndex { fieldName, fieldValue, i ->
+    def transition = fieldName + '_should_be_modified'
+    def server = defaultFieldsServer + conditionalValidation.no + "field=$fieldValue"
+    addTransitionFunction( transition, 'validator', server, functionKey )
 }
 
-fieldsList.eachWithIndex { field, value, i ->
-    def fields = defaultFieldsServer +"conditionalValidation=yes" + "field=$value" + "conditionalValidationScript=$groovyExpression.getIssuetype"
-            addTransitionFunction(field + 'ShouldModifiedIfConditionValidationTrue' , 'validator', fields, functionKey )
+fields.eachWithIndex { fieldName, fieldValue, i ->
+    def transition  = fieldName + '_should_be_modified_if_condition_true'
+    def fields = defaultFieldsServer + "field=$fieldValue" + conditionalValidation.yes
+    addTransitionFunction(transition, 'validator', fields, functionKey )
 }
 
 createWorkflowScheme()
@@ -45,65 +35,303 @@ createProject()
 gint.taskHelper.add( action: 'addVersion', ext: ': create versions',
             parameters: [ project: projectName, version: 1 ])
 gint.taskHelper.add( action: 'addComponent', ext: ': create Component',
-        parameters: [ project: projectName, component: 'component1' ])
+            parameters: [ project: projectName, component: 'component1' ])
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
-// checking the current status To Do and previous status In Progress
-['ShouldModified','ShouldModifiedIfConditionValidationTrue']
-.each {
-    fieldsList.eachWithIndex { field, value, i ->
-        gint.taskHelper.add(
-                [action    : 'transitionIssue', ext: " : custom error when field_$field not provided during transition" + it,
+// FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_01-verify the error message for _Labels
+['Labels_should_be_modified'].each {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_01-Case_01_ $it _when field not modified : " ,
                  expected  : -3,
                  parameters: [
-                         transition: field + it,
+                         transition: it,
                          issue     : { -> defaultIssue[] },
                     ],
                 ],
-         )
-   }
-}
-['ShouldModified','ShouldModifiedIfConditionValidationTrue'].each {
-    gint.taskHelper.add(
-            [action    : 'transitionIssue', ext: " : when field_labels provided during transition" + it,
-             expected  : 0,
-             parameters: [
-                     transition: 'labels' + it,
-                     issue     : { -> defaultIssue[] },
-                     labels    : it
-             ],
-            ])
-}
-['ShouldModified'].each {
-    gint.taskHelper.add(
-            [action    : 'transitionIssue', ext: " : when field_assignee provided during transition" + it,
-             expected  : 0,
-             parameters: [
-                     transition: 'assignee' + it,
-                     issue     : { -> defaultIssue[] },
-                     assignee    : user
-             ],
-            ])
-}
-gint.taskHelper.add(
-        [action: 'updateIssue', ext: ': change issue type',
-         parameters: [
-                 issue: {->defaultIssue[]},
-                 issueType: 'Story'
-         ]
-   ],
-)
-fieldsList.eachWithIndex { field, value, i ->
-    gint.taskHelper.add(
-            [action    : 'transitionIssue', ext: " : should not throw error when conditional validation false : $field",
-             expected  : 0,
-             parameters: [
-                     transition: field + 'ShouldModifiedIfConditionValidationTrue',
-                     issue: { -> defaultIssue[] },
+                [action    : 'transitionIssue',
+                 ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_01-Case_02_ $it _when field modified : " ,
+                 expected  : 0,
+                 parameters: [
+                         transition: it,
+                         issue     : { -> defaultIssue[] },
+                         labels : "testLabels"
+                 ],
                 ],
-            ]
-    )
+         ])
+}
+
+// FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_02-verify the error message for _components
+['Components_should_be_modified'].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_02-Case_01_ $it _when field not modified : " ,
+             expected  : -3,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_02-Case_02_ $it _when field modified : " ,
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+                     components : 'component1'
+             ],
+            ],
+    ])
+}
+
+// FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_03-verify the error message for _Assignee
+['Assignee_should_be_modified'].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_03-Case_01_ $it _when field not modified : " ,
+             expected  : -3,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_03-Case_02_ $it _when field modified : " ,
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+                     assignee : user
+             ],
+            ],
+    ])
+}
+
+// FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_04-verify the error message for _affects versions
+['AffectsVersions_should_be_modified'].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_04-Case_01_ $it _when field not modified : " ,
+             expected  : -3,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_04-Case_02_ $it _when field modified : " ,
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+                     affectsVersions : 1
+             ],
+            ],
+    ])
+}
+
+// FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_05-verify the error message for _FixVersions
+['FixVersions_should_be_modified'].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_05-Case_01_ $it _when field not modified : " ,
+             expected  : -3,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_05-Case_02_ $it _when field modified : " ,
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+                     fixVersions : 1
+             ],
+            ],
+    ])
+}
+
+// FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_12_TC_01-verify the error message for _Labels _only if condition true
+['Labels_should_be_modified_if_condition_true'].each {
+    gint.taskHelper.add([
+            [action    : 'updateIssue',
+             ext: " : change priority to low_to check_ $it : " ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     priority: 'Low'
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_01-Case_01_ $it _when condition false : " ,
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action    : 'updateIssue',
+             ext: " : change priority to High_to check_ $it : " ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     priority: 'High'
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_10_TC_01-Case_02_ $it _when condition true : " ,
+             expected  : -3,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+    ])
+}
+
+// FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_12_TC_02-verify the error message for _Components _only if condition true
+['Components_should_be_modified_if_condition_true'].each {
+    gint.taskHelper.add([
+            [action    : 'updateIssue',
+             ext: " : change priority to low_to check_ $it : " ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     priority: 'Low'
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_12_TC_02-Case_01_ $it _when condition false : " ,
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action    : 'updateIssue',
+             ext: " : change priority to High_to check_ $it : " ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     priority: 'High'
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_12_TC_02-Case_02_ $it _when condition true : " ,
+             expected  : -3,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+    ])
+}
+
+// FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_12_TC_03-verify the error message for _Assignee _only if condition true
+['Assignee_should_be_modified_if_condition_true'].each {
+    gint.taskHelper.add([
+            [action    : 'updateIssue',
+             ext: " : change priority to low_to check_ $it : " ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     priority: 'Low'
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_12_TC_03-Case_01_ $it _when condition false : " ,
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action    : 'updateIssue',
+             ext: " : change priority to High_to check_ $it : " ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     priority: 'High'
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_12_TC_03-Case_02_ $it _when condition true : " ,
+             expected  : -3,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+    ])
+}
+
+// FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_12_TC_04-verify the error message for _AffectsVersions _only if condition true
+['AffectsVersions_should_be_modified_if_condition_true'].each {
+    gint.taskHelper.add([
+            [action    : 'updateIssue',
+             ext: " : change priority to low_to check_ $it : " ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     priority: 'Low'
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_12_TC_04-Case_01_ $it _when condition false : " ,
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action    : 'updateIssue',
+             ext: " : change priority to High_to check_ $it : " ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     priority: 'High'
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_12_TC_04-Case_02_ $it _when condition true : " ,
+             expected  : -3,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+    ])
+}
+
+// FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_12_TC_05-verify the error message for _AffectsVersions _only if condition true
+['FixVersions_should_be_modified_if_condition_true'].each {
+    gint.taskHelper.add([
+            [action    : 'updateIssue',
+             ext: " : change priority to low_to check_ $it : " ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     priority: 'Low'
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_12_TC_05-Case_01_ $it _when condition false : " ,
+             expected  : 0,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action    : 'updateIssue',
+             ext: " : change priority to High_to check_ $it : " ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     priority: 'High'
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_TS_12_TC_05-Case_02_ $it _when condition true : " ,
+             expected  : -3,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+    ])
 }
 
 /*

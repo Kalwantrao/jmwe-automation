@@ -15,77 +15,58 @@ apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 tearDown()
 addWorkflow()
 
-def functionKey = info?.isCloud? functionKey.relatedIssuesConditionCloud : functionKey.relatedIssuesConditionServer
+def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssuesCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linked-issues-condition'
 
-def defaultFields = [
-		"correlationId="
-]
-def mode = [
-		requireLinks : [ "conditionMode=requireLinks" ],
-		checkLinks : [ "conditionMode=checkLinks", "groovyExpression=$groovyExpression.checkPriorityHigh" ],
-		forbidLinks : [	"conditionMode=forbidLinks", "groovyExpression=$groovyExpression.checkPriorityHigh", ]
-]
-def issueConstraints = [
-		atLeastOne : [  "minLinkedIssues=1","maxLinkedIssues=" ],
-		atLeastTwoAtMostTwo : [ "minLinkedIssues=2", "maxLinkedIssues=2" ],
-		atLeastTwoAtMostFive : [  "minLinkedIssues=1", "maxLinkedIssues=5" ]
-]
-def verifyAllLinkedIssues = [
-		yes : [	"checkAllLinkedIssues=yes" ],
-		no : [ "checkAllLinkedIssues=no" ]
-]
-
-def relatedIssue = info?.isCloud ? requireRelatedIssuesFieldsCloud : relatedIssueServer
-
-def fieldsToRemove = ["currentIssue", "parentIssue", "epicOfTheCurrentIssue","parentPortfolio"]
+def fieldsToRemove = [ "currentIssue", "parentIssue", "epicOfTheCurrentIssue","parentPortfolio" ]
 
 fieldsToRemove.each { key ->
 	relatedIssue.remove(key)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
-	def transition = 'relatedIssueCondition_requireLinks'
-	def server = defaultFields + "selectedLinkType=$value" + mode.requireLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
-	addTransitionFunction(transition + i, 'condition', server, functionKey)
-}
+def linkedIssuesMode = [
+		requireLinks : [ "conditionMode=requireLinks" ],
+		requireSpecificLinkedIssues : [ "conditionMode=requireLinks", /groovyExpression=issue.get('assignee')?.name == "$testUser"/ ],
+		checkLinks : [ "conditionMode=checkLinks", "groovyExpression=$groovyExpression.checkPriorityHigh" ],
+		forbidLinks : [	"conditionMode=forbidLinks", "groovyExpression=$groovyExpression.checkPriorityHigh" ]
+]
 
 relatedIssue.eachWithIndex { key, value, i ->
-	def transition = 'relatedIssueCondition_checkLinks'
-	def server = defaultFields + "selectedLinkType=$value" + mode.checkLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
-	addTransitionFunction( transition + i, 'condition', server, functionKey)
+	def transition = 'verify_require_certain_related_issues_' + key
+	def server = defaultFieldsServer + "selectedLinkType=$value" + linkedIssuesMode.requireLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	addTransitionFunction(transition, 'condition', server, functionKey)
+}
+
+['Verify_Issue_constraints_min_two_linkByRelatesTo'].each {
+	def server = defaultFieldsServer + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireLinks + issueConstraints.minTwo + verifyAllLinkedIssues.yes
+	addTransitionFunction(it , 'condition', server, functionKey)
+}
+
+['Verify_Issue_constraints_max_two_linkByRelatesTo'].each {
+	def server = defaultFieldsServer + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireLinks + issueConstraints.maxTwo + verifyAllLinkedIssues.yes
+	addTransitionFunction(it , 'condition', server, functionKey)
+}
+
+['Verify_Issue_constraints_min_three_max_six_linkByRelatesTo'].each {
+	def server = defaultFieldsServer + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireLinks + issueConstraints.atLeastThreeAndAtMostSix + verifyAllLinkedIssues.yes
+	addTransitionFunction(it , 'condition', server, functionKey)
+}
+
+['verify_condition_on_related_issues_checkAssignee'].each {
+	def server = defaultFieldsServer + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireSpecificLinkedIssues + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	addTransitionFunction(it , 'condition', server, functionKey)
+}
+
+
+relatedIssue.eachWithIndex { key, value, i ->
+	def transition = 'verify_check_related_issues_' + key
+	def server = defaultFieldsServer + "selectedLinkType=$value" + linkedIssuesMode.checkLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	addTransitionFunction( transition, 'condition', server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-	def transition = 'relatedIssueCondition_forbidLinks'
-	def server = defaultFields + "selectedLinkType=$value" + mode.forbidLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
-	addTransitionFunction(transition + i, 'condition', server, functionKey)
-}
-
-relatedIssue.eachWithIndex { key, value, i ->
-	def transition = 'relatedIssueCondition_issueConstraintsFalse'
-	def server = defaultFields + "selectedLinkType=$value" + mode.requireLinks + issueConstraints.atLeastTwoAtMostTwo + verifyAllLinkedIssues.yes
-	addTransitionFunction(transition + i, 'condition', server, functionKey)
-}
-
-relatedIssue.eachWithIndex { key, value, i ->
-	def transition = 'relatedIssueCondition_issueConstraintsTrue'
-	def server = defaultFields + "selectedLinkType=$value" + mode.requireLinks + issueConstraints.atLeastTwoAtMostFive + verifyAllLinkedIssues.yes
-	addTransitionFunction(transition + i, 'condition', server, functionKey)
-}
-
-['issueReturnFromJqlSearch_require'].each {
-	def server = defaultFields + "selectedLinkType=jql:project = $projectName AND summary ~ JQL_ISSUE" + mode.requireLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
-	addTransitionFunction(it, 'condition', server, functionKey)
-}
-
-['issueReturnFromJqlSearch_check'].each {
-	def server = defaultFields + "selectedLinkType=jql:project = $projectName AND summary ~ JQL_ISSUE" + mode.checkLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
-	addTransitionFunction( it, 'condition', server, functionKey)
-}
-
-['issueReturnFromJqlSearch_forbid'].each {
-	def server = defaultFields + "selectedLinkType=jql:project = $projectName AND summary ~ JQL_ISSUE" + mode.forbidLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
-	addTransitionFunction(it, 'condition', server, functionKey)
+	def transition = 'forbid_certain_related_issues_' + key
+	def server = defaultFieldsServer + "selectedLinkType=$value" + linkedIssuesMode.forbidLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	addTransitionFunction( transition, 'condition', server, functionKey)
 }
 
 createWorkflowScheme()
@@ -93,27 +74,27 @@ createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'default')
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
-def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[] }], 'Sub-task')
-def subtask2 = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[] }, priority: 'High'], 'Sub-task2')
-def subtask3 = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[] },priority: 'High'], 'Sub-task3')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { ->parent[] }], 'Sub-task')
+def epicNoChildIssue = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'EpicNoChildIssue')
 def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
 def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {->epic[]}], 'BelongsToEpic')
-def issueBelongsToEpic2 = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {->epic[]}, priority: 'High'], 'BelongsToEpic2')
-def issueBelongsToEpic3 = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {->epic[]}, priority: 'High'], 'BelongsToEpic3')
+def initiativeNoChildIssue = createIssue([type: 'Initiative', summary: 'JMWE_Issue'], 'InitiativeNoChildIssue')
 def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue'], 'Initiative')
 def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
-def epic_initiative2 = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue", priority: 'High'], 'Epic_initiative2')
-def epic_initiative3 = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue", priority: 'High'], 'Epic_initiative3')
 def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
 def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
 def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
 def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
 def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesTo')
+def relatesToIssue2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesToIssue2')
 def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
+def relatesToIssue3 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesToIssue3')
+def relatesToIssue4 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesToIssue4')
+def relatesToIssue5 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesToIssue5')
+def relatesToIssue6 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesToIssue6')
+def relatesToIssue7 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesToIssue7')
 
 updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
-updateIssue([issue: {->epic_initiative2[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic2")
-updateIssue([issue: {->epic_initiative3[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic3")
 
 def linkIssuesMap = [
 		blocks : {->blocks[]},
@@ -121,284 +102,1491 @@ def linkIssuesMap = [
 		duplicates : {->duplicates[]},
 		'relates to': {->relatesTo[]}
 ]
+
 linkIssuesMap.eachWithIndex { key, value, i ->
 	linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
 }
 
-def relatedIssuesMapServer = [
-		{->parent[]}: {->subtask[]},
-		{->epic[]}: {->issueBelongsToEpic[]},
-		{-> initiative[]} : {->epic_initiative[]},
-		{->issueLinks[]} : {->blocks[]},
-		{->issueLinks[]} : {->blocks[]},
-		{->blocks[]} : {->issueLinks[]},
-		{->issueLinks[]} : {->clones[]},
-		{->clones[]} : {->issueLinks[]},
-		{->issueLinks[]} : {->duplicates[]},
-		{->duplicates[]} : {->issueLinks[]},
-		{->issueLinks[]} : {->relatesTo[]},
-		{->issueLinks[]} : {->relatesTo[]},
-		{->issueLinks[]} : {->relatesTo[]},
-]
-def relatedIssuesMapCloud = [
-		{->parent[]}: {->subtask[]},
-		{->epic[]}: {->issueBelongsToEpic[]},
-		{->issueLinks[]} : {->blocks[]},
-		{->issueLinks[]} : {->blocks[]},
-		{->blocks[]} : {->issueLinks[]},
-		{->issueLinks[]} : {->clones[]},
-		{->clones[]} : {->issueLinks[]},
-		{->issueLinks[]} : {->duplicates[]},
-		{->duplicates[]} : {->issueLinks[]},
-		{->issueLinks[]} : {->relatesTo[]},
-]
-def relatedIssuesMap = info?.isCloud ? relatedIssuesMapCloud : relatedIssuesMapServer
-relatedIssue.remove("returnsFromJqlSearch")
 
-[
-		'relatedIssueCondition_requireLinks',
- 		'relatedIssueCondition_forbidLinks',
-].collect {
-	relatedIssuesMap.eachWithIndex { key, value, i ->
-		gint.taskHelper.add([
-				[action    : 'transitionIssue', ext: ': issue has linked issues :'+ it + i,
-						sleep: 3000,
-				 expected: 0,
-				 parameters: [
-						 issue     : key,
-						 transition: it + i,
-				 ]
-				],
-		])
-	}
-}
+/*   -----------------------------------------------------------------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------------------------------------------------------
+                                      RELATED_ISSUES_CONDITION => REQUIRE CERTAIN RELATED ISSUES
+     -----------------------------------------------------------------------------------------------------------------------------------
+     -----------------------------------------------------------------------------------------------------------------------------------   */
 
-// When issue not having related issues or issues linked to it through specific link types
-
+// RELATED_ISSUES_CONDITION_TC_14-verify require certain related issues and subtask of the current issue
 [
-		'relatedIssueCondition_requireLinks',
+		'verify_require_certain_related_issues_subtask',
 ].collect {
-	relatedIssue.eachWithIndex { key, value, i ->
-		gint.taskHelper.add([
-				[action    : 'transitionIssue', ext: ': issue not has linked issues_checkRequireLinks :' + it +i,
-				 sleep: 3000,
-				 expected  : -1,
-				 parameters: [
-						 issue     : { -> defaultIssue[] },
-						 transition: it + i,
-				 ]
-				],
-		])
-	}
-}
-
-[
-		'relatedIssueCondition_checkLinks',
-].collect {
-	relatedIssue.eachWithIndex { key, value, i ->
-		gint.taskHelper.add([
-				[action    : 'transitionIssue', ext: ': issue not has linked issues_checkLinks :' + it +i,
-				 expected  : 0,
-				 parameters: [
-						 issue     : { -> defaultIssue[] },
-						 transition: it + i,
-				 ]
-				],
-		])
-	}
-}
-
-[
-		'relatedIssueCondition_checkLinks',
-].collect {
-	relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
-		gint.taskHelper.add([
-				[action    : 'transitionIssue', ext: ': issue not has linked issues following given constraints_checkLinks :'+ it + i,
-				 expected: -1,
-				 parameters: [
-						 issue     : currentIssue,
-						 transition: it + i,
-				 ]
-				],
-		])
-	}
-}
-
-[
-		'relatedIssueCondition_checkLinks',
-].collect {
-	relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
-		gint.taskHelper.add([
-				[action: 'updateIssue', ext: ': set priority to High_targetIssue:' + it + i,
-				parameters:[
-					 issue: targetIssue,
-					 priority: 'High'
-					]
-				],
-				[action: 'updateIssue', ext: ': set priority to High_currentIssue:' + it + i,
-				 parameters:[
-						 issue: currentIssue,
-						 priority: 'High'
-				 ]
-				],
-				[action    : 'transitionIssue', ext: ': issue has linked issues following given constraints_requireLinks :'+ it + i,
-				 expected: 0,
-				 parameters: [
-						 issue     : currentIssue,
-						 transition: it + i,
-				 ]
-				],
-		])
-	}
-}
-[
-		'relatedIssueCondition_forbidLinks'
-].collect {
-	relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
-		gint.taskHelper.add([
-				[action: 'updateIssue', ext: ': set priority to High_currentIssue:' + it + i,
-				 parameters:[
-						 issue: currentIssue,
-						 priority: 'High'
-				 ]
-				],
-				[action    : 'transitionIssue', ext: ': issue has linked issues following given constraints_forbid :'+ it + i,
-				 expected: -1,
-				 parameters: [
-						 issue     : currentIssue,
-						 transition: it + i,
-				 ]
-				],
-		])
-	}
-}
-
-[
-		'relatedIssueCondition_issueConstraintsFalse'
-].collect {
-	relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
-		gint.taskHelper.add([
-			[action    : 'transitionIssue', ext: ': issue not has linked issues following given constraints_no of Issues :' + it + i,
-			 expected  : -1,
-			 parameters: [
-					 issue     : currentIssue,
-					 transition: it + i,
-				 ]
-			],
-		])
-	}
-}
-[
-		'relatedIssueCondition_issueConstraintsTrue'
-].collect {
-	relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
-		gint.taskHelper.add([
-			[action    : 'transitionIssue', ext: ': issue has linked issues following given constraints_no of Issues :' + it + i,
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_14_Case_01 -$it _when issue having one subtask:",
 			 expected  : 0,
 			 parameters: [
-					 issue     : currentIssue,
-					 transition: it + i,
+					 issue     : {->parent[]},
+					 transition: it ,
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_14_Case_02 -$it _when issue not having subtask:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it ,
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TC_17-verify require certain related issues_issueBelongsToEpic
+[
+		'verify_require_certain_related_issues_issueBelongsToEpic',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 expected  : 0,
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_17_Case_01 -$it _when epic having one issueBelongsToEpic:",
+			 parameters: [
+					 issue     : {->epic[]},
+					 transition: it
+			 ]
+			],
+
+			[action    : 'transitionIssue',
+			 expected  : -1,
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_17_Case_02 -$it _when epic not having issueBelongsToEpic:",
+			 parameters: [
+					 issue     : {->epicNoChildIssue[]},
+					 transition: it ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TC_21-verify require certain related issues_child issue in the Portfolio hierarchy
+[
+		'verify_require_certain_related_issues_childPortfolio',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_21_Case_01 -$it _current issue must have one child issue in the Portfolio hierarchy:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->initiative[]},
+					 transition: it ,
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_21_Case_02 -$it _when current issue not having child issues in the Portfolio hierarchy:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->initiativeNoChildIssue[]},
+					 transition: it ,
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TC_26-verify require certain related issues_current issue must have at least 1 issues linked to it through any link type
+[
+		'verify_require_certain_related_issues_linkByAnyLink',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_26_Case_01 -$it _current issue having one issue linked to it through any link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_26_Case_02 -$it _current issue not having issues linked to it through any link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it ,
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TC_27-verify require certain related issues_current issue must have at least 1 issues linked to it through the blocks link type
+[
+		'verify_require_certain_related_issues_linkByBlock',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_27_Case_01 -$it _when current issue have at least 1 issue linked to it through the blocks link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_27_Case_02 -$it _The current issue not having issues linked to it through the blocks link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it ,
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TC_29-verify require certain related issues_current issue must have at least 1 issues linked to it through the is blocked by link type
+[
+		'verify_require_certain_related_issues_linkByisBlockedBy',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_29_Case_01 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->blocks[]},
+					 transition: it ,
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_29_Case_02 -$it _when current issue not having issues linked to it through the is blocked by link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it ,
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TC_31-verify require certain related issues_current issue must have at least 1 issues linked to it through the clones link type
+[
+		'verify_require_certain_related_issues_linkByClones',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_01 -$it _when current issue have issue linked to it through the clones link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_02 -$it _when current issue not have issues linked to it through the clones link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it ,
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TC_32-verify require certain related issues_current issue must have at least 1 issues linked to it through the is cloned by link type
+[
+		'verify_require_certain_related_issues_linkByIsClonedBy',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_01 -$it _when current issue have issue linked to it through the is cloned by link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->clones[]},
+					 transition: it ,
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_02 -$it _when current issue not having issues linked to it through the is cloned by link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it ,
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TC_33-verify require certain related issues_current issue must have at least 1 issues linked to it through the duplicates link type
+[
+		'verify_require_certain_related_issues_linkByDuplicates',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_01 -$it _when current issue have issue linked to it through the duplicates link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_02 -$it _when current issue not having issues linked to it through the duplicates link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it ,
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TC_34-verify require certain related issues_current issue must have at least 1 issues linked to it through the is duplicated by link type
+[
+		'verify_require_certain_related_issues_linkByIsDuplicatedBy',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_34_Case_01 -$it _when current issue have issue linked to it through the is duplicated by link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->duplicates[]},
+					 transition: it ,
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_34_Case_02 -$it _when current issue not having issues linked to it through the is duplicated by link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it ,
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TC_37-verify require certain related issues_current issue must have at least 1 issues linked to it through the relates to link type
+[
+		'verify_require_certain_related_issues_linkByRelatesTo',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_37_Case_01 -$it _when current issue have issue linked to it through the relates to link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_37_Case_02 -$it _when current issue not having issues linked to it through the relates to link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it ,
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TC_38-verify require certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
+[
+		'verify_require_certain_related_issues_returnsByGroovyExpression',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_38_Case_01 -$it _when the following Groovy expression:$returnsLinkedIssues return at least 1 issue:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_38_Case_02 -$it _The following Groovy expression:$returnsLinkedIssues not returns issues:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it ,
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TC_40-verify require certain related issues_The following JQL search:issuetype = Task and summary~JQL_ISSUE must return at least 1 issues
+[
+		'verify_require_certain_related_issues_returnsFromJqlSearch',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_40_Case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it ,
+			 ]
+			],
+			[action    : 'updateIssue',
+			 ext       : ":change the issue type to check when jql search not returns any issues for:"+ it,
+			 sleepAfter: 3000,
+			 parameters: [
+					 issue     : {->jqlIssue[]},
+					 issueType: "Bug" ,
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_40_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it ,
+			 ]
+			],
+			[action    : 'updateIssue',
+			 ext       : ":change the issue type after checking when jql search not returns any issues for:"+ it,
+			 sleepAfter: 3000,
+			 parameters: [
+					 issue     : {->jqlIssue[]},
+					 issueType: "Task" ,
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TC_42_Case_01-verify require certain related issues_The current issue must have at least 2 issues linked to it through the relates to link type
+[
+		'Verify_Issue_constraints_min_two_linkByRelatesTo'
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_42_Case_01 _$it _when current issue not having at least 2 issues linked to it through the relates to link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : { -> issueLinks[] },
+					 transition: it,
+			 ]
+			],
+			[action: 'linkIssue', ext: ": by relates to link type to check min issue constraints option:",
+					parameters: [
+					        issue: {-> issueLinks[]},
+							toIssue: {-> relatesToIssue2[]},
+							link: 'relates to'
+					]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_42_Case_02 _$it _when current issue having at least 2 issues linked to it through the relates to link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : { -> issueLinks[] },
+					 transition: it,
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TC_43_Case_01-verify require certain related issues_The current issue must not have more than 2 issues linked to it through the relates to link type
+[
+		'Verify_Issue_constraints_max_two_linkByRelatesTo'
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_43_Case_01 _$it _when current issue not having more than 2 issues linked to it through the relates to link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : { -> issueLinks[] },
+					 transition: it,
+			 ]
+			],
+			[action: 'linkIssue', ext: ": by relates to link type to check max issue constraints option:",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> relatesToIssue3[]},
+					 link: 'relates to'
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_43_Case_02 _$it _when current issue having more than 3 issues linked to it through the relates to link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : { -> issueLinks[] },
+					 transition: it,
+			 ]
+			],
+			[action: 'deleteLink', ext : ': issues linked to check min_issue constraints:',
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> relatesToIssue2[]},
+					 link: 'relates to'
+			 ]
+			],
+			[action: 'deleteLink', ext : ': issues linked to check max_issue constraints:',
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> relatesToIssue3[]},
+					 link: 'relates to'
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TC_44- The current issue must have at least 3 and at most 6 issues linked to it through the relates to link type
+[
+		'Verify_Issue_constraints_min_three_max_six_linkByRelatesTo'
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_01 _$it _when current issue not have at least 3 and at most 6 issues linked to it through the relates to link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : { -> issueLinks[] },
+					 transition: it,
+			 ]
+			],
+			[action    : 'linkIssue', ext: ": by relates to link type to check min and max issue constraints option:" + it,
+			 parameters: [
+					 issue  : { -> issueLinks[] },
+					 toIssue: { -> relatesToIssue2[] },
+					 link   : 'relates to'
+			 ]
+			],
+			[action    : 'linkIssue', ext: ": by relates to link type to check min and max issue constraints option2:" + it,
+			 parameters: [
+					 issue  : { -> issueLinks[] },
+					 toIssue: { -> relatesToIssue3[] },
+					 link   : 'relates to'
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_02 _$it _when current issue having at least 3 issues linked to it through the relates to link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : { -> issueLinks[] },
+					 transition: it,
+			 ]
+			],
+	])
+}
+
+// link the issues to check the issue constraint options for max 6 issues by relates to link type
+def relatesToIssuesList = [
+		issue2 : {->relatesToIssue2[]},
+		issue3 : {->relatesToIssue3[]},
+		issue4 : {->relatesToIssue4[]},
+		issue5 : {->relatesToIssue5[]},
+		issue6 : {->relatesToIssue6[]},
+		issue7 : {->relatesToIssue7[]}
+]
+
+relatesToIssuesList.eachWithIndex { key, value, i ->
+	gint.taskHelper.add(
+			[action    : 'linkIssue', ext: ": by relates to link type to check max issue constraints option:" + key,
+			 parameters: [
+					 issue  : { -> issueLinks[] },
+					 toIssue: value,
+					 link   : 'relates to'
+			 ],
+			])
+}
+
+[
+		'Verify_Issue_constraints_min_three_max_six_linkByRelatesTo'
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_03 _$it _when current issue have at least 3 and but more than 6 ie 7 issues linked to it through the relates to link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : { -> issueLinks[] },
+					 transition: it,
+			 ]
+			],
+	])
+}
+
+// delete link between issues to while check the issue constraint options for max 6 issues by relates to link type
+relatesToIssuesList.eachWithIndex { key, value, i ->
+	gint.taskHelper.add(
+			[action    : 'deleteLink', ext: ": by relates to link type to check max issue constraints option:" + key,
+			 parameters: [
+					 issue  : { -> issueLinks[] },
+					 toIssue: value,
+					 link   : 'relates to'
+			 ],
+			])
+}
+
+// RELATED_ISSUES_CONDITION_TC_49 - current issue must have at least 1 and at most 0 issues linked to it through the relates to link type, and at least one of them must respect the following condition
+[
+		'verify_condition_on_related_issues_checkAssignee'
+].each {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_49_Case_01 -$it _when current issue not having at least 1 issues linked to it through the relates to link type which respect the following condition_issue must have assignee $testUser:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action    : 'assignIssue', ext: ": to _ $testUser to_ $it :",
+			 parameters: [
+					 issue  : { -> relatesTo[] },
+					 assignee: testUser,
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_49_Case_02 -$it _when current issue having at least 1 issues linked to it through the relates to link type which respect the following condition_issue must have assignee $testUser:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->relatesTo[]},
+					 transition: it ,
+			 ]
+			],
+			[action    : 'assignIssue', ext: ": to _ UNASSIGNED issue- after_ $it :",
+			 parameters: [
+					 issue  : { -> relatesTo[] },
+					 assignee: " ",
 			 ],
 			],
 	])
-	}
 }
 
 
+/* -----------------------------------------------------------------------------------------------------------------------------------
+   -----------------------------------------------------------------------------------------------------------------------------------
+                                          RELATED_ISSUES_CONDITION => CHECK RELATED ISSUES TESTS
+   ------------------------------------------------------------------------------------------------------------------------------------
+   ----------------------------------------------------------------------------------------------------------------------------------- */
+
+// RELATED_ISSUES_CONDITION_TS_51 -verify Check related issues and verify with different - Target issues
 [
-		'issueReturnFromJqlSearch_require',
+		'verify_check_related_issues_subtask',
 ].collect {
-		gint.taskHelper.add([
-				[action    : 'transitionIssue', ext: ': atleast one issue found by jql search summary_JQL_ISSUE_requireLinks:'+ it,
-				 expected: 0,
-				 parameters: [
-						 issue     : { ->jqlIssue[] },
-						 transition: it,
-				 ]
-				],
-				[action: 'updateIssue', ext: ': change summary_requireLinks:' + it,
-						sleepAfter: 2000,
-				 parameters:[
-						 issue: { ->jqlIssue[] },
-						 summary: 'Invalid',
-						 priority: 'High',
-				 ]
-				],
-				[action    : 'transitionIssue', ext: ': when jql search does not return atleast one issue_requireLinks :'+ it,
-				 expected: -1,
-				 parameters: [
-						 issue     : { ->jqlIssue[] },
-						 transition: it,
-				 ]
-				],
-		])
-}
-
-[		'issueReturnFromJqlSearch_check',
-].each {
 	gint.taskHelper.add([
-			[action: 'updateIssue', ext: ': change summary for check issues_CheckLinks:' + it,
-			 parameters:[
-					 issue: { ->jqlIssue[] },
-					 summary: 'JQL_ISSUE',
-					 priority: 'High',
-			 ]
-			],
-			[action    : 'transitionIssue', ext: ': when jql search issues respecting constraints_CheckLinks:'+ it,
-			 expected: 0,
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_01_Case_01 -$it _when issue having subtask not respecting given condition :",
+			 expected  : -1,
 			 parameters: [
-					 issue     : { ->jqlIssue[] },
-					 transition: it,
+					 issue     : {->parent[]},
+					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ': change priority to check issues_CheckLinks:' + it,
-			 parameters:[
-					 issue: { ->jqlIssue[] },
-					 priority: 'Low',
-			 ]
+			[action: 'updateIssue', ext: ":  change issue priority to high satisfy the criteria to check: $it",
+			parameters: [
+			        issue: {->parent[]},
+					priority: "High",
+			]
 			],
-			[action    : 'transitionIssue', ext: ': when jql search issues not respecting constraints_CheckLinks:'+ it,
-			 expected: -1,
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_01_Case_02 -$it _when issue having subtask respecting given condition:",
+			 expected  : 0,
 			 parameters: [
-					 issue     : { ->jqlIssue[] },
-					 transition: it,
+					 issue     : {->parent[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to low satisfy the criteria after checking: $it",
+			 parameters: [
+					 issue: {->parent[]},
+					 priority: "Low",
 			 ]
 			],
 	])
-
 }
-[		'issueReturnFromJqlSearch_forbid',
-].each {
+
+// RELATED_ISSUES_CONDITION_TS_51_TC_02-verify Check related issues and verify with different - Target issues
+[
+		'verify_check_related_issues_issueBelongsToEpic',
+].collect {
 	gint.taskHelper.add([
-			[action: 'updateIssue', ext: ': change summary for check issues_forbid:' + it,
-			 parameters:[
-					 issue: { ->jqlIssue[] },
-					 summary: 'JQL_ISSUE',
-					 priority: 'High',
-			 ]
-			],
-			[action    : 'transitionIssue', ext: ': when jql search issues respecting constraints:'+ it,
-			 expected: -1,
+			[action    : 'transitionIssue',
+			 expected  : -1,
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_02_Case_01 -$it _when epic having issueBelongsToEpic not respecting condition:",
 			 parameters: [
-					 issue     : { ->jqlIssue[] },
-					 transition: it,
+					 issue     : {->epic[]},
+					 transition: it
 			 ]
 			],
-			[action: 'updateIssue', ext: ': change priority to check issues-forbid:' + it,
-			 parameters:[
-					 issue: { ->jqlIssue[] },
-					 priority: 'Low',
-			 ]
-			],
-			[action    : 'transitionIssue', ext: ': when jql search issues not respecting constraints_forbid:'+ it,
-			 expected: 0,
+			[action: 'updateIssue', ext: ":  change issue priority to high satisfy the criteria to check: $it",
 			 parameters: [
-					 issue     : { ->jqlIssue[] },
-					 transition: it,
+					 issue: {->epic[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 expected  : 0,
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_02_Case_02 -$it _when epic having issueBelongsToEpic respecting condition:",
+			 parameters: [
+					 issue     : {->epic[]},
+					 transition: it ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to low satisfy the criteria after checking: $it",
+			 parameters: [
+					 issue: {->epic[]},
+					 priority: "Low",
 			 ]
 			],
 	])
+}
 
+// RELATED_ISSUES_CONDITION_TS_51_TC_03-verify Check related issues and verify with different - Target issues
+[
+		'verify_check_related_issues_childPortfolio',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_03_Case_01 -$it _when parent issue not having issues child issues in portfolio hierarchy respecting given condition:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->initiative[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 parameters: [
+					 issue: {->initiative[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_03_Case_02 -$it _when parent issue having issues child issues in portfolio hierarchy respecting given condition:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->initiative[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to low satisfy the criteria after checking: $it",
+			 parameters: [
+					 issue: {->initiative[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_51_TC_04-verify Check related issues and verify with different - Target issues
+[
+		'verify_check_related_issues_linkByAnyLink',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_04_Case_01 -$it _current issue not having issue linked to it through any link type which respect given condition:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->blocks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_04_Case_02 -$it _current issue having issue linked to it through any link type which respect given condition:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to low satisfy the criteria after checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_51_TC_05-verify Check related issues and verify with different - Target issues
+[
+		'verify_check_related_issues_linkByBlock',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_51_TC_06-verify Check related issues and verify with different - Target issues
+[
+		'verify_check_related_issues_linkByisBlockedBy',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_06_Case_01 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->blocks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 parameters: [
+					 issue: {->blocks[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_06_Case_02 -$it _when current issue not having issues linked to it through the is blocked by link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->blocks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->blocks[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_51_TC_07-verify Check related issues and verify with different - Target issues
+[
+		'verify_check_related_issues_linkByClones',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_51_TC_08-verify Check related issues and verify with different - Target issues
+[
+		'verify_check_related_issues_linkByIsClonedBy',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_08_Case_01 -$it _when current issue have issue linked to it through the is cloned by link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->clones[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			 parameters: [
+					 issue: {->clones[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_08_Case_02 -$it _when current issue not having issues linked to it through the is cloned by link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->clones[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->clones[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_51_TC_09-verify Check related issues and verify with different - Target issues
+[
+		'verify_check_related_issues_linkByDuplicates',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_09_Case_01 -$it _when current issue have issue linked to it through the duplicates link type_not respecting condition:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_09_Case_02 -$it _when current issue not having issues linked to it through the duplicates link type_respecting condition:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_51_TC_10-verify Check related issues and verify with different - Target issues
+[
+		'verify_check_related_issues_linkByIsDuplicatedBy',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_10_Case_01 -$it _when current issue have issue linked to it through the is duplicated by link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->duplicates[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			 parameters: [
+					 issue: {->duplicates[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_10_Case_02 -$it _when current issue not having issues linked to it through the is duplicated by link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->duplicates[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->duplicates[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_51_TC_11-verify Check related issues and verify with different - Target issues
+[
+		'verify_check_related_issues_linkByRelatesTo',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_11_Case_01 -$it _when current issue have issue linked to it through the relates to link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_11_Case_02 -$it _when current issue not having issues linked to it through the relates to link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_51_TC_12-verify check certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
+[
+		'verify_check_related_issues_returnsByGroovyExpression',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_12_Case_01 -$it _when the following Groovy expression:$returnsLinkedIssues return at least 1 issue:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_12_Case_02 -$it _The following Groovy expression:$returnsLinkedIssues not returns issues:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_51_TC_13-verify check certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
+[
+		'verify_check_related_issues_returnsFromJqlSearch',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_13_case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			 parameters: [
+					 issue: {->defaultIssue[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_13_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->defaultIssue[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+
+
+/* -----------------------------------------------------------------------------------------------------------------------------------
+   -----------------------------------------------------------------------------------------------------------------------------------
+                                     RELATED_ISSUES_CONDITION => FORBID CERTAIN RELATED ISSUES
+   -----------------------------------------------------------------------------------------------------------------------------------
+   ----------------------------------------------------------------------------------------------------------------------------------- */
+
+// RELATED_ISSUES_CONDITION_TS_55-verify Forbid certain related issues and verify with different - Target issues
+[
+		'forbid_certain_related_issues_subtask',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_01_Case_01 -$it _when issue having subtask not respecting given condition :",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->parent[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ":  change issue priority to high satisfy the criteria to check: $it",
+			 parameters: [
+					 issue: {->parent[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_01_Case_02 -$it _when issue having subtask respecting given condition:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->parent[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to low satisfy the criteria after checking: $it",
+			 parameters: [
+					 issue: {->parent[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_55_TC_02-verify Forbid certain related issues and verify with different - Target issues
+[
+		'forbid_certain_related_issues_issueBelongsToEpic',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 expected  : 0,
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_02_Case_01 -$it _when epic having issueBelongsToEpic not respecting condition:",
+			 parameters: [
+					 issue     : {->epic[]},
+					 transition: it
+			 ]
+			],
+			[action: 'updateIssue', ext: ":  change issue priority to high satisfy the criteria to check: $it",
+			 parameters: [
+					 issue: {->epic[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 expected  : -1,
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_02_Case_02 -$it _when epic having issueBelongsToEpic respecting condition:",
+			 parameters: [
+					 issue     : {->epic[]},
+					 transition: it ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to low satisfy the criteria after checking: $it",
+			 parameters: [
+					 issue: {->epic[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_55_TC_03-verify Forbid certain related issues and verify with different - Target issues
+[
+		'forbid_certain_related_issues_childPortfolio',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_03_Case_01 -$it _when parent issue not having issues child issues in portfolio hierarchy respecting given condition:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->initiative[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 parameters: [
+					 issue: {->initiative[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_03_Case_02 -$it _when parent issue having issues child issues in portfolio hierarchy respecting given condition:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->initiative[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to low satisfy the criteria after checking: $it",
+			 parameters: [
+					 issue: {->initiative[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_55_TC_04-verify Forbid certain related issues and verify with different - Target issues
+[
+		'forbid_certain_related_issues_linkByAnyLink',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_04_Case_01 -$it _current issue not having issue linked to it through any link type which respect given condition:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->blocks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_04_Case_02 -$it _current issue having issue linked to it through any link type which respect given condition:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to low satisfy the criteria after checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_55_TC_05-verify Forbid certain related issues and verify with different - Target issues
+[
+		'forbid_certain_related_issues_linkByBlock',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_55_TC_06-verify Forbid certain related issues and verify with different - Target issues
+[
+		'forbid_certain_related_issues_linkByisBlockedBy',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_06_Case_01 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->blocks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 parameters: [
+					 issue: {->blocks[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_06_Case_02 -$it _when current issue not having issues linked to it through the is blocked by link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->blocks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->blocks[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_55_TC_07-verify Forbid certain related issues and verify with different - Target issues
+[
+		'forbid_certain_related_issues_linkByClones',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_55_TC_08-verify Forbid certain related issues and verify with different - Target issues
+[
+		'forbid_certain_related_issues_linkByIsClonedBy',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_08_Case_01 -$it _when current issue have issue linked to it through the is cloned by link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->clones[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			 parameters: [
+					 issue: {->clones[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_08_Case_02 -$it _when current issue not having issues linked to it through the is cloned by link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->clones[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->clones[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_55_TC_09-verify Forbid certain related issues and verify with different - Target issues
+[
+		'forbid_certain_related_issues_linkByDuplicates',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_09_Case_01 -$it _when current issue have issue linked to it through the duplicates link type_not respecting condition:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_09_Case_02 -$it _when current issue not having issues linked to it through the duplicates link type_respecting condition:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_55_TC_10-verify Forbid certain related issues and verify with different - Target issues
+[
+		'forbid_certain_related_issues_linkByIsDuplicatedBy',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_10_Case_01 -$it _when current issue have issue linked to it through the is duplicated by link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->duplicates[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			 parameters: [
+					 issue: {->duplicates[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_10_Case_02 -$it _when current issue not having issues linked to it through the is duplicated by link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->duplicates[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->duplicates[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_55_TC_11-verify Forbid certain related issues and verify with different - Target issues
+[
+		'forbid_certain_related_issues_linkByRelatesTo',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_11_Case_01 -$it _when current issue have issue linked to it through the relates to link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_11_Case_02 -$it _when current issue not having issues linked to it through the relates to link type:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_55_TC_12-verify Forbid certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
+[
+		'forbid_certain_related_issues_returnsByGroovyExpression',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_12_Case_01 -$it _when the following Groovy expression:$returnsLinkedIssues return at least 1 issue:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_12_Case_02 -$it _The following Groovy expression:$returnsLinkedIssues not returns issues:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "Low",
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TS_55_TC_13-verify forbid certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
+[
+		'forbid_certain_related_issues_returnsFromJqlSearch',
+].collect {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_13_case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			 parameters: [
+					 issue: {->defaultIssue[]},
+					 priority: "High",
+			 ]
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_55_TC_13_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			 parameters: [
+					 issue: {->defaultIssue[]},
+					 priority: "Low",
+			 ]
+			],
+	])
 }
 
 
@@ -414,5 +1602,4 @@ relatedIssue.remove("returnsFromJqlSearch")
   parent issue has 3 subtasks and out of 3 ,2 subtasks must be of 'High' priority = "Done"
 8.The current issue must have at least 2 and at most 2 sub-tasks and they must all respect the following condition:issue.get("creator")?.name == "automation"
   create issue with defferent users as creator's and validate issues having given creator - IMPORTANT
-9.
  */

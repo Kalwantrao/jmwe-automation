@@ -2,7 +2,7 @@ apply from: gint.resourceDirectory +'/src/common/tearDown.gradle'
 
 
 ext.addWorkflow = {
-    if(skipSetup != "yes"){
+    if(skipSetup != "true"){
         gint.taskHelper.addSetUp([
                 [
                         action       : 'copyWorkflow' ,
@@ -14,7 +14,7 @@ ext.addWorkflow = {
 }
 
 ext.addTransitionFunction = { transitions, type, field, functionKey -> // key, type, condition, functionKey, description
-    if(skipSetup != "yes"){
+    if(skipSetup != "true"){
         gint.taskHelper.addSetUp([
                 [action    : 'addTransition', ext: ':' + transitions,
                  retry: true,
@@ -55,7 +55,7 @@ ext.addTransitionFunction = { transitions, type, field, functionKey -> // key, t
 }
 
 ext.moveTransitionFunction = { transition, after ->
-    if(skipSetup != "yes"){
+    if(skipSetup != "true"){
         gint.taskHelper.addSetUp(
                 action: 'moveTransitionFunction',
                 retry: true,
@@ -73,7 +73,7 @@ ext.moveTransitionFunction = { transition, after ->
     }
 }
 ext.createWorkflowScheme = {
-    if(skipSetup != "yes"){
+    if(skipSetup != "true"){
         gint.taskHelper.addSetUp([
                 action: 'createWorkflowScheme',
                 retrySleep: 5000,
@@ -96,7 +96,7 @@ ext.createWorkflowScheme = {
     }
 }
 ext.associateWorkflow = { workflowName ->
-    if(skipSetup == "yes") {
+    if(skipSetup == "true") {
         gint.taskHelper.addSetUp([
                 [
                         action    : 'associateWorkflow',
