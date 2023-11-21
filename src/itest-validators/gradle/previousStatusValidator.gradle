@@ -325,7 +325,7 @@ def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultI
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_24_TC_01-Verify for the Conditional validation
-['verify_previous_status_of_the_issue_if_condition_true_must_be_be_inProgress'].each {
+['verify_previous_status_of_the_issue_if_condition_true_must_be_inProgress'].each {
 	gint.taskHelper.add([
 			[action: 'updateIssue',
 			 ext: ":change priority of issue to low to check _$it :",
