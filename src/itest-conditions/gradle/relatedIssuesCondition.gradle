@@ -57,7 +57,6 @@ relatedIssue.eachWithIndex { key, value, i ->
 }
 
 ['verify_condition_on_related_issues_checkAssignee'].each {
-	def cloud = defaultFieldsCloud +
 	def server = defaultFieldsServer + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireSpecificLinkedIssues + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
 	addTransitionFunction(it , 'condition', server, functionKey)
 }
@@ -127,7 +126,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
 	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TC_14_Case_01 -$it _when issue having one subtask:",
-			 expected  : 0,
+			 expected  : -1,
 			 parameters: [
 					 issue     : {->parent[]},
 					 transition: it ,
