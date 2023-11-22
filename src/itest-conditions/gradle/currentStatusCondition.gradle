@@ -17,6 +17,10 @@ addWorkflow()
 
 def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CurrentStatusCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:currentstatus-condition'
 
+def defaultFieldsCloud= [
+		"condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9",
+]
+
 def currentStatusServer = [
 		SELECT_CURRENT_STATUS_TODO : [ defaultFieldsServer + "issue_statuses=$statusIds.toDo", "not="],
 		SELECT_CURRENT_STATUS_TODO_AND_REVERSE : [ defaultFieldsServer +  "issue_statuses=$statusIds.toDo", "not=yes" ],

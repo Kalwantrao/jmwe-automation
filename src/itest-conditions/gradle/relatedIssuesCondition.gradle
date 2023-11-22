@@ -23,6 +23,10 @@ fieldsToRemove.each { key ->
 	relatedIssue.remove(key)
 }
 
+def defaultFieldsCloud= [
+		"condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9",
+]
+
 def linkedIssuesMode = [
 		requireLinks : [ "conditionMode=requireLinks" ],
 		requireSpecificLinkedIssues : [ "conditionMode=requireLinks", /groovyExpression=issue.get('assignee')?.name == "$testUser"/ ],
@@ -32,6 +36,7 @@ def linkedIssuesMode = [
 
 relatedIssue.eachWithIndex { key, value, i ->
 	def transition = 'verify_require_certain_related_issues_' + key
+	def cloud = "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9="
 	def server = defaultFieldsServer + "selectedLinkType=$value" + linkedIssuesMode.requireLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
 	addTransitionFunction(transition, 'condition', server, functionKey)
 }
@@ -52,6 +57,7 @@ relatedIssue.eachWithIndex { key, value, i ->
 }
 
 ['verify_condition_on_related_issues_checkAssignee'].each {
+	def cloud = defaultFieldsCloud +
 	def server = defaultFieldsServer + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireSpecificLinkedIssues + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
 	addTransitionFunction(it , 'condition', server, functionKey)
 }

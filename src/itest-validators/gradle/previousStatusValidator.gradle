@@ -18,7 +18,6 @@ addWorkflow()
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:previousstatus-validator'
 
 def errorMessage = "transition does not perform on issue screen"
-
 def defaultFields = [
 		"correlationId=",
 		"errorMessage=$errorMessage"
@@ -26,7 +25,7 @@ def defaultFields = [
 
 statusList.eachWithIndex { status, value, i ->
 	def transition = "verify_previous_status_of_the_issue_must_be_" + status
-	def fields = defaultFields + "status=$value" + "conditionalValidation=no"
+	def fields = defaultFields + "status=$value" + conditionalValidation.no
 	addTransitionFunction(transition, 'validator', fields, functionKey)
 }
 
@@ -41,6 +40,7 @@ statusList.eachWithIndex { status, value, i ->
 	def fields = defaultFields + "status=$value" + conditionalValidation.yes
 	addTransitionFunction(transition, 'validator', fields, functionKey)
 }
+
 
 createWorkflowScheme()
 createProject()
