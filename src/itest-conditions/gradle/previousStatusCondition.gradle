@@ -36,7 +36,7 @@ previousStatusServer.eachWithIndex { transitions, fields, i->
     def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:previousstatus-condition'
     if(!isCloud) {
         addTransitionFunction(transitions, 'condition', fields, functionKey)
-}
+    }
 }
 
 

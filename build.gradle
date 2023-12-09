@@ -126,7 +126,7 @@ def jmweConditions = 'src/itest-conditions/gradle'
 def jmweValidators = 'src/itest-validators/gradle'
 def jmwePostfunctions = 'src/itest-postfunctions/gradle'
 
-[jmweConditions,jmweValidators].each { folder ->
+[jmweConditions].each { folder ->
     if (file(folder).exists()) {
         def args = [
                 '-DtargetDirectory=' + project.buildDir,

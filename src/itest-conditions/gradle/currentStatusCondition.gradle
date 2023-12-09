@@ -25,9 +25,10 @@ def currentStatusServer = [
 		SELECT_CURRENT_STATUS_TODO : [ defaultFieldsServer + "issue_statuses=$statusIds.toDo", "not="],
 		SELECT_CURRENT_STATUS_TODO_AND_REVERSE : [ defaultFieldsServer +  "issue_statuses=$statusIds.toDo", "not=yes" ],
 ]
+
 def currentStatusCloud = [
-		SELECT_CURRENT_STATUS_TODO :  [ defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[10003],\"options\":{\"not\":false},\"expression\":\"config.statusIds.includes(issue.status.id)\"}" ],
-		SELECT_CURRENT_STATUS_TODO_AND_REVERSE : [	defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[10003],\"options\":{\"not\":true},\"expression\":\"!config.statusIds.includes(issue.status.id)\"}" ]
+		SELECT_CURRENT_STATUS_TODO :  [ defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[$statusIds.toDo],\"options\":{\"not\":false},\"expression\":\"config.statusIds.includes(issue.status.id)\"}" ],
+		SELECT_CURRENT_STATUS_TODO_AND_REVERSE : [	defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[$statusIds.toDo],\"options\":{\"not\":true},\"expression\":\"!config.statusIds.includes(issue.status.id)\"}" ]
 ]
 
 def currentStatusCondition = info?.isCloud ? currentStatusCloud : currentStatusServer

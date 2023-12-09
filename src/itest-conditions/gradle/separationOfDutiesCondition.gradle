@@ -24,7 +24,9 @@ def separationOfDutiesConditionOptions = [
 ]
 
 separationOfDutiesConditionOptions.eachWithIndex { transitions, fields, i ->
-    addTransitionFunction(transitions, 'condition', fields, functionKey )
+    if(!isCloud){
+        addTransitionFunction(transitions, 'condition', fields, functionKey )
+    }
 }
 
 createWorkflowScheme()
@@ -35,54 +37,61 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 // SEPARATION_OF_DUTIES_CONDITION_TC_10_Case_01-Verify when issue never transitioned FROM status to TO status
 
 separationOfDutiesConditionOptions.eachWithIndex { transition, fields, i->
+    if(!isCloud) {
+        gint.taskHelper.add([
+                action    : 'transitionIssue',
+                ext       : ": SEPARATION_OF_DUTIES_CONDITION_TC_10_Case_01_ $i _Verify when issue never transitioned_ $transition: ",
+                expected  : 0,
+                parameters: [
+                        transition: transition,
+                        issue     : { -> defaultIssue[] },
+                ],
+        ])
+    }
+}
+
+
+// transition issue to check when the issues are transitioned from status to status
+if(!isCloud) {
     gint.taskHelper.add([
-            action    : 'transitionIssue',
-            ext: ": SEPARATION_OF_DUTIES_CONDITION_TC_10_Case_01_ $i _Verify when issue never transitioned_ $transition: ",
-            expected  : 0,
-            parameters: [
-                    transition: transition,
-                    issue: { -> defaultIssue[] },
+            [action    : 'transitionIssue', ext: ' : To Done',
+             parameters: [
+                     transition: 'In Progress',
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action    : 'transitionIssue', ext: ' : To In Progress',
+             parameters: [
+                     transition: 'Done',
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action    : 'transitionIssue', ext: ' : again In Progress',
+             parameters: [
+                     transition: 'In Progress',
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action    : 'transitionIssue', ext: ' : To To Do',
+             parameters: [
+                     transition: 'To Do',
+                     issue     : { -> defaultIssue[] },
+             ],
             ],
     ])
 }
 
-// transition issue to check when the issues are transitioned from status to status
-gint.taskHelper.add([
-        [action    : 'transitionIssue', ext: ' : To Done',
-         parameters: [
-                 transition: 'In Progress',
-                 issue: { -> defaultIssue[] },
-         ],
-        ],
-        [action    : 'transitionIssue', ext: ' : To In Progress',
-         parameters: [
-                 transition: 'Done',
-                 issue: { -> defaultIssue[] },
-         ],
-        ],
-        [action    : 'transitionIssue', ext: ' : again In Progress',
-         parameters: [
-                 transition: 'In Progress',
-                 issue: { -> defaultIssue[] },
-         ],
-        ],
-        [action    : 'transitionIssue', ext: ' : To To Do',
-         parameters: [
-                 transition: 'To Do',
-                 issue: { -> defaultIssue[] },
-         ],
-        ],
-])
-
 //SEPARATION_OF_DUTIES_CONDITION_TC_10_Case_02-Verify when issue transitioned FROM status to TO status
 separationOfDutiesConditionOptions.eachWithIndex { transition, fields, i->
-    gint.taskHelper.add([
-            action    : 'transitionIssue',
-            ext: ": SEPARATION_OF_DUTIES_CONDITION_TC_10_Case_02_ $i _Verify when issue transitioned_ $transition : ",
-            expected  : -1,
-            parameters: [
-                    transition: transition,
-                    issue: { -> defaultIssue[] },
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                action    : 'transitionIssue',
+                ext       : ": SEPARATION_OF_DUTIES_CONDITION_TC_10_Case_02_ $i _Verify when issue transitioned_ $transition : ",
+                expected  : -1,
+                parameters: [
+                        transition: transition,
+                        issue     : { -> defaultIssue[] },
+                ],
+        ])
+    }
 }

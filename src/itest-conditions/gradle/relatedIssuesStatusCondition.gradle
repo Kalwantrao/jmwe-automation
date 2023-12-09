@@ -17,43 +17,56 @@ addWorkflow()
 
 def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssueStatusCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-condition'
 
-def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
-relatedIssue.remove("currentIssue")
+def allRelatedIssuesStatus = info?.isCloud ? allRelatedIssuesStatusCondition : relatedIssueServer
+def atLeastOneRelatedIssuesStatus = info?.isCloud ? atLeastOneRelatedIssuesStatusCondition : relatedIssueServer
+def noRelatedIssuesStatus = info?.isCloud ? noRelatedIssuesStatusCondition : relatedIssueServer
+def atLeastOneNotRelatedIssuesStatus = info?.isCloud ? atLeastOneNotRelatedIssuesStatusCondition : relatedIssueServer
+
+allRelatedIssuesStatus.remove("currentIssue")
+atLeastOneRelatedIssuesStatus.remove("currentIssue")
+noRelatedIssuesStatus.remove("currentIssue")
+atLeastOneNotRelatedIssuesStatus.remove("currentIssue")
 
 def defaultFieldsCloud = ["condition.id=7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f"]
 
-relatedIssue.eachWithIndex { linkedIssue, fieldValues, i ->
+allRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     def transition = "verify_status_in_progress_of_all_issues_which_are_" + linkedIssue
+    def cloud = defaultFieldsCloud + "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=$fieldValues"
     def server = defaultFieldsServer + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.all + statuses.inProgress
-    addTransitionFunction(transition, 'condition', server, functionKey)
+    addTransitionFunction(transition, 'condition', info?.isCloud? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { linkedIssue, fieldValues, i ->
+atLeastOneRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     def transition = 'verify_status_in_progress_of_at_least_one_issues_which_is_' + linkedIssue
+    def cloud = defaultFieldsCloud + "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=$fieldValues"
     def server = defaultFieldsServer + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.one + statuses.inProgress
-    addTransitionFunction( transition, 'condition', server, functionKey)
+    addTransitionFunction( transition, 'condition', info?.isCloud? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { linkedIssue, fieldValues, i ->
+noRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     def transition = 'verify_status_in_progress_none_of_the_issues_which_are_' + linkedIssue
+    def cloud = defaultFieldsCloud + "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=$fieldValues"
     def server = defaultFieldsServer + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.none + statuses.inProgress
-    addTransitionFunction(transition, 'condition', server, functionKey)
+    addTransitionFunction(transition, 'condition', info?.isCloud? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { linkedIssue, fieldValues, i ->
+atLeastOneNotRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     def transition = 'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_' + linkedIssue
+    def cloud = defaultFieldsCloud + "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=$fieldValues"
     def server = defaultFieldsServer + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.oneNot + statuses.inProgress
-    addTransitionFunction(transition, 'condition', server, functionKey)
+    addTransitionFunction(transition, 'condition', info?.isCloud? cloud : server, functionKey)
 }
 
 ['verify_the_issue_type_dropdwn_Task'].each {
+    def cloud = defaultFieldsCloud + "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f={\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"$TaskIssueTypeCloud\",\"validatorMode\":\"allInStatus\",\"statusIds\":[3],\"expression\":\"!issue.parent || [issue.parent].every(linkedIssue => linkedIssue.issueType.id != $TaskIssueTypeCloud || config.statusIds.includes(linkedIssue.status.id))\"}"
     def server = defaultFieldsServer + issueType.task + "selectedLinkType=$relatedIssue.parentIssue" + linkedIssuesStatusMode.all + statuses.inProgress
-    addTransitionFunction(it, 'condition', server, functionKey)
+    addTransitionFunction(it, 'condition', info?.isCloud? cloud : server, functionKey)
 }
 
 ['verify_the_issue_type_dropdwn_Story'].each {
+    def cloud = defaultFieldsCloud + "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f={\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"$StoryIssueTypeCloud\",\"validatorMode\":\"allInStatus\",\"statusIds\":[3],\"expression\":\"!issue.parent || [issue.parent].every(linkedIssue => linkedIssue.issueType.id != $StoryIssueTypeCloud || config.statusIds.includes(linkedIssue.status.id))\"}"
     def server = defaultFieldsServer + issueType.story + "selectedLinkType=$relatedIssue.parentIssue" + linkedIssuesStatusMode.all + statuses.inProgress
-    addTransitionFunction(it, 'condition', server, functionKey)
+    addTransitionFunction(it, 'condition', info?.isCloud? cloud : server, functionKey)
 }
 
 createWorkflowScheme()
@@ -74,12 +87,22 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 
 updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
 
-def linkIssuesMap = [
+def linkIssuesMapServer = [
+        blocks : {->blocks[]},
+        "$clonesLinkType" : {->clones[]},
+        duplicates : {->duplicates[]},
+        'relates to': {->relatesTo[]}
+]
+
+def linkIssuesMapCloud = [
         blocks : {->blocks[]},
         clones : {->clones[]},
         duplicates : {->duplicates[]},
         'relates to': {->relatesTo[]}
 ]
+
+def linkIssuesMap = info?.isCloud ? linkIssuesMapCloud : linkIssuesMapServer
+
 linkIssuesMap.eachWithIndex { key, value, i ->
     linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
 }
@@ -93,6 +116,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
                 [action    : 'transitionIssue',
                  ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_10_Case_01- $it _when Sub_task of the current issue not in selected status:",
                  expected: -1,
+                 sleep: 5000,
                  parameters: [
                          issue     : { ->parent[] },
                          transition: it,
@@ -101,6 +125,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
                 [action    : 'transitionIssue',
                  ext: ": transition issue to IN_PROGRESS to verify_ $it _when Sub_task of the current issue in selected status:",
                  expected: 0,
+                 sleep: 5000,
                  parameters: [
                          issue     : { ->subtask[] },
                          transition: "In Progress",
@@ -109,6 +134,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
                 [action    : 'transitionIssue',
                  ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_10_Case_02- $it _when Sub_task of the current issue not in selected status:",
                  expected: 0,
+                 sleep: 5000,
                  parameters: [
                          issue     : { ->parent[] },
                          transition: it,
@@ -117,6 +143,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
                 [action    : 'transitionIssue',
                  ext: ": transition issue to TO_DO after verifying_ $it _when Sub_task of the current issue in selected status:",
                  expected: 0,
+                 sleep: 5000,
                  parameters: [
                          issue     : { ->subtask[] },
                          transition: "To Do",
@@ -133,6 +160,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_11_Case_01- $it _when parent issue of the current subtask not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->subtask[] },
                      transition: it,
@@ -141,6 +169,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when parent issue of the current subtask in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->parent[] },
                      transition: "In Progress",
@@ -149,6 +178,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_11_Case_02- $it _when parent issue of the current subtask in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->subtask[] },
                      transition: it,
@@ -157,6 +187,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when parent issue of the current subtask in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->parent[] },
                      transition: "To Do",
@@ -172,6 +203,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_13_Case_01- $it _when Issues that belong to the current Epic _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->epic[] },
                      transition: it,
@@ -180,6 +212,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issues that belong to the current Epic _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueBelongsToEpic[] },
                      transition: "In Progress",
@@ -188,6 +221,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_13_Case_02- $it _when Issues that belong to the current Epic _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->epic[] },
                      transition: it,
@@ -196,6 +230,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issues that belong to the current Epic _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueBelongsToEpic[] },
                      transition: "To Do",
@@ -212,6 +247,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_15_Case_01- $it _when Epic of the current issue _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueBelongsToEpic[] },
                      transition: it,
@@ -220,6 +256,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Epic of the current issue _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->epic[] },
                      transition: "In Progress",
@@ -228,6 +265,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_15_Case_02- $it _when Epic of the current issue _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueBelongsToEpic[] },
                      transition: it,
@@ -236,6 +274,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Epic of the current issue _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->epic[] },
                      transition: "To Do",
@@ -252,6 +291,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_16_Case_01- $it _when Issue link to the current issue throgh any link type _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: it,
@@ -260,6 +300,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue throgh any link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: "In Progress",
@@ -268,6 +309,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_16_Case_02- $it _when Issue link to the current issue throgh any link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: it,
@@ -276,6 +318,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue throgh any link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: "To Do",
@@ -292,6 +335,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_01_Case_01- $it _when Issue link to the current issue throgh any link type _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -300,6 +344,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through blocks link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: "In Progress",
@@ -308,6 +353,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_01_Case_02- $it _when Issue link to the current issue through blocks link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -316,6 +362,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through blocks link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: "To Do",
@@ -332,6 +379,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_02_Case_01- $it _when Issue link to the current issue throgh is blocked by link type _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: it,
@@ -340,6 +388,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is blocked by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: "In Progress",
@@ -348,6 +397,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_02_Case_02- $it _when Issue link to the current issue through is blocked by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: it,
@@ -356,6 +406,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is blocked by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: "To Do",
@@ -372,6 +423,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_03_Case_01- $it _when Issue link to the current issue throgh clones link type _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -380,6 +432,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through clones link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->clones[] },
                      transition: "In Progress",
@@ -388,6 +441,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_03_Case_02- $it _when Issue link to the current issue through clones link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -396,6 +450,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through clones link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->clones[] },
                      transition: "To Do",
@@ -412,6 +467,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_04_Case_01- $it _when Issue link to the current issue throgh is cloned by link type _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->clones[] },
                      transition: it,
@@ -420,6 +476,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is cloned by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: "In Progress",
@@ -428,6 +485,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_04_Case_02- $it _when Issue link to the current issue through is cloned by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->clones[] },
                      transition: it,
@@ -436,6 +494,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is cloned by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: "To Do",
@@ -452,6 +511,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_05_Case_01- $it _when Issue link to the current issue throgh duplicates link type _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -460,6 +520,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through duplicates link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->duplicates[] },
                      transition: "In Progress",
@@ -468,6 +529,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_05_Case_02- $it _when Issue link to the current issue through duplicates link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -476,6 +538,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through duplicates link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->duplicates[] },
                      transition: "To Do",
@@ -492,6 +555,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_06_Case_01- $it _when Issue link to the current issue through is duplicated by link type _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->duplicates[] },
                      transition: it,
@@ -500,6 +564,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: "In Progress",
@@ -508,6 +573,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_06_Case_02- $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->duplicates[] },
                      transition: it,
@@ -516,6 +582,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: "To Do",
@@ -532,6 +599,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_07_Case_01- $it _when Issue link to the current issue through is relates to link type _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -540,6 +608,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through relates to link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->relatesTo[] },
                      transition: "In Progress",
@@ -548,6 +617,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_18_TC_07_Case_02- $it _when Issue link to the current issue through relates to link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -556,6 +626,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through relates to link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->relatesTo[] },
                      transition: "To Do",
@@ -568,160 +639,185 @@ linkIssuesMap.eachWithIndex { key, value, i ->
 [
         'verify_status_in_progress_of_all_issues_which_are_childPortfolio'
 ].collect {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_19_Case_01- $it _when Child issues of the current issue in the Portfolio hierarchy _not in selected status:",
-             expected: -1,
-             parameters: [
-                     issue     : { ->initiative[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to IN_PROGRESS before_ $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->epic_initiative[] },
-                     transition: "In Progress",
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_19_Case_02- $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->initiative[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to TO_DO after_ $it _when Child issues of the current issue in the Portfolio hierarchy_in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->epic_initiative[] },
-                     transition: "To Do",
-             ]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TC_19_Case_01- $it _when Child issues of the current issue in the Portfolio hierarchy _not in selected status:",
+                 expected  : -1,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> initiative[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to IN_PROGRESS before_ $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> epic_initiative[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TC_19_Case_02- $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> initiative[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to TO_DO after_ $it _when Child issues of the current issue in the Portfolio hierarchy_in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> epic_initiative[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
 }
 
 // RELATED_ISSUES_STATUS_CONDITION_TC_20-Verify Parent issues of the current issue in the Portfolio hierarchy
 [
         'verify_status_in_progress_of_all_issues_which_are_parentPortfolio'
 ].collect {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_20_Case_01- $it _when Parent issues of the current issue in the Portfolio hierarchy _not in selected status:",
-             expected: -1,
-             parameters: [
-                     issue     : { ->epic_initiative[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to IN_PROGRESS before_ $it _when Parent issues of the current issue in the Portfolio hierarchy _in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->initiative[] },
-                     transition: "In Progress",
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_20_Case_02- $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->epic_initiative[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to TO_DO after_ $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->initiative[] },
-                     transition: "To Do",
-             ]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TC_20_Case_01- $it _when Parent issues of the current issue in the Portfolio hierarchy _not in selected status:",
+                 expected  : -1,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> epic_initiative[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to IN_PROGRESS before_ $it _when Parent issues of the current issue in the Portfolio hierarchy _in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> initiative[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TC_20_Case_02- $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> epic_initiative[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to TO_DO after_ $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> initiative[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
 }
 
 // RELATED_ISSUES_STATUS_CONDITION_TC_23-Verify Issues returned by a Groovy script
 [
         'verify_status_in_progress_of_all_issues_which_are_returnsByGroovyExpression'
 ].collect {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_23_Case_01- $it _when Issues returned by a Groovy script _not in selected status:",
-             expected: -1,
-             parameters: [
-                     issue     : { ->relatesTo[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a Groovy script _in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->issueLinks[] },
-                     transition: "In Progress",
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_23_Case_02- $it _when Issues returned by a Groovy script_in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->relatesTo[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to TO_DO after_ $it _when Issues returned by a Groovy script_in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->issueLinks[] },
-                     transition: "To Do",
-             ]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TC_23_Case_01- $it _when Issues returned by a Groovy script _not in selected status:",
+                 expected  : -1,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> relatesTo[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a Groovy script _in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TC_23_Case_02- $it _when Issues returned by a Groovy script_in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> relatesTo[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to TO_DO after_ $it _when Issues returned by a Groovy script_in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
 }
+
 
 // RELATED_ISSUES_STATUS_CONDITION_TC_25-Verify Issues returned by a JQL search
 [
         'verify_status_in_progress_of_all_issues_which_are_returnsFromJqlSearch'
 ].collect {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_23_Case_01- $it _when Issues returned by a JQL search _not in selected status:",
-             expected: -1,
-             parameters: [
-                     issue     : { ->issueLinks[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a JQL search _in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->jqlIssue[] },
-                     transition: "In Progress",
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_23_Case_02- $it _when Issues returned by a JQL search_in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->issueLinks[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to TO_DO after_ $it _when Issues returned by a JQL search_in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->jqlIssue[] },
-                     transition: "To Do",
-             ]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TC_23_Case_01- $it _when Issues returned by a JQL search _not in selected status:",
+                 expected  : -1,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a JQL search _in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> jqlIssue[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TC_23_Case_02- $it _when Issues returned by a JQL search_in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to TO_DO after_ $it _when Issues returned by a JQL search_in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> jqlIssue[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
 }
 
 // RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_01-Verify Sub_task of the current issue
@@ -732,6 +828,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_01_Case_01- $it _when Sub_task of the current issue not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->parent[] },
                      transition: it,
@@ -740,6 +837,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS to verify_ $it _when Sub_task of the current issue in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->subtask[] },
                      transition: "In Progress",
@@ -748,6 +846,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_01_Case_02- $it _when Sub_task of the current issue not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->parent[] },
                      transition: it,
@@ -756,6 +855,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after verifying_ $it _when Sub_task of the current issue in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->subtask[] },
                      transition: "To Do",
@@ -773,6 +873,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_02_Case_01- $it _when parent issue of the current subtask not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->subtask[] },
                      transition: it,
@@ -781,6 +882,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when parent issue of the current subtask in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->parent[] },
                      transition: "In Progress",
@@ -789,6 +891,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_02_Case_02- $it _when parent issue of the current subtask in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->subtask[] },
                      transition: it,
@@ -797,6 +900,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when parent issue of the current subtask in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->parent[] },
                      transition: "To Do",
@@ -812,6 +916,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_03_Case_01- $it _when Issues that belong to the current Epic _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->epic[] },
                      transition: it,
@@ -820,6 +925,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issues that belong to the current Epic _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueBelongsToEpic[] },
                      transition: "In Progress",
@@ -828,6 +934,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_03_Case_02- $it _when Issues that belong to the current Epic _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->epic[] },
                      transition: it,
@@ -836,6 +943,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issues that belong to the current Epic _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueBelongsToEpic[] },
                      transition: "To Do",
@@ -853,6 +961,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_04_Case_01- $it _when Epic of the current issue _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueBelongsToEpic[] },
                      transition: it,
@@ -861,6 +970,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Epic of the current issue _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->epic[] },
                      transition: "In Progress",
@@ -869,6 +979,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_04_Case_02- $it _when Epic of the current issue _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueBelongsToEpic[] },
                      transition: it,
@@ -877,6 +988,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Epic of the current issue _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->epic[] },
                      transition: "To Do",
@@ -893,6 +1005,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_04_Case_01- $it _when Issue link to the current issue throgh any link type _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: it,
@@ -901,6 +1014,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue throgh any link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: "In Progress",
@@ -909,6 +1023,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_05_Case_02- $it _when Issue link to the current issue throgh any link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: it,
@@ -917,6 +1032,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue throgh any link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: "To Do",
@@ -933,6 +1049,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06A_TC_01_Case_01- $it _when Issue link to the current issue throgh any link type _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -941,6 +1058,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through blocks link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: "In Progress",
@@ -949,6 +1067,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06A_TC_01_Case_02- $it _when Issue link to the current issue through blocks link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -957,6 +1076,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through blocks link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: "To Do",
@@ -973,6 +1093,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06B_Case_01- $it _when Issue link to the current issue throgh is blocked by link type _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: it,
@@ -981,6 +1102,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is blocked by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: "In Progress",
@@ -989,6 +1111,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06B_Case_02- $it _when Issue link to the current issue through is blocked by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: it,
@@ -997,6 +1120,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is blocked by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: "To Do",
@@ -1013,6 +1137,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06C_Case_01- $it _when Issue link to the current issue throgh clones link type _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -1021,6 +1146,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through clones link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->clones[] },
                      transition: "In Progress",
@@ -1029,6 +1155,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06C_Case_02- $it _when Issue link to the current issue through clones link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -1037,6 +1164,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through clones link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->clones[] },
                      transition: "To Do",
@@ -1053,6 +1181,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06D_Case_01- $it _when Issue link to the current issue throgh is cloned by link type _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->clones[] },
                      transition: it,
@@ -1061,6 +1190,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is cloned by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: "In Progress",
@@ -1069,6 +1199,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06D_Case_02- $it _when Issue link to the current issue through is cloned by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->clones[] },
                      transition: it,
@@ -1077,6 +1208,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is cloned by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: "To Do",
@@ -1093,6 +1225,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06E_Case_01- $it _when Issue link to the current issue throgh duplicates link type _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -1101,6 +1234,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through duplicates link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->duplicates[] },
                      transition: "In Progress",
@@ -1109,6 +1243,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06E_Case_02- $it _when Issue link to the current issue through duplicates link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -1117,6 +1252,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through duplicates link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->duplicates[] },
                      transition: "To Do",
@@ -1133,6 +1269,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06F_Case_01- $it _when Issue link to the current issue through is duplicated by link type _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->duplicates[] },
                      transition: it,
@@ -1141,6 +1278,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: "In Progress",
@@ -1149,6 +1287,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06F_Case_02- $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->duplicates[] },
                      transition: it,
@@ -1157,6 +1296,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: "To Do",
@@ -1173,6 +1313,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06G_Case_01- $it _when Issue link to the current issue through is relates to link type _not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -1181,6 +1322,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to IN_PROGRESS before_ $it _when Issue link to the current issue through relates to link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->relatesTo[] },
                      transition: "In Progress",
@@ -1189,6 +1331,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_06G_Case_02- $it _when Issue link to the current issue through relates to link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -1197,6 +1340,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": transition issue to TO_DO after_ $it _when Issue link to the current issue through relates to link type _in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->relatesTo[] },
                      transition: "To Do",
@@ -1209,40 +1353,46 @@ linkIssuesMap.eachWithIndex { key, value, i ->
 [
         'verify_status_in_progress_of_at_least_one_issues_which_is_childPortfolio'
 ].collect {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_07_Case_01- $it _when Child issues of the current issue in the Portfolio hierarchy _not in selected status:",
-             expected: -1,
-             parameters: [
-                     issue     : { ->initiative[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to IN_PROGRESS before_ $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->epic_initiative[] },
-                     transition: "In Progress",
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_07_Case_02- $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->initiative[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to TO_DO after_ $it _when Child issues of the current issue in the Portfolio hierarchy_in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->epic_initiative[] },
-                     transition: "To Do",
-             ]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_07_Case_01- $it _when Child issues of the current issue in the Portfolio hierarchy _not in selected status:",
+                 expected  : -1,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> initiative[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to IN_PROGRESS before_ $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> epic_initiative[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_07_Case_02- $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> initiative[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to TO_DO after_ $it _when Child issues of the current issue in the Portfolio hierarchy_in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> epic_initiative[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
 }
 
 // RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_08-Verify Parent issues of the current issue in the Portfolio hierarchy
@@ -1250,120 +1400,138 @@ linkIssuesMap.eachWithIndex { key, value, i ->
 [
         // 'verify_status_in_progress_of_at_least_one_issues_which_is_parentPortfolio'
 ].collect {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_08_Case_01- $it _when Parent issues of the current issue in the Portfolio hierarchy _not in selected status:",
-             expected: -1,
-             parameters: [
-                     issue     : { ->epic_initiative[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to IN_PROGRESS before_ $it _when Parent issues of the current issue in the Portfolio hierarchy _in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->initiative[] },
-                     transition: "In Progress",
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_08_Case_02- $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->epic_initiative[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to TO_DO after_ $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->initiative[] },
-                     transition: "To Do",
-             ]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_08_Case_01- $it _when Parent issues of the current issue in the Portfolio hierarchy _not in selected status:",
+                 expected  : -1,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> epic_initiative[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to IN_PROGRESS before_ $it _when Parent issues of the current issue in the Portfolio hierarchy _in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> initiative[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_08_Case_02- $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> epic_initiative[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to TO_DO after_ $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> initiative[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
 }
 
 // RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_09-Verify Issues returned by a Groovy script
 [
         'verify_status_in_progress_of_at_least_one_issues_which_is_returnsByGroovyExpression'
 ].collect {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_09_Case_01- $it _when Issues returned by a Groovy script _not in selected status:",
-             expected: -1,
-             parameters: [
-                     issue     : { ->relatesTo[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a Groovy script _in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->issueLinks[] },
-                     transition: "In Progress",
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_09_Case_02- $it _when Issues returned by a Groovy script_in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->relatesTo[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to TO_DO after_ $it _when Issues returned by a Groovy script_in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->issueLinks[] },
-                     transition: "To Do",
-             ]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_09_Case_01- $it _when Issues returned by a Groovy script _not in selected status:",
+                 expected  : -1,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> relatesTo[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a Groovy script _in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_09_Case_02- $it _when Issues returned by a Groovy script_in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> relatesTo[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to TO_DO after_ $it _when Issues returned by a Groovy script_in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
 }
 
 // RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_10-Verify Issues returned by a JQL search
 [
         'verify_status_in_progress_of_at_least_one_issues_which_is_returnsFromJqlSearch'
 ].collect {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_10_Case_01- $it _when Issues returned by a JQL search _not in selected status:",
-             expected: -1,
-             parameters: [
-                     issue     : { ->issueLinks[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a JQL search _in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->jqlIssue[] },
-                     transition: "In Progress",
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_10_Case_02- $it _when Issues returned by a JQL search_in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->issueLinks[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to TO_DO after_ $it _when Issues returned by a JQL search_in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->jqlIssue[] },
-                     transition: "To Do",
-             ]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_10_Case_01- $it _when Issues returned by a JQL search _not in selected status:",
+                 expected  : -1,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a JQL search _in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> jqlIssue[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_10_Case_02- $it _when Issues returned by a JQL search_in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to TO_DO after_ $it _when Issues returned by a JQL search_in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> jqlIssue[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
 }
 
 // RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_01-Verify Sub_task of the current issue
@@ -1374,6 +1542,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_01_Case_01- $it _when Sub_task of the current issue not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->parent[] },
                      transition: it,
@@ -1389,6 +1558,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_01_Case_02- $it _when Sub_task of the current issue not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->parent[] },
                      transition: it,
@@ -1412,6 +1582,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_02_Case_01- $it _when parent issue of the current subtask not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->subtask[] },
                      transition: it,
@@ -1427,6 +1598,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_02_Case_02- $it _when parent issue of the current subtask in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->subtask[] },
                      transition: it,
@@ -1449,6 +1621,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_03_Case_01- $it _when Issues that belong to the current Epic _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->epic[] },
                      transition: it,
@@ -1464,6 +1637,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_03_Case_02- $it _when Issues that belong to the current Epic _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->epic[] },
                      transition: it,
@@ -1488,6 +1662,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_04_Case_01- $it _when Epic of the current issue _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueBelongsToEpic[] },
                      transition: it,
@@ -1503,6 +1678,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_04_Case_02- $it _when Epic of the current issue _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueBelongsToEpic[] },
                      transition: it,
@@ -1526,6 +1702,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_04_Case_01- $it _when Issue link to the current issue throgh any link type _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: it,
@@ -1541,6 +1718,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_05_Case_02- $it _when Issue link to the current issue throgh any link type _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: it,
@@ -1564,6 +1742,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06A_TC_01_Case_01- $it _when Issue link to the current issue throgh any link type _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -1579,6 +1758,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06A_TC_01_Case_02- $it _when Issue link to the current issue through blocks link type _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -1602,6 +1782,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06B_Case_01- $it _when Issue link to the current issue throgh is blocked by link type _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: it,
@@ -1617,6 +1798,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06B_Case_02- $it _when Issue link to the current issue through is blocked by link type _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: it,
@@ -1640,6 +1822,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06C_Case_01- $it _when Issue link to the current issue throgh clones link type _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -1655,6 +1838,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06C_Case_02- $it _when Issue link to the current issue through clones link type _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -1678,6 +1862,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06D_Case_01- $it _when Issue link to the current issue throgh is cloned by link type _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->clones[] },
                      transition: it,
@@ -1693,6 +1878,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06D_Case_02- $it _when Issue link to the current issue through is cloned by link type _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->clones[] },
                      transition: it,
@@ -1716,6 +1902,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06E_Case_01- $it _when Issue link to the current issue throgh duplicates link type _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -1731,6 +1918,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06E_Case_02- $it _when Issue link to the current issue through duplicates link type _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -1754,6 +1942,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06F_Case_01- $it _when Issue link to the current issue through is duplicated by link type _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->duplicates[] },
                      transition: it,
@@ -1769,6 +1958,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06F_Case_02- $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->duplicates[] },
                      transition: it,
@@ -1792,6 +1982,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06G_Case_01- $it _when Issue link to the current issue through is relates to link type _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -1807,6 +1998,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_06G_Case_02- $it _when Issue link to the current issue through relates to link type _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -1826,38 +2018,41 @@ linkIssuesMap.eachWithIndex { key, value, i ->
 [
         'verify_status_in_progress_none_of_the_issues_which_are_childPortfolio'
 ].collect {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_07_Case_01- $it _when Child issues of the current issue in the Portfolio hierarchy _not in selected status:",
-             expected:0,
-             parameters: [
-                     issue     : { ->initiative[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to IN_PROGRESS before_ $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
-             parameters: [
-                     issue     : { ->epic_initiative[] },
-                     transition: "In Progress",
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_07_Case_02- $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
-             expected: -1,
-             parameters: [
-                     issue     : { ->initiative[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to TO_DO after_ $it _when Child issues of the current issue in the Portfolio hierarchy_in selected status:",
-             parameters: [
-                     issue     : { ->epic_initiative[] },
-                     transition: "To Do",
-             ]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_07_Case_01- $it _when Child issues of the current issue in the Portfolio hierarchy _not in selected status:",
+                 expected  : 0,
+                 parameters: [
+                         issue     : { -> initiative[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to IN_PROGRESS before_ $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
+                 parameters: [
+                         issue     : { -> epic_initiative[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_07_Case_02- $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
+                 expected  : -1,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> initiative[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to TO_DO after_ $it _when Child issues of the current issue in the Portfolio hierarchy_in selected status:",
+                 parameters: [
+                         issue     : { -> epic_initiative[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
 }
 
 // RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_08-Verify Parent issues of the current issue in the Portfolio hierarchy
@@ -1865,114 +2060,126 @@ linkIssuesMap.eachWithIndex { key, value, i ->
 [
          'verify_status_in_progress_none_of_the_issues_which_are_parentPortfolio'
 ].collect {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_08_Case_01- $it _when Parent issues of the current issue in the Portfolio hierarchy _not in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->epic_initiative[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to IN_PROGRESS before_ $it _when Parent issues of the current issue in the Portfolio hierarchy _in selected status:",
-             parameters: [
-                     issue     : { ->initiative[] },
-                     transition: "In Progress",
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_08_Case_02- $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
-             expected: -1,
-             parameters: [
-                     issue     : { ->epic_initiative[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to TO_DO after_ $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
-             parameters: [
-                     issue     : { ->initiative[] },
-                     transition: "To Do",
-             ]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_08_Case_01- $it _when Parent issues of the current issue in the Portfolio hierarchy _not in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> epic_initiative[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to IN_PROGRESS before_ $it _when Parent issues of the current issue in the Portfolio hierarchy _in selected status:",
+                 parameters: [
+                         issue     : { -> initiative[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_08_Case_02- $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
+                 expected  : -1,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> epic_initiative[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to TO_DO after_ $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
+                 parameters: [
+                         issue     : { -> initiative[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
 }
 
 // RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_09-Verify Issues returned by a Groovy script
 [
         'verify_status_in_progress_none_of_the_issues_which_are_returnsByGroovyExpression'
 ].collect {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_09_Case_01- $it _when Issues returned by a Groovy script _not in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->relatesTo[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a Groovy script _in selected status:",
-             parameters: [
-                     issue     : { ->issueLinks[] },
-                     transition: "In Progress",
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_09_Case_02- $it _when Issues returned by a Groovy script_in selected status:",
-             expected: -1,
-             parameters: [
-                     issue     : { ->relatesTo[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to TO_DO after_ $it _when Issues returned by a Groovy script_in selected status:",
-             parameters: [
-                     issue     : { ->issueLinks[] },
-                     transition: "To Do",
-             ]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_09_Case_01- $it _when Issues returned by a Groovy script _not in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> relatesTo[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a Groovy script _in selected status:",
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_09_Case_02- $it _when Issues returned by a Groovy script_in selected status:",
+                 expected  : -1,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> relatesTo[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to TO_DO after_ $it _when Issues returned by a Groovy script_in selected status:",
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
 }
 
 // RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_10-Verify Issues returned by a JQL search
 [
         'verify_status_in_progress_none_of_the_issues_which_are_returnsFromJqlSearch'
 ].collect {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_10_Case_01- $it _when Issues returned by a JQL search _not in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->issueLinks[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a JQL search _in selected status:",
-             parameters: [
-                     issue     : { ->jqlIssue[] },
-                     transition: "In Progress",
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_10_Case_02- $it _when Issues returned by a JQL search_in selected status:",
-             expected: -1,
-             parameters: [
-                     issue     : { ->issueLinks[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to TO_DO after_ $it _when Issues returned by a JQL search_in selected status:",
-             parameters: [
-                     issue     : { ->jqlIssue[] },
-                     transition: "To Do",
-             ]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_10_Case_01- $it _when Issues returned by a JQL search _not in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a JQL search _in selected status:",
+                 parameters: [
+                         issue     : { -> jqlIssue[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_33_TC_10_Case_02- $it _when Issues returned by a JQL search_in selected status:",
+                 expected  : -1,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to TO_DO after_ $it _when Issues returned by a JQL search_in selected status:",
+                 parameters: [
+                         issue     : { -> jqlIssue[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
 }
 
 // RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_01-Verify Sub_task of the current issue
@@ -1983,6 +2190,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_01_Case_01- $it _when Sub_task of the current issue not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->parent[] },
                      transition: it,
@@ -1998,6 +2206,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_32_TC_01_Case_02- $it _when Sub_task of the current issue not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->parent[] },
                      transition: it,
@@ -2015,12 +2224,13 @@ linkIssuesMap.eachWithIndex { key, value, i ->
 
 // RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_02-Verify Sub_task of the current issue
 [
-        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_parentIssue'
+        //'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_parentIssue'
 ].collect {
     gint.taskHelper.add([
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_02_Case_01- $it _when parent issue of the current subtask not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->subtask[] },
                      transition: it,
@@ -2036,6 +2246,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_02_Case_02- $it _when parent issue of the current subtask in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->subtask[] },
                      transition: it,
@@ -2058,6 +2269,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_03_Case_01- $it _when Issues that belong to the current Epic _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->epic[] },
                      transition: it,
@@ -2073,6 +2285,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_03_Case_02- $it _when Issues that belong to the current Epic _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->epic[] },
                      transition: it,
@@ -2091,12 +2304,13 @@ linkIssuesMap.eachWithIndex { key, value, i ->
 // RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_04-Verify Epic of the current issue
 // Invalid use case as child issue has only one parent issue - can't check invalid configuration
 [
-        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_epicOfTheCurrentIssue'
+        //'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_epicOfTheCurrentIssue'
 ].collect {
     gint.taskHelper.add([
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_04_Case_01- $it _when Epic of the current issue _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueBelongsToEpic[] },
                      transition: it,
@@ -2112,6 +2326,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_04_Case_02- $it _when Epic of the current issue _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueBelongsToEpic[] },
                      transition: it,
@@ -2135,6 +2350,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_04_Case_01- $it _when Issue link to the current issue throgh any link type _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: it,
@@ -2150,6 +2366,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_05_Case_02- $it _when Issue link to the current issue throgh any link type _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: it,
@@ -2173,6 +2390,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06A_TC_01_Case_01- $it _when Issue link to the current issue throgh any link type _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -2188,6 +2406,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06A_TC_01_Case_02- $it _when Issue link to the current issue through blocks link type _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -2211,6 +2430,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06B_Case_01- $it _when Issue link to the current issue throgh is blocked by link type _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: it,
@@ -2226,6 +2446,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06B_Case_02- $it _when Issue link to the current issue through is blocked by link type _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->blocks[] },
                      transition: it,
@@ -2249,6 +2470,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06C_Case_01- $it _when Issue link to the current issue throgh clones link type _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -2264,6 +2486,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06C_Case_02- $it _when Issue link to the current issue through clones link type _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -2287,6 +2510,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06D_Case_01- $it _when Issue link to the current issue throgh is cloned by link type _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->clones[] },
                      transition: it,
@@ -2302,6 +2526,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06D_Case_02- $it _when Issue link to the current issue through is cloned by link type _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->clones[] },
                      transition: it,
@@ -2325,6 +2550,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06E_Case_01- $it _when Issue link to the current issue throgh duplicates link type _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -2340,6 +2566,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06E_Case_02- $it _when Issue link to the current issue through duplicates link type _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -2363,6 +2590,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06F_Case_01- $it _when Issue link to the current issue through is duplicated by link type _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->duplicates[] },
                      transition: it,
@@ -2378,6 +2606,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06F_Case_02- $it _when Issue link to the current issue through is duplicated by link type _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->duplicates[] },
                      transition: it,
@@ -2401,6 +2630,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06G_Case_01- $it _when Issue link to the current issue through is relates to link type _not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -2416,6 +2646,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_06G_Case_02- $it _when Issue link to the current issue through relates to link type _in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->issueLinks[] },
                      transition: it,
@@ -2435,153 +2666,168 @@ linkIssuesMap.eachWithIndex { key, value, i ->
 [
         'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_childPortfolio'
 ].collect {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_07_Case_01- $it _when Child issues of the current issue in the Portfolio hierarchy _not in selected status:",
-             expected:0,
-             parameters: [
-                     issue     : { ->initiative[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to IN_PROGRESS before_ $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
-             parameters: [
-                     issue     : { ->epic_initiative[] },
-                     transition: "In Progress",
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_07_Case_02- $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
-             expected: -1,
-             parameters: [
-                     issue     : { ->initiative[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to TO_DO after_ $it _when Child issues of the current issue in the Portfolio hierarchy_in selected status:",
-             parameters: [
-                     issue     : { ->epic_initiative[] },
-                     transition: "To Do",
-             ]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_07_Case_01- $it _when Child issues of the current issue in the Portfolio hierarchy _not in selected status:",
+                 expected  : 0,
+                 parameters: [
+                         issue     : { -> initiative[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to IN_PROGRESS before_ $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
+                 parameters: [
+                         issue     : { -> epic_initiative[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_07_Case_02- $it _when Child issues of the current issue in the Portfolio hierarchy _in selected status:",
+                 expected  : -1,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> initiative[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to TO_DO after_ $it _when Child issues of the current issue in the Portfolio hierarchy_in selected status:",
+                 parameters: [
+                         issue     : { -> epic_initiative[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
 }
 
 // RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_08-Verify Parent issues of the current issue in the Portfolio hierarchy
 // Invalid use case as child issue has only one parent issue - can't check invalid configuration
 [
-        'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_parentPortfolio'
+        //'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_parentPortfolio'
 ].collect {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_08_Case_01- $it _when Parent issues of the current issue in the Portfolio hierarchy _not in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->epic_initiative[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to IN_PROGRESS before_ $it _when Parent issues of the current issue in the Portfolio hierarchy _in selected status:",
-             parameters: [
-                     issue     : { ->initiative[] },
-                     transition: "In Progress",
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_08_Case_02- $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
-             expected: -1,
-             parameters: [
-                     issue     : { ->epic_initiative[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to TO_DO after_ $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
-             parameters: [
-                     issue     : { ->initiative[] },
-                     transition: "To Do",
-             ]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_08_Case_01- $it _when Parent issues of the current issue in the Portfolio hierarchy _not in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> epic_initiative[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to IN_PROGRESS before_ $it _when Parent issues of the current issue in the Portfolio hierarchy _in selected status:",
+                 parameters: [
+                         issue     : { -> initiative[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_08_Case_02- $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
+                 expected  : -1,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> epic_initiative[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to TO_DO after_ $it _when Parent issues of the current issue in the Portfolio hierarchy_in selected status:",
+                 parameters: [
+                         issue     : { -> initiative[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
 }
 
 // RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_09-Verify Issues returned by a Groovy script
 [
         'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_returnsByGroovyExpression'
 ].collect {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_09_Case_01- $it _when Issues returned by a Groovy script _not in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->relatesTo[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a Groovy script _in selected status:",
-             parameters: [
-                     issue     : { ->issueLinks[] },
-                     transition: "In Progress",
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_09_Case_02- $it _when Issues returned by a Groovy script_in selected status:",
-             expected: -1,
-             parameters: [
-                     issue     : { ->relatesTo[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to TO_DO after_ $it _when Issues returned by a Groovy script_in selected status:",
-             parameters: [
-                     issue     : { ->issueLinks[] },
-                     transition: "To Do",
-             ]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_09_Case_01- $it _when Issues returned by a Groovy script _not in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> relatesTo[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a Groovy script _in selected status:",
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_09_Case_02- $it _when Issues returned by a Groovy script_in selected status:",
+                 expected  : -1,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> relatesTo[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to TO_DO after_ $it _when Issues returned by a Groovy script_in selected status:",
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
 }
 
 // RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_10-Verify Issues returned by a JQL search
 [
         'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_returnsFromJqlSearch'
 ].collect {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_10_Case_01- $it _when Issues returned by a JQL search _not in selected status:",
-             expected: 0,
-             parameters: [
-                     issue     : { ->issueLinks[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a JQL search _in selected status:",
-             parameters: [
-                     issue     : { ->jqlIssue[] },
-                     transition: "In Progress",
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_10_Case_02- $it _when Issues returned by a JQL search_in selected status:",
-             expected: -1,
-             parameters: [
-                     issue     : { ->issueLinks[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ": transition issue to TO_DO after_ $it _when Issues returned by a JQL search_in selected status:",
-             parameters: [
-                     issue     : { ->jqlIssue[] },
-                     transition: "To Do",
-             ]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_10_Case_01- $it _when Issues returned by a JQL search _not in selected status:",
+                 expected  : 0,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to IN_PROGRESS before_ $it _when Issues returned by a JQL search _in selected status:",
+                 parameters: [
+                         issue     : { -> jqlIssue[] },
+                         transition: "In Progress",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": RELATED_ISSUES_STATUS_CONDITION_TS_34_TC_10_Case_02- $it _when Issues returned by a JQL search_in selected status:",
+                 expected  : -1,
+                 sleep     : 5000,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue to TO_DO after_ $it _when Issues returned by a JQL search_in selected status:",
+                 parameters: [
+                         issue     : { -> jqlIssue[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
 }
 
 // RELATED_ISSUES_STATUS_CONDITION_TS_28_TC_01-Verify issue type dropdown_ check only if Task issue type
@@ -2592,6 +2838,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_28_TC_01_Case_01- $it _when parent issue is of task type of the current subtask not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->subtask[] },
                      transition: it,
@@ -2606,6 +2853,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_28_TC_01_Case_02- $it _when parent issue is of task type of the current subtask not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->subtask[] },
                      transition: it,
@@ -2622,6 +2870,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_28_TC_02_Case_01- $it _when parent issue is of story type of the current subtask not in selected status:",
              expected: -1,
+             sleep: 5000,
              parameters: [
                      issue     : { ->subtask[] },
                      transition: it,
@@ -2636,6 +2885,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
             [action    : 'transitionIssue',
              ext: ": RELATED_ISSUES_STATUS_CONDITION_TS_28_TC_02_Case_02- $it _when parent issue is not of story type of the current subtask not in selected status:",
              expected: 0,
+             sleep: 5000,
              parameters: [
                      issue     : { ->subtask[] },
                      transition: it,
