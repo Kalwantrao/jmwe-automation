@@ -164,3 +164,7 @@ def jmwePostfunctions = 'src/itest-postfunctions/gradle'
     }
 }
 
+def info = gint.getJiraHelper().getServerInfoWithVerify()
+gint.taskHelper.add('test',[
+action: 'getServerInfo']
+)
