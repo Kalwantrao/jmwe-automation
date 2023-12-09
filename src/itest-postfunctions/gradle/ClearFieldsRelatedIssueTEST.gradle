@@ -1,0 +1,142 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+
+
+tearDown(); // Existing projects, workflows will be deleted
+addWorkflow(); // Adding a new workflow
+
+def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:ClearFieldValueOfLinkedIssues-function' // From the radio button 'value'
+def testUser = info?.isCloud ? cloudUser : serverUser
+
+def defaultFields = [
+        "correlationId=",
+        "throwExceptions="
+]
+
+
+//Adding fields to clear
+def fields = [
+        assignee: ["fields=assignee"],
+        labels: ["fields=labels"]
+]
+
+
+
+// Removing unwanted values from target issue map
+relatedIssue.remove("currentIssue")
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'verify_clearfields_Labels_for_'+key //Clear the fields EX: Labels
+    def server = defaultFields + fields.labels + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser //Configure the Server
+    addTransitionFunction( transition, 'postfunction', server, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'verify_clearfields_Assignee_for_'+key //Clear the fields EX: Labels
+    def server = defaultFields + fields.assignee + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser //Configure the Server
+    addTransitionFunction( transition, 'postfunction', server, functionKey)
+}
+
+createWorkflowScheme();
+createProject();
+
+// Creating issues
+def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
+def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
+def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[]} ], 'BelongsToEpic')
+def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Initiative')
+def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
+def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
+def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
+def isBlockedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isBlockedBy')
+def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
+def isClonedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isClonedBy')
+def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
+def isDuplicatedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isDuplicatedBy')
+def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
+def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
+// Linking all the issues "Custom issue type"
+updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
+
+// Linking issues with the all link types
+def linkIssuesMap = [
+
+        blocks : {->blocks[]},
+        'is blocked by' : {->isBlockedBy[]},
+        clones : {->clones[]},
+        'is cloned by' : {->isClonedBy[]},
+        duplicates : {->duplicates[]},
+        'is duplicated by' : {->isDuplicatedBy[]},
+        'relates to': {->relatesTo[]}
+]
+
+// Method to link issues to all the link types
+linkIssuesMap.eachWithIndex { key, value, i ->
+    linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
+}
+
+// Verify_clearfields_Labels_for_subtask
+['verify_clearfields_Labels_for_subtask'].each {
+    gint.taskHelper.add([
+            [action: 'addLabels',
+             ext: ": add labels in subtask to check _ $it:",
+             parameters: [
+                     issue: {->subtask[]},
+                     labels: "testLabels"
+             ]],
+            [action: 'transitionIssue',
+             ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_PF_TC_14_ $it :",
+             parameters: [
+                     issue: {->parent[]},
+                     transition: it,
+             ]],
+            [action: 'getFieldValue',
+             ext: ": check labels in subtask to check _ $it:",
+             parameters: [
+                     issue: {->subtask[]},
+                     field: "Labels"
+             ],
+             failData      : [/Labels  . . . . . . . . . . . : testLabels/],
+            ],
+    ])
+}
+
+
+// Verify_clearfields_Labels_for_subtask
+['verify_clearfields_Labels_for_subtask'].each {
+    gint.taskHelper.add([
+            [action: 'addLabels',
+             ext: ": add labels in subtask to check _ $it:",
+             parameters: [
+                     issue: {->subtask[]},
+                     labels: "testLabels"
+             ]],
+            [action: 'transitionIssue',
+             ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_PF_TC_14_ $it :",
+             parameters: [
+                     issue: {->parent[]},
+                     transition: it,
+             ]],
+            [action: 'getFieldValue',
+             ext: ": check labels in subtask to check _ $it:",
+             parameters: [
+                     issue: {->subtask[]},
+                     field: "Labels"
+             ],
+             failData      : [/Labels  . . . . . . . . . . . : testLabels/],
+            ],
+    ])
+}
