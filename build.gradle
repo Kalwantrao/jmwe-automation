@@ -170,6 +170,6 @@ gint.taskHelper.add('test',[
 action: 'getServerInfo']
 )
 */
-task test {
+
 print "Hello"
-}
+
