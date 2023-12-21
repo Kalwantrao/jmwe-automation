@@ -1,10 +1,11 @@
 apply from: gint.resourceDirectory +'/src/common/commonTasks.gradle'
 
 project.ext.info =  gint.getJiraHelper().getServerInfoWithVerify()
-project.ext.user = info?.isCloud ? info?.userDisplayName : info.user
+project.ext.user =  info.user
 project.ext.projectKey = gint.getJiraHelper().getProjectKey()
 project.ext.isServer = info?.isServer
 project.ext.isCloud = info?.isCloud
+project.ext.currentUserKey=info.userKey
 project.ext.workflowScheme = "AUTOMATION"
 project.ext.screen = "AUTOMATION"
 project.ext.workflow = projectKey
@@ -15,6 +16,19 @@ project.ext.tearDownFile="resources/tearDown.txt"
 project.ext.baseWorkflow="Software Simplified Workflow for Project $TestProject"
 project.ext.projectTemplateCloud="Bug tracking"
 project.ext.projectTemplateServer="Basic software development"
+project.ext.ToDo = info?.isCloud? ToDoCloud : ToDoServer
+project.ext.InProgress = info?.isCloud? InProgressCloud : InProgressServer
+project.ext.InReview = info?.isCloud? InReviewCloud : InReviewServer
+project.ext.Done = info?.isCloud? DoneCloud : DoneServer
+project.ext.BugIssueType = info?.isCloud? BugIssueTypeCloud : BugIssueTypeServer
+project.ext.StoryIssueType = info?.isCloud? StoryIssueTypeCloud : StoryIssueTypeServer
+project.ext.TaskIssueType = info?.isCloud? TaskIssueTypeCloud : TaskIssueTypeServer
+project.ext.EpicIssueType = info?.isCloud? EpicIssueTypeCloud : EpicIssueTypeServer
+project.ext.InitiativeIssueType = info?.isCloud? InitiativeIssueTypeCloud : InitiativeIssueTypeServer
+project.ext.SubtaskIssueType = info?.isCloud? SubtaskIssueTypeCloud : SubtaskIssueTypeServer
+
+tearDown()
+addWorkflow()
 
 project.ext.groovyExpression = [
         getIssuetype:"issue.get('issuetype')?.name == 'Task'",
@@ -35,7 +49,8 @@ project.ext.nunjuckExpression = [
 ]
 
 project.ext.jiraExpression = [
-        getIssueType : "!!issue.issueType && issue.issueType.name == 'Task'"
+        getIssueType : "!!issue.issueType && issue.issueType.name == 'Task'",
+        checkPriorityHigh: "!!issue.priority && issue.priority.name == 'High'"
 ]
 
 project.ext.securityLevelId = [
@@ -92,29 +107,36 @@ project.ext.relatedIssueCloud = [
         returnsFromJqlSearch: "jql:$jqlSearchExpression"
 ]
 
-project.ext.statusIds = [ // statusIds.inProgress
-        toDo: ToDo,
-        inProgress: InProgress,
-        inReview : InReview,
-        done : Done
+project.ext.statusIdsServer = [ // statusIds.inProgress
+        toDo: ToDoServer,
+        inProgress: InProgressServer,
+        inReview : InReviewServer,
+        done : DoneServer
+]
+
+project.ext.statusIdsCloud = [
+        toDo: ToDoCloud,
+        inProgress: InProgressCloud,
+        inReview : InReviewCloud,
+        done : DoneCloud
 ]
 
 project.ext.issueTypeServer = [
-        bug : BugIssueType,
-        task : TaskIssueType,
-        subtask  : SubtaskIssueType,
-        epic : EpicIssueType,
-        story : StoryIssueType, //10001 FOR JIRA9
-        initiative : InitiativeIssueType
+        bug : BugIssueTypeServer,
+        task : TaskIssueTypeServer,
+        subtask  : SubtaskIssueTypeServer,
+        epic : EpicIssueTypeServer,
+        story : StoryIssueTypeServer, //10001 FOR JIRA9
+        initiative : InitiativeIssueTypeServer
 ]
 
 project.ext.issueTypeCloud = [
-        subtask : 10008,
-        epic : 10000,
-        story : 10011,
-        task : 10007,
-        bug : 10010,
-        initiative : 10020
+        bug : BugIssueTypeCloud,
+        task : TaskIssueTypeCloud,
+        subtask  : SubtaskIssueTypeCloud,
+        epic : EpicIssueTypeCloud,
+        story : StoryIssueTypeCloud, //10001 FOR JIRA9
+        initiative : InitiativeIssueTypeCloud
 ]
 
 project.ext.customFields = [
@@ -160,78 +182,7 @@ project.ext.defaultFieldsServer = [
         "correlationId=",
 ]
 
-project.ext.issueType = info?.isCloud ? issueTypeCloud : issueTypeServer
-project.ext.defaultFields = info?.isCloud ? defaultFieldsCloud : defaultFieldsServer
 project.ext.relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
-
-
-project.ext.whichUser = [
-        currentUser : ["fromUserType=currentUser"],
-        userInFieldAssignee : [ "fromUserType=userInField", "userField=assignee" ],
-        userInFieldReporter : [  "fromUserType=userInField", "userField=reporter"],
-        userInFieldCreator : [  "fromUserType=userInField", "userField=creator"],
-]
-
-project.ext.userMode = [
-        allUsers : [ "conditionMode=all-user-condition" ],
-        atLeastOne : [ "conditionMode=any-user-condition" ],
-]
-
-project.ext.fieldEmpty = [
-        no : [ "fieldEmpty=no" ],
-        yes : [ "fieldEmpty=yes" ],
-]
-
-project.ext.userCriteria = [
-        reporter : "isReporter=yes",
-        assignee : "isAssignee=yes",
-        inFieldLabels : "userFieldsToCheck=labels",
-        returnFromScript : /usersConditionScript=issue.get('reporter')?.name == "$user"/,
-        projectLead : "isProjectLead=yes",
-        inAdminRole : "rolesToCheck=$jiraAdminRoleId",
-        inAdminGroup : "groupsToCheck=jira-administrators",
-        inTestGroup : "groupsToCheck=$testGroup",
-        watcher : "isWatcher=yes",
-        checkUser : "usersToCheck=$currentUserKey",
-]
-
-project.ext.reverse = [
-        no : [ "reverse=" ],
-        yes : [ "reverse=yes" ]
-]
-
-project.ext.issueConstraints = [
-        atLeastOne : [  "minLinkedIssues=1","maxLinkedIssues=" ],
-        minTwo : [ "minLinkedIssues=2", "maxLinkedIssues=" ],
-        maxTwo : [ "minLinkedIssues=", "maxLinkedIssues=2" ],
-        atLeastThreeAndAtMostSix : [ "minLinkedIssues=3", "maxLinkedIssues=6" ]
-]
-
-project.ext.verifyAllLinkedIssues = [
-        yes : [	"checkAllLinkedIssues=yes" ],
-        no : [ "checkAllLinkedIssues=no" ]
-]
-
-project.ext.issueType = [
-        any : [ "selectedIssueType=" ],
-        story : [ "selectedIssueType=$StoryIssueType" ],
-        task : [ "selectedIssueType=$TaskIssueType" ],
-        bug : [ "selectedIssueType=$BugIssueType" ],
-        initiative: [ "selectedIssueType=$InitiativeIssueType" ]
-]
-project.ext.linkedIssuesStatusMode = [
-        all : [ "conditionMode=all-in-status" ],
-        one : ["conditionMode=one-in-status"],
-        none : ["conditionMode=none-in-status"],
-        oneNot : ["conditionMode=one-not-in-status"]
-]
-
-project.ext.statuses = [
-        inProgress : ["issue_statuses=$InProgress" ],
-        toDo : [ "issue_statuses=$ToDo" ],
-        inReview : [ "issue_statuses=$InReview" ],
-        done : [ "issue_statuses=$Done" ]
-]
 
 project.ext.requireRelatedIssuesConditionCloud = [
         subtask : ["{\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.subtasks.some(linkedIssue => (true)))\"}"],
@@ -245,29 +196,31 @@ project.ext.requireRelatedIssuesConditionCloud = [
         linkByIsDuplicatedBy : ["{\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (true)))\"}"],
         linkByRelatesTo : ["{\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))\"}"],
 ]
+
 project.ext.checkRelatedIssuesConditionCloud = [
-        subtask : ["{\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"checkLinks\",\"expression\":\"(issue.subtasks.length == 0 || issue.subtasks.some(linkedIssue => (!!issue.priority && issue.priority.name == \\\"High\\\")))\"}"],
-        issueBelongsToEpic : ["{\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.stories || issue.stories.length == 0 || issue.stories.some(linkedIssue => (!!issue.priority && issue.priority.name == \\\"High\\\")))\"}"],
-        linkByAnyLink : ["{\"selectedLinkTypeId\":\"*\",\"selectedLinkTypeDirection\":\"*\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links || issue.links.length == 0 || issue.links.some(issueLink => (!!issue.priority && issue.priority.name == \\\"High\\\")))\"}"],
-        linkByBlock : ["{\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == \\\"High\\\")))\"}"],
-        linkByisBlockedBy : ["{\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == \\\"High\\\")))\"}"],
-        linkByClones : ["{\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == \\\"High\\\")))\"}"],
-        linkByIsClonedBy : ["{\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == \\\"High\\\")))\"}"],
-        linkByDuplicates : ["{\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == \\\"High\\\")))\"}"],
-        linkByIsDuplicatedBy : ["{\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == \\\"High\\\")))\"}"],
-        linkByRelatesTo : ["{\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == \\\"High\\\")))\"}"],
+        subtask : ["{\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(issue.subtasks.length == 0 || issue.subtasks.some(linkedIssue => (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        issueBelongsToEpic : ["{\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.stories || issue.stories.length == 0 || issue.stories.some(linkedIssue => (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        linkByAnyLink : ["{\"selectedLinkTypeId\":\"*\",\"selectedLinkTypeDirection\":\"*\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links || issue.links.length == 0 || issue.links.some(issueLink => (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        linkByBlock : ["{\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        linkByisBlockedBy : ["{\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        linkByClones : ["{\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        linkByIsClonedBy : ["{\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        linkByDuplicates : ["{\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        linkByIsDuplicatedBy : ["{\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        linkByRelatesTo : ["{\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}"],
 ]
+
 project.ext.forbidRelatedIssuesConditionCloud = [
-        subtask : ["{\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.subtasks.some(linkedIssue => (!!issue.priority && issue.priority.name == \\\"High\\\"))))\"}"],
-        issueBelongsToEpic : ["{\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(!!issue.stories && issue.stories.some(linkedIssue => (!!issue.priority && issue.priority.name == \\\"High\\\"))))\"}"],
-        linkByAnyLink : ["{\"selectedLinkTypeId\":\"*\",\"selectedLinkTypeDirection\":\"*\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => (!!issue.priority && issue.priority.name == \\\"High\\\"))))\"}"],
-        linkByBlock : ["{\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == \\\"High\\\"))))\"}"],
-        linkByisBlockedBy : ["{\"_modified\":\"2023-11-21T13:48:19.346Z\"\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == \\\"High\\\"))))\"}"],
-        linkByClones : ["{\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == \\\"High\\\"))))\"}"],
-        linkByIsClonedBy : ["{\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == \\\"High\\\"))))\"}"],
-        linkByDuplicates : ["{\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == \\\"High\\\"))))\"}"],
-        linkByIsDuplicatedBy : ["{\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == \\\"High\\\"))))\"}"],
-        linkByRelatesTo : ["{\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == \\\"High\\\"\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == \\\"High\\\"))))\"}"],
+        subtask : ["{\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.subtasks.some(linkedIssue => (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        issueBelongsToEpic : ["{\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(!!issue.stories && issue.stories.some(linkedIssue => (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        linkByAnyLink : ["{\"selectedLinkTypeId\":\"*\",\"selectedLinkTypeDirection\":\"*\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        linkByBlock : ["{\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        linkByisBlockedBy : ["{\"_modified\":\"2023-11-21T13:48:19.346Z\"\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        linkByClones : ["{\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        linkByIsClonedBy : ["{\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        linkByDuplicates : ["{\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        linkByIsDuplicatedBy : ["{\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        linkByRelatesTo : ["{\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}"],
 ]
 
 project.ext.functionKey = [
@@ -278,29 +231,95 @@ project.ext.functionKey = [
         transitionRelatedIssuesPostfunctionServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionLinkedIssues-function',
         transitionParentIssuePostfunctionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionParentIssue-function',
         transitionParentIssuePostfunctionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__TransitionParentIssueFunction',
-        clearFieldsCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ClearFieldsFunction',
-        clearFieldsServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:ClearFieldValue-function',
         assignToRoleMemberCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__AssignToRoleMemberFunction',
         assignToRoleMemberServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:assigntorolemember',
         returnToPreviousStatusServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:return-to-previous-status-function',
-        addFieldValueToParentIssuePfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:AddFieldValueToParent-function',
-        assignIssuePostfunctionServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:AssignIssue-function',
         transitionParentIssuePfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionParentIssue-function',
         transitionRelatedIssuePfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionParentIssue-function',
         setFieldValueOfRelatedIssuesPfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:SetFieldValueOfLinkedIssues-function',
         setFieldValuePfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:SetFieldValue-function',
         setIssueFieldsPfServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:set-issue-fields-function',
-        commentIssuePostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function',
-        commentIssuePostfunctionCloud : 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CommentIssueFunction',
         copyIssueFieldsPfServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:copy-fields-function',
         assignToRoleMemberPf : 'com.innovalog.jmwe.jira-misc-workflow-extensions:assigntorolemember',
         createIssuePostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CreateIssue-function',
         createIssuePostfunctionCloud : 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CreateIssueFunction',
-        copyFieldValueFromParentIssuePostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CopyFieldValueFromParent-function',
         copyFieldValueToParentIssuePostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CopyFieldValueToParent-function',
         copyFieldValueFromRelatedIssuesPostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CopyFieldValueFromLinkedIssue-function',
         copyFieldValueToRelatedIssuesPostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CopyFieldValueToLinkedIssues-function',
 ]
+
+
+/*
+def linkIssue = { issue1, issue2, linkType, String ext ->
+    gint.taskHelper.add(
+            [action: 'linkIssue',
+             ext: ":by_ $linkType _ linkType _ $ext :",
+             parameters:[
+                     issue: issue1,
+                     toIssue: issue2
+             ],
+            ],
+    )
+}
+
+def unlinkIssue = { issue1, issue2, linkType, String ext ->
+    gint.taskHelper.add(
+            [action: 'deleteLink',
+             ext: ":by_ $linkType _ linkType _ $ext :",
+             parameters:[
+                     issue: issue1,
+                     toIssue: issue2
+             ],
+            ],
+    )
+}
+linkIssue({->issueLinks []}, {-> toIssue[]}, "blocks", "LinkIssue")
+unlinkIssue({->issueLinks []}, {-> toIssue[]},"blocks"," unlinkIssue")
+
+def getFieldValueBeforeTransition = { issue, field, value, String ext ->
+    gint.taskHelper.add(
+            [action: "getFieldValue",
+             ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the before transition value of field _$field should be: $value : $ext",
+             parameters:[
+                     issue: issue,
+                     field: field
+             ],
+                    finalClosure:{Task task ->
+                        def actualValue = "$task.outData"
+                        assert actualValue.contains("$value")
+                    }
+            ]
+    )
+}
+
+def transitionIssue = { issue, transition,String ext ->
+    gint.taskHelper.add(
+            [action: "transitionIssue",
+             ext: ":to check_CLEAR_FIELDS_POSTFUNCTION: $transition : $ext _",
+             parameters:[
+                     issue: issue,
+                     transition: transition
+             ],
+            ]
+    )
+}
+
+def getFieldValueAfterTransition = { issue, field, value, String ext ->
+    gint.taskHelper.add(
+            [action: "getFieldValue",
+             ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the after transition value of field _$field should be: $value : $ext",
+             parameters:[
+                     issue: issue,
+                     field: field
+             ],
+             finalClosure:{Task task ->
+                 def actualValue = "$task.outData"
+                 assert !actualValue.contains("$value")
+             }
+            ]
+    )
+}
+*/
 
 
 

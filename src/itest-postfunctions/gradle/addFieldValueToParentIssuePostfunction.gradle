@@ -12,96 +12,303 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-tearDown()
-//tearDownUsers()
-addWorkflow()
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:AddFieldValueToParent-function'
 
-def fieldsList = [
-        labels : 'labels',
-        fixVersions : 'fixVersions',
-        affectsVersions : 'versions',
-        components : 'components',
-        assignee : 'assignee',
-]
-def defaultFields = [
-        "correlationId=",
-]
-def functionKey = functionKey.addFieldValueToParentIssuePfServer
-
-// Configuration for validator
-['addFieldLabelToParentIssue'].each {
-    def fields = defaultFields + "field=labels" + "useGroovyCondition=no"
-    addTransitionFunction(it, 'postfunction', fields, functionKey )
+['verify_the_field_dropdown_for_field_affectsVersions'].each {
+    def fields = defaultFieldsServer + "field=versions" + conditionalExecution.false
+    if(!isCloud) {
+        addTransitionFunction(it, 'postfunction', fields, functionKey)
+    }
 }
 
-['addToParentIssueIfConditionTrue'].each {
-    def fields = defaultFields +  "field=labels" + "useGroovyCondition=yes" + "groovyExpression=$groovyExpression.checkPriorityHigh"
-    addTransitionFunction(it , 'postfunction', fields, functionKey )
+['verify_the_condition_execution_if_issues_priority_is_high'].each {
+    def fields = defaultFieldsServer +  "field=versions" + conditionalExecution.true
+    if(!isCloud) {
+        addTransitionFunction(it, 'postfunction', fields, functionKey)
+    }
 }
 
 createWorkflowScheme()
 createProject()
 
-
-def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
-def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->defaultIssue[]}, labels: 'test_label'], 'subtask')
-def defaultIssue1 = createIssue([type: 'Story', summary: 'JMWE_Issue', priority: 'High'], 'defaultIssue1')
-def subtask1 = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->defaultIssue1[]},labels: 'test_label',priority: 'High'], 'subtask1')
-
-// checking the current status To Do and previous status In Progress
-['addToParentIssueIfConditionTrue',].each {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: " :  when condition false ",
+(1..2).each {
+    gint.taskHelper.addSetUp([
+            [action: 'addVersion', ext: ': create versions : ' + it,
              parameters: [
-                     transition: it,
-                     issue     : { -> subtask[] },
-             ],
+                     project: projectName,
+                     version: it
+             ]
             ],
-            [action: 'getFieldValue', ext: ": Chack field value not added to parent issue as condition false",
+            [action: 'addComponent', ext: ': create Component : ' + it,
              parameters: [
-                     issue: {-> defaultIssue[]},
-                     field : "Labels",
+                     project: projectName,
+                     component: 'component' + it
              ],
-             failData:[ "Labels  . . . . . . . . . . . : test_label" ]
             ]
-
     ])
 }
 
-['addFieldLabelToParentIssue',].each {
+def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->parent[]}], 'subtask')
+
+// ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_08- Verify the Field dropdown_selected field_affects versions
+['verify_the_field_dropdown_for_field_affectsVersions',].each {
+    if(!isCloud) {
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: " :  labels "+ it,
+                [action    : 'setFieldValue',
+                 ext       : " :to subtask to check_ $it _field should be added to the parent issue of the subtask:",
+                 parameters: [
+                         issue: { -> subtask[] },
+                         field: "Affects Version/s",
+                         value: 1
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : " :to check_ $it :",
                  parameters: [
                          transition: it,
                          issue     : { -> subtask[] },
                  ],
                 ],
-                [action: 'getFieldValue', ext: ": Chack field value should be added to parent issue",
+                [action    : 'getFieldValue',
+                 ext       : " :ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_08- $it _field should be added to the parent issue of the subtask:",
                  parameters: [
-                         issue: {-> defaultIssue[]},
-                         field : "Labels",
+                         issue: { -> parent[] },
+                         field: "Affects Version/s",
                  ],
-                 data:[
-                         "Labels  . . . . . . . . . . . : test_label",
-                 ]
+                 data      : ["Affects Version/s . . . . . . : 1"]
                 ]
-
         ])
+    }
 }
-['addToParentIssueIfConditionTrue',].each {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: " :  when condition true ",
-             parameters: [
-                     transition: it,
-                     issue     : { -> subtask1[] },
-             ],
-            ],
-            [action: 'getFieldValue', ext: ": Chack field value should be added to parent issue when condition is true",
-             parameters: [
-                     issue: {-> defaultIssue1[]},
-                     field : "Labels",
-             ],
-             data:[ "Labels  . . . . . . . . . . . : test_label" ]
-            ]
-    ])
+
+// ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_09- Verify the field dropdown, when selected field value is empty
+['verify_the_field_dropdown_for_field_affectsVersions',].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'setFieldValue',
+                 ext       : " :remove the field value from subtask to check_ $it _when field is empty:",
+                 parameters: [
+                         issue: { -> subtask[] },
+                         field: "Affects Version/s",
+                         value: " "
+                 ]
+                ],
+                [action    : 'setFieldValue',
+                 ext       : " :remove the field value from parent issue to check_ $it _when field is empty:",
+                 parameters: [
+                         issue: { -> parent[] },
+                         field: "Affects Version/s",
+                         value: " "
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : " :to check_ $it _when field value of the subtask is empty :",
+                 parameters: [
+                         transition: it,
+                         issue     : { -> subtask[] },
+                 ],
+                ],
+                [action    : 'getFieldValue',
+                 ext       : " :ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_09- $it _when selected field value is empty:",
+                 parameters: [
+                         issue: { -> parent[] },
+                         field: "Affects Version/s",
+                 ],
+                 failData  : ["Affects Version/s . . . . . . : 1"]
+                ]
+        ])
+    }
 }
+
+// ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_10- Check when selected field value is empty of the current issue but parent issue have a value
+['verify_the_field_dropdown_for_field_affectsVersions',].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'setFieldValue',
+                 ext       : " :add the field value to parent issue to check_ $it _when subtask field is empty:",
+                 parameters: [
+                         issue: { -> parent[] },
+                         field: "Affects Version/s",
+                         value: 1
+                 ]
+                ],
+                [action    : 'setFieldValue',
+                 ext       : " :remove the field value from subtask to check_ $it _when subtask field is empty:",
+                 parameters: [
+                         issue: { -> subtask[] },
+                         field: "Affects Version/s",
+                         value: " "
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : " :to check_ $it _when field value of the subtask is empty and parent issue has value :",
+                 parameters: [
+                         transition: it,
+                         issue     : { -> subtask[] },
+                 ],
+                ],
+                [action    : 'getFieldValue',
+                 ext       : " :ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_10- $it __when field value of the subtask is empty and parent issue has value :",
+                 parameters: [
+                         issue: { -> parent[] },
+                         field: "Affects Version/s",
+                 ],
+                 data      : ["Affects Version/s . . . . . . : 1"]
+                ],
+                [action    : 'setFieldValue',
+                 ext       : " :remove the field value from parent issue after checking_ $it _when subtask field is empty:",
+                 parameters: [
+                         issue: { -> parent[] },
+                         field: "Affects Version/s",
+                         value: " "
+                 ]
+                ],
+        ])
+    }
+}
+
+// ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_11- Check when selected field has two different values in parent and current issue
+['verify_the_field_dropdown_for_field_affectsVersions',].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'setFieldValue',
+                 ext       : " :add the field value to parent issue to check_ $it _Check when selected field has two different values in parent and current issue:",
+                 parameters: [
+                         issue: { -> parent[] },
+                         field: "Affects Version/s",
+                         value: 1
+                 ]
+                ],
+                [action    : 'setFieldValue',
+                 ext       : " :add the field value to subtask to check_ $it _Check when selected field has two different values in parent and current issue:",
+                 parameters: [
+                         issue: { -> subtask[] },
+                         field: "Affects Version/s",
+                         value: 2
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : " :to check_ $it _Check when selected field has two different values in parent and current issue :",
+                 parameters: [
+                         transition: it,
+                         issue     : { -> subtask[] },
+                 ],
+                ],
+                [action    : 'getFieldValue',
+                 ext       : " :ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_10- $it _Check when selected field has two different values in parent and current issue :",
+                 parameters: [
+                         issue: { -> parent[] },
+                         field: "Affects Version/s",
+                 ],
+                 data      : ["Affects Version/s . . . . . . : 1,2"]
+                ],
+                [action    : 'setFieldValue',
+                 ext       : " :remove the field value from parent issue after checking_ $it _when subtask and parent has different field values:",
+                 parameters: [
+                         issue: { -> parent[] },
+                         field: "Affects Version/s",
+                         value: " "
+                 ]
+                ],
+                [action    : 'setFieldValue',
+                 ext       : " :remove the field value to subtask to check_ $it _Check when selected field has two different values in parent and current issue:",
+                 parameters: [
+                         issue: { -> subtask[] },
+                         field: "Affects Version/s",
+                         value: " "
+                 ]
+                ],
+        ])
+    }
+}
+
+// ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_12- Verify the Condition Execution
+['verify_the_condition_execution_if_issues_priority_is_high',].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'setFieldValue',
+                 ext       : " :add the field value to subtask to check_ $it _when condition not true:",
+                 parameters: [
+                         issue: { -> subtask[] },
+                         field: "Affects Version/s",
+                         value: 1
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : " :to check_ $it _when condition not true :",
+                 parameters: [
+                         transition: it,
+                         issue     : { -> subtask[] },
+                 ],
+                ],
+                [action    : 'getFieldValue',
+                 ext       : " :ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_12_Case_01_ $it _when condition not true :",
+                 parameters: [
+                         issue: { -> parent[] },
+                         field: "Affects Version/s",
+                 ],
+                 failData  : ["Affects Version/s . . . . . . : 1"]
+                ],
+                [action    : 'setFieldValue',
+                 ext       : " :change the priority of the subtask to high_ $it _when condition true:",
+                 parameters: [
+                         issue: { -> subtask[] },
+                         field: "Priority",
+                         value: "High"
+                 ]
+                ],
+                [action    : 'setFieldValue',
+                 ext       : " :change the priority of the parent issue to high_ $it _when condition true:",
+                 parameters: [
+                         issue: { -> parent[] },
+                         field: "Priority",
+                         value: "High"
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : " :to check_ $it _when condition true :",
+                 parameters: [
+                         transition: it,
+                         issue     : { -> subtask[] },
+                 ],
+                ],
+                [action    : 'getFieldValue',
+                 ext       : " :ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_12_Case_02_ $it _when condition true :",
+                 parameters: [
+                         issue: { -> parent[] },
+                         field: "Affects Version/s",
+                 ],
+                 data      : ["Affects Version/s . . . . . . : 1"]
+                ]
+        ])
+    }
+}
+
+/*
+// ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_13_Verify by the run condition for the issue without parent
+['verify_the_field_dropdown_for_field_affectsVersions',].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'setFieldValue',
+                 ext       : " :affects versions to parent issue_ $it _Verify by the run condition for the issue without parent:",
+                 parameters: [
+                         issue: { -> parent[] },
+                         field: "Affects Version/s",
+                         value: 1
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : " :ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_13- $it _Verify by the run condition for the issue without parent:",
+                 expected: -3,
+                 parameters: [
+                         transition: it,
+                         issue     : { -> parent[] },
+                 ],
+                        data: ["Could not get value for variable 'currentValue': This issue has no parent"],
+                ],
+        ])
+    }
+}
+ */
+

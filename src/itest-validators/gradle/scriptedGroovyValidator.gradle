@@ -12,8 +12,6 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-tearDown()
-addWorkflow()
 def errorMessage = "Check the scripted groovy returns true"
 def defaultFieldsServer = [
         "scriptDescription=",

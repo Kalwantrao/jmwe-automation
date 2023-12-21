@@ -12,24 +12,34 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-tearDown()
-addWorkflow()
-
+['hideTransitionCondition'].each {transitions ->
+    def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:non-interactive-condition'
 if(!isCloud){
-    ['hideTransitionCondition'].each {transitions ->
-        def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:non-interactive-condition'
         addTransitionFunction(transitions, 'condition', defaultFieldsServer, functionKey)
     }
 }
 
 def previousStatusServer = [
-        previousStatusCondition : [ defaultFieldsServer + "issue_statuses=$ToDo" ] ,
-        selectStatusInProgress_reverse : [ defaultFieldsServer + "issue_statuses=$InProgress" + "not=yes" ],
-        selectStatusToDo_reverse : [ defaultFieldsServer + "issue_statuses=$ToDo" + "not=yes" ],
-        mostRecentStatusOnly : [ defaultFieldsServer + "issue_statuses=$InProgress" + "mostRecentOnly=yes" ],
-        includeCurrentStatusInProgress : [defaultFieldsServer + "issue_statuses=$InProgress" + "includeCurrent=yes" ],
-        previousStatusIncludeCurrentStatusMustBeToDo : [defaultFieldsServer + "issue_statuses=$ToDo" + "includeCurrent=yes" ],
-        previousStatusSelectMultipleStatuses : [defaultFieldsServer + "issue_statuses=$InProgress,$InReview" ],
+        select_previousStatus_toDo : [ defaultFieldsServer + "issue_statuses=$ToDo" ] ,
+        select_toDo_with_most_recent_status_only : [ defaultFieldsServer + "issue_statuses=$ToDo" + "mostRecentOnly=yes" ],
+        select_toDo_with_include_current_status : [ defaultFieldsServer + "issue_statuses=$ToDo" + "includeCurrent=yes" ],
+        select_toDo_with_reverse : [ defaultFieldsServer + "issue_statuses=$ToDo" + "not=yes" ],
+        select_previousStatus_inProgress : [ defaultFieldsServer + "issue_statuses=$InProgress" ],
+        select_inProgress_with_most_recent_status_only : [ defaultFieldsServer + "issue_statuses=$InProgress" + "mostRecentOnly=yes" ],
+        select_inProgress_with_include_current_status : [ defaultFieldsServer + "issue_statuses=$InProgress" + "includeCurrent=yes" ],
+        select_inProgress_with_reverse : [ defaultFieldsServer + "issue_statuses=$InProgress" + "not=yes" ],
+        select_previousStatus_inReview : [ defaultFieldsServer + "issue_statuses=$InReview"],
+        select_inReview_with_most_recent_status_only : [ defaultFieldsServer + "issue_statuses=$InReview", "mostRecentOnly=yes" ],
+        select_inReview_with_include_current_status : [ defaultFieldsServer + "issue_statuses=$InReview","includeCurrent=yes" ],
+        select_inReview_with_reverse : [ defaultFieldsServer + "issue_statuses=$InReview", "not=yes" ],
+        select_previousStatus_done : [ defaultFieldsServer + "issue_statuses=$Done" ],
+        select_done_with_most_recent_status_only : [ defaultFieldsServer + "issue_statuses=$Done", "mostRecentOnly=yes" ],
+        select_done_with_include_current_status : [ defaultFieldsServer + "issue_statuses=$Done","includeCurrent=yes" ],
+        select_done_with_reverse : [ defaultFieldsServer + "issue_statuses=$Done", "not=yes" ],
+        select_previousStatus_toDo_inProgress_inReview_Done : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done" ],
+        select_previousStatus_toDo_inProgress_inReview_Done_with_all_options : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "mostRecentOnly=yes","includeCurrent=yes","not=yes" ],
+        select_all_previousStatus_with_most_recent_status_only : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "mostRecentOnly=yes" ],
+        select_all_previousStatus_with_all_options : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "mostRecentOnly=yes", "includeCurrent=yes","not=yes"  ],
 ]
 
 previousStatusServer.eachWithIndex { transitions, fields, i->
@@ -39,16 +49,27 @@ previousStatusServer.eachWithIndex { transitions, fields, i->
     }
 }
 
-
 createWorkflowScheme()
 createProject()
 
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
+def transitionByUserTask =  { transition, userId, issue, expected ->
+    if(!isCloud) {
+        gint.taskHelper.add(
+                [expected    : expected,
+                 name        : ":check transition trigger by other user:" + transition,
+                 cmd         : /acli $userId -a transitionIssue --issue $issue --transition $transition/,
+                ]
+        )
+    }
+}
+
 // HIDE_TRANSITION_CONDITION_TC_06_Verify transition tab eg $it after apply_Hide Transition Condition_ on ToDo status and current status of Issue is also ToDo
 [
         'hideTransitionCondition',
+        'select_previousStatus_toDo_inProgress_inReview_Done_with_all_options'
 ].each {
     if(!isCloud) {
         gint.taskHelper.add([
@@ -62,15 +83,19 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
     }
 }
 
+// HIDE_TRANSITION_CONDITION_Verify transition tab eg $it after apply_Hide Transition Condition_ on ToDo status and current status of Issue is also ToDo_from different user
+transitionByUserTask('hideTransitionCondition', testUserForServer, {->defaultIssue[]}, -1)
+
 // PREVIOUS_STATUS_CONDITION_TC_16_Verify the Previous Status without selecting any Options_when issues previous status is not in selected status
 [
-        'previousStatusCondition',
+        'select_previousStatus_toDo',
+        'select_toDo_with_most_recent_status_only',
+        'select_all_previousStatus_with_most_recent_status_only'
 ].each {
     if(!isCloud) {
         gint.taskHelper.add([
                 action    : 'transitionIssue',
-                ext       : ":PREVIOUS_STATUS_CONDITION_TC_16_Verify the Previous Status without selecting any Options_when issues previous status is not in selected status:",
-                onlyIf    : !isCloud,
+                ext       : ":PREVIOUS_STATUS_CONDITION_TC_16_ to check_ $it _Verify the Previous Status without selecting any Options_when issues previous status is not in selected status:",
                 expected  : -1,
                 parameters: [
                         transition: it,
@@ -80,9 +105,13 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
     }
 }
 
+// PREVIOUS_STATUS_CONDITION-Verify transition by user other than admin
+transitionByUserTask('select_previousStatus_toDo', testUserForServer, {->defaultIssue[]}, -1)
+transitionByUserTask('select_toDo_with_most_recent_status_only', testUserForServer, {->defaultIssue[]}, -1)
+
 // PREVIOUS_STATUS_CONDITION_TC_19_Verify for the option: Most recent status only_when issues most recent status is not in selected status
 [
-        'mostRecentStatusOnly',
+        'select_inProgress_with_most_recent_status_only',
 ].each {
     if(!isCloud) {
         gint.taskHelper.add([
@@ -98,9 +127,13 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
     }
 }
 
+// PREVIOUS_STATUS_CONDITION-Verify transition by user other than admin
+transitionByUserTask('select_previousStatus_inProgress', testUserForServer, {->defaultIssue[]}, -1)
+transitionByUserTask('select_inProgress_with_most_recent_status_only', testUserForServer, {->defaultIssue[]}, -1)
+
 // PREVIOUS_STATUS_CONDITION_TC_21_Verify for the Include current status option_when issues previous and current status is not in selected status
 [
-        'includeCurrentStatusInProgress',
+        'select_inProgress_with_include_current_status',
 ].each {
     if(!isCloud) {
         gint.taskHelper.add([
@@ -116,9 +149,12 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
     }
 }
 
+// PREVIOUS_STATUS_CONDITION-Verify transition by user other than admin
+transitionByUserTask('select_inProgress_with_include_current_status', testUserForServer, {->defaultIssue[]}, -1)
+
 // PREVIOUS_STATUS_CONDITION_TC_23-Verify for the Reverse condition option_when issues previous status is not in selected status
 [
-        'selectStatusInProgress_reverse',
+        'select_inProgress_with_reverse',
 ].each {
     if(!isCloud) {
         gint.taskHelper.add([
@@ -133,6 +169,9 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
         ])
     }
 }
+
+// PREVIOUS_STATUS_CONDITION-Verify transition by user other than admin
+transitionByUserTask('select_inProgress_with_reverse', testUserForServer, {->defaultIssue[]}, 0)
 
 // transition issue to set the previous status to In Progress
 [
@@ -155,7 +194,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 
 // PREVIOUS_STATUS_CONDITION_TC_19_Case_01-Verify for the option: Most recent status only_when issues most recent status is in selected status
 [
-        'mostRecentStatusOnly',
+        'select_inProgress_with_most_recent_status_only',
 ].each {
     if(!isCloud) {
         gint.taskHelper.add([
@@ -173,7 +212,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 
 // PREVIOUS_STATUS_CONDITION_TC_16_Case_01_Verify the Previous Status without selecting any Options_when issues previous status is in selected status
 [
-        'previousStatusCondition',
+        'select_previousStatus_toDo',
 ].each {
     if(!isCloud) {
         gint.taskHelper.add([
@@ -191,7 +230,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 
 // PREVIOUS_STATUS_CONDITION_TC_21_Case_01-Verify for the Include current status option_when issues previous and current status is in selected status
 [
-        'previousStatusIncludeCurrentStatusMustBeToDo',
+        'select_toDo_with_include_current_status',
 ].each {
     if(!isCloud) {
         gint.taskHelper.add([
@@ -209,13 +248,12 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 
 // PREVIOUS_STATUS_CONDITION_TC_20_Case_01-Verify the multiple Options selection_when issues previous status is in one of the selected status
 [
-        'previousStatusSelectMultipleStatuses'
+        'select_previousStatus_toDo_inProgress_inReview_Done'
 ].each {
     if(!isCloud) {
         gint.taskHelper.add([
                 action    : 'transitionIssue',
                 ext       : ":PREVIOUS_STATUS_CONDITION_TC_20_Case_01-Verify the multiple Options selection_when issues previos status is in one of the selected status: ",
-                onlyIf    : !isCloud,
                 expected  : 0,
                 parameters: [
                         transition: it,
@@ -227,7 +265,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 
 // PREVIOUS_STATUS_CONDITION_TC_23_Case_01-Verify for the Reverse condition option_when issues previous status is in selected status_when reverse option selected
 [
-        'selectStatusToDo_reverse',
+        'select_toDo_with_reverse',
 ].each {
     if(!isCloud) {
         gint.taskHelper.add([
@@ -245,7 +283,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 
 // PREVIOUS_STATUS_CONDITION_TC_23_Case_02-Verify for the Reverse condition option_when issues previous status is in selected status_when reverse option selected
 [
-        'selectStatusInProgress_reverse'
+        'select_inProgress_with_reverse'
 ].each {
     if(!isCloud) {
         gint.taskHelper.add([
@@ -265,7 +303,7 @@ def prevStatusInReview = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'pre
 
 // PREVIOUS_STATUS_CONDITION_TC_20_Case_02-Verify the multiple Options selection_when issues previous status is not in one of the selected status
 [
-        'previousStatusSelectMultipleStatuses'
+        'select_previousStatus_toDo_inProgress_inReview_Done'
 ].each {
     if(!isCloud) {
         gint.taskHelper.add([
@@ -301,7 +339,7 @@ def prevStatusInReview = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'pre
 
 // PREVIOUS_STATUS_CONDITION_TC_20_Case_03-Verify the multiple Options selection_when issues previous status is not in one of the selected status
 [
-         'previousStatusSelectMultipleStatuses'
+         'select_previousStatus_toDo_inProgress_inReview_Done'
 ].each {
     if(!isCloud) {
         gint.taskHelper.add([
@@ -316,3 +354,224 @@ def prevStatusInReview = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'pre
         ])
     }
 }
+
+def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue1')
+// PREVIOUS_STATUS_CONDITION_Check each status with each option_when issues previous status is not in selected
+[
+        'select_previousStatus_inReview',
+        'select_inReview_with_most_recent_status_only',
+        'select_inReview_with_include_current_status',
+        'select_previousStatus_done',
+        'select_done_with_most_recent_status_only',
+        'select_done_with_include_current_status',
+].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                action    : 'transitionIssue',
+                ext       : ": PREVIOUS_STATUS_CONDITION_to check_ $it _Check each status with each option: ",
+                expected  : -1,
+                parameters: [
+                        transition: it,
+                        issue     : { -> defaultIssue1[] },
+                ],
+        ])
+    }
+}
+
+// set previous status to selected
+[		'In Review',
+        'Done',
+        'To Do',
+].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                action    : 'transitionIssue',
+                ext       : ": to $it _ to check each status with each option: ",
+                onlyIf    : !isCloud,
+                expected  : 0,
+                parameters: [
+                        transition: it,
+                        issue     : { -> defaultIssue1[] },
+                ],
+        ])
+    }
+}
+
+// PREVIOUS_STATUS_CONDITION_Check each status with each option-when issues previous status is in selected status
+[
+        'select_previousStatus_inReview',
+        'select_previousStatus_done',
+].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                action    : 'transitionIssue',
+                ext       : ": PREVIOUS_STATUS_CONDITION_to check_ $it _Check each status with each option_when issues previous status is in selected: ",
+                expected  : 0,
+                sleep: 5000,
+                parameters: [
+                        transition: it,
+                        issue     : { -> defaultIssue1[] },
+                ],
+        ])
+    }
+}
+
+// PREVIOUS_STATUS_CONDITION_Check each status with each option_when issues previous status most recent status is in review
+[		'In Review',
+         'To Do',
+         'select_inReview_with_most_recent_status_only',
+].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                action    : 'transitionIssue',
+                ext       : ": to $it _ to check most recent status in review: ",
+                onlyIf    : !isCloud,
+                expected  : 0,
+                parameters: [
+                        transition: it,
+                        issue     : { -> defaultIssue1[] },
+                ],
+        ])
+    }
+}
+
+def defaultIssue2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue2')
+[
+        'select_all_previousStatus_with_all_options'
+].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                ext       : ": PREVIOUS_STATUS_CONDITION_TC_Verify for the option: Most recent status only_when issues most recent status is not in selected status:",
+                expected  : -1,
+                parameters: [
+                        transition: it,
+                        issue     : { -> defaultIssue2[] },
+                ],
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": PREVIOUS_STATUS_CONDITION_TC_Verify for the option: all_when all status selected:",
+                 parameters: [
+                         transition: "In Progress",
+                         issue     : { -> defaultIssue2[] },
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": PREVIOUS_STATUS_CONDITION_TC_Verify for the option: all_when all status selected:",
+                 parameters: [
+                         transition: "To Do",
+                         issue     : { -> defaultIssue2[] },
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": PREVIOUS_STATUS_CONDITION_TC_Verify for the all option and all status selected_when previous status of issue is In Progress:",
+                 expected  : -1,
+                 parameters: [
+                         transition: it,
+                         issue     : { -> defaultIssue2[] },
+                 ],
+                ],
+        ])
+    }
+}
+
+def defaultIssue3 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue3')
+[
+        'select_all_previousStatus_with_most_recent_status_only'
+].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": PREVIOUS_STATUS_CONDITION_TC_Verify for_ $it:",
+                 expected  : -1,
+                 parameters: [
+                         transition: it,
+                         issue     : { -> defaultIssue2[] },
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": PREVIOUS_STATUS_CONDITION_TC_Verify for the $it _:",
+                 parameters: [
+                         transition: "In Progress",
+                         issue     : { -> defaultIssue2[] },
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": PREVIOUS_STATUS_CONDITION_TC_Verify for the option:$it _:",
+                 parameters: [
+                         transition: "To Do",
+                         issue     : { -> defaultIssue2[] },
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": PREVIOUS_STATUS_CONDITION_TC_Verify for the all option and all status selected_when previous status of issue is In Progress: $it",
+                 expected  : -1,
+                 parameters: [
+                         transition: it,
+                         issue     : { -> defaultIssue2[] },
+                 ],
+                ],
+        ])
+    }
+}
+/*
+1. Check transition by logging into other user = DONE
+    - Check reverse option by logging into other user = DONE
+2. Update existing configuration and then check the behaviour for example unselect the selected status checkboxes = PENDING
+3. Each Previous Status with each Options one by one
+    EX:
+    IN PROGRESS with Most recent status only = done
+    IN PROGRESS with Include current status = done
+    IN PROGRESS with Ignore Auto-transitions (loops)= pending
+    IN PROGRESS with Reverse condition = done
+
+    IN REVIEW with Most recent status only = done
+    IN REVIEW with Include current status = done
+    IN REVIEW with Ignore Auto-transitions (loops)= pending
+    IN REVIEW with Reverse condition = done
+
+    Done with Most recent status only = done
+    Done with Include current status = done
+    Done with Ignore Auto-transitions (loops) = pending
+    Done with Reverse condition = done
+
+4. All Previous Status with all Options
+    EX: Select all the statuses and all the Options = Done
+5. All Previous Status with the
+    - Most recent status only  = Done
+6. All Previous Status with the
+    - Most recent status only
+    - Include current status
+7. All Previous Status with the
+    - Most recent status only
+    - Include current status
+    - Ignore Auto-transitions (loops)
+8. All Previous Status with the
+    - Most recent status only
+    - Include current status
+    - Ignore Auto-transitions (loops)
+    - Reverse condition
+
+9. One Previous Status with the  "Do it for all the individual statuses"
+    - Most recent status only
+10. One Previous Status with the
+    - Most recent status only
+    - Include current status
+11. One Previous Status with the
+    - Most recent status only
+    - Include current status
+    - Ignore Auto-transitions (loops)
+12. One Previous Status with the
+    - Most recent status only
+    - Include current status
+    - Ignore Auto-transitions (loops)
+    - Reverse condition
+13. Execute script for the deleted status:
+    EX:
+        1. Create 1 custom status (QA)
+        2. Configure that with Previous Status Condition (Done)
+        3. Through the script, first delete the created custom status (QA)  and then execute the script = Pending
+
+
+
+ */

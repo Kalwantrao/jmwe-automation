@@ -20,6 +20,8 @@ def cloudFields = [
         "condition.config-e96e5f36-5d19-4cd7-b8d7-f13bfb41877d={\"expression\":\"!! issue.assignee\"}"
 ]
 
+// create transition and configure the condition to it with required options
+
 ['issueMustBeAssignedToSpecificUser'].each {
 	def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ScriptedCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-condition'
 	def fields = info?.isCloud ? cloudFields : defaultFieldsServer + "scriptDescription=" + /groovyExpression=issue.getAsString('assignee') == "$testUser"/

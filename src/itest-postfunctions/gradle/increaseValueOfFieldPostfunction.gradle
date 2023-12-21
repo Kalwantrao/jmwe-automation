@@ -12,10 +12,6 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-tearDown()
-//tearDownUsers()
-addWorkflow()
-
 def defaultFields = [
         "throwExceptions=false",
         "correlationId=",

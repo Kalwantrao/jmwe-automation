@@ -12,9 +12,6 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-tearDown()
-addWorkflow()
-
 def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__UserValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-validator'
 def errorMessage = "Check user satisfy the given criteria"
 
@@ -22,9 +19,46 @@ def defaultFieldsServer = [
         "errorMessage=$errorMessage",
         "correlationId=",
 ]
+
 def defaultFieldsCloud = [
         "validator.id=e92924ef-37fc-4863-809d-add6da80b9e7"
 ]
+
+def whichUser = [
+        currentUser : ["fromUserType=currentUser"],
+        userInFieldAssignee : [ "fromUserType=userInField", "userField=assignee" ],
+        userInFieldReporter : [  "fromUserType=userInField", "userField=reporter"],
+        userInFieldCreator : [  "fromUserType=userInField", "userField=creator"],
+]
+
+def userMode = [
+        allUsers : [ "conditionMode=all-user-condition" ],
+        atLeastOne : [ "conditionMode=any-user-condition" ],
+]
+
+def fieldEmpty = [
+        no : [ "fieldEmpty=no" ],
+        yes : [ "fieldEmpty=yes" ],
+]
+
+def userCriteria = [
+        reporter : "isReporter=yes",
+        assignee : "isAssignee=yes",
+        inFieldLabels : "userFieldsToCheck=labels",
+        returnFromScript : /usersConditionScript=issue.get('reporter')?.name == "$user"/,
+        projectLead : "isProjectLead=yes",
+        inAdminRole : "rolesToCheck=$jiraAdminRoleId",
+        inAdminGroup : "groupsToCheck=jira-administrators",
+        inTestGroup : "groupsToCheck=$testGroup",
+        watcher : "isWatcher=yes",
+        checkUser : "usersToCheck=$currentUserKey",
+]
+
+def reverse = [
+        no : [ "reverse=" ],
+        yes : [ "reverse=yes" ]
+]
+
 userCriteria.eachWithIndex { criteria, userFields, i ->
     def transition = "verify_current_user_should_be_" + criteria //verify_current_user_should_be_inTestGroup
     def server = defaultFieldsServer + userFields +  whichUser.currentUser + reverse.no + userMode.allUsers + fieldEmpty.no

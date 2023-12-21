@@ -12,13 +12,43 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-tearDown()
-addWorkflow()
-
 def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__UserCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition'
 
 def defaultFieldsCloud = [ "condition.id=85e260ad-0ccf-433d-bd76-2fcda1e4bb6d" ]
 
+def whichUser = [
+		currentUser : ["fromUserType=currentUser"],
+		userInFieldAssignee : [ "fromUserType=userInField", "userField=assignee" ],
+		userInFieldReporter : [  "fromUserType=userInField", "userField=reporter"],
+		userInFieldCreator : [  "fromUserType=userInField", "userField=creator"],
+]
+
+def userMode = [
+		allUsers : [ "conditionMode=all-user-condition" ],
+		atLeastOne : [ "conditionMode=any-user-condition" ],
+]
+
+def fieldEmpty = [
+		no : [ "fieldEmpty=no" ],
+		yes : [ "fieldEmpty=yes" ],
+]
+def userCriteria = [
+		reporter : "isReporter=yes",
+		assignee : "isAssignee=yes",
+		inFieldLabels : "userFieldsToCheck=labels",
+		returnFromScript : /usersConditionScript=issue.get('reporter')?.name == "$user"/,
+		projectLead : "isProjectLead=yes",
+		inAdminRole : "rolesToCheck=$jiraAdminRoleId",
+		inAdminGroup : "groupsToCheck=jira-administrators",
+		inTestGroup : "groupsToCheck=$testGroup",
+		watcher : "isWatcher=yes",
+		checkUser : "usersToCheck=$currentUserKey",
+]
+
+def reverse = [
+		no : [ "reverse=" ],
+		yes : [ "reverse=yes" ]
+]
 
 def currentUserConditionCriteria = info?.isCloud ? currentUserConditionCriteriaCloud : userCriteria
 def userInFieldAssigneeUserConditionCriteria = info?.isCloud ? userInFieldAssigneeUserConditionCriteriaCloud : userCriteria
@@ -123,6 +153,7 @@ userInFieldCreatorUserConditionCriteria.eachWithIndex { criteria, userFields, i 
 	}
 }
 
+
 createWorkflowScheme()
 createProject()
 
@@ -136,7 +167,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_26_TC_01_Case_01_ $it _when  satisfies the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
+			 group: "test",
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -145,7 +176,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'updateIssue',
 			 ext: ":Change the reporter of issue before checking_ $it _satisfy the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 reporter: testUser,
@@ -154,7 +184,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_26_TC_01_Case_02_ $it _when  not satisfies the criteria: ",
 			 expected  : -1,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -163,7 +192,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'updateIssue',
 			 ext: ":Change the reporter of issue after checking_ $it _satisfy the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 reporter: user,
@@ -180,7 +208,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_26_TC_02_Case_01_ $it _when  satisfies the criteria: ",
 			 expected  : -1,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -189,7 +216,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'updateIssue',
 			 ext: ":Change the assignee of issue before checking_ $it _satisfy the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 assignee: user,
@@ -198,7 +224,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_26_TC_02_Case_02_ $it _when  not satisfies the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -207,7 +232,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'updateIssue',
 			 ext: ":Change the assignee of issue after checking_ $it _satisfy the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 assignee: " ",
@@ -267,7 +291,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_26_TC_04_Case_01_ $it _when  satisfies the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -276,7 +299,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'updateIssue',
 			 ext: ":Change the reporter of issue before checking_ $it _satisfy the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 reporter: testUser,
@@ -285,7 +307,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_26_TC_04_Case_02_ $it _when  not satisfies the criteria: ",
 			 expected  : -1,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -294,7 +315,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'updateIssue',
 			 ext: ":Change the reporter of issue after checking_ $it _satisfy the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 reporter: user,
@@ -312,7 +332,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'updateProject',
 				 ext       : ":change the project lead to $testUser _to check_ $it: ",
 				 expected  : 0,
-				 sleep: 5000,
 				 parameters: [
 						 project: projectName,
 						 lead   : testUser,
@@ -321,7 +340,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'transitionIssue',
 				 ext       : ":USER_CONDITION_TS_26_TC_05_Case_01_ $it _when  not satisfies the criteria: ",
 				 expected  : -1,
-				 sleep: 5000,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
@@ -330,7 +348,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'updateProject',
 				 ext       : ":change the project lead to $user _to check_ $it: ",
 				 expected  : 0,
-			     sleep: 5000,
 				 parameters: [
 						 project: projectName,
 						 lead   : user,
@@ -339,7 +356,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'transitionIssue',
 				 ext       : ":USER_CONDITION_TS_26_TC_05_Case_02_ $it _when  satisfies the criteria: ",
 				 expected  : 0,
-				 sleep: 5000,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
@@ -357,7 +373,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ":asign to $testUser _ $it _to check criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 field: "Assignee",
@@ -367,7 +382,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_01_Case_01_ $it _when  not satisfies the criteria: ",
 			 expected  : -1,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -376,7 +390,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ":asign to $user _ $it _to check criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 field: "Assignee",
@@ -386,7 +399,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_01_Case_02_ $it _when  not satisfies the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -403,6 +415,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 		gint.taskHelper.add([
 				[action    : 'setFieldValue',
 				 ext       : ":of assignee value to $user _to check $it : ",
+				 expected  : 0,
 				 parameters: [
 						 issue: { -> defaultIssue[] },
 						 field: "Assignee",
@@ -446,7 +459,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ":reporter value set to $testUser _to check $it : ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 field: "Reporter",
@@ -456,7 +468,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_03_Case_01_ $it _when not satisfies the criteria: ",
 			 expected  : -1,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -465,7 +476,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ":reporter value set to $user _to check $it : ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 field: "Reporter",
@@ -475,7 +485,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_03_Case_02_ $it _when satisfies the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -493,7 +502,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'updateProject',
 				 ext       : ":project lead value set to $testUser _to check $it : ",
 				 expected  : 0,
-				 sleep: 5000,
 				 parameters: [
 						 project: projectName,
 						 lead   : testUser
@@ -502,7 +510,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'transitionIssue',
 				 ext       : ":USER_CONDITION_TS_40_TC_04_Case_01_ $it _when not satisfies the criteria: ",
 				 expected  : -1,
-				 sleep: 5000,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
@@ -511,7 +518,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'updateProject',
 				 ext       : ":project lead value set to $user _to check $it : ",
 				 expected  : 0,
-				 sleep: 5000,
 				 parameters: [
 						 project: projectName,
 						 lead   : user
@@ -520,7 +526,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'transitionIssue',
 				 ext       : ":USER_CONDITION_TS_40_TC_04_Case_02_ $it _when satisfies the criteria: ",
 				 expected  : 0,
-				 sleep: 5000,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
@@ -538,7 +543,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ": assignee to $testUser _to check $it : ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : { ->defaultIssue[] },
 					 field: "Assignee",
@@ -548,25 +552,23 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_05_Case_01_ $it _when not satisfies the criteria: ",
 			 expected  : -1,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
 			 ],
 			],
-			[action    : 'updateIssue',
-			 ext: ": to set assignee to $user _to check $it : ",
+			[action    : 'setFieldValue',
+			 ext: ": assignee to $user _to check $it : ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : { ->defaultIssue[] },
-					 assignee: user,
+					 field: "Assignee",
+					 value: user
 			 ],
 			],
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_05_Case_02_ $it _when satisfies the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -579,47 +581,42 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 [
 		'verify_user_in_field_assignee_should_be_inAdminGroup',
 ].each {
-	if(!isCloud) {
-		gint.taskHelper.add([
-				[action    : 'setFieldValue',
-				 ext       : ": of assignee to $testUser _to check $it : ",
-				 expected  : 0,
-				 sleep     : 5000,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Assignee",
-						 value: testUser
-				 ],
-				],
-				[action    : 'transitionIssue',
-				 ext       : ":USER_CONDITION_TS_40_TC_06_Case_01_ $it _when not satisfies the criteria: ",
-				 expected  : -1,
-				 sleep     : 5000,
-				 parameters: [
-						 issue     : { -> defaultIssue[] },
-						 transition: it,
-				 ],
-				],
-				[action    : 'updateIssue',
-				 ext       : ": to set assignee to $user _to check $it : ",
-				 expected  : 0,
-				 sleep     : 5000,
-				 parameters: [
-						 issue   : { -> defaultIssue[] },
-						 assignee: user,
-				 ],
-				],
-				[action    : 'transitionIssue',
-				 ext       : ":USER_CONDITION_TS_40_TC_06_Case_02_ $it _when satisfies the criteria: ",
-				 expected  : 0,
-				 sleep     : 5000,
-				 parameters: [
-						 issue     : { -> defaultIssue[] },
-						 transition: it,
-				 ],
-				],
-		])
-	}
+	gint.taskHelper.add([
+			[action    : 'setFieldValue',
+			 ext: ": of assignee to $testUser _to check $it : ",
+			 expected  : 0,
+			 parameters: [
+					 issue     : { ->defaultIssue[] },
+					 field: "Assignee",
+					 value: testUser
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: ":USER_CONDITION_TS_40_TC_06_Case_01_ $it _when not satisfies the criteria: ",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it,
+			 ],
+			],
+			[action    : 'setFieldValue',
+			 ext: ": of assignee to $user _to check $it : ",
+			 expected  : 0,
+			 parameters: [
+					 issue     : { ->defaultIssue[] },
+					 field: "Assignee",
+					 value: user
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: ":USER_CONDITION_TS_40_TC_06_Case_02_ $it _when satisfies the criteria: ",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it,
+			 ],
+			],
+	])
 }
 
 // USER_CONDITION_TS_40_TC_07_Verify the user in field assignee should specific user_checkUser
@@ -630,7 +627,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ": of assignee to $testUser _to check $it : ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : { ->defaultIssue[] },
 					 field: "Assignee",
@@ -640,25 +636,23 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_07_Case_01_ $it _when not satisfies the criteria: ",
 			 expected  : -1,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
 			 ],
 			],
-			[action    : 'updateIssue',
-			 ext: ": to set assignee to $user _to check $it : ",
+			[action    : 'setFieldValue',
+			 ext: ": of assignee to $user _to check $it : ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : { ->defaultIssue[] },
-					 assignee: user,
+					 field: "Assignee",
+					 value: user
 			 ],
 			],
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_07_Case_02_ $it _when satisfies the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -675,7 +669,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ":asign to $testUser _ $it _to check criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 field: "Assignee",
@@ -685,25 +678,23 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_08_Case_01_ $it _when not satisfies the criteria: ",
 			 expected  : -1,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
 			 ],
 			],
-			[action    : 'updateIssue',
-			 ext: ":to ser assignee to $user _ $it _to check criteria: ",
+			[action    : 'setFieldValue',
+			 ext: ":asign to $user _ $it _to check criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
-					 assignee: user,
+					 field: "Assignee",
+					 value: user
 			 ],
 			],
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_08_Case_02_ $it _when  not satisfies the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -721,7 +712,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'setFieldValue',
 				 ext       : ":of reporter to $user _to check $it : ",
 				 expected  : 0,
-			     sleep: 5000,
 				 parameters: [
 						 issue: { -> defaultIssue[] },
 						 field: "Reporter",
@@ -731,7 +721,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'setFieldValue',
 				 ext       : ":of labels to empty _to check $it : ",
 				 expected  : 0,
-			     sleep: 5000,
 				 parameters: [
 						 issue: { -> defaultIssue[] },
 						 field: "Labels",
@@ -741,7 +730,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'transitionIssue',
 				 ext       : ":USER_CONDITION_TS_40_TC_09_Case_01_ $it _when not satisfies the criteria: ",
 				 expected  : -1,
-			     sleep: 5000,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
@@ -750,7 +738,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'setFieldValue',
 				 ext       : ":labels value set to $user _to check $it : ",
 				 expected  : 0,
-			     sleep: 5000,
 				 parameters: [
 						 issue: { -> defaultIssue[] },
 						 field: "Labels",
@@ -760,7 +747,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'transitionIssue',
 				 ext       : ":USER_CONDITION_TS_40_TC_09_Case_02_ $it _when satisfies the criteria: ",
 				 expected  : 0,
-			     sleep: 5000,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
@@ -778,7 +764,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ":reporter value set to $testUser _to check $it : ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 field: "Reporter",
@@ -788,7 +773,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_10_Case_01_ $it _when not satisfies the criteria: ",
 			 expected  : -1,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -797,7 +781,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ":reporter value set to $user _to check $it : ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 field: "Reporter",
@@ -807,7 +790,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_10_Case_02_ $it _when satisfies the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -825,7 +807,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'updateProject',
 				 ext       : ":project lead value set to $testUser _to check $it : ",
 				 expected  : 0,
-			     sleep: 5000,
 				 parameters: [
 						 project: projectName,
 						 lead   : testUser
@@ -834,7 +815,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'transitionIssue',
 				 ext       : ":USER_CONDITION_TS_40_TC_11_Case_01_ $it _when not satisfies the criteria: ",
 				 expected  : -1,
-			     sleep: 5000,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
@@ -843,7 +823,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'updateProject',
 				 ext       : ":project lead value set to $user _to check $it : ",
 				 expected  : 0,
-			     sleep: 5000,
 				 parameters: [
 						 project: projectName,
 						 lead   : user
@@ -852,7 +831,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'transitionIssue',
 				 ext       : ":USER_CONDITION_TS_40_TC_11_Case_02_ $it _when satisfies the criteria: ",
 				 expected  : 0,
-			     sleep: 5000,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
@@ -870,7 +848,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ": reporter to $testUser _to check $it : ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : { ->defaultIssue[] },
 					 field: "Reporter",
@@ -880,7 +857,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_12_Case_01_ $it _when not satisfies the criteria: ",
 			 expected  : -1,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -889,7 +865,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ": reporter to $user _to check $it : ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : { ->defaultIssue[] },
 					 field: "Reporter",
@@ -899,7 +874,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_12_Case_02_ $it _when satisfies the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -912,48 +886,42 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 [
 		'verify_user_in_field_reporter_should_be_inAdminGroup',
 ].each {
-	if(!isCloud) {
-		gint.taskHelper.add([
-				[action    : 'setFieldValue',
-				 ext       : ": of reporter to $testUser _to check $it : ",
-				 expected  : 0,
-				 sleep     : 5000,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Reporter",
-						 value: testUser
-				 ],
-				],
-				[action    : 'transitionIssue',
-				 ext       : ":USER_CONDITION_TS_40_TC_13_Case_01_ $it _when not satisfies the criteria: ",
-				 expected  : -1,
-				 sleep     : 5000,
-				 parameters: [
-						 issue     : { -> defaultIssue[] },
-						 transition: it,
-				 ],
-				],
-				[action    : 'setFieldValue',
-				 ext       : ": of reporter to $user _to check $it : ",
-				 expected  : 0,
-				 sleep     : 5000,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Reporter",
-						 value: user
-				 ],
-				],
-				[action    : 'transitionIssue',
-				 ext       : ":USER_CONDITION_TS_40_TC_13_Case_02_ $it _when satisfies the criteria: ",
-				 expected  : 0,
-				 sleep     : 5000,
-				 parameters: [
-						 issue     : { -> defaultIssue[] },
-						 transition: it,
-				 ],
-				],
-		])
-	}
+	gint.taskHelper.add([
+			[action    : 'setFieldValue',
+			 ext: ": of reporter to $testUser _to check $it : ",
+			 expected  : 0,
+			 parameters: [
+					 issue     : { ->defaultIssue[] },
+					 field: "Reporter",
+					 value: testUser
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: ":USER_CONDITION_TS_40_TC_13_Case_01_ $it _when not satisfies the criteria: ",
+			 expected  : -1,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it,
+			 ],
+			],
+			[action    : 'setFieldValue',
+			 ext: ": of reporter to $user _to check $it : ",
+			 expected  : 0,
+			 parameters: [
+					 issue     : { ->defaultIssue[] },
+					 field: "Reporter",
+					 value: user
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: ":USER_CONDITION_TS_40_TC_13_Case_02_ $it _when satisfies the criteria: ",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it,
+			 ],
+			],
+	])
 }
 
 // USER_CONDITION_TS_40_TC_14_Verify the user in field reporter should be specific user_checkUser
@@ -964,7 +932,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ": of reporter to $testUser _to check $it : ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : { ->defaultIssue[] },
 					 field: "Reporter",
@@ -974,7 +941,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_14_Case_01_ $it _when not satisfies the criteria: ",
 			 expected  : -1,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -983,7 +949,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ": of reporter to $user _to check $it : ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : { ->defaultIssue[] },
 					 field: "Reporter",
@@ -993,7 +958,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_14_Case_02_ $it _when satisfies the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -1010,7 +974,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ":reporter to $testUser _ $it _to check criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 field: "Reporter",
@@ -1020,7 +983,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_15_Case_01_ $it _when not satisfies the criteria: ",
 			 expected  : -1,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -1029,7 +991,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ":reporter to $user _ $it _to check criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 field: "Reporter",
@@ -1039,7 +1000,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_15_Case_02_ $it _when  not satisfies the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -1056,7 +1016,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ":assign to $testUser _ $it _to check criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 field: "Assignee",
@@ -1066,7 +1025,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_08_Case_01_ $it _when not satisfies the criteria: ",
 			 expected  : -1,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -1075,7 +1033,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ":asign to $user _ $it _to check criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 field: "Assignee",
@@ -1085,7 +1042,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_08_Case_02_ $it _when  not satisfies the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -1103,7 +1059,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'setFieldValue',
 				 ext       : ":of labels to empty _to check $it : ",
 				 expected  : 0,
-			     sleep: 5000,
 				 parameters: [
 						 issue: { -> defaultIssue[] },
 						 field: "Labels",
@@ -1113,7 +1068,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'transitionIssue',
 				 ext       : ":USER_CONDITION_TS_40_TC_17_Case_01_ $it _when not satisfies the criteria: ",
 				 expected  : -1,
-			     sleep: 5000,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
@@ -1122,7 +1076,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'setFieldValue',
 				 ext       : ":labels value set to $user _to check $it : ",
 				 expected  : 0,
-			     sleep: 5000,
 				 parameters: [
 						 issue: { -> defaultIssue[] },
 						 field: "Labels",
@@ -1132,7 +1085,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 				[action    : 'transitionIssue',
 				 ext       : ":USER_CONDITION_TS_40_TC_17_Case_02_ $it _when satisfies the criteria: ",
 				 expected  : 0,
-			     sleep: 5000,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
@@ -1150,7 +1102,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ":reporter value set to $testUser _to check $it : ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 field: "Reporter",
@@ -1160,7 +1111,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_18_Case_01_ $it _when not satisfies the criteria: ",
 			 expected  : -1,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -1169,7 +1119,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'setFieldValue',
 			 ext: ":reporter value set to $user _to check $it : ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 field: "Reporter",
@@ -1179,7 +1128,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_18_Case_02_ $it _when satisfies the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -1238,7 +1186,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_20_Case_01_ $it _when not satisfies the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,
@@ -1251,19 +1198,16 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 [
 		'verify_user_in_field_creator_should_be_inAdminGroup',
 ].each {
-	if(!isCloud) {
-		gint.taskHelper.add([
-				[action    : 'transitionIssue',
-				 ext       : ":USER_CONDITION_TS_40_TC_21_Case_01_ $it _when not satisfies the criteria: ",
-				 expected  : 0,
-				 sleep     : 5000,
-				 parameters: [
-						 issue     : { -> defaultIssue[] },
-						 transition: it,
-				 ],
-				],
-		])
-	}
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext: ":USER_CONDITION_TS_40_TC_21_Case_01_ $it _when not satisfies the criteria: ",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->defaultIssue[]},
+					 transition: it,
+			 ],
+			],
+	])
 }
 
 // USER_CONDITION_TS_40_TC_22_Verify the user in field creator should specific user_checkUser
@@ -1274,7 +1218,6 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			[action    : 'transitionIssue',
 			 ext: ":USER_CONDITION_TS_40_TC_22_Case_01_ $it _when not satisfies the criteria: ",
 			 expected  : 0,
-			 sleep: 5000,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
 					 transition: it,

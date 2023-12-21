@@ -18,9 +18,9 @@ addWorkflow()
 def functionKey =  'com.innovalog.jmwe.jira-misc-workflow-extensions:separationofduties-condition'
 
 def separationOfDutiesConditionOptions = [
-        FROM_ANY_TO_TODO_STATUS : [defaultFieldsServer + "fromStatus=" + "toStatus=To Do"],
-        FROM_INPROGRESS_TO_DONE_STATUS : [defaultFieldsServer + "fromStatus=In Progress" + "toStatus=Done"],
-        FROM_DONE_TO_INPROGRESS_STATUS : [defaultFieldsServer + "fromStatus=Done" + "toStatus=In Progress"],
+        FROM_ANY_TO_TODO_STATUS : [ defaultFieldsServer + "fromStatus=" + "toStatus=To Do" ],
+        FROM_INPROGRESS_TO_DONE_STATUS : [ defaultFieldsServer + "fromStatus=In Progress" + "toStatus=Done"  ],
+        FROM_DONE_TO_INPROGRESS_STATUS : [ defaultFieldsServer + "fromStatus=Done" + "toStatus=In Progress" ],
 ]
 
 separationOfDutiesConditionOptions.eachWithIndex { transitions, fields, i ->
@@ -29,13 +29,14 @@ separationOfDutiesConditionOptions.eachWithIndex { transitions, fields, i ->
     }
 }
 
+
 createWorkflowScheme()
 createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
-// SEPARATION_OF_DUTIES_CONDITION_TC_10_Case_01-Verify when issue never transitioned FROM status to TO status
 
+// SEPARATION_OF_DUTIES_CONDITION_TC_10_Case_01-Verify when issue never transitioned FROM status to TO status
 separationOfDutiesConditionOptions.eachWithIndex { transition, fields, i->
     if(!isCloud) {
         gint.taskHelper.add([
@@ -50,29 +51,32 @@ separationOfDutiesConditionOptions.eachWithIndex { transition, fields, i->
     }
 }
 
-
-// transition issue to check when the issues are transitioned from status to status
+// transition issue to check when the issues are transitioned FROM STATUS to TO STATUS
 if(!isCloud) {
     gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: ' : To Done',
+            [action    : 'transitionIssue',
+             ext: ' : To_ In Progress',
              parameters: [
                      transition: 'In Progress',
                      issue     : { -> defaultIssue[] },
              ],
             ],
-            [action    : 'transitionIssue', ext: ' : To In Progress',
+            [action    : 'transitionIssue',
+             ext: ' : To_ Done',
              parameters: [
                      transition: 'Done',
                      issue     : { -> defaultIssue[] },
              ],
             ],
-            [action    : 'transitionIssue', ext: ' : again In Progress',
+            [action    : 'transitionIssue',
+             ext: ' : again_ In Progress',
              parameters: [
                      transition: 'In Progress',
                      issue     : { -> defaultIssue[] },
              ],
             ],
-            [action    : 'transitionIssue', ext: ' : To To Do',
+            [action    : 'transitionIssue',
+             ext: ' : To_ To Do',
              parameters: [
                      transition: 'To Do',
                      issue     : { -> defaultIssue[] },
@@ -95,3 +99,58 @@ separationOfDutiesConditionOptions.eachWithIndex { transition, fields, i->
         ])
     }
 }
+
+def transitionByUserTaskForSuccess =  { transition, userId, issue, expected ->
+    if(!isCloud) {
+        gint.taskHelper.add(
+                [expected    : expected,
+                 name        : ":check transition trigger by other user_ when issue transition by current user only:" + transition ,
+                 cmd         : /acli $userId -a transitionIssue --issue $issue --transition $transition/,
+                ]
+        )
+    }
+}
+
+// Check transition by other user_ when issue has transitioned FROM status to TO status by current user only
+[
+         'FROM_INPROGRESS_TO_DONE_STATUS',
+         'FROM_DONE_TO_INPROGRESS_STATUS'
+ ].each {
+    transitionByUserTaskForSuccess(it, testUserForServer, {->defaultIssue[]}, 0)
+}
+
+def transitionByUserTaskForError =  { transition, userId, issue, expected ->
+    if(!isCloud) {
+        gint.taskHelper.add(
+                [expected    : expected,
+                 name        : ":check transition trigger by other user_ when issue transition by test _ $testUserForServer user:" + transition ,
+                 cmd         : /acli $userId -a transitionIssue --issue $issue --transition "$transition"/,
+                ]
+        )
+    }
+}
+
+transitionByUserTaskForError('In Progress', testUserForServer, {->defaultIssue[]}, 0)
+transitionByUserTaskForError('Done', testUserForServer, {->defaultIssue[]}, 0)
+transitionByUserTaskForError('To Do', testUserForServer, {->defaultIssue[]}, 0)
+
+// Check transition by other user_ when issue has transitioned FROM status to TO status by current user only
+[
+        'FROM_ANY_TO_TODO_STATUS',
+        'FROM_INPROGRESS_TO_DONE_STATUS',
+].each {
+    transitionByUserTaskForError(it, testUserForServer, {->defaultIssue[]}, -1)
+}
+
+/*
+1. Add custom status to workflow and configure the condition For
+    - From : customStatus
+    - To : To DO , In Progress, In review, done = Pending
+2. Add custom status to workflow and configure the condition For
+    - From : To DO , In Progress, In review, done
+    - To : customStatus = Pending
+3. Add one more custom status and configure condition for
+    - From : customStatus
+    - To : customStatus = Pending
+4. Check transition by logging into other users = Done
+ */

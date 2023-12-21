@@ -12,40 +12,71 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-tearDown()
-addWorkflow()
+def issueType = [
+        any : [ "selectedIssueType=" ],
+        story : [ "selectedIssueType=$StoryIssueType" ],
+        task : [ "selectedIssueType=$TaskIssueType" ],
+        bug : [ "selectedIssueType=$BugIssueType" ],
+        initiative: [ "selectedIssueType=$InitiativeIssueType" ]
+]
+def linkedIssuesStatusMode = [
+        all : [ "conditionMode=all-in-status" ],
+        one : ["conditionMode=one-in-status"],
+        none : ["conditionMode=none-in-status"],
+        oneNot : ["conditionMode=one-not-in-status"]
+]
 
-def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
-relatedIssue.remove("currentIssue")
-def functionKey = info?.isCloud? functionKey.relatedIssuesStatusvalidatorCloud : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-validator'
+def statuses = [
+        inProgress : ["issue_statuses=$InProgress" ],
+        toDo : [ "issue_statuses=$ToDo" ],
+        inReview : [ "issue_statuses=$InReview" ],
+        done : [ "issue_statuses=$Done" ]
+]
+
+
+def allRelatedIssuesStatus = info?.isCloud ? allRelatedIssuesStatusValidator : relatedIssueServer
+def atLeastOneRelatedIssuesStatus = info?.isCloud ? atLeastOneRelatedIssuesStatusValidator : relatedIssueServer
+def noRelatedIssuesStatus = info?.isCloud ? noRelatedIssuesStatusValidator : relatedIssueServer
+def atLeastOneNotRelatedIssuesStatus = info?.isCloud ? atLeastOneNotRelatedIssuesStatusValidator : relatedIssueServer
+
+allRelatedIssuesStatus.remove("currentIssue")
+atLeastOneRelatedIssuesStatus.remove("currentIssue")
+noRelatedIssuesStatus.remove("currentIssue")
+atLeastOneNotRelatedIssuesStatus.remove("currentIssue")
+
+def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssueStatusValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-validator'
 def errorMessage = "Check linked issues status"
 
 def defaultFieldsCloud = ["validator.id=7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f"]
 
 def defaultFieldsServer = [ "errorMessage=$errorMessage", "correlationId=" ]
 
-relatedIssue.eachWithIndex { linkedIssue, fieldValues, i ->
+allRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     def transition = "verify_status_in_progress_of_all_issues_which_are_" + linkedIssue
+    def cloud = defaultFieldsCloud + "validator.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=$fieldValues"
     def server = defaultFieldsServer + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.all + statuses.inProgress
-    addTransitionFunction(transition, 'validator', server, functionKey)
+    addTransitionFunction(transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { linkedIssue, fieldValues, i ->
+atLeastOneRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     def transition = 'verify_status_in_progress_of_at_least_one_issues_which_is_' + linkedIssue
+    def cloud = defaultFieldsCloud + "validator.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=$fieldValues"
     def server = defaultFieldsServer + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.one + statuses.inProgress
-    addTransitionFunction( transition, 'validator', server, functionKey)
+    addTransitionFunction( transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { linkedIssue, fieldValues, i ->
+noRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     def transition = 'verify_status_in_progress_none_of_the_issues_which_are_' + linkedIssue
+    def cloud = defaultFieldsCloud + "validator.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=$fieldValues"
     def server = defaultFieldsServer + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.none + statuses.inProgress
-    addTransitionFunction(transition, 'validator', server, functionKey)
+    addTransitionFunction(transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { linkedIssue, fieldValues, i ->
+atLeastOneNotRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     def transition = 'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_' + linkedIssue
+    def cloud = defaultFieldsCloud + "validator.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=$fieldValues"
     def server = defaultFieldsServer + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.oneNot + statuses.inProgress
-    addTransitionFunction(transition, 'validator', server, functionKey)
+    addTransitionFunction(transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 ['verify_the_issue_type_dropdwn_Task'].each {
@@ -81,12 +112,21 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 
 updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
 
-def linkIssuesMap = [
+def linkIssuesMapServer = [
+        blocks : {->blocks[]},
+        "$clonesLinkType" : {->clones[]},
+        duplicates : {->duplicates[]},
+        'relates to': {->relatesTo[]}
+]
+
+def linkIssuesMapCloud = [
         blocks : {->blocks[]},
         clones : {->clones[]},
         duplicates : {->duplicates[]},
         'relates to': {->relatesTo[]}
 ]
+
+def linkIssuesMap = info?.isCloud ? linkIssuesMapCloud : linkIssuesMapServer
 linkIssuesMap.eachWithIndex { key, value, i ->
     linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
 }
