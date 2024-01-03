@@ -1,0 +1,566 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.3"
+    }
+}
+apply plugin: "org.gint.atlassian"
+apply from: gint.resourceDirectory + '/src/common/utils.gradle'
+
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:assigntolastrolemember'
+def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
+def defaultFields = [
+        "correlationId=",
+        "throwExceptions="
+]
+def projectRole = [
+        admin : ["jira.projectrole.id=$jiraAdminRoleId"],
+        testRole : ["jira.projectrole.id=$testProjectRoleId"],
+        emptyRole : ["jira.projectrole.id=$emptyProjectRoleId"],
+]
+def option = [
+        includeReporter : ["includeReporter=yes"],
+        includeCurrentAssignee : ["includeCurrentAssignee=yes"],
+        skipInactiveUsers :["skipInactiveUsers=yes"],
+]
+def action = [
+        force : ["assigneeMode=default"],
+        ifAutomatic : ["assigneeMode=skipIfAssignee"],
+        ifChangedOnTransitionScreen : ["assigneeMode=forceSelectedUser"],
+]
+['1. assignToLastAdminRole'].each {
+    def server = defaultFields + projectRole.admin + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['2. assignToLastTestRole'].each {
+    def server = defaultFields + projectRole.testRole + conditionalExecution.true
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['3. assignToLastRoleIncludeReporter'].each {
+    def server = defaultFields + projectRole.admin + option.includeReporter + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['4. assignToLastRoleIncludeReporterIfAutomatic'].each {
+    def server = defaultFields + projectRole.admin + option.includeReporter + action.ifAutomatic + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['5. assignToLastRoleIncludeReporterIfNotAutomatic'].each {
+    def server = defaultFields + projectRole.admin + option.includeReporter + action.ifAutomatic + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['6. assignToLastRoleIncludeReporterIfChangeOnTransitionScreen'].each {
+    def server = defaultFields + projectRole.admin + option.includeReporter + action.ifChangedOnTransitionScreen + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['7. assignToLastRoleIncludeReporterIfNotChangeOnTransitionScreen'].each {
+    def server = defaultFields + projectRole.admin + option.includeReporter + action.ifChangedOnTransitionScreen + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['8. assignToLastRoleIncludeCurrentAssignee'].each {
+    def server = defaultFields + projectRole.admin + option.includeCurrentAssignee+ conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['9. assignToLastRoleIncludeCurrentAssigneeNegative'].each {
+    def server = defaultFields + projectRole.admin + option.includeCurrentAssignee+ conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['10. assignToLastRoleIncludeCurrentAssigneeIfAutomatic'].each {
+    def server = defaultFields + projectRole.admin + option.includeCurrentAssignee + action.ifAutomatic + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['11. assignToLastRoleIncludeCurrentAssigneeIfAutomaticNegative'].each {
+    def server = defaultFields + projectRole.admin + option.includeCurrentAssignee + action.ifAutomatic + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['12. assignToLastRoleIncludeCurrentAssigneeIfChangeOnTransitionScreen'].each {
+    def server = defaultFields + projectRole.admin + option.includeCurrentAssignee + action.ifChangedOnTransitionScreen + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['13. assignToLastRoleIncludeCurrentAssigneeIfChangeOnTransitionScreenNegative'].each {
+    def server = defaultFields + projectRole.admin + option.includeCurrentAssignee + action.ifChangedOnTransitionScreen + conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+['14. assignToLastRoleSkipInactiveUsers'].each {
+    def server = defaultFields + projectRole.admin + option.skipInactiveUsers+ conditionalExecution.false
+    addTransitionFunction( it, 'postfunction', server, functionKey)
+}
+createWorkflowScheme();
+createProject()
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+
+gint.taskHelper.add(
+        action: 'updateUser', ext: ": Make user active",
+        parameters: [
+                activate: null,
+                userId: inactiveAdmin,
+        ]
+)
+
+[testUser1,testUser2].collect{
+    gint.taskHelper.add(
+            action: 'removeProjectRoleActors', ext: ": remove user $it from specific role",
+            parameters:[
+                    project: projectName,
+                    role: testRole,
+                    userId: it
+            ]
+    )
+}
+
+[testUser1,testUser2].collect{
+    gint.taskHelper.add(
+            action: 'addProjectRoleActors', ext: ": add user $it to specific role",
+            parameters:[
+                    project: projectName,
+                    role: testRole,
+                    userId: it
+            ]
+    )
+}
+
+[inactiveAdmin, testAdmin].collect{
+    gint.taskHelper.add(
+            action: 'removeProjectRoleActors', ext: ":remove user $it from specific role: ",
+            parameters:[
+                    project: projectName,
+                    role: 'Administrators',
+                    userId: it
+            ]
+    )
+}
+[inactiveAdmin, testAdmin].collect{
+    gint.taskHelper.add(
+            action: 'addProjectRoleActors', ext: ":add user $it to specific role: ",
+            parameters:[
+                    project: projectName,
+                    role: 'Administrators',
+                    userId: it
+            ]
+    )
+}
+
+[user,testAdmin, " "].collect{
+    gint.taskHelper.add(
+            [action    : 'updateIssue',
+             ext       : ': change assignee1: '+it  ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     assignee: it
+             ],
+            ],
+    )
+}
+
+[
+        '1. assignToLastAdminRole'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it ,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $testAdmin/],
+            ],
+    ])
+}
+
+[testUser1,testUser2, " "].collect{
+    gint.taskHelper.add(
+            [action    : 'updateIssue',
+             ext       : it + ': change assignee2' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     assignee: it
+             ],
+            ],
+    )
+}
+
+[
+        '2. assignToLastTestRole'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it ,
+                     priority:'High',
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $testUser2/],
+            ],
+    ])
+}
+def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue1'], 'defaultIssue1')
+[
+        '3. assignToLastRoleIncludeReporter'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue1[] },
+                     transition: it ,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue1[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $user/],
+            ],
+    ])
+}
+def defaultIssue2 = createIssue([type: 'Task', summary: 'JMWE_Issue2'], 'defaultIssue2')
+[
+        '4. assignToLastRoleIncludeReporterIfAutomatic'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue2[] },
+                     transition: it ,
+                     assignee: -1 ,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue2[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $user/],
+            ],
+    ])
+}
+def defaultIssue3 = createIssue([type: 'Task', summary: 'JMWE_Issue3'], 'defaultIssue3')
+[
+        '5. assignToLastRoleIncludeReporterIfNotAutomatic'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue3[] },
+                     transition: it ,
+                     assignee: testUser1 ,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue3[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $testUser1/],
+            ],
+    ])
+}
+/*
+def defaultIssue4 = createIssue([type: 'Task', summary: 'JMWE_Issue4'], 'defaultIssue4')
+[
+        '6. assignToLastRoleIncludeReporterIfChangeOnTransitionScreen'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue4[] },
+                     transition: it ,
+                     assignee: testUser2,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue4[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $testUser2/],
+            ],
+    ])
+}
+*/
+def defaultIssue5 = createIssue([type: 'Task', summary: 'JMWE_Issue5'], 'defaultIssue5')
+[
+        '7. assignToLastRoleIncludeReporterIfNotChangeOnTransitionScreen'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue5[] },
+                     transition: it ,
+                     assignee: " " ,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue5[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $user/],
+            ],
+    ])
+}
+def defaultIssue6 = createIssue([type: 'Task', summary: 'JMWE_Issue6'], 'defaultIssue6')
+[testAdmin].collect{
+    gint.taskHelper.add(
+            [action    : 'updateIssue',
+             ext       : it + ': change assignee3' ,
+             parameters: [
+                     issue: { -> defaultIssue6[] },
+                     assignee: it
+             ],
+            ],
+    )
+}
+[
+        '8. assignToLastRoleIncludeCurrentAssignee'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue6[] },
+                     transition: it ,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue6[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $testAdmin/],
+            ],
+    ])
+}
+
+def defaultIssue7 = createIssue([type: 'Task', summary: 'JMWE_Issue7'], 'defaultIssue7')
+[testUser1].collect{
+    gint.taskHelper.add(
+            [action    : 'updateIssue',
+             ext       : ":" + ': change assignee to' + it ,
+             parameters: [
+                     issue: { -> defaultIssue7[] },
+                     assignee: it
+             ],
+            ],
+    )
+}
+[
+        '9. assignToLastRoleIncludeCurrentAssigneeNegative'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue',
+             parameters: [
+                     issue     : { -> defaultIssue7[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue',
+             parameters: [
+                     issue: { -> defaultIssue7[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $testUser1/],
+            ],
+    ])
+}
+def defaultIssue8 = createIssue([type: 'Task', summary: 'JMWE_Issue8'], 'defaultIssue8')
+[user," "].collect{
+    gint.taskHelper.add(
+            [action    : 'updateIssue',
+             ext       : it + ': change assignee5' ,
+             parameters: [
+                     issue: { -> defaultIssue8[] },
+                     issue: { -> defaultIssue8[] },
+                     assignee: it
+             ],
+            ],
+    )
+}
+[
+        '10. assignToLastRoleIncludeCurrentAssigneeIfAutomatic'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue8[] },
+                     transition: it ,
+                     assignee: -1 ,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue8[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $user/],
+            ],
+    ])
+}
+def defaultIssue9 = createIssue([type: 'Task', summary: 'JMWE_Issue9'], 'defaultIssue9')
+[user," "].collect{
+    gint.taskHelper.add(
+            [action    : 'updateIssue',
+             ext       :  ': change assignee to : '+ it ,
+             parameters: [
+                     issue: { -> defaultIssue9[] },
+                     issue: { -> defaultIssue9[] },
+                     assignee: it
+             ],
+            ],
+    )
+}
+
+[
+        '11. assignToLastRoleIncludeCurrentAssigneeIfAutomaticNegative'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue9[] },
+                     transition: it ,
+                     assignee: testUser2 ,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue9[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $testUser2/],
+            ],
+    ])
+}
+
+def defaultIssue10 = createIssue([type: 'Task', summary: 'JMWE_Issue10'], 'defaultIssue10')
+
+[testAdmin].collect{
+    gint.taskHelper.add(
+            [action    : 'updateIssue',
+             ext       : it + ': change assignee7' ,
+             parameters: [
+                     issue: { -> defaultIssue10[] },
+                     assignee: it
+             ],
+            ],
+    )
+}
+
+[
+        '12. assignToLastRoleIncludeCurrentAssigneeIfChangeOnTransitionScreen'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue10[] },
+                     transition: it ,
+                     assignee: " ",
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       :  ":" + it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue10[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $testAdmin/],
+            ],
+    ])
+}
+
+[
+        //'13. assignToLastRoleIncludeCurrentAssigneeIfChangeOnTransitionScreenNegative'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue10[] },
+                     transition: it ,
+                     assignee: testUser2,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue10[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $testUser2/],
+            ],
+            ],
+    )
+}
+
+def defaultIssue11 = createIssue([type: 'Task', summary: 'JMWE_Issue11'], 'defaultIssue11')
+
+gint.taskHelper.add(
+        action: 'updateUser', ext: ": Make user active1",
+        parameters: [
+                activate: null,
+                userId: inactiveAdmin,
+        ]
+)
+
+[testAdmin,inactiveAdmin," "].collect{
+    gint.taskHelper.add(
+            [action    : 'updateIssue',
+             ext       : it + ': change assignee8' ,
+             parameters: [
+                     issue: { -> defaultIssue11[] },
+                     assignee: it
+             ],
+            ],
+    )
+}
+
+gint.taskHelper.add(
+        action: 'updateUser', ext: ": Make user inactive",
+        parameters: [
+                deactivate: null,
+                userId: inactiveAdmin,
+        ]
+)
+[
+        '14. assignToLastRoleSkipInactiveUsers'
+].collect {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: it + ': of related issue' ,
+             parameters: [
+                     issue     : { -> defaultIssue11[] },
+                     transition: it ,
+                     assignee: " ",
+             ]
+            ],
+            [action    : 'getFieldValue',
+             ext       : it + ': of related issue' ,
+             parameters: [
+                     issue: { -> defaultIssue11[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : $testAdmin/],
+            ],
+    ])
+}

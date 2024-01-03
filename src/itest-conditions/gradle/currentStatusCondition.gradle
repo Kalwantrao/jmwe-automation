@@ -1,6 +1,3 @@
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
 buildscript {
 	repositories {
 		maven {
@@ -11,47 +8,189 @@ buildscript {
 		classpath "org.gint:gint-atlassian:3.8.4"
 	}
 }
+
 apply plugin: 'org.gint.atlassian'
-//apply from: 'common/setUp.gradle'
-apply from: gint.resourceDirectory +'/src/common/testConditions.gradle'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def workflow = project
-def screen = project
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CurrentStatusCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:currentstatus-condition'
 
-gint.xmlReport =	true	//xml report generates in projects root directory
-gint.verbose =	true
-def userId = 'jmwe_qa'
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/conditionsData/CurrentStatusConditionFunctions${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
-def transition = 'currentStatusCondition'
-def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CurrentStatusCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:currentstatus-condition'	//function key for HideTransitionCondition
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+def defaultFieldsCloud= [
+		"condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9",
+]
 
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'condition', startStep, workflow, screen, 0)
+def currentStatusServer = [
+		SELECT_CURRENT_STATUS_TODO : [ defaultFieldsServer + "issue_statuses=$ToDo", "not="],
+		SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "not="],
+		SELECT_CURRENT_STATUS_TODO_AND_REVERSE : [ defaultFieldsServer +  "issue_statuses=$ToDo", "not=yes" ],
+		SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE_REVERSE : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "not=yes"],
+]
 
-// TC_01-check issues current status should be in selected and is in selected
-def currentIssue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createCurrentIssue')
-transitionIssue(transition+0, {-> currentIssue[0]}, 0, 'TC_01-check issues current status should be in selected and is in selected', null, null)
+def currentStatusCloud = [
+		SELECT_CURRENT_STATUS_TODO :  [ defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[$ToDo],\"options\":{\"not\":false},\"expression\":\"config.statusIds.includes(issue.status.id)\"}" ],
+		SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE :  [ defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[$ToDo,$InProgress,$InReview,$Done],\"options\":{\"not\":false},\"expression\":\"config.statusIds.includes(issue.status.id)\"}" ],
+		SELECT_CURRENT_STATUS_TODO_AND_REVERSE : [	defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[$ToDo],\"options\":{\"not\":true},\"expression\":\"!config.statusIds.includes(issue.status.id)\"}" ],
+		SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE_REVERSE : [	defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[$ToDo,$InProgress,$InReview,$Done],\"options\":{\"not\":true},\"expression\":\"!config.statusIds.includes(issue.status.id)\"}" ]
+]
 
-// TC_02-check issues current status should not be in selected status but in selected status
-def parent = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'createParentIssue')
-transitionIssue(transition+1, {-> parent[0]}, -1, 'TC_02-check issues current status should not be in selected status but in selected status', null, null)
+def currentStatusCondition = info?.isCloud ? currentStatusCloud : currentStatusServer
+
+currentStatusCondition.eachWithIndex { transitions, fields, i->
+	addTransitionFunction(transitions, 'condition', fields, functionKey)
+}
+
+createWorkflowScheme()
+createProject()
+
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+
+// CURRENT_STATUS_CONDITION_TC_10_Verify transition tab after apply Current Status Condition on ToDo status and current status of Issue is also ToDo
+[
+		'SELECT_CURRENT_STATUS_TODO',
+].each {
+	gint.taskHelper.add([
+			[action: 'getFieldValue',
+			 ext: ":Validate that the current issue in status_ TODO:$it ",
+			parameters: [
+			        issue: {->defaultIssue[]},
+					field: "Status"
+			],
+					finalClosure: {Task task ->
+						def currentStatus = "$task.outData"
+						assert currentStatus.contains("Status  . . . . . . . . . . . : To Do")
+					}
+			],
+			[action    : 'transitionIssue',
+			ext: ": CURRENT_STATUS_CONDITION_TC_10-Verify transition tab $it after apply Current Status Condition on ToDo status and current status of Issue is also ToDo:",
+			expected  : 0,
+			parameters: [
+					transition: it,
+					issue: { -> defaultIssue[] },
+			],
+			]
+	])
+}
+
+// CURRENT_STATUS_CONDITION_TC_14-Verify transition eg $it tab on issue screen when apply Reverse condition with ToDo status and current status of issue is also ToDo
+[
+		'SELECT_CURRENT_STATUS_TODO_AND_REVERSE',
+].each {
+	gint.taskHelper.add([
+			[action: 'getFieldValue',
+			 ext: ":Validate that the current issue in status_ TODO:$it",
+			 parameters: [
+					 issue: {->defaultIssue[]},
+					 field: "Status"
+			 ],
+			 finalClosure: {Task task ->
+				 def currentStatus = "$task.outData"
+				 assert currentStatus.contains("Status  . . . . . . . . . . . : To Do")
+			 }
+			],
+			[action    : 'transitionIssue',
+			ext: ": CURRENT_STATUS_CONDITION_TC_14-Verify transition eg $it tab on issue screen when apply Reverse condition with ToDo status and current status of issue is also ToDo:",
+			expected  : -1,
+			parameters: [
+					transition: it,
+					issue: { -> defaultIssue[] },
+			],
+			]
+	])
+}
+
+// CURRENT_STATUS_CONDITION-Verify transition tab on issue screen when apply Reverse condition with all status and current status of issue is ToDo
+['SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE'].each {
+	gint.taskHelper.add([
+			[action: 'getFieldValue',
+			 ext: ":Validate that the current issue in status_ TODO: $it",
+			 parameters: [
+					 issue: {->defaultIssue[]},
+					 field: "Status"
+			 ],
+			 finalClosure: {Task task ->
+				 def currentStatus = "$task.outData"
+				 assert currentStatus.contains("Status  . . . . . . . . . . . : To Do")
+			 }
+			],
+			[action    : 'transitionIssue',
+			ext: ": CURRENT_STATUS_CONDITION_-Verify transition tab $it after apply Current Status Condition on all status and current status of Issue also ToDo:",
+			expected  : 0,
+			parameters: [
+					transition: it,
+					issue: { -> defaultIssue[] },
+			],
+			]
+	])
+}
+
+// CURRENT_STATUS_CONDITION-Verify transition tab on issue screen when apply Reverse condition with all status and current status of issue is ToDo
+[
+		'SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE_REVERSE',
+].each {
+	gint.taskHelper.add([
+			[action: 'getFieldValue',
+			 ext: ":Validate that the current issue in status_ TODO:$it ",
+			 parameters: [
+					 issue: {->defaultIssue[]},
+					 field: "Status"
+			 ],
+			 finalClosure: {Task task ->
+				 def currentStatus = "$task.outData"
+				 assert currentStatus.contains("Status  . . . . . . . . . . . : To Do")
+			 }
+			],
+			[action    : 'transitionIssue',
+			ext: ": CURRENT_STATUS_CONDITION_TC_14-Verify transition eg $it tab on issue screen when apply Reverse condition with all status and current status of issue is ToDo:",
+			expected  : -1,
+			parameters: [
+					transition: it,
+					issue: { -> defaultIssue[] },
+			],
+			]
+	])
+}
+
+def transitionByUserTask =  { transition, userId, issue, expected ->
+	if(!isCloud) {
+		gint.taskHelper.add(
+				[expected    : expected,
+				 name        : ":check transition trigger by other user:" + transition,
+				 cmd         : /acli $userId -a transitionIssue --issue $issue --transition $transition/,
+				]
+		)
+	}
+}
+
+// CURRENT_STATUS_CONDITION-Verify transition by user other than admin
+transitionByUserTask('SELECT_CURRENT_STATUS_TODO', testUserForServer, {->defaultIssue[]}, 0)
+transitionByUserTask('SELECT_CURRENT_STATUS_TODO_REVERSE', testUserForServer, {->defaultIssue[]}, -1)
+transitionByUserTask('SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE', testUserForServer, {->defaultIssue[]}, 0)
+transitionByUserTask('SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE_REVERSE', testUserForServer, {->defaultIssue[]}, -1)
 
 /*
-1. select all status checkbox
-2. multiple conditions with To Do and In Progress
-3. Add extension multiple times and check first should apply first FIFO
-4. check the behaviour on custom statuses
-5. check adding multiple custom statuses
-6. check behaviour on all issuetypes
-7. check status should not be visible when status itself is selected as current status -> transition: Done ,Current status: In Progress , issueTransition:Done
-8. transition: Done , Current status : Done
-9. transition: Done, current status: To Do, again add condition on transition: Done, current Status :Done
-10. Check behaviour by adding postfunctions on same status also check fields
-*/
+
+1. Negative  - add current status condition with in progress and check on issue when issue status is to do = Need to addTransitionFunction on workflow step
+2. Positive -  add current status condition with in progress and check on issue when issue status is in progress = "DONE"
+3. add current status condition with in progress,done and to do and check on issue when issue status is in progress, done, to to , in review
+4. add current status condition with in progress,done and to do and check on issue when issue status is in progress, done, to to , in review - reverse
+5. add current status condition with in progress,done and to do and check on issue when issue status is in progress
+6. add current status condition with in progress,done and to do and check on issue when issue status is in progress - reverse
+7. Select all the statuses and check on issue by changing the statuses
+	- for example - select all status checkboxes and check on issue when the issue status is
+	- TODO - DONE
+	- INPROGRESS - PENDING
+	- INREVIEW - PENDING
+	- DONE  - PENDING
+8. Select all the status checkboxes and reverse option and check on the issue by changing the statuses
+	- for example - select all status checkboxes and reverse and check on issue when the issue status is
+	- TODO - DONE
+	- INPROGRESS - PENDING
+	- INREVIEW - PENDING
+	- DONE  - PENDING
+9. update the existing configuration -
+	- unselect status checkbox and then check on issue - PENDING
+	- unselect the reverse checkbox and check on issue - PENDING
+
+ */
 
 
 

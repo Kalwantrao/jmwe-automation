@@ -21,41 +21,55 @@ To run this project, you will need to set the following environment variables
 
 ## Pre-requisites in Jira Instance:
 
-#### Create screen with name "AUTOMATION" in Jira and add the following fields:
-   - Assignee
-   - Affects Version/s
-   - Fix Version/s
-   - Labels
-   - Component/s
-   - Priority
-   - Story Points
-   - Original Story Points
-   - Environment
-   - Summary
-   - Reporter
-   - Security Level
-   - Linked Issues
+#### Create screen with name "AUTOMATION" in Jira and add the following system fields:
+    Assignee
+    Affects Version/s
+    Fix Version/s
+    Labels
+    Component/s
+    Priority
+    Story Points
+    Original Story Points
+    Environment
+    Summary
+    Reporter
+    Security Level
+    Linked Issues
+    Parent Link
+    Epic Name
+    IssueType
 
+#### Create issueType scheme "AUTOMATION" and add following issueTypes : 
+    Task
+    Bug
+    Story
+    Epic
+    Initiative
+    Sub-task
 
-#### Create new user with credentials as mentioned:
-  - Username `jmwe_qa`
-  - Password `jmwe_qa`
-  - Email address `jmwe_qa@gmail.com`
-
+#### Add screen "AUTOMATION" to issueType scheme as default for all issuetypes
+#### Create issuetype hierarchy level as initiative should be parent of epic:
+    Initiative
+    Epic
+    Task
+#### Add issueType screen scheme with name "AUTOMATION" and associate screen "AUTOMATION" to it
+#### Create issue security scheme with name "AUTOMATION" and add below security levels -
+    Level1 - Allow jira admin users to access this level
+    Level2
 ## Install Jira command line interface in jira instance with valid license key
-- Install the `Jira Command Line Interface(CLI)` application from atlassian marketplace in your Jira instance.
-- Update with valid `License key` for getting started with Jira Command Line 
+ - Install the `Jira Command Line Interface(CLI)` application from atlassian marketplace in your Jira instance.
+ - Update with valid `License key` for getting started with Jira Command Line 
 
 ## Set acli.properties file should be in ACLI or gradle installation directory,
 - For server and cloud instance it should be similar to
 
-- `jiraServer = --server http://localhost:9090/ --user yourUsername --password yourPassword`
+    `jiraServer = --server http://localhost:9090/ --user yourUsername --password yourPassword`
 
-- `jiraCloud = --server https://automationgint.atlassian.net/ --user yourUsername --token APItoken`
+    `jiraCloud = --server https://automationgint.atlassian.net/ --user yourUsername --token APItoken`
 
 - Update the above properties with Jira credentials.
-
-- Only update the url with your Jira instance and add `jmwe_qa = --server http://localhost:9090/ --user jmwe_qa --password jmwe_qa` this property to acli.properties file.
+- Only update the url with your Jira instance and add this property to acli.properties file like.
+  `jmwe_qa = --server http://localhost:9090/ --user jmwe_qa --password jmwe_qa` 
 - To verify the installation and configuration of ACLI, run the following command in the command line terminal: 
 - `acli jiraServer --action getServerInfo`
 
@@ -65,14 +79,11 @@ To run this project, you will need to set the following environment variables
 
 - Update the gradle.properties file as per your setting values provided in acli.properties file for jira instance.
   `jira`= `jiraServer`
-  `systemProp.cli`=`acli jiraServer`
 
 - Open the command prompt in project’s root directory.
-- Use command to run the scripts of jmwe-extensions using gradle: `./gradlew conditions validators postfunctions`
+- Use command to run the scripts of jmwe-extensions using gradle: `./gradlew itestServer`
 - Use command to run the single extension using gradle:
-   `./gradlew conditions-currentStatusCondition` ,
-   `./gradlew validators-commentRequiredValidator` ,
-   `./gradlew postfunctions-addFieldValueToParentIssuePostfunction`
+   `./gradlew itestServer-currentStatusCondition` ,
 
 ## Gint framework documentation
 Check the documentation for getting started with gint-acli

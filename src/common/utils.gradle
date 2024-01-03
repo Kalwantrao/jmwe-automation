@@ -1,154 +1,325 @@
 apply from: gint.resourceDirectory +'/src/common/commonTasks.gradle'
 
-ext.createIssue = { parameters, ext ->
-    def savedIssues = [:]
-    gint.taskHelper.addSetUp([
-            [action: 'createIssue',
-             ext: ext ,
-             mustRunAfter: 'createProject',
-             project: projectName,
-             parameters: parameters,
-             finalClosure: { Task task ->
-                 def currentIssue = gint.searchForIssueKey(task.outData)
-                 savedIssues[] = currentIssue
-                 gint.helper.log("Issue created ", savedIssues[]);
-             },
-            ],
-    ]
-    )
-    return savedIssues
-}
-ext.linkIssue = { parameters, ext ->
-    gint.taskHelper.addSetUp([
+project.ext.info =  gint.getJiraHelper().getServerInfoWithVerify()
+project.ext.user =  info.user
+project.ext.projectKey = gint.getJiraHelper().getProjectKey()
+project.ext.isServer = info?.isServer
+project.ext.isCloud = info?.isCloud
+project.ext.currentUserKey=info.userKey
+project.ext.workflowScheme = "AUTOMATION"
+project.ext.screen = "AUTOMATION"
+project.ext.workflow = projectKey
+project.ext.startStepCloud=11
+project.ext.startStepServer=11
+project.ext.workflowFile="resources/workflowJ8.xml"
+project.ext.tearDownFile="resources/tearDown.txt"
+project.ext.baseWorkflow="Software Simplified Workflow for Project $TestProject"
+project.ext.projectTemplateCloud="Bug tracking"
+project.ext.projectTemplateServer="Basic software development"
+project.ext.ToDo = info?.isCloud? ToDoCloud : ToDoServer
+project.ext.InProgress = info?.isCloud? InProgressCloud : InProgressServer
+project.ext.InReview = info?.isCloud? InReviewCloud : InReviewServer
+project.ext.Done = info?.isCloud? DoneCloud : DoneServer
+project.ext.BugIssueType = info?.isCloud? BugIssueTypeCloud : BugIssueTypeServer
+project.ext.StoryIssueType = info?.isCloud? StoryIssueTypeCloud : StoryIssueTypeServer
+project.ext.TaskIssueType = info?.isCloud? TaskIssueTypeCloud : TaskIssueTypeServer
+project.ext.EpicIssueType = info?.isCloud? EpicIssueTypeCloud : EpicIssueTypeServer
+project.ext.InitiativeIssueType = info?.isCloud? InitiativeIssueTypeCloud : InitiativeIssueTypeServer
+project.ext.SubtaskIssueType = info?.isCloud? SubtaskIssueTypeCloud : SubtaskIssueTypeServer
+
+tearDown()
+addWorkflow()
+
+project.ext.groovyExpression = [
+        getIssuetype:"issue.get('issuetype')?.name == 'Task'",
+        checkPriorityHigh: "issue.get('priority')?.name == 'High'",
+        checkPriorityLow: "issue.get('priority')?.name == 'Low'",
+        returnsReporter : "issue.get('reporter')",
+        getDescription : "issue.get('description')",
+        getEntityValue : "currentUser.getEntityProperty('Name')",
+        getUserProperty: "currentUser.getUserProperty('Name')",
+        checkIssueEntity: "issue.getEntityProperty('Labels')"
+]
+project.ext.nunjuckExpression = [
+        returnsLinkedIssues: "{{ issue | linkedIssues | field('key') }}",
+        getIssuetype: "{{ issue.fields.issuetype.name == 'Task' }}",
+        checkPriorityHigh: "{{ issue.fields.priority.name == 'High' }}",
+        checkPriorityLow: "{{ issue.fields.priority.name == 'Low' }}",
+        returnsReporter : "{{ issue.fields.reporter }}"
+]
+
+project.ext.jiraExpression = [
+        getIssueType : "!!issue.issueType && issue.issueType.name == 'Task'",
+        checkPriorityHigh: "!!issue.priority && issue.priority.name == 'High'"
+]
+
+project.ext.securityLevelId = [
+        lavel1 : securityLevel1Id ,
+        level2 :  securityLevel2Id
+]
+
+project.ext.fields = [
+        Labels:'labels',
+        Components:'components',
+        Assignee:'assignee',
+        AffectsVersions:'versions',
+        FixVersions:'fixVersions',
+        Priority: 'priority',
+]
+
+project.ext.relatedIssueServer = [
+        currentIssue: "$currentIssue",
+        subtask: "$subtask",
+        parentIssue: "$parentIssue",
+        issueBelongsToEpic: "$issueBelongsToEpic",
+        epicOfTheCurrentIssue: "$epicOfTheCurrentIssue",
+        childPortfolio: "$childPortfolio",
+        parentPortfolio: "$parentPortfolio",
+        linkByAnyLink: "$linkByAnyLink",
+        linkByBlock: "$linkByBlock",
+        linkByisBlockedBy: "$linkByisBlockedBy",
+        linkByClones: "$linkByClones",
+        linkByIsClonedBy: "$linkByIsClonedBy",
+        linkByDuplicates: "$linkByDuplicates",
+        linkByIsDuplicatedBy: "$linkByIsDuplicatedBy",
+        linkByRelatesTo: "$linkByRelatesTo",
+        returnsByGroovyExpression: "groovy:$returnsLinkedIssues",
+        returnsFromJqlSearch: "jql:$jqlSearchExpression"
+]
+
+project.ext.relatedIssueCloud = [
+        currentIssue: "currentIssue:*",
+        subtask: "outward:jira_subtask_link",
+        parentIssue: "inward:jira_subtask_link",
+        issueBelongsToEpic: "outward:Epic-Story Link",
+        epicOfTheCurrentIssue: "inward:Epic-Story Link",
+        childPortfolio: "inward:Portfolio Parent Link",
+        parentPortfolio: "outward:Portfolio Parent Link",
+        linkByAnyLink: "*:*",
+        linkByBlock: "outward:10000",
+        linkByisBlockedBy: "inward:10000",
+        linkByClones: "outward:10001",
+        linkByIsClonedBy: "inward:10001",
+        linkByDuplicates: "outward:10002",
+        linkByIsDuplicatedBy: "inward:10002",
+        linkByRelatesTo: "outward:10003",
+        returnsByNunjucksExpression: "nunjucks:$nunjuckExpression.returnsLinkedIssues",
+        returnsFromJqlSearch: "jql:$jqlSearchExpression"
+]
+
+project.ext.statusIdsServer = [ // statusIds.inProgress
+        toDo: ToDoServer,
+        inProgress: InProgressServer,
+        inReview : InReviewServer,
+        done : DoneServer
+]
+
+project.ext.statusIdsCloud = [
+        toDo: ToDoCloud,
+        inProgress: InProgressCloud,
+        inReview : InReviewCloud,
+        done : DoneCloud
+]
+
+project.ext.issueTypeServer = [
+        bug : BugIssueTypeServer,
+        task : TaskIssueTypeServer,
+        subtask  : SubtaskIssueTypeServer,
+        epic : EpicIssueTypeServer,
+        story : StoryIssueTypeServer, //10001 FOR JIRA9
+        initiative : InitiativeIssueTypeServer
+]
+
+project.ext.issueTypeCloud = [
+        bug : BugIssueTypeCloud,
+        task : TaskIssueTypeCloud,
+        subtask  : SubtaskIssueTypeCloud,
+        epic : EpicIssueTypeCloud,
+        story : StoryIssueTypeCloud, //10001 FOR JIRA9
+        initiative : InitiativeIssueTypeCloud
+]
+
+project.ext.customFields = [
+        storyPoints : storyPointFieldId,
+        originalStoryPoints : originalStoryPointsFieldId
+]
+
+project.ext.conditionalValidation = [
+        no : [ "conditionalValidation=no", "conditionalValidationScript=" ],
+        yes : [ "conditionalValidation=yes", "conditionalValidationScript=$groovyExpression.checkPriorityHigh" ]
+]
+
+project.ext.runAsUser = [
+        currentUser : "runAsUser=",
+        specificUser: "runAsUser=userByKey:$jmwe_qaUserId",
+        userInFieldAssignee : "runAsUser=userField:assignee",
+        userInFieldReporter : "runAsUser=userField:reporter",
+        userInFieldCreator : "runAsUser=userField:creator",
+        userFromScript : "runAsUser=userFromScript:$groovyExpression.returnsReporter"
+]
+
+project.ext.conditionalExecution = [
+        false : [ "useGroovyCondition=false", "groovyExpression=" ],
+        true : [ "useGroovyCondition=yes", "groovyExpression=$groovyExpression.checkPriorityHigh" ]
+]
+
+project.ext.statusList = [
+        inProgress: "In Progress",
+        inReview: "In Review",
+        done: "Done"
+]
+
+project.ext.defaultFieldsCloud= [
+        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
+        "condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9",
+        "validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a",
+]
+
+project.ext.defaultFieldsServer = [
+        "restrictToInternal=no",
+        "sendNotification=no",
+        "throwExceptions=",
+        "correlationId=",
+]
+
+project.ext.relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
+
+project.ext.requireRelatedIssuesConditionCloud = [
+        subtask : ["{\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.subtasks.some(linkedIssue => (true)))\"}"],
+        issueBelongsToEpic : ["{\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(!!issue.stories && issue.stories.some(linkedIssue => (true)))\"}"],
+        linkByAnyLink : ["\"selectedLinkTypeId\":\"*\",\"selectedLinkTypeDirection\":\"*\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => (true)))\"}"],
+        linkByBlock : ["{\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))\"}"],
+        linkByisBlockedBy : ["{\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (true)))\"}"],
+        linkByClones : ["{\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))\"}"],
+        linkByIsClonedBy : ["{\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (true)))\"}"],
+        linkByDuplicates : ["{\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))\"}"],
+        linkByIsDuplicatedBy : ["{\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (true)))\"}"],
+        linkByRelatesTo : ["{\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))\"}"],
+]
+
+project.ext.checkRelatedIssuesConditionCloud = [
+        subtask : ["{\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(issue.subtasks.length == 0 || issue.subtasks.some(linkedIssue => (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        issueBelongsToEpic : ["{\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.stories || issue.stories.length == 0 || issue.stories.some(linkedIssue => (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        linkByAnyLink : ["{\"selectedLinkTypeId\":\"*\",\"selectedLinkTypeDirection\":\"*\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links || issue.links.length == 0 || issue.links.some(issueLink => (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        linkByBlock : ["{\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        linkByisBlockedBy : ["{\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        linkByClones : ["{\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        linkByIsClonedBy : ["{\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        linkByDuplicates : ["{\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        linkByIsDuplicatedBy : ["{\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}"],
+        linkByRelatesTo : ["{\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}"],
+]
+
+project.ext.forbidRelatedIssuesConditionCloud = [
+        subtask : ["{\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.subtasks.some(linkedIssue => (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        issueBelongsToEpic : ["{\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(!!issue.stories && issue.stories.some(linkedIssue => (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        linkByAnyLink : ["{\"selectedLinkTypeId\":\"*\",\"selectedLinkTypeDirection\":\"*\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        linkByBlock : ["{\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        linkByisBlockedBy : ["{\"_modified\":\"2023-11-21T13:48:19.346Z\"\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        linkByClones : ["{\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        linkByIsClonedBy : ["{\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        linkByDuplicates : ["{\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        linkByIsDuplicatedBy : ["{\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+        linkByRelatesTo : ["{\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}"],
+]
+
+project.ext.functionKey = [
+        sharedConditionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:shared-condition',
+        transitionIssuePostfunctionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionIssue-function',
+        transitionIssuePostfunctionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__TransitionIssueFunction',
+        transitionRelatedIssuesPostfunctionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__TransitionLinkedIssuesFunction',
+        transitionRelatedIssuesPostfunctionServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionLinkedIssues-function',
+        transitionParentIssuePostfunctionServer: 'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionParentIssue-function',
+        transitionParentIssuePostfunctionCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__TransitionParentIssueFunction',
+        assignToRoleMemberCloud:'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__AssignToRoleMemberFunction',
+        assignToRoleMemberServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:assigntorolemember',
+        returnToPreviousStatusServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:return-to-previous-status-function',
+        transitionParentIssuePfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionParentIssue-function',
+        transitionRelatedIssuePfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionParentIssue-function',
+        setFieldValueOfRelatedIssuesPfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:SetFieldValueOfLinkedIssues-function',
+        setFieldValuePfServer:'com.innovalog.jmwe.jira-misc-workflow-extensions:SetFieldValue-function',
+        setIssueFieldsPfServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:set-issue-fields-function',
+        copyIssueFieldsPfServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:copy-fields-function',
+        assignToRoleMemberPf : 'com.innovalog.jmwe.jira-misc-workflow-extensions:assigntorolemember',
+        createIssuePostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CreateIssue-function',
+        createIssuePostfunctionCloud : 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CreateIssueFunction',
+        copyFieldValueToParentIssuePostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CopyFieldValueToParent-function',
+        copyFieldValueFromRelatedIssuesPostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CopyFieldValueFromLinkedIssue-function',
+        copyFieldValueToRelatedIssuesPostfunctionServer : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CopyFieldValueToLinkedIssues-function',
+]
+
+
+/*
+def linkIssue = { issue1, issue2, linkType, String ext ->
+    gint.taskHelper.add(
             [action: 'linkIssue',
-             ext: ext,
-             parameters: parameters
-            ]
-    ]
-    )
-}
-ext.updateIssue = { parameters, ext ->
-    gint.taskHelper.add(
-            action: 'updateIssue',
-            ext: ': '+ext,
-            parameters: parameters,
-    )
-}
-ext.transitionIssue = { transition, issue, expected, addfield, ext ->
-    gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: ': '+ext,
-             expected  : expected,
-             parameters: [
-                     issue     : issue,
-                     transition: transition
-             ] + (addfield != null ? addfield : [:]),
+             ext: ":by_ $linkType _ linkType _ $ext :",
+             parameters:[
+                     issue: issue1,
+                     toIssue: issue2
+             ],
             ],
-    ]
     )
 }
-ext.getFieldValue = { issue, field, data, ext ->
+
+def unlinkIssue = { issue1, issue2, linkType, String ext ->
     gint.taskHelper.add(
-             [action: 'getFieldValue',
-             ext: ': '+ext,
-             parameters: [
+            [action: 'deleteLink',
+             ext: ":by_ $linkType _ linkType _ $ext :",
+             parameters:[
+                     issue: issue1,
+                     toIssue: issue2
+             ],
+            ],
+    )
+}
+linkIssue({->issueLinks []}, {-> toIssue[]}, "blocks", "LinkIssue")
+unlinkIssue({->issueLinks []}, {-> toIssue[]},"blocks"," unlinkIssue")
+
+def getFieldValueBeforeTransition = { issue, field, value, String ext ->
+    gint.taskHelper.add(
+            [action: "getFieldValue",
+             ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the before transition value of field _$field should be: $value : $ext",
+             parameters:[
                      issue: issue,
                      field: field
              ],
-             data: [data],
-             finalClosure: { Task task ->
-                 if(!task.outData){
-                     gint.helper.log("expected value of field $data but got", task.outData)
-                 }
-                 else {
-                     gint.helper.log("found expected field value", data)
-                 }
-                 assert task.found == true
-             }
+                    finalClosure:{Task task ->
+                        def actualValue = "$task.outData"
+                        assert actualValue.contains("$value")
+                    }
             ]
-    )
-}
-ext.jqlSearch = { jql, field, number, issueType, ext ->
-    gint.taskHelper.add([
-            [action: 'getIssueList', ext: ': '+ext,
-             parameters: [
-                     jql: jql
-             ],
-             data: [ "$number issues in list",
-                     "$field","$issueType"
-             ],
-             finalClosure: { Task task ->
-                 assert task.found == true
-                 gint.helper.log("Issues found for the given search: $number", ext)
-             }
-            ]
-    ]
     )
 }
 
-ext.getIssueHistory = { issue, userId, ext ->
-    gint.taskHelper.add('getIssueHistoryList',[
-            [action: 'getIssueHistoryList', ext: ': '+ext,
-             parameters: [
+def transitionIssue = { issue, transition,String ext ->
+    gint.taskHelper.add(
+            [action: "transitionIssue",
+             ext: ":to check_CLEAR_FIELDS_POSTFUNCTION: $transition : $ext _",
+             parameters:[
                      issue: issue,
+                     transition: transition
              ],
-             data: [ "$userId" ]
             ]
-    ])
-}
-
-ext.getLinkedIssueList = {currentIssue, numberOfLinkedIssues, ext, linkType, link ->
-    gint.taskHelper.add('getLinkIssues',[
-            [action: 'getLinkList', ext: ': '+ext,
-             parameters: [
-                     issue: currentIssue,
-             ],
-             data: [/$numberOfLinkedIssues links for issue: $currentIssue/,
-                    "$currentIssue","$linkType","$link"],
-             finalClosure: { Task task ->
-                 assert task.found == true
-                 gint.helper.log("Check $numberOfLinkedIssues in issue $currentIssue", ext)
-             }
-            ]
-    ]
     )
 }
 
-ext.getComments = { issue, user, ext ->
+def getFieldValueAfterTransition = { issue, field, value, String ext ->
     gint.taskHelper.add(
-            [action: 'getComments', ext: ': '+ext,
-             parameters: [
+            [action: "getFieldValue",
+             ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the after transition value of field _$field should be: $value : $ext",
+             parameters:[
                      issue: issue,
+                     field: field
              ],
-             data: [~/$user added a comment/],
-             finalClosure: { Task task ->
-                 assert task.found == true
-                 gint.helper.log("Comment found: ", user)
-                 }
-            ],
-    )
-}
-ext.transitionIssueByOtherUser = {transition, issue, userId, ext ->
-    gint.taskHelper.add('checkRunAsUser', [
-            [name:"transition issue by user : $userId:"+ext,
-             cmd : /acli $userId -a transitionIsue --issue $issue --transition $transition/,]
-    ],
-    )
-}
-ext.checkIssueHistoryByOtherUser = {transition, issue, userId, ext ->
-    gint.taskHelper.add(
-            [name: "History check by user $userId", ext: ': ' + ext , cmd: /acli ${userId} getIssueHistoryList --issue ${issue} /,
-             data:["$userId"],
-            ],
-    )
-}
-ext.getCommentByOtherUser = { issue, userId, user, ext->
-    gint.taskHelper.add(
-            [name: "Comment Visible To User: $user", ext: ': '+ext, cmd : /acli $userId -a getComments --issue $issue /,
-             failData: [~/$user added a comment/],
-             finalClosure: {Task task ->
-                 assert task.found == true
-                 gint.helper.log("Comment visible to", userId)
+             finalClosure:{Task task ->
+                 def actualValue = "$task.outData"
+                 assert !actualValue.contains("$value")
              }
             ]
     )
 }
+*/
+
+
+

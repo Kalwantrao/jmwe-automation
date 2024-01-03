@@ -1,6 +1,3 @@
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
 buildscript {
 	repositories {
 		maven {
@@ -13,45 +10,346 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: 'common/setUp.gradle'
-apply from: gint.resourceDirectory +'/src/common/testValidators.gradle'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def workflow = project
-def screen = project
-gint.xmlReport =	true	//xml report generates in projects root directory
-gint.verbose =	true
-def user = info.user
-def transition = 'fieldsRequiredValidator'
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/validatorsData/FieldsRequiredValidatorFunctions${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
-def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CommentRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldrequired-validator'
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+def errorMessage = "fields required"
 
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'validator', startStep, workflow, screen, 0)
+def defaultFieldsCloud = [
+		"validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a",
+]
 
-createVersions(project, 5)
-createComponents(project, 'component', 5)
+def fieldsList = [
+		labels : 'labels',
+		fixVersions : 'fixVersions',
+		affectsVersions : 'versions',
+		components : 'components'
+]
 
-// check fieldsRequired
-def currentIssue = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', affectsVersions: '1']}, 'fieldsRequired')
-transitionIssue(transition+0, {-> currentIssue[0]}, 0, 'whenAffectsVersionHasValue', null, null)
-transitionIssue(transition+1, {-> currentIssue[0]}, -3, 'whenFixVersionNotHavingValues', null, ['Remote error: thisIsCustomMsgForFixVersionFieldsRequired'])
-transitionIssue(transition+2, {-> currentIssue[0]}, 0, 'whenAssigneeHavingValuesFromTransitionScreen', [assignee: user], null)
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__FieldRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldrequired-validator'
 
+fieldsList.eachWithIndex { field, value, i ->
+	def transition = field + '_field_is_required'
+	def server = defaultFieldsServer + conditionalValidation.no + "field=$value" + "errorMessage=$errorMessage"
+	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"conditionalValidation\":false,\"fields\":\"$value\",\"errorMessage\":\"$errorMessage\",\"expression\":\"!!issue.${value} && issue.${value}.length > 0\"}"
+	def fields = info?.isCloud ? cloud : server
+	addTransitionFunction( transition, 'validator', fields, functionKey )
+}
 
-// check conditional execution - issueType = story
-def condExecTrue = createIssue(project,{[ type: 'story', summary: 'JMWE_Issue']}, 'condExecTrue')
-transitionIssue(transition+7, {-> condExecTrue[0]}, -3, 'condExecTrueFieldRequired', null, ['Remote error: assignee: Field Assignee is required.'])
-transitionIssue(transition+7, {-> condExecTrue[0]}, 0, 'condExecTrueFieldRequiredProvided', [assignee: user], null)
+fieldsList.eachWithIndex { field, value, i ->
+	def transition = field + '_field_is_required_only_if_condition_true'
+	def server = defaultFieldsServer + conditionalValidation.yes + "field=$value" + "errorMessage=$errorMessage"
+	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"conditionalValidation\":true,\"conditionalValidationExpression\":\"$jiraExpression.getIssueType\",\"fields\":\"$value\",\"errorMessage\":\"$errorMessage\",\"expression\":\"!($jiraExpression.getIssueType) || !!issue.${value} && issue.${value}.length > 0\"}"
+	def fields = info?.isCloud ? cloud : server
+	addTransitionFunction( transition , 'validator', fields, functionKey )
+}
 
-def condExecFalse = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'condExecFalse')
-transitionIssue(transition+7, {-> condExecFalse[0]}, 0, 'condExecFalseFieldNotRequired', null, null)
+['labels_assignee_component_multiple_fields_required'].each{
+	def server = defaultFieldsServer + conditionalValidation.no + "field=labels,assignee,components" + "errorMessage=$errorMessage"
+	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"conditionalValidation\":false,\"fields\":\"labels,assignee,components\",\"errorMessage\":\"$errorMessage\",\"expression\":\"!!issue.labels && issue.labels.length > 0 && issue.assignee != null && (typeof(issue.assignee) != 'List' || issue.assignee.length > 0) && !!issue.components && issue.components.length > 0\"}"
+	def fields = info?.isCloud ? cloud : server
+	addTransitionFunction( it, 'validator', fields, functionKey )
+}
 
+createWorkflowScheme()
+createProject()
 
+(1..2).each {
+	gint.taskHelper.addSetUp([
+			[action: 'addVersion', ext: ': create versions : ' + it,
+			 parameters: [
+					 project: projectName,
+					 version: it
+			 ]
+			],
+			[action: 'addComponent', ext: ': create Component : ' + it,
+			 parameters: [
+					 project: projectName,
+					 component: 'component' + it
+			 ],
+			]
+	])
+}
 
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+
+// FIELDS_REQUIRED_VALIDATOR-TS_09_TC_01 - Verify the validator on issue view for the selected fields
+[
+		'labels_field_is_required'
+].each {
+		gint.taskHelper.add([
+				[action    : 'transitionIssue',
+				 ext: ": FIELDS_REQUIRED_VALIDATOR-TS_09_TC_01_Case_01- $it _ when field not has value:",
+				 expected  : -3,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+						data: ["$errorMessage"],
+				],
+				[action    : 'transitionIssue',
+				 ext: ": FIELDS_REQUIRED_VALIDATOR-TS_09_TC_01_Case_02 $it _ when field added on transition screen:",
+				 expected  : 0,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+						 labels: "testLabels"
+				 ],
+				 failData: ["$errorMessage"],
+				],
+				[action    : 'transitionIssue',
+				 ext: ": FIELDS_REQUIRED_VALIDATOR-TS_09_TC_01_Case_03 $it _ when field has value:",
+				 expected  : 0,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				 failData: ["$errorMessage"],
+				],
+		])
+}
+
+// FIELDS_REQUIRED_VALIDATOR-TS_09_TC_02 - Verify the validator on issue view for the selected fields
+[
+		'fixVersions_field_is_required'
+].each {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext: ": FIELDS_REQUIRED_VALIDATOR-TS_09_TC_02_Case_01 $it _when field not has value:",
+			 expected  : -3,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> defaultIssue[] },
+			 ],
+			 data: ["$errorMessage"],
+			],
+			[action    : 'transitionIssue',
+			 ext: ": FIELDS_REQUIRED_VALIDATOR-TS_09_TC_02_Case_02 $it _when field added on transition screen:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> defaultIssue[] },
+					 fixVersions: 1
+			 ],
+			 failData: ["$errorMessage"],
+			],
+			[action    : 'transitionIssue',
+			 ext: ": FIELDS_REQUIRED_VALIDATOR-TS_09_TC_02_Case_03 $it _when field already has value:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> defaultIssue[] },
+			 ],
+			 failData: ["$errorMessage"],
+			],
+	])
+}
+
+// FIELDS_REQUIRED_VALIDATOR-TS_09_TC_03 - Verify the validator on issue view for the selected fields
+[
+		'affectsVersions_field_is_required'
+].each {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext: ": FIELDS_REQUIRED_VALIDATOR-TS_09_TC_03_Case_01 $it _when field not has value:",
+			 expected  : -3,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> defaultIssue[] },
+			 ],
+			 data: ["$errorMessage"],
+			],
+			[action    : 'transitionIssue',
+			 ext: ": FIELDS_REQUIRED_VALIDATOR-TS_09_TC_03_Case_02 $it _when field added on transition screen:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> defaultIssue[] },
+					 affectsVersions: 1
+			 ],
+			 failData: ["$errorMessage"],
+			],
+			[action    : 'transitionIssue',
+			 ext: ": FIELDS_REQUIRED_VALIDATOR-TS_09_TC_03_Case_02 $it _when field already has value:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> defaultIssue[] },
+			 ],
+			 failData: ["$errorMessage"],
+			],
+	])
+}
+// FIELDS_REQUIRED_VALIDATOR-TS_14_TC_01 -Verify the Condition groovy expression
+[
+		'labels_field_is_required_only_if_condition_true'
+].each {
+	gint.taskHelper.add([
+			[action: 'updateIssue',
+			 ext: ":remove labels to check $it :",
+			 parameters: [
+					 issue: {->defaultIssue[]},
+					 labels: " ",
+					 priority: "Low"
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: ": FIELDS_REQUIRED_VALIDATOR-TS_14_TC_01_Case_01- $it _ when field not has value_and condition not true:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> defaultIssue[] },
+			 ],
+			 failData: ["$errorMessage"],
+			],
+			[action: 'updateIssue',
+			 ext: ":chenge priority to High to check $it :",
+			 parameters: [
+					 issue: {->defaultIssue[]},
+					 priority: "High"
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: ": FIELDS_REQUIRED_VALIDATOR-TS_14_TC_01_Case_02 $it _ when field not has value_and condition true:",
+			 expected  : -3,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> defaultIssue[] },
+			 ],
+			 data: ["$errorMessage"],
+			],
+	])
+}
+
+// FIELDS_REQUIRED_VALIDATOR-TS_14_TC_02 - Verify the Condition groovy expression
+[
+		'fixVersions_field_is_required_only_if_condition_true'
+].each {
+	gint.taskHelper.add([
+			[action: 'updateIssue',
+			 ext: ":remove fixVersions to check $it :",
+			 parameters: [
+					 issue: {->defaultIssue[]},
+					 fixVersions: " ",
+					 priority: "Low"
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: ": FIELDS_REQUIRED_VALIDATOR-TS_14_TC_02_Case_01 $it _when field not has value_and condition not true:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> defaultIssue[] },
+			 ],
+			 failData: ["$errorMessage"],
+			],
+			[action: 'updateIssue',
+			 ext: ":chenge priority to High to check $it :",
+			 parameters: [
+					 issue: {->defaultIssue[]},
+					 priority: "High"
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: ": FIELDS_REQUIRED_VALIDATOR-TS_14_TC_02_Case_02 $it _when field not has value_and condition true:",
+			 expected  : -3,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> defaultIssue[] },
+			 ],
+			 data: ["$errorMessage"],
+			],
+	])
+}
+
+// FIELDS_REQUIRED_VALIDATOR-TS_14_TC_03 - Verify the Condition groovy expression
+[
+		'affectsVersions_field_is_required_only_if_condition_true'
+].each {
+	gint.taskHelper.add([
+			[action: 'updateIssue',
+			 ext: ":remove fixVersions to check $it :",
+			 parameters: [
+					 issue: {->defaultIssue[]},
+					 affectsVersions: " ",
+					 priority: "Low"
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: ": FIELDS_REQUIRED_VALIDATOR-TS_14_TC_03_Case_01 $it _when field not has value_and condition not true:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> defaultIssue[] },
+			 ],
+			 failData: ["$errorMessage"],
+			],
+			[action: 'updateIssue',
+			 ext: ":chenge priority to High to check $it :",
+			 parameters: [
+					 issue: {->defaultIssue[]},
+					 priority: "High"
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: ": FIELDS_REQUIRED_VALIDATOR-TS_14_TC_03_Case_02 $it _when field not has value_and condition true:",
+			 expected  : -3,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> defaultIssue[] },
+			 ],
+			 data: ["$errorMessage"],
+			],
+
+	])
+}
+
+// FIELDS_REQUIRED_VALIDATOR-Check for multiple fields
+['labels_assignee_component_multiple_fields_required'].each {
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext: ": FIELDS_REQUIRED_VALIDATOR-Case_01- $it _ when multiple fields not provided:",
+			 expected  : -3,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> defaultIssue[] },
+			 ],
+			 data: ["$errorMessage"],
+			],
+			[action    : 'transitionIssue',
+			 ext: ": FIELDS_REQUIRED_VALIDATOR-Case_02 $it _ when only one field from multiple fields provided on transition screen:",
+			 expected  : -3,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> defaultIssue[] },
+					 labels: "testLabel"
+			 ],
+			 data: ["$errorMessage"],
+			],
+			[action: 'updateIssue',
+			 ext: ":add all required fields to issue to check $it :",
+			 parameters: [
+					 issue: {->defaultIssue[]},
+					 assignee: user,
+					 components: 'component1',
+					 labels: "testLabel"
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 ext: ": FIELDS_REQUIRED_VALIDATOR-Case_03 $it _ when all fields from multiple fields has provided value:",
+			 expected  : 0,
+			 parameters: [
+					 transition: it,
+					 issue     : { -> defaultIssue[] },
+			 ],
+			 failData: ["$errorMessage"],
+			],
+	])
+}
+/*
+1. single and multi value fields = "Done"
+2. check with custom field and normal fields = "ToDo - need to configure custom field"
+3. check with multiple fields and provide value for any one value and check error  = "Done"
+ */
 
 
 

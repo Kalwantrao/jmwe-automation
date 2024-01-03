@@ -1,6 +1,3 @@
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
 buildscript {
     repositories {
         maven {
@@ -13,123 +10,345 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
+apply from: gint.resourceDirectory + '/src/common/utils.gradle'
 
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def transition = 'createIssuePostfunction'
-def workflow = project
-def screen = project
-def user = info.user
-def userId = 'jmwe_qa'
-gint.xmlReport =	true	//xml report generates in projects root directory
-gint.verbose =	true
+def functionKey =	info ?.isCloud ?  functionKey.createIssuePostfunctionCloud : functionKey.createIssuePostfunctionServer
 
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/CreateIssuePostfunction${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
-def functionKey =	info ?.isCloud ? 'com.innovalog.jmwe.jira-misc-workflow-extensions:link-issues-function' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CreateIssue-function'
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+String testSummary = "copySummaryOfCurrentIssue"
+String customSummary = "customSummary"
+String testLabel = "addLabelToNewIssue"
+String description = "description"
+def sameAsCurrentIssue = '$sameAsCurrentIssue$'
+def currentIssue = '$currentIssue$'
 
-// Create transitions and add transition function for multiple scenarios using json data file from resources
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
+def createSubtask = [
+        subtask : ["issuetype=$issueType.subtask", "calculatedIssueType="],
+]
 
-createVersions(project, 5)
-createComponents(project, 'component', 5)
-addUsers(userId)
+def parentIssue = [
+        current: ["parentIssueType=currentIssue","calculatedParentIssue="]
+]
 
-// TC_01-check issue creates with fields provided
-def issue1 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createIssue1')
-transitionIssue(transition+0, {-> issue1[0]}, 0, 'TC_01-check issue creates with fields provided', null, null)
-checkIssueList('summary~JMWE_Issue_Postfunction','JMWE_Issue_Postfunction', '1', 'Sub-task', 'TC_01-check issue creates with current fields provided')
+def setFields = [
+        onlySelected : ["fieldsToCopy=selected-fields-only"],
+]
 
-// TC_02-check issue creates with copy current issue fields
-def issue2 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue_Subtask']}, 'createIssue2')
-transitionIssue(transition+1, {-> issue2[0]}, 0, 'TC_02-check issue creates with copy current issue fields', null, null)
-checkIssueList('summary~JMWE_Issue_Subtask','JMWE_Issue_Subtask', '2','Sub-task', 'TC_02-check issue creates with copy current issue fields')
+def addFields = [
+        not : ["fieldsToCopy=selected-fields-only","createMissingValues=no"]
+]
 
-// TC_03-check issue created with specific issuetype
-//def issue3 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createIssue3')
-transitionIssue(transition+2, {-> issue1[0]}, 0, 'TC_03-check issue creates with specific issuetype', null, null)
-checkIssueList('summary~JMWE_Issue_Story','JMWE_Issue_Story', '1', 'Story', 'TC_03-check issue creates with specific issuetype')
+def postCreationScript = [
+        no : ["runPostCreationScript=no","postCreationScript="],
+        yes : ["runPostCreationScript=yes","postCreationScript=newIssue.setFieldValue('Priority','High')"],
+]
 
-// TC_04-check issue creates in project return from script
-def issue4 = createIssue(project,{[ type: 'Bug', summary: 'Summary_Project_fromScript']}, 'createIssue4')
-transitionIssue(transition+3, {-> issue4[0]}, 0, 'TC_04-check issue creates in project return from script', null, null)
-checkIssueList('summary~summary_project_script','AUTOMATION', '1', 'Sub-task', 'TC_04-check issue creates in project return from script')
+def copySubtask = [
+        no : ["copySubtasks=no"]
+]
 
-// TC_05-check issue creates in project selected from projects dropdown and copy summary of current issue
-def issue5 = createIssue(project,{[ type: 'Bug', summary: 'summary_copyToNewIssue_task']}, 'createIssue5')
-transitionIssue(transition+4, {-> issue5[0]}, 0, 'TC_05-check issue creates in project selected from projects dropdown copy summary from current issue', null, null)
-checkIssueList('summary~summary_copyToNewIssue_task','AUTOMATION', '2', 'Task', 'TC_05-check issue creates in project AUTOMATION, selected from projects dropdown and copy summary of current issue')
+def commentTypeServer = [
+        template : ["commentIssue=yes", "commentType=template", "comment=template" ],
+        description : [ "commentIssue=yes","commentType=expression", "comment=$groovyExpression.getDescription" ],
+]
 
-// TC_06-check issue creates in project selected from projects dropdown and set summary from groovy template
-//def issue6 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createIssue6')
-transitionIssue(transition+5, {-> issue1[0]}, 0, 'TC_06-check issue creates in project selected from projects dropdown copy summary from current issue', null, null)
-checkIssueList("summary~Summary_template_story",'AUTOMATION', '1', 'Story', 'TC_06-check issue creates in project AUTOMATION, selected from projects dropdown and set summary from groovy template')
+def commentTypeCloud = [
+        template : ["postFunction.config-1cbe04f4-b379-4913-a819-87795214407d={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$createSubtask.subtask\",\"selectedLinkType\":\"\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"comment\":\"template\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"commentAs\":\"\",\"commentAsType\":\"currentUser\",\"navigateToNewIssue\":false}"]
+]
 
-// TC_07-Creates issue with calculated issuetypes
-//def issue7 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createIssue7')
-transitionIssue(transition+6, {-> issue1[0]}, 0, 'TC_07-Creates issue with calculated issuetypes ', null, null)
-checkIssueList("summary~summary_calculated_issuetype_bug",'AUTOMATION', '1', 'Bug', 'TC_07-Creates issue with calculated issuetypes_bug')
+def commentType = info?.isCloud ? commentTypeCloud : commentTypeServer
 
-// TC_08-Creates issue with calculated issuetypes
-//def issue8 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createIssue8')
-transitionIssue(transition+7, {-> issue1[0]}, 0, 'TC_08-Creates issue with calculated issuetypes ', null, null)
-checkIssueList("summary~summary_calculated_issuetype_task",'AUTOMATION', '1', 'Task', 'TC_08-Creates issue with calculated issuetypes_task')
+def commentVisibility = [
+        notSelected : [ "restrictToGroup=", "restrictToProjectRole=" ],
+        jiraAdminGroups : [ "restrictToGroup=$jiraAdminGrooup", "restrictToProjectRole=" ],
+        jiraAdminRoles : [ "restrictToGroup=", "restrictToProjectRole=$jiraAdminRoleId" ],
+        jiraSoftwareUsers : ["restrictToGroup=$testGroup", "restrictToProjectRole="]
+]
 
-// TC_09-Creates issue with calculated issuetypes
-//def issue9 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createIssue9')
-transitionIssue(transition+8, {-> issue1[0]}, 0, 'TC_09-Creates issue with calculated issuetypes_Story ', null, null)
-checkIssueList("summary~summary_calculated_issuetype_story",'AUTOMATION', '1', 'Story', 'TC_09-Creates issue with calculated issuetypes_story')
+def createMultipleIssues = [
+        no : ["createMultiple=no","iterationScript="],
+        two: ["createMultiple=yes","iterationScript=1..2"],
+        three: ["createMultiple=yes","iterationScript=1..3"]
+]
 
-// TC_10-Creates issue with calculated issuetypes
-//def issue9 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'createIssue9')
-transitionIssue(transition+9, {-> issue1[0]}, 0, 'TC_10-Creates issue with calculated issuetype_subtask ', null, null)
-checkIssueList("summary~summary_calculated_issuetype_story",'AUTOMATION', '1', 'Sub-task', 'TC_10-Creates issue with calculated issuetypes_subtask')
+def issueType = info?.isCloud ? issueTypeCloud : issueTypeServer
 
-// TC_11-check issues link to current issue through links
-def blocks = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'blocks')
-transitionIssue(transition+10, {-> blocks[0]}, 0, 'linkIssueByBlocksLink', null, null)
-getLinkedIssueList({-> blocks[0]}, '1', 'linkIssuesOfBlocksType', "Blocks", "blocks")
+def createIssueTypeServer = [
+        Story : ["issuetype=$issueType.story", "calculatedIssueType="],
+        Bug : ["issuetype=$issueType.bug", "calculatedIssueType="],
+        Initiative : ["issuetype=$issueType.initiative", "calculatedIssueType="],
+]
+def createIssueTypeCloud = [
+        Story :"postFunction.config-1cbe04f4-b379-4913-a819-87795214407d={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$issueType.story\",\"selectedLinkType\":\"\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}",
+        Bug : "postFunction.config-1cbe04f4-b379-4913-a819-87795214407d={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$issueType.bug\",\"selectedLinkType\":\"\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}",
+        Initiative : "postFunction.config-1cbe04f4-b379-4913-a819-87795214407d={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$issueType.initiative\",\"selectedLinkType\":\"\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}",
+]
+def linkToNewIssueServer = [
+        Blocks: ["selectedLinkType=$relatedIssue.linkByBlock"],
+        Cloners: ["selectedLinkType=$relatedIssue.linkByClones"],
+        Duplicate: ["selectedLinkType=$relatedIssue.linkByDuplicates"],
+        Relates: ["selectedLinkType=$relatedIssue.linkByRelatesTo"],
+]
+def linkToNewIssueCloud = [
+        Blocks: "postFunction.config-1cbe04f4-b379-4913-a819-87795214407d={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$issueType.story\",\"selectedLinkType\":\"outward:10000\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}",
+        Cloners: "postFunction.config-1cbe04f4-b379-4913-a819-87795214407d={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$issueType.story\",\"selectedLinkType\":\"outward:10001\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}",
+        Duplicate: "postFunction.config-1cbe04f4-b379-4913-a819-87795214407d={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$issueType.story\",\"selectedLinkType\":\"outward:10002\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}",
+        Relates: "postFunction.config-1cbe04f4-b379-4913-a819-87795214407d={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$issueType.story\",\"selectedLinkType\":\"outward:10003\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}",
+]
 
-def isBlockedBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isBlockedBy')
-transitionIssue(transition+11, {-> isBlockedBy[0]}, 0, 'linkIssuesByIsBlockedByLink', null, null)
-getLinkedIssueList({-> isBlockedBy[0]}, '1', 'linkIssuesOfIsBlockByType', "Blocks", "is blocked by")
+def createIssueType = info?.isCloud ? createIssueTypeCloud : createIssueTypeServer
+def linkToNewIssue = info?.isCloud ? linkToNewIssueCloud : linkToNewIssueServer
+def setSpecificFieldServer = [
+        setDefault : ["fieldsToSet={\"summary\":{\"action\":\"template\",\"value\":\"CLONE - <%=issue.get('summary')%>\"}}"],
+        setSummary : ["fieldsToSet={\"summary\":{\"action\":\"template\",\"value\":\"$customSummary\"}}"],
+        copyLabelsFromCurrentIssue: ["fieldsToSet={\"summary\":{\"action\":\"template\",\"value\":\"CLONE - <%=issue.get('summary')%>\"},\"labels\":{\"action\":\"copy\"}}"],
+        setLabelsByTemplate: ["fieldsToSet={\"summary\":{\"action\":\"template\",\"value\":\"CLONE - <%=issue.get('summary')%>\"},\"labels\":{\"action\":\"template\",\"value\":\"$testLabel\"}}"],
+        setLabelsFromDescription: ["fieldsToSet={\"summary\":{\"action\":\"template\",\"value\":\"CLONE - <%=issue.get('summary')%>\"},\"labels\":{\"action\":\"script\",\"value\":\"issue.get('description')\"}}"],
+]
 
-def clones = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'clones')
-transitionIssue(transition+12, {-> clones[0]}, 0, 'linkIssuesByClonesLink', null, null)
-getLinkedIssueList({-> clones[0]}, '1', 'linkIssuesOfClonesType', "Cloners", "clones")
+def setSpecificFieldCloud = [
+        setDefault : "postFunction.config-1cbe04f4-b379-4913-a819-87795214407d={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$issueType.subtask\",\"selectedLinkType\":\"\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}",
+        setSummary : "postFunction.config-1cbe04f4-b379-4913-a819-87795214407d={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$issueType.subtask\",\"selectedLinkType\":\"\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}",
+        copyLabelsFromCurrentIssue: ["fieldsToSet={\"summary\":{\"action\":\"template\",\"value\":\"CLONE - <%=issue.get('summary')%>\"},\"labels\":{\"action\":\"copy\"}}"],
+        setLabelsByTemplate: ["fieldsToSet={\"summary\":{\"action\":\"template\",\"value\":\"CLONE - <%=issue.get('summary')%>\"},\"labels\":{\"action\":\"template\",\"value\":\"$testLabel\"}}"],
+        setLabelsFromDescription: ["fieldsToSet={\"summary\":{\"action\":\"template\",\"value\":\"CLONE - <%=issue.get('summary')%>\"},\"labels\":{\"action\":\"script\",\"value\":\"issue.get('description')\"}}"],
+]
+//        \"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"},\"labels\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false
+def setSpecificField = info?.isCloud ? setSpecificFieldCloud : setSpecificFieldServer
 
-def isClonedBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isClonedBy')
-transitionIssue(transition+13, {-> isClonedBy[0]}, 0, 'linkIssueOfIsClonedByLink', null, null)
-getLinkedIssueList({-> isClonedBy[0]}, '1', 'linkIssuesOfIsClonedByType', "Cloners", "is cloned by")
+['createIssueOfTypeSubtask'].each {
+    def server = defaultFields + setSpecificField.setDefault+ createSubtask.subtask + parentIssue.current  + conditionalExecution.false + runAsUser.currentUser
+    def cloud = defaultFields + "postFunction.config-1cbe04f4-b379-4913-a819-87795214407d={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$issueType.subtask\",\"selectedLinkType\":\"\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
 
-def duplicates = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'duplicates')
-transitionIssue(transition+14, {-> duplicates[0]}, 0, 'linkIssueOfDuplicatesLink', null, null)
-getLinkedIssueList({-> duplicates[0]}, '1', 'linkIssueOfDuplicatesLink', "Duplicate", "duplicates")
+createIssueType.eachWithIndex { issueTypes, value, i ->
+    def transition = 'createIssueOfType'
+    def server = defaultFields + setSpecificField.setDefault+ value + parentIssue.current  + runAsUser.currentUser
+    def cloud = defaultFields +  value
+    addTransitionFunction( transition + issueTypes, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
 
-def isDuplicateBy = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'isDuplicateBy')
-transitionIssue(transition+15, {-> isDuplicateBy[0]}, 0, 'linkIssueOfIsDuplicatesLink', null, null)
-getLinkedIssueList({-> isDuplicateBy[0]}, '1', 'linkIssueOfIsDuplicatesLink', "Duplicate", "is duplicated by")
+['createIssueIfConditionTrue'].each {
+    def server = defaultFields + setSpecificField.setDefault+ createIssueType.subtask + parentIssue.current  + conditionalExecution.true + runAsUser.currentUser
+    def cloud = defaultFields + "postFunction.config-1cbe04f4-b379-4913-a819-87795214407d={\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$issueType.subtask\",\"selectedLinkType\":\"\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
 
-def relates = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue']}, 'relatesTo')
-transitionIssue(transition+18, {-> relates[0]}, 0, 'linkIssueOfrelatesToLink', null, null)
-getLinkedIssueList({-> relates[0]}, '1', 'linkIssueOfrelatesToLink', "Relates", "relates to")
+['setCustomSummary'].each {
+    def server = defaultFields + setSpecificField.setSummary + createIssueType.subtask + parentIssue.current  + runAsUser.currentUser
+    def cloud = defaultFields + "postFunction.config-1cbe04f4-b379-4913-a819-87795214407d={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$issueType.subtask\",\"selectedLinkType\":\"\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}    "
+    addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
 
-// TC_12-Copy only selected fields
-// Case1: Copy from the current issue
-def issue6 = createIssue(project,{[ type: 'Bug', summary: 'JMWE_Issue', labels: 'label_copy_to_newIssue']}, 'createIssue6')
-transitionIssue(transition+19, {-> issue6[0]}, 0, 'copySelectedFieldsFromCurrentIssue', null, null)
-checkIssueList("summary~label_copy_to_newIssue",'Labels', '1', 'label_copy_to_newIssue', 'TC_12-Case1: Copy from the current issue')
+linkToNewIssue.eachWithIndex { linkType, value, i ->
+        def transition = 'createAndLinkIssueBy'
+        def server = defaultFields + value + setSpecificField.setDefault+ createIssueType.Story + parentIssue.current  + conditionalExecution.false + runAsUser.currentUser
+        def cloud = defaultFields +  value
+        addTransitionFunction( transition + linkType, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
 
-// Case2: testLabel_set_groovyTemplate
-transitionIssue(transition+20, {-> issue6[0]}, 0, 'testLabel_set_groovyTemplate', null, null)
-checkIssueList("summary~testLabel_set_groovyTemplate",'Labels', '1', 'testLabel_set_groovyTemplate', 'TC_12-Case2: testLabel_set_groovyTemplate')
+commentType.eachWithIndex{ type, value, i->
+    def server = defaultFields + value + setSpecificField.setDefault+ createSubtask.subtask + parentIssue.current  + conditionalExecution.false + runAsUser.currentUser
+    def cloud = defaultFields + value
+    addTransitionFunction( type, 'postfunction', info?.isCloud ? cloud : server, functionKey )
+}
 
-// Case3: testLabel_set_groovyExpression
-transitionIssue(transition+21, {-> issue6[0]}, 0, 'testLabel_set_groovyExpression', null, null)
-checkIssueList("summary~testLabel_set_groovyExpression",'Labels', '1', 'testLabel_set_groovyExpression', 'TC_12-Case3: testLabel_set_groovyExpression')
+createWorkflowScheme()
+createProject()
 
+// set issue status to In Progress
 
+def defaultIssue = createIssue([type: 'Task', summary: testSummary, description: description], 'defaultIssue')
 
+linkToNewIssue.eachWithIndex { linkType, value, i ->
+    def issue = {-> defaultIssue[]}
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: ': create issue created by postfunction of type  :' + linkType,
+             sleepAfter: 3000,
+             parameters: [
+                     issue     : { ->defaultIssue[] },
+                     transition: 'createAndLinkIssueBy' + linkType,
+             ],
+            ],
+            [action: 'getIssueList', ext: " : check issue created by postfunction of type :" + linkType,
+             parameters: [
+                     project: projectName,
+                     jql: "project = $projectName AND summary ~ $testSummary AND type = Story",
+                     outputType: "Text",
+                     columns:"Type,Summary"
+             ],
+             data:[  "Story" ,
+                     /$testSummary/  ],
+            ],
+            [action: 'getLinkList', ext: ": check new issue linked by : $linkType ",
+                parameters: [
+                        issue: {-> defaultIssue[]},
+                        outputType: "Text",
+                        columns: "Issue,'Type Name'"
+                ],
+                    data: ["$issue","$linkType"],
+            ],
+            [action: 'runFromIssueList',ext: " : delete issue created by post function to check next option: " + linkType,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $testSummary AND type = Story",
+                     common: [ "--action deleteIssue --issue @issue@ --continue"
+                     ]
+             ]
+            ]
+    ])
+}
+
+['createIssueIfConditionTrue'].each {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': create issue of type subtask :' + it,
+                 sleepAfter: 3000,
+                 parameters: [
+                         issue     : { ->defaultIssue[] },
+                         transition: it,
+                 ],
+                ],
+                [action: 'getIssueList', ext: " : when condition returns false :" + it,
+                 parameters: [
+                         project: projectName,
+                         jql: "project = $projectName AND summary ~ $testSummary AND type = Sub-task",
+                         outputType: "Text",
+                         columns:"Type,Summary"
+                 ],
+                 failData:[  "Sub-task" ,
+                         /$testSummary/  ],
+                ],
+        ])
+}
+
+gint.taskHelper.add(
+        action: 'updateIssue', ext: ": set issue priority high to check conditional execution true",
+        sleepAfter: 2000,
+        parameters: [
+                issue: {-> defaultIssue[]},
+                priority: 'High'
+                ]
+)
+createIssueType.eachWithIndex{ issueTypes,value,i->
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: ': create issue created by postfunction of type  :' + issueTypes,
+             sleepAfter: 3000,
+             parameters: [
+                     issue     : { ->defaultIssue[] },
+                     transition: 'createIssueOfType' + issueTypes,
+             ],
+            ],
+            [action: 'getIssueList', ext: " : check issue created by postfunction of type :" + issueTypes,
+             parameters: [
+                     project: projectName,
+                     jql: "project = $projectName AND summary ~ $testSummary AND type = $issueTypes",
+                     outputType: "Text",
+                     columns:"Type,Summary"
+             ],
+             data:[  "$issueTypes" ,
+                     /$testSummary/  ],
+            ],
+            [action: 'runFromIssueList',ext: " : delete issue created by post function to check next option: " + issueTypes,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $testSummary AND type = $issueTypes",
+                     common: [ "--action deleteIssue --issue @issue@ --continue"
+                     ]
+             ]
+            ]
+    ])
+}
+
+[
+        'createIssueOfTypeSubtask',
+].each {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': create issue of type subtask when :' + it,
+                 sleepAfter: 3000,
+                 parameters: [
+                         issue     : { ->defaultIssue[] },
+                         transition: it,
+                 ],
+                ],
+                [action: 'getIssueList', ext: " : check new issue:" + it,
+                 parameters: [
+                         project: projectName,
+                         jql: "project = $projectName AND summary ~ $testSummary AND type = Sub-task",
+                         outputType: "Text",
+                         columns:"Type,Summary"
+                 ],
+                 data:[  "Sub-task" ,
+                         /$testSummary/  ],
+                ],
+                [action: 'runFromIssueList',ext: " : delete issue created by post function to check next option: " + it,
+                        parameters:[
+                                jql: "project = $projectName AND summary ~ $testSummary AND type = Sub-task",
+                                common: [ "--action deleteIssue --issue @issue@ --continue"
+                                ]
+                        ]
+                ]
+        ])
+}
+
+['setCustomSummary'].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: ': create issue of type subtask with :' + it,
+             sleepAfter: 3000,
+             parameters: [
+                     issue     : { -> defaultIssue[] },
+                     transition: it,
+             ],
+            ],
+            [action    : 'getIssueList', ext: " : create issue of type subtask with:" + it,
+             parameters: [
+                     project   : projectName,
+                     jql       : "project = $projectName AND summary ~ $customSummary AND type = Sub-task",
+                     outputType: "Text",
+                     columns   : "Type,Summary"
+             ],
+             data      : ["Sub-task",
+                          /$customSummary/],
+            ],
+            [action    : 'runFromIssueList', ext: " : delete issue created by post function to check next option: " + it,
+             parameters: [
+                     jql   : "project = $projectName AND summary ~ $customSummary AND type = Sub-task",
+                     common: ["--action deleteIssue --issue @issue@ --continue"
+                     ]
+             ]
+            ]
+    ])
+}
+
+commentType.eachWithIndex{ transitions, value, i ->
+    gint.taskHelper.add([
+            [action: 'transitionIssue', ext: ': create issue of type subtask and add this comment: ' + transitions,
+            parameters: [
+                    issue: {->defaultIssue[]},
+                    transition: transitions,
+                    ]
+            ],
+            [action    : 'getIssueList', ext: " : create issue of type subtask with:" + transitions,
+             parameters: [
+                     project   : projectName,
+                     jql       : "project = $projectName AND summary ~ $testSummary AND type = Sub-task",
+                     outputType: "Text",
+                     columns   : "Type,Summary"
+             ],
+             data      : ["Sub-task",
+                          /$testSummary/],
+            ],
+            [action: 'getComments', ext: " : add comment by :" + transitions + i,
+             parameters: [
+                     issue: { ->defaultIssue[] }
+             ],
+             data:[   /$user added a comment on/,
+                      /$transitions/
+             ],
+            ],
+            [action    : 'runFromIssueList', ext: " : delete issue created by post function to check next option: " + transitions,
+             parameters: [
+                     jql   : "project = $projectName AND summary ~ $testSummary AND type = Sub-task",
+                     common: ["--action deleteIssue --issue @issue@ --continue" ],
+                     ],
+             ]
+    ]
+    )
+}

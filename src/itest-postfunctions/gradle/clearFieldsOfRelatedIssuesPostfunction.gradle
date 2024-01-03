@@ -13,8 +13,12 @@ apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
+relatedIssue.remove("currentIssue")
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ClearFieldsOfLinkedIssuesFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:ClearFieldValueOfLinkedIssues-function'
 
-def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ClearFieldsFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:ClearFieldValue-function'
+def defaultFieldsCloud= [
+        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249"
+]
 
 def fields = [
         labels : [ "fields=labels"],
@@ -22,10 +26,6 @@ def fields = [
         fixVersions : [ "fields=fixVersions"],
         affectsVersions : [ "fields=versions"],
         assignee : [ "fields=assignee"]
-]
-
-def defaultFieldsCloud= [
-        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249"
 ]
 
 relatedIssue.eachWithIndex { key, value, i ->
@@ -104,8 +104,6 @@ createProject()
     ])
 }
 
-
-def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
 def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
 def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
@@ -132,7 +130,6 @@ linkIssuesMap.eachWithIndex { key, value, i ->
 }
 
 def relatedIssuesMap = [
-        {->current[]} : {->current[]},
         {->parent[]} : {->subtask[]},
         {->subtask[]} : {->parent[]},
         {->epic[]} : {->issueBelongsToEpic[]},
@@ -372,7 +369,7 @@ def component = 'component1'
         ])
     }
 }
-
+*/
 // CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_02_Verify the run as user in field reporter option
 [
         'runAsUserInFieldReporter',
@@ -398,7 +395,7 @@ def component = 'component1'
                  sleep:5000,
                  parameters: [
                          issue: value,
-                         assignee: user
+                         assignee: userInFieldAssignee1
                  ],
                 ],
                 [action: "getFieldValue",
@@ -428,7 +425,7 @@ def component = 'component1'
                          issue: value,
                          field: "Assignee"
                  ],
-                        failData:["Assignee  . . . . . . . . . . : $userInFieldAssignee1"],
+                 failData:["Assignee  . . . . . . . . . . : $userInFieldAssignee1"],
                  finalClosure:{Task task ->
                      def actualValue = "$task.outData"
                      assert !actualValue.contains(userInFieldAssignee1)
@@ -512,113 +509,133 @@ def component = 'component1'
         'clearFieldsIfConditionalExecutionTrue'
 ].each {
     if(!isCloud){
-    relatedIssuesMap.eachWithIndex { key, value, i ->
-        gint.taskHelper.add([
-                [action: 'updateIssue',
-                 ext: " : add field labels to before transition issue with_ $it$i _  : ",
-                 sleep:5000,
-                 parameters: [
-                         issue: value,
-                         labels: testLabel,
-                 ],
-                ],
-                [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that before transition value of field _labels should be: $testLabel :$it$i",
-                 sleep:5000,
-                 parameters:[
-                         issue: value,
-                         field: "Labels"
-                 ],
-                 finalClosure:{Task task ->
-                     def actualValue = "$task.outData"
-                     assert actualValue.contains("$testLabel")
-                 }
-                ],
-                [action    : 'updateIssue',
-                 ext       : " : set priority of current issue to Low to check $it _when condition returns false: " + i,
-                 sleep     : 5000,
-                 parameters: [
-                         issue   : key,
-                         priority: 'Low'
-                 ]
-                ],
-                [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that priority of the issue should not be high: $testLabel :$it$i",
-                 sleep:5000,
-                 parameters:[
-                         issue: key,
-                         field: "Priority"
-                 ],
-                 finalClosure:{Task task ->
-                     def actualValue = "$task.outData"
-                     assert !actualValue.contains("High")
-                 }
-                ],
-                [action    : 'transitionIssue',
-                 ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_31_Case_01_ TC_$i _check $it _When condition false: ",
-                 sleep     : 5000,
-                 parameters: [
-                         issue     : key,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getFieldValue',
-                 ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_31_Case_01_ TC_$i _check $it _When condition false_labels should not clear: ",
-                 sleep     : 5000,
-                 parameters: [
-                         issue: value,
-                         field: "Labels"
-                 ],
-                 data      : [/Labels  . . . . . . . . . . . : $testLabel/],
-                 finalClosure:{Task task ->
-                     def actualValue = "$task.outData"
-                     assert actualValue.contains("$testLabel")
-                 }
-                ],
-                [action    : 'updateIssue',
-                 ext       : " : set priority of current issue to High to check $it _when condition returns true: " + i,
-                 sleep     : 5000,
-                 parameters: [
-                         issue   : key,
-                         priority: 'High'
-                 ]
-                ],
-                [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that priority of the issue should be high: $testLabel :$it$i",
-                 sleep:5000,
-                 parameters:[
-                         issue: key,
-                         field: "Priority"
-                 ],
-                 finalClosure:{Task task ->
-                     def actualValue = "$task.outData"
-                     assert actualValue.contains("High")
-                 }
-                ],
-                [action    : 'transitionIssue',
-                 ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_31_Case_02 TC_$i _check $it _When condition true: ",
-                 sleep     : 5000,
-                 parameters: [
-                         issue     : key,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getFieldValue',
-                 ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_31_Case_02_TC_$i _check $it _When condition true_labels should be clear: ",
-                 sleep     : 5000,
-                 parameters: [
-                         issue: value,
-                         field: "Labels"
-                 ],
-                 failData  : [/Labels  . . . . . . . . . . . : $testLabel/],
-                 finalClosure:{Task task ->
-                     def actualValue = "$task.outData"
-                     assert !actualValue.contains("$testLabel")
-                 }
-                ],
-        ])
-    }
+        relatedIssuesMap.eachWithIndex { key, value, i ->
+            gint.taskHelper.add([
+                    [action: 'updateIssue',
+                     ext: " : add field labels to before transition issue with_ $it$i _  : ",
+                     sleep:5000,
+                     parameters: [
+                             issue: value,
+                             labels: testLabel,
+                     ],
+                    ],
+                    [action: "getFieldValue",
+                     ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that before transition value of field _labels should be: $testLabel :$it$i",
+                     sleep:5000,
+                     parameters:[
+                             issue: value,
+                             field: "Labels"
+                     ],
+                     finalClosure:{Task task ->
+                         def actualValue = "$task.outData"
+                         assert actualValue.contains("$testLabel")
+                     }
+                    ],
+                    [action    : 'updateIssue',
+                     ext       : " : set priority of current issue to Low to check $it _when condition returns false: " + i,
+                     sleep     : 5000,
+                     parameters: [
+                             issue   : key,
+                             priority: 'Low'
+                     ]
+                    ],
+                    [action: "getFieldValue",
+                     ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that priority of the issue should not be high: $testLabel :$it$i",
+                     sleep:5000,
+                     parameters:[
+                             issue: key,
+                             field: "Priority"
+                     ],
+                     finalClosure:{Task task ->
+                         def actualValue = "$task.outData"
+                         assert !actualValue.contains("High")
+                     }
+                    ],
+                    [action    : 'transitionIssue',
+                     ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_31_Case_01_ TC_$i _check $it _When condition false: ",
+                     sleep     : 5000,
+                     parameters: [
+                             issue     : key,
+                             transition: it + i,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_31_Case_01_ TC_$i _check $it _When condition false_labels should not clear: ",
+                     sleep     : 5000,
+                     parameters: [
+                             issue: value,
+                             field: "Labels"
+                     ],
+                     data      : [/Labels  . . . . . . . . . . . : $testLabel/],
+                     finalClosure:{Task task ->
+                         def actualValue = "$task.outData"
+                         assert actualValue.contains("$testLabel")
+                     }
+                    ],
+                    [action    : 'updateIssue',
+                     ext       : " : set priority of current issue to High to check $it _when condition returns true: " + i,
+                     sleep     : 5000,
+                     parameters: [
+                             issue   : key,
+                             priority: 'High'
+                     ]
+                    ],
+                    [action: "getFieldValue",
+                     ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that priority of the issue should be high: $testLabel :$it$i",
+                     sleep:5000,
+                     parameters:[
+                             issue: key,
+                             field: "Priority"
+                     ],
+                     finalClosure:{Task task ->
+                         def actualValue = "$task.outData"
+                         assert actualValue.contains("High")
+                     }
+                    ],
+                    [action    : 'transitionIssue',
+                     ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_31_Case_02 TC_$i _check $it _When condition true: ",
+                     sleep     : 5000,
+                     parameters: [
+                             issue     : key,
+                             transition: it + i,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_31_Case_02_TC_$i _check $it _When condition true_labels should be clear: ",
+                     sleep     : 5000,
+                     parameters: [
+                             issue: value,
+                             field: "Labels"
+                     ],
+                     failData  : [/Labels  . . . . . . . . . . . : $testLabel/],
+                     finalClosure:{Task task ->
+                         def actualValue = "$task.outData"
+                         assert !actualValue.contains("$testLabel")
+                     }
+                    ],
+            ])
+        }
     }
 }
 
 
+
+
+/*
+subtask:[{->parent[]} : {->subtask[]}] ,
+        parent : [{->subtask[]} : {->parent[]}],
+        issueBelongsToEpic: [{->epic[]} : {->issueBelongsToEpic[]}],
+        epicOfTheCurrentIssue : [{->issueBelongsToEpic[]} : {->epic[]}],
+        childPortfolio: [{-> initiative[]} : {->epic_initiative[]}],
+        parentPortfolio:[{->epic_initiative[]} : {-> initiative[]}],
+        linkByAnyLink:[{->blocks[]} : {->issueLinks[]}],
+        linkByBlock:[{->issueLinks[]} : {->blocks[]}],
+        linkByisBlockedBy:[{->blocks[]} : {->issueLinks[]}],
+        linkByClones:[{->issueLinks[]} : {->clones[]}],
+        linkByIsClonedBy:[{->clones[]} : {->issueLinks[]}],
+        linkByDuplicates: [{->issueLinks[]} : {->duplicates[]}],
+        linkByIsDuplicatedBy: [{->duplicates[]} : {->issueLinks[]}],
+        linkByRelatesTo : [{->relatesTo[]} : {->issueLinks[]}],
+         [{->issueLinks[]} : {->relatesTo[]}],
+         [{->issueLinks[]} : {->jqlIssue[]}]
+ */

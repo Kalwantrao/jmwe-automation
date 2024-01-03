@@ -1,0 +1,149 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory + '/src/common/utils.gradle'
+
+tearDown()
+addWorkflow()
+
+def defaultFieldsServer = [
+        "throwExceptions=false",
+        "correlationId="
+]
+def defaultFieldsCloud = [
+        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
+]
+def conditionToUnlinkIssues = [
+        lowPriority : ["groovyExpression=$groovyExpression.checkPriorityLow"]
+]
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__UnlinkIssuesFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:unlink-issues-function'
+
+['unlinkIssuesWhichReturnsConditionTrue'].each {
+    def server = defaultFieldsServer + conditionToUnlinkIssues.lowPriority + runAsUser.currentUser
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityLow\",\"runAsType\":\"addonUser\"}"
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+createWorkflowScheme()
+//associateWorkflow(projectKey)
+createProject()
+
+// set issue status to In Progress
+
+def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
+def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
+
+def linkIssuesMap = [
+        blocks : {->blocks[]},
+]
+
+linkIssuesMap.eachWithIndex { key, value, i ->
+    linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
+}
+
+def relatedIssuesMap = [
+        Blocks : {->blocks[]},
+]
+
+relatedIssuesMap.eachWithIndex{ key, value, i ->
+    gint.taskHelper.add([
+            [action    : 'getLinkList',
+                    ext       : ': check before triggering pf link issues exists of link type: ' + key ,
+                    parameters: [
+                            issue: {->issueLinks[]},
+                            outputType: "text",
+                            select: "Type Name:Blocks",
+                            columns: "Issue,'To Issue','Type Name'"
+                            ],
+                    data      : ["$key","$value"],
+                    ],
+            ]
+    )
+}
+
+gint.taskHelper.add(
+        [action    : 'updateIssue', ext: ': set prioity High: ',
+                parameters: [
+                     issue   : {->issueLinks[]},
+                     priority: 'High',
+             ]
+            ],
+)
+
+gint.taskHelper.add(
+        [action    : 'transitionIssue', ext: ': when prioity high dont unlink issues',
+         parameters: [
+                 issue     : {->issueLinks[]},
+                 transition: 'unlinkIssuesWhichReturnsConditionTrue' ,
+         ]
+        ],
+)
+
+relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'getLinkList',
+                 ext       : ': when prioity High dont unlink issue by link type:'+ key + i,
+                 parameters: [
+                         issue: {->issueLinks[]},
+                         outputType: "text",
+                         select: "Type Name:Blocks",
+                         columns: "Issue,'To Issue','Type Name'"
+                 ],
+                 data      : ["$key","$value"],
+                ],
+        ])
+}
+
+relatedIssuesMap.eachWithIndex { key, value, i ->
+    gint.taskHelper.add(
+            [action    : 'updateIssue', ext: ': set prioity Low: ',
+             parameters: [
+                     issue   : {->issueLinks[]},
+                     priority: 'Low',
+             ]
+            ],
+    )
+}
+
+gint.taskHelper.add(
+        [action    : 'transitionIssue', ext: ': when prioity Low unlink issues',
+         parameters: [
+                 issue     : {->issueLinks[]},
+                 transition: 'unlinkIssuesWhichReturnsConditionTrue' ,
+         ]
+        ],
+)
+
+relatedIssuesMap.eachWithIndex { key, value, i ->
+    gint.taskHelper.add([
+            [action    : 'getLinkList',
+             ext       : ': when prioity Low unlink issue by link type:'+ key + i,
+             parameters: [
+                     issue: {->issueLinks[]},
+                     outputType: "text",
+                     select: "Type Name:Blocks",
+                     columns: "Issue,'To Issue','Type Name'"
+             ],
+             failData      : ["$key","$value"],
+            ],
+    ])
+}
+
+/*
+ "Field",  "From",         "From String",                    "To",              "To String"
+
+ "Link",    "",             "",                              "AUTOMATION-2",      "This issue blocks AUTOMATION-2"
+
+ "Link",   "AUTOMATION-2", "This issue blocks AUTOMATION-2",   "",                  ""
+*/
+
+

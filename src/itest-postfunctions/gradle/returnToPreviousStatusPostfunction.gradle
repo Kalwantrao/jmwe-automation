@@ -1,6 +1,3 @@
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
 buildscript {
     repositories {
         maven {
@@ -8,40 +5,124 @@ buildscript {
         }
     }
     dependencies {
-        classpath "org.gint:gint-atlassian:3.8.3"
+        classpath "org.gint:gint-atlassian:3.8.4"
     }
 }
 
-apply plugin: "org.gint.atlassian"
+apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
+def functionKey = functionKey.returnToPreviousStatusServer
 
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def user = info.user
-def userId = info?.isCloud ? cloudUser : serverUser
-def transition = 'returnToPreviousStatusPf'
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/ReturnToPreviousStatusPostfunction${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
+def defaultFields = [
+        "correlationId=",
+]
+def useTransition = [
+        yes : [ "useTransition=yes" ],
+        no : [ "useTransition=no" ]
+]
+def throwExceptions = [
+        true : ["throwExceptions=true"],
+        false : ["throwExceptions="]
+]
+// Configuration for validator
+['returnToPrevStatus'].each {
+    def fields = defaultFields + conditionalExecution.false + useTransition.no + throwExceptions.false + runAsUser.currentUser
+    addTransitionFunction(it, 'postfunction', fields, functionKey )
+    moveTransitionFunction( it, 4)
+}
 
+['returnToPrevStatus_ifConditionTrue'].each {
+    def fields = defaultFields + conditionalExecution.true + useTransition.no + throwExceptions.false + runAsUser.currentUser
+    addTransitionFunction(it, 'postfunction', fields, functionKey )
+    moveTransitionFunction( it, 4)
+}
 
-tearDown()
-addWorkflow()
-addWorkflowExtension( transitionFunctions, transition, returnToPreviousStatusServer, 'postfunction', 0)
 createWorkflowScheme()
 createProject()
-addUser()
-addGroup()
-addProjectRole()
-addProjectRoleActors()
 
-def issue1 = createIssue([type: 'Bug', summary: "JMWE_Issue"],'Bug')
-ext.TC_01 = { ext->
-    transitionIssue('returnToPreviousStatusPf'+0, {->issue1[]}, 0, null, ext)
-    getFieldValue({->issue1[]}, "Status", "In Progress", ext)
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+def previousStatus = "In Progress"
+// checking the current status To Do and previous status In Progress
+gint.taskHelper.add([
+        [action    : 'transitionIssue', ext: " :  set previous status of issue to $previousStatus ",
+         parameters: [
+                 transition: previousStatus,
+                 issue     : { -> defaultIssue[] },
+         ],
+        ],
+        [action    : 'transitionIssue', ext: " : set status of issue to To Do again : ",
+         parameters: [
+                 transition: "To Do",
+                 issue     : { -> defaultIssue[] },
+         ],
+        ],
+])
+
+['returnToPrevStatus_ifConditionTrue',].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " :  when condition false ",
+             sleepaAfter : 2000,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action: 'getFieldValue', ext: ": issue should not return to previous status when condition false",
+             parameters: [
+                     issue: {-> defaultIssue[]},
+                     field : "Status",
+             ],
+             failData:[ "Status  . . . . . . . . . . . : $previousStatus" ]
+            ],
+            [action: 'updateIssue' , ext: " : add description to add in comment : " + it,
+            parameters: [
+                    issue: {-> defaultIssue[]},
+                    priority: 'High'
+                    ]
+            ],
+            [action    : 'transitionIssue', ext: " :  return to previous status " + it,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+
+            [action: 'getFieldValue', ext: ": issue return to previous status when condition true",
+             parameters: [
+                     issue: {-> defaultIssue[]},
+                     field : "Status",
+             ],
+             data:[ "Status  . . . . . . . . . . . : $previousStatus" ]
+            ],
+            [action    : 'transitionIssue', ext: " : set issue status to To Do again : " + it,
+             parameters: [
+                     transition: "To Do",
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+    ])
 }
-//def toIssue = createIssue([type: 'Bug', summary: "JMWE_Issue"],' ')
-//linkIssue([issue: {-> issue[]}, toIssue: {-> toIssue[]}, link: 'blocks'], 'Blocks')
 
-TC_01("Check issue status should be In Progress" )
+['returnToPrevStatus',].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " :  return to previous status " + it,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action: 'getFieldValue', ext: ": Check issue should :  $it",
+             parameters: [
+                     issue: {-> defaultIssue[]},
+                     field : "Status",
+             ],
+             data:[
+                     "Status  . . . . . . . . . . . : $previousStatus",
+             ]
+            ]
+
+    ])
+}
+
 

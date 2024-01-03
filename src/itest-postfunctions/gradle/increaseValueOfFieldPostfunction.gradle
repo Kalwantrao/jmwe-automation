@@ -1,6 +1,3 @@
-import groovy.json.JsonSlurper
-import java.nio.file.Paths
-
 buildscript {
     repositories {
         maven {
@@ -13,57 +10,161 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/testPostfunctions.gradle'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+
+def defaultFields = [
+        "throwExceptions=false",
+        "correlationId=",
+]
+def field = [
+        storyPoint : [ "field=$customFields.storyPoints" ],
+        originalStoryPoint : ["field=$customFields.originalStoryPoints"]
+]
+
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:IncreaseFieldValue-function'
+
+// Configuration for validator
+['increaseValueOfStoryPoint'].each {
+    def fields = defaultFields + field.storyPoint + conditionalExecution.false
+    addTransitionFunction(it, 'postfunction', fields, functionKey )
+}
+
+['increaseValueOfOriginalStoryPoint'].each {
+    def fields = defaultFields +  field.originalStoryPoint + conditionalExecution.false
+    addTransitionFunction(it , 'postfunction', fields, functionKey )
+}
+['increaseValueOfStoryPointIfConditionTrue'].each {
+    def fields = defaultFields + field.storyPoint + conditionalExecution.true
+    addTransitionFunction(it, 'postfunction', fields, functionKey )
+}
+
+['increaseValueOfOriginalStoryPointIfConditionTrue'].each {
+    def fields = defaultFields +  field.originalStoryPoint + conditionalExecution.true
+    addTransitionFunction(it , 'postfunction', fields, functionKey )
+}
+createWorkflowScheme()
+createProject()
 
 
-def info = gint.getJiraHelper().getServerInfoWithVerify() // Verify access to Jira instance otherwise end test if server not available
-def project = 'AUTOMATION'//gint.getJiraHelper().getProjectKey()	//get project key using jira helper functions
-def transition = 'increaseValueOfFieldsPf'
-def workflow = project
-def screen = project
-def user = info.user
-def userId = 'jmwe_qa'
-def projectRole = 'jmwe_role'
-def userGroup = 'jmwe_group'
-gint.xmlReport =	true	//xml report generates in projects root directory
-gint.verbose =	true
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
-def jsonSlurper = new JsonSlurper();
-def path = Paths.get(gint.directories.resource + "/resources/postfunctionsData/IncreaseValueOfFieldPostfunction${info?.isCloud ? "Cloud" : ""}.json")
-def transitionFunctions = jsonSlurper.parse(path)
-def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:IncreaseFieldValue-function'	//function key for current status condition
-def startStep = info?.isCloud ? '1':'11' // depends on workflow. '1' for cloud and '11' (To Do)for server works for custom jira workflow
+// checking the current status To Do and previous status In Progress
+['increaseValueOfStoryPoint',].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " : " + it,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action: 'getFieldValue', ext: ": Chack :" + it,
+             parameters: [
+                     issue: {-> defaultIssue[]},
+                     field : "Story Points",
+             ],
+             data:[ "Story Points  . . . . . . . . : 1.0" ],
+            ]
 
-createTransitionsWithFunctions(transitionFunctions, transition, functionKey, 'postfunction', startStep, workflow, screen, 0)
+    ])
+}
 
-// TC_01-check increase value of field original story points
-def originalStoryPoints = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue']}, 'originalStoryPoints')
-transitionIssue(transition+0, {-> originalStoryPoints[0]}, 0, 'originalStoryPoints', null, null)
-getIssueInformation({-> originalStoryPoints[0]}, "Original story points . . . . : 1.0", 'originalStoryPoints')
+['increaseValueOfOriginalStoryPoint',].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " : "+ it,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action: 'getFieldValue', ext: ": : " + it,
+             parameters: [
+                     issue: {-> defaultIssue[]},
+                     field : "Original story points",
+             ],
+             data:[ "Original story points . . . . : 1.0"  ],
+            ]
 
-// TC_02-check increase value of field story points
-def storyPoints = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue']}, 'storyPoints')
-transitionIssue(transition+1, {-> storyPoints[0]}, 0, 'storyPoints', null, null)
-getIssueInformation({-> storyPoints[0]}, "Story Points  . . . . . . . . : 1.0", 'storyPoints')
+    ])
+}
+['increaseValueOfStoryPointIfConditionTrue'].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " :  " + it,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action: 'getFieldValue', ext: ": " + it,
+             parameters: [
+                     issue: {-> defaultIssue[]},
+                     field : "Story Points",
+             ],
+                    data:[ "Story Points  . . . . . . . . : 1.0" ],
+                    failData : ["Story Points  . . . . . . . . : 2.0"]
+            ]
+    ])
+}
+['increaseValueOfOriginalStoryPointIfConditionTrue'].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " :  " + it,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action: 'getFieldValue', ext: ":  " + it,
+             parameters: [
+                     issue: {-> defaultIssue[]},
+                     field : "Original story points",
+             ],
+             data:[ "Original story points . . . . : 1.0" ],
+             failData : ["Original story points . . . . : 2.0"]
+            ]
+    ])
+}
+gint.taskHelper.add(
+        action : 'updateIssue', ext: ': To check conditional execution true',
+        parameters : [
+                issue: {->defaultIssue[]},
+                priority : 'High'
+        ]
+)
+['increaseValueOfStoryPointIfConditionTrue'].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " :when condition true  " + it,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action: 'getFieldValue', ext: ":when condition true " + it,
+             parameters: [
+                     issue: {-> defaultIssue[]},
+                     field : "Story Points",
+             ],
+             data:[ "Story Points  . . . . . . . . : 2.0" ],
+             failData : ["Story Points  . . . . . . . . : 1.0"]
+            ]
+    ])
+}
+['increaseValueOfOriginalStoryPointIfConditionTrue'].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " : when condition true " + it,
+             parameters: [
+                     transition: it,
+                     issue     : { -> defaultIssue[] },
+             ],
+            ],
+            [action: 'getFieldValue', ext: ": when condition true " + it,
+             parameters: [
+                     issue: {-> defaultIssue[]},
+                     field : "Original story points",
+             ],
+             data:[ "Original story points . . . . : 2.0" ],
+             failData : ["Original story points . . . . : 1.0"]
+            ]
+    ])
+}
 
-// TC_01-check increase value of field original story points when  conditional execution true
-def condExecTrue_originalStoryPoints = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue', priority: 'High']}, 'condExecTrue_originalStoryPoints')
-transitionIssue(transition+2, {-> condExecTrue_originalStoryPoints[0]}, 0, 'condExecTrue_originalStoryPoints', null, null)
-getIssueInformation({-> condExecTrue_originalStoryPoints[0]}, "Original story points . . . . : 1.0", 'condExecTrue_originalStoryPoints')
-
-def condExecTrue_storyPoints = createIssue(project,{[ type: 'Story', summary: 'JMWE_Issue', priority: 'High']}, 'condExecTrue_storyPoints')
-transitionIssue(transition+3, {-> condExecTrue_storyPoints[0]}, 0, 'condExecTrue_storyPoints', null, null)
-getIssueInformation({-> condExecTrue_storyPoints[0]}, "Story Points  . . . . . . . . : 1.0", 'condExecTrue_storyPoints')
-
-
-// check conditional execution false
-def condExecFalse_originalStoryPoints = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'condExecFalse_originalStoryPoints')
-transitionIssue(transition+2, {-> condExecFalse_originalStoryPoints[0]}, 0, 'condExecFalse_originalStoryPoints', null, null)
-getIssueInformation({-> condExecFalse_originalStoryPoints[0]}, " ", 'condExecFalse_originalStoryPoints')
-
-
-def condExecFalse_storyPoints = createIssue(project,{[ type: 'Task', summary: 'JMWE_Issue']}, 'condExecFalse_storyPoints')
-transitionIssue(transition+3, {-> condExecFalse_originalStoryPoints[0]}, 0, 'condExecFalse_storyPoints', null, null)
-getIssueInformation({-> condExecFalse_originalStoryPoints[0]}, " ", 'condExecFalse_storyPoints')
 
 
