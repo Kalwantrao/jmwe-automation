@@ -13,14 +13,6 @@ ext.tearDown = {
                  }
              }
             ],
-            [action    : 'createProject',ext: ': FOR WORKFLOW',
-             onlyIf: createTestProject == "true",
-             parameters: [
-                     project: TestProject,
-                     lead: '@Self',
-                     template: info?.isCloud? projectTemplateCloud : projectTemplateServer
-             ],
-            ],
             [
                     action    : 'deleteIssueTypeScheme',
                     dependsOn : 'deleteProject',

@@ -14,9 +14,8 @@ buildscript {
     dependencies {
         classpath 'org.gint:gint:3.8.4'
         classpath 'org.gint:gint-atlassian:3.8.4'
-
+        classpath "com.aventstack:extentreports:5.0.0"
     }
-
     repositories {
         flatDir { dirs 'libs' }
         mavenLocal()
@@ -26,18 +25,33 @@ buildscript {
 }
 
 plugins {
+    id "io.qameta.allure" version "2.9.6"
     id "net.saliman.properties" version "1.5.2"
     id "idea"
 }
+
 apply plugin: 'org.gint'
 apply plugin: 'org.gint.atlassian'
+apply plugin: "io.qameta.allure"
+
+
+reporting {
+    baseDir = "$buildDir/reports"
+}
+
+allure {
+    report {
+        reportDir.set(project.reporting.baseDirectory.dir("allure-report"))
+    }
+}
+
 /*
 configurations {
     localDeps
     localDeps.transitive = false
 }
 
-def appVersion = "8.3.0-SNAPSHOT"
+def appVersion = "8.6.0-SNAPSHOT"
 dependencies {
     localDeps "com.innovalog.jmwe:jira-misc-workflow-extensions:$appVersion"
 }
@@ -57,16 +71,12 @@ repositories {
         }
     }
 }
-
+ext.info =  gint.getJiraHelper().getServerInfoWithVerify()
 gint.verbose = true
-
-defaultTasks
 
 def appLibPath = "$buildDir/output/lib"
 def appLibName = "JMWE.jar"
 def appPath = "$appLibPath/$appLibName"
-
-ext.info =  gint.getJiraHelper().getServerInfoWithVerify()
 
 ext.gint = gint
 gint.taskHelper.addSetUp('installAcli', [
@@ -120,17 +130,56 @@ gint.taskHelper.addSetUp('installJMWE', [
         ],
 ])
 
- */
-
+defaultTasks "installJMWE"
+*/
 def jmweConditions = 'src/itest-conditions/gradle'
 def jmweValidators = 'src/itest-validators/gradle'
 def jmwePostfunctions = 'src/itest-postfunctions/gradle'
+def setUp = 'src/itest-setUp/gradle'
 
-[jmweConditions].each { folder ->
+[setUp].each { folder ->
     if (file(folder).exists()) {
         def args = [
                 '-DtargetDirectory=' + project.buildDir,
                 '-DxmlReport',
+                '-Dverbose',
+                '-Dclean',
+                '--continue',
+                '-DsourceDirectory=src',
+                "-Dcli=acli $server"
+        ]
+        gint.scriptRunner.add(
+                taskNamePrefix: 'setup-server',
+                directory: folder,
+                args: args,
+        )
+    }
+}
+
+[setUp].each { folder ->
+    if (file(folder).exists()) {
+        def args = [
+                '-DtargetDirectory=' + project.buildDir,
+                '-DxmlReport',
+                '-Dverbose',
+                '-Dclean',
+                '--continue',
+                '-DsourceDirectory=src',
+                "-Dcli=acli $cloud"
+        ]
+        gint.scriptRunner.add(
+                taskNamePrefix: 'setup-cloud',
+                directory: folder,
+                args: args,
+        )
+    }
+}
+
+[jmweConditions,jmweValidators,jmwePostfunctions].each { folder ->
+    if (file(folder).exists()) {
+        def args = [
+                '-DtargetDirectory=' + project.buildDir,
+                '-DxmlReport=reports-server',
                 '-Dverbose',
                 '-Dclean',
                 '--continue',
@@ -145,11 +194,11 @@ def jmwePostfunctions = 'src/itest-postfunctions/gradle'
     }
 }
 
-[jmweConditions,jmwePostfunctions,jmweValidators].each { folder ->
+[jmweConditions,jmwePostfunctions].each { folder ->
     if (file(folder).exists()) {
         def args = [
                 '-DtargetDirectory=' + project.buildDir,
-                '-DxmlReport',
+                '-DxmlReport=reports-cloud',
                 '-Dverbose',
                 '-Dclean',
                 '--continue',
@@ -163,16 +212,3 @@ def jmwePostfunctions = 'src/itest-postfunctions/gradle'
         )
     }
 }
-
-/*
-def info = gint.getJiraHelper().getServerInfoWithVerify()
-gint.taskHelper.add('test',[
-action: 'getServerInfo']
-)
-*/
-task test {
-print "Hello"
-}
-
-defaultTasks('test')
-

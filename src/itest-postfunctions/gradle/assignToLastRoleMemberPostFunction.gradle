@@ -88,8 +88,10 @@ def action = [
     def server = defaultFields + projectRole.admin + option.skipInactiveUsers+ conditionalExecution.false
     addTransitionFunction( it, 'postfunction', server, functionKey)
 }
+
 createWorkflowScheme();
 createProject()
+
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
 gint.taskHelper.add(

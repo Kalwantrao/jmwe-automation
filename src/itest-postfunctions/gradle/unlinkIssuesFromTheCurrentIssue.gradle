@@ -12,19 +12,14 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory + '/src/common/utils.gradle'
 
-tearDown()
-addWorkflow()
-
-def defaultFieldsServer = [
-        "throwExceptions=false",
-        "correlationId="
-]
 def defaultFieldsCloud = [
         "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
 ]
+
 def conditionToUnlinkIssues = [
         lowPriority : ["groovyExpression=$groovyExpression.checkPriorityLow"]
 ]
+
 def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__UnlinkIssuesFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:unlink-issues-function'
 
 ['unlinkIssuesWhichReturnsConditionTrue'].each {
@@ -34,109 +29,91 @@ def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugi
 }
 
 createWorkflowScheme()
-//associateWorkflow(projectKey)
 createProject()
-
-// set issue status to In Progress
 
 def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
 def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
 
-def linkIssuesMap = [
-        blocks : {->blocks[]},
-]
-
-linkIssuesMap.eachWithIndex { key, value, i ->
-    linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
-}
-
-def relatedIssuesMap = [
-        Blocks : {->blocks[]},
-]
-
-relatedIssuesMap.eachWithIndex{ key, value, i ->
-    gint.taskHelper.add([
-            [action    : 'getLinkList',
-                    ext       : ': check before triggering pf link issues exists of link type: ' + key ,
-                    parameters: [
-                            issue: {->issueLinks[]},
-                            outputType: "text",
-                            select: "Type Name:Blocks",
-                            columns: "Issue,'To Issue','Type Name'"
-                            ],
-                    data      : ["$key","$value"],
-                    ],
-            ]
-    )
-}
-
-gint.taskHelper.add(
-        [action    : 'updateIssue', ext: ': set prioity High: ',
-                parameters: [
-                     issue   : {->issueLinks[]},
-                     priority: 'High',
-             ]
-            ],
-)
-
-gint.taskHelper.add(
-        [action    : 'transitionIssue', ext: ': when prioity high dont unlink issues',
-         parameters: [
-                 issue     : {->issueLinks[]},
-                 transition: 'unlinkIssuesWhichReturnsConditionTrue' ,
-         ]
-        ],
-)
-
-relatedIssuesMap.eachWithIndex { key, value, i ->
+[
+        'unlinkIssuesWhichReturnsConditionTrue'
+].eachWithIndex{ transition, i ->
+    ["High","Low","Medium"].eachWithIndex { String priority, int idx ->
+        def fieldToChange = "Priority"
+        def expectedOutput;
+        def dataParam;
+        if (priority == "Low") {
+            dataParam = [failData: ["Blocks", "${-> blocks[]}"]]
+        } else {
+            dataParam = [data: ["Blocks", "${-> blocks[]}"]]
+        }
+        if (priority == "Low") {
+            expectedOutput = "0 links for issue"
+        } else {
+            expectedOutput = "1 links for issue"
+        }
         gint.taskHelper.add([
-                [action    : 'getLinkList',
-                 ext       : ': when prioity High dont unlink issue by link type:'+ key + i,
+                [action    : "linkIssue",
+                 ext       : ":Link issues by link type:blocks _before transition issue with_ $transition: when priority is $priority",
+                 sleep     : info?.isCloud ? 5000 : 0,
                  parameters: [
-                         issue: {->issueLinks[]},
-                         outputType: "text",
-                         select: "Type Name:Blocks",
-                         columns: "Issue,'To Issue','Type Name'"
-                 ],
-                 data      : ["$key","$value"],
+                         issue   : { -> issueLinks[] },
+                         toIssue : { -> blocks[] },
+                         link    : "blocks",
+                         continue: null
+                 ]
                 ],
-        ])
+                [action    : 'getLinkList',
+                 sleep     : info?.isCloud ? 5000 : 0,
+                 ext       : ":Check issue has link issues before transition issue with:" + transition + ":when priority is $priority",
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         outputType: "text",
+                         select    : "Type Name:Blocks",
+                         columns   : "Issue,'To Issue','Type Name'"
+                 ],
+                 data      : ["Blocks", "${-> blocks[]}"],
+                ],
+                [action    : 'setFieldValue',
+                 ext       : ": Of prioity to_ $priority:before transition issue with :$transition",
+                 sleep     : info?.isCloud ? 5000 : 0,
+                 parameters: [
+                         issue: { -> issueLinks[] },
+                         field: fieldToChange,
+                         value: priority
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": transition issue with $transition _when prioity is $priority:",
+                 sleep     : info?.isCloud ? 5000 : 0,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: transition,
+                 ]
+                ],
+                [action      : 'getLinkList',
+                 ext         : ": when prioity is $priority _:after transition issue with_" + transition,
+                 sleep       : info?.isCloud ? 5000 : 0,
+                 parameters  : [
+                         issue     : { -> issueLinks[] },
+                         outputType: "text",
+                         select    : "Type Name:Blocks",
+                         columns   : "Issue,'To Issue','Type Name'"
+                 ],
+                 finalClosure: { Task task ->
+                     def output = "$task.outData"
+                     if (output.contains(expectedOutput)) {
+                         gint.helper.log("Test passed for transition", "unlinkIssuesWhichReturnsConditionTrue")
+                     } else {
+                         gint.helper.log("Test failed for transition", "unlinkIssuesWhichReturnsConditionTrue")
+                         assert output.contains(expectedOutput)
+                     }
+                 }
+                ],
+        ]
+        )
+    }
 }
 
-relatedIssuesMap.eachWithIndex { key, value, i ->
-    gint.taskHelper.add(
-            [action    : 'updateIssue', ext: ': set prioity Low: ',
-             parameters: [
-                     issue   : {->issueLinks[]},
-                     priority: 'Low',
-             ]
-            ],
-    )
-}
-
-gint.taskHelper.add(
-        [action    : 'transitionIssue', ext: ': when prioity Low unlink issues',
-         parameters: [
-                 issue     : {->issueLinks[]},
-                 transition: 'unlinkIssuesWhichReturnsConditionTrue' ,
-         ]
-        ],
-)
-
-relatedIssuesMap.eachWithIndex { key, value, i ->
-    gint.taskHelper.add([
-            [action    : 'getLinkList',
-             ext       : ': when prioity Low unlink issue by link type:'+ key + i,
-             parameters: [
-                     issue: {->issueLinks[]},
-                     outputType: "text",
-                     select: "Type Name:Blocks",
-                     columns: "Issue,'To Issue','Type Name'"
-             ],
-             failData      : ["$key","$value"],
-            ],
-    ])
-}
 
 /*
  "Field",  "From",         "From String",                    "To",              "To String"

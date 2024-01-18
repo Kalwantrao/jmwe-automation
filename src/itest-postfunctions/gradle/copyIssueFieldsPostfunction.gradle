@@ -33,7 +33,7 @@ def fieldOptions = [
 
 relatedIssue.eachWithIndex { targetIssue, fields, i ->
     def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_' + i
-    def server = defaultFieldsServer + fieldOptions.assigneeToLabels+ "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
+    def server = defaultFieldsServer + fieldOptions.assigneeToLabels + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
     addTransitionFunction(transition, 'postfunction', server, functionKey)
 }
 
@@ -775,7 +775,7 @@ def testLabel = "label1"
         'userInFieldAssignee',
 ].each {
     relatedIssuesMap.eachWithIndex { key, value, i ->
-        def transition = 'verify_current_issue_from_source_and_all_target_issue_options_to_destination_issue_run_as_' + it
+        def transition = 'verify_current_issue_from_source_and_all_target_issue_options_to_destination_issue_run_as_' + it +i
         gint.taskHelper.add([
                 [action: 'setFieldValue',
                  ext: ": clear the labels value_current issue_to check COPY_ISSUE_FIELDS_Postfunction_$transition : ",

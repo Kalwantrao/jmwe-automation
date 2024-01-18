@@ -13,45 +13,84 @@ apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 def jqlExpressionToLinkIssue = "project = $projectName and issueType = Task and summary ~ JMWE_LinkIssue"
-def defaultFields = [
-        "correlationId=",
-        "throwExceptions=false",
+
+def numberOfIssues = 10
+
+def issuesToLinkServer = [
+        returnByJql : ["jql=$jqlExpressionToLinkIssue"],
 ]
 
-def issuesToLink = [
-        jql : ["jql=$jqlExpressionToLinkIssue"],
+def issuesToLinkCloud = [
+        returnByJql : /"jql":"$jqlExpressionToLinkIssue"/
 ]
 
-def maxIssues = [
+def issuesToLink = info?.isCloud ? issuesToLinkCloud : issuesToLinkServer
+
+def maxIssuesServer = [
         zero : [ "maxIssues=0"],
         one : [ "maxIssues=1"],
         two : [ "maxIssues=2"],
         three : [ "maxIssues=3"],
 ]
 
-def  selectedLinkType = [
-        blocks: ["selectedLinkType=$relatedIssue.linkByBlock"],
-        clones: ["selectedLinkType=$relatedIssue.linkByClones"],
-        duplicates: ["selectedLinkType=$relatedIssue.linkByDuplicates"],
-        'relates to': ["selectedLinkType=$relatedIssue.linkByRelatesTo"],
+def maxIssuesCloud = [
+        zero: /"maxIssues":"0"/,
+        one: /"maxIssues":"1"/,
+        two: /"maxIssues":"2"/,
+        three: /"maxIssues":"3"/
 ]
-def useGroovyFilter = [
-        no : ["useGroovyFilter=false"],
-        yes : ["useGroovyFilter=true"],
-]
-def functionKey =	info ?.isCloud ? 'com.innovalog.jmwe.jira-misc-workflow-extensions:link-issues-function' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:link-issues-function'
 
-// Configuration
-selectedLinkType.eachWithIndex { key,  value, i ->
+def maxIssues = info?.isCloud ? maxIssuesCloud : maxIssuesServer
+
+def selectedLinkTypeServer = [
+        Blocks: ["selectedLinkType=$linkByBlock"],
+        Clones: ["selectedLinkType=$linkByClones"],
+        Duplicates: ["selectedLinkType=$linkByDuplicates"],
+        Relates: ["selectedLinkType=$linkByRelatesTo"],
+]
+def selectedLinkTypeCloud = [
+        Blocks: /"selectedLinkType":"$relatedIssue.linkByBlock"/,
+        Clones: /"selectedLinkType":"$relatedIssue.linkByClones"/,
+        Duplicates: /"selectedLinkType":"$relatedIssue.linkByDuplicates"/,
+        Relates: /"selectedLinkType":"$relatedIssue.linkByRelatesTo"/,
+]
+
+def selectedLinkType = info?.isCloud ? selectedLinkTypeCloud : selectedLinkTypeServer
+
+def useGroovyFilterServer = [
+        no : ["useGroovyFilter=false"],
+        yes : ["useGroovyFilter=true"]
+]
+
+def useGroovyFilterCloud = [
+        no : /"useFilter":false,"filterExpression:""/,
+        yes : /"useFilter":true,"filterExpression:""/
+]
+
+def useGroovyFilter = info ?.isCloud ? useGroovyFilterCloud : useGroovyFilterServer
+
+def functionKey =	info ?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkIssuesFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:link-issues-function'
+
+selectedLinkType.take(1).eachWithIndex { key,  value, i ->
         def transition = 'linkIssuesToCurrentIssueByType'
-        def fields = defaultFields + value + issuesToLink.jql + maxIssues.one +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.false
-        addTransitionFunction(transition + key, 'postfunction', fields, functionKey )
+        def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"_modified\":\"2024-01-17T09:11:39.183Z\",\"jql\":\"$jqlExpressionToLinkIssue\",\"selectedLinkType\":\"$value\",\"maxIssues\":\"1\",\"runAsType\":\"addonUser\",\"useFilter\":false,\"filterExpression\":\"\"}"
+        def server = defaultFieldsServer + value + issuesToLink.returnByJql + maxIssues.one +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.false
+        addTransitionFunction(transition + key, 'postfunction', info?.isCloud ? cloud : server, functionKey )
 }
 
-selectedLinkType.eachWithIndex { key,  value, i ->
+selectedLinkType.take(1).eachWithIndex { key,  value, i ->
     def transition = 'linkIssuesToCurrentIssueIfConditionTrueByType'
-    def fields = defaultFields + value + issuesToLink.jql + maxIssues.one +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.true
-    addTransitionFunction(transition + key, 'postfunction', fields, functionKey )
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"jql\":\"$jqlExpressionToLinkIssue\",\"selectedLinkType\":\"$value\",\"maxIssues\":\"1\",\"runAsType\":\"addonUser\",\"useFilter\":false,\"filterExpression\":\"\"}"
+    def server = defaultFieldsServer + value + issuesToLink.returnByJql + maxIssues.one +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.true
+    addTransitionFunction(transition + key, 'postfunction', info?.isCloud ? cloud : server, functionKey )
+}
+
+[
+        'numberOfIssuesToBeLinked'
+].each {
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"jql\":\"$jqlExpressionToLinkIssue\",\"selectedLinkType\":\"$relatedIssue.linkByBlock\",\"maxIssues\":\"1\",\"runAsType\":\"addonUser\",\"useFilter\":false,\"filterExpression\":\"\"}"
+    def server = defaultFieldsServer + selectedLinkType.Blocks + issuesToLink.returnByJql + "maxIssues=$numberOfIssues" +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.false
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
 }
 
 createWorkflowScheme()
@@ -63,70 +102,196 @@ def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_LinkIssue'], 'defa
 def issue = {-> defaultIssue[]}
 def toIssue = {->defaultIssue1[]}
 
-// checking the current status To Do and previous status In Progress
-
-
-selectedLinkType.eachWithIndex { linkType, value, i ->
+selectedLinkType.take(1).eachWithIndex { linkType, value, i ->
     [
             'linkIssuesToCurrentIssueIfConditionTrueByType'
     ].each {
+        ["High","Low"].eachWithIndex{ priority, idx ->
+            def expectedOutput;
+            if(priority == "High"){
+                expectedOutput = "1 links for issue"
+            }
+            else{
+                expectedOutput = "0 links for issue"
+            }
+                gint.taskHelper.add([
+                        [action: 'setFieldValue',
+                         sleep: info?.isCloud ? 5000 : 0,
+                         ext : ": Of priority $priority:before transition issue with _ $it$i",
+                         parameters: [
+                                 issue: {-> defaultIssue[]},
+                                 field: "Priority",
+                                 value: priority
+                         ]
+                        ],
+                        [action    : 'transitionIssue',
+                         sleep: info?.isCloud ? 5000 : 0,
+                         ext: " : when priority is $priority :" + it + linkType + i ,
+                         parameters: [
+                                 transition: it + linkType,
+                                 issue     : { -> defaultIssue[] },
+                         ],
+                        ],
+                        [action: 'getLinkList',
+                         sleep: info?.isCloud ? 5000 : 0,
+                         ext: ":issues to be linked by $linkType by postfunction_ when priority is $priority: after transition issue with" + it + i ,
+                         parameters  : [
+                                 issue     : { -> defaultIssue[] },
+                                 outputType: "text",
+                                 select    : "Type Name:$linkType",
+                                 columns   : "Issue,'To Issue','Type Name'"
+                         ],
+                         finalClosure: { Task task ->
+                             def output = "$task.outData"
+                             if (output.contains(expectedOutput)) {
+                                 gint.helper.log("Test passed for transition", it)
+                             } else {
+                                 gint.helper.log("Test failed for transition", it)
+                                 assert output.contains(expectedOutput)
+                             }
+                         }
+                        ],
+                ]
+                )
+            if(priority != "Low") {
+                gint.taskHelper.add([
+                        [action    : "deleteLink",
+                         sleep: info?.isCloud ? 5000 : 0,
+                         ext       : ":issue link by postfunction after transition issue with _ $it$i _when priority is $priority:",
+                         parameters: [
+                                 issue  : { -> defaultIssue[] },
+                                 toIssue: { -> defaultIssue1[] },
+                                 link   : linkType
+                         ]
+                        ],
+                        [action      : 'getLinkList',
+                         sleep: info?.isCloud ? 5000 : 0,
+                         ext         : ":issues to be linked by $linkType when priority is $priority:" + it + i,
+                         parameters  : [
+                                 issue     : { -> defaultIssue[] },
+                                 outputType: "text",
+                                 select    : "Type Name:$linkType",
+                                 columns   : "Issue,'To Issue','Type Name'"
+                         ],
+                         finalClosure: { Task task ->
+                             def output = "$task.outData"
+                             !output.contains(expectedOutput)
+                         }
+                        ],
+                ]
+                )
+            }
+        }
+
+    }
+}
+
+selectedLinkType.take(1).eachWithIndex { linkType, value, i ->
+    [
+            'linkIssuesToCurrentIssueByType',
+    ].each {
+        def expectedOutput= "1 links for issue";
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: " : when issue priority is not high :" + it + linkType +i ,
+                [action    : 'transitionIssue',
+                 sleep: info?.isCloud ? 5000 : 0,
+                 ext: " ::" + it + linkType + i ,
                  parameters: [
                          transition: it + linkType,
                          issue     : { -> defaultIssue[] },
                  ],
                 ],
-                [action: 'getFieldValue', ext: ":when issues priority not high: " + it + linkType + i,
-                 parameters: [
-                         issue: {-> defaultIssue[] },
-                         field: "Linked Issues",
+                [action: 'getLinkList',
+                 sleep: info?.isCloud ? 5000 : 0,
+                 ext: ":issues to be linked by $linkType by postfunction: after transition issue with" + it + i ,
+                 parameters  : [
+                         issue     : { -> defaultIssue[] },
+                         outputType: "text",
+                         select    : "Type Name:$linkType",
+                         columns   : "Issue,'To Issue','Type Name'"
                  ],
-                 failData: [/Linked Issues . . . . . . . . : $toIssue/]
+                 finalClosure: { Task task ->
+                     def output = "$task.outData"
+                     if (output.contains(expectedOutput)) {
+                         gint.helper.log("Test passed for transition", it)
+                     } else {
+                         gint.helper.log("Test failed for transition", it)
+                         assert output.contains(expectedOutput)
+                     }
+                 }
                 ],
-               ],
+                [action: "deleteLink",
+                 sleep: info?.isCloud ? 5000 : 0,
+                 ext: ":issue link by postfunction after transition issue with _ $it$i:",
+                 parameters: [
+                         issue: {->defaultIssue[]},
+                         toIssue: {-> defaultIssue1[]},
+                         link: linkType
+                 ]
+                ],
+                [action: 'getLinkList',
+                 sleep: info?.isCloud ? 5000 : 0,
+                 ext: ":issues to be linked by $linkType :" + it + i ,
+                 parameters  : [
+                         issue     : { -> defaultIssue[] },
+                         outputType: "text",
+                         select    : "Type Name:$linkType",
+                         columns   : "Issue,'To Issue','Type Name'"
+                 ],
+                 finalClosure: { Task task ->
+                     def output = "$task.outData"
+                     !output.contains(expectedOutput)
+                 }
+                ],
+        ]
         )
     }
 }
-gint.taskHelper.add(
-        action: 'updateIssue', ext : ": set priority to high: ",
-        parameters: [
-                issue: {-> defaultIssue[]},
-                priority: 'High'
-        ]
-)
 
+(1..numberOfIssues).each {
+    gint.taskHelper.add(
+            action: 'createIssue', ext: ":create issue number: $it",
+            parameters: [
+                    project: projectName,
+                    type: "Task",
+                    summary: "JMWE_LinkIssue",
+            ]
+    )
+}
 
-
-selectedLinkType.eachWithIndex { linkType, value, i ->
-    [
-            'linkIssuesToCurrentIssueByType',
-            'linkIssuesToCurrentIssueIfConditionTrueByType'
-    ].each {
-        gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: " : when priority high: " + it + linkType +i ,
+[
+        'numberOfIssuesToBeLinked'
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             sleep: info?.isCloud ? 5000 : 0,
+             ext: " : when issue priority is not high :" + it ,
+             sleepAfter: info?. isCloud ? 5000 : 5000,
              parameters: [
-                     transition: it + linkType,
+                     transition: it,
                      issue     : { -> defaultIssue[] },
              ],
             ],
-            [action: 'getFieldValue', ext: ": when priority high" + it + linkType + i,
-             parameters: [
-                     issue: {-> defaultIssue[] },
-                     field: "Linked Issues",
+            [action: 'getLinkList',
+             sleep: info?.isCloud ? 5000 : 0,
+             ext: ":Check number issues to be linked by blocks link type postfunction is $numberOfIssues: after transition issue with" + it ,
+             parameters  : [
+                     issue     : { -> defaultIssue[] },
+                     outputType: "text",
+                     select    : "Type Name:Blocks",
+                     columns   : "Issue,'To Issue','Type Name'"
              ],
-                    data: [/Linked Issues . . . . . . . . : $toIssue/]
+             finalClosure: { Task task ->
+                 def output = "$task.outData"
+                 if (output.contains("$numberOfIssues links for issue")) {
+                     gint.helper.log("Test passed for transition", "unlinkIssuesWhichReturnsConditionTrue")
+                 } else {
+                     gint.helper.log("Test failed for transition", "unlinkIssuesWhichReturnsConditionTrue")
+                     assert output.contains("$numberOfIssues links for issue")
+                 }
+             }
             ],
-            [action: 'deleteLink',ext: " : unlink issues linked by post function to check next option: " + it+ linkType,
-             parameters:[
-                     issue: issue,
-                     toIssue: toIssue,
-                     link: "$linkType"
-                     ]
-             ]
-             ],
+    ],
     )
-    }
 }
 
 

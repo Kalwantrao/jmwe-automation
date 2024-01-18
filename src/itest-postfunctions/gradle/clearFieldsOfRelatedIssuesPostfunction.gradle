@@ -153,7 +153,7 @@ int fixVersions = 1
 def affectsVersions = 1
 def component = 'component1'
 
-// CLEAR_FIELDS_POSTFUNCTION_TS_11-Verify to select fields from the Field(s) picker
+// CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_11-Verify to select fields from the Field(s) picker
 [
         'clearFieldLabel',
 ].collect {
@@ -161,15 +161,15 @@ def component = 'component1'
         gint.taskHelper.add([
                 [action: 'updateIssue',
                  ext: " : add field labels to before transition issue with_ $it$i _  : ",
-                 sleep: 5000,
+                 sleep: info?.isCloud? 5000 : 0,
                 parameters: [
                         issue: value,
                         labels: testLabel,
                 ],
                 ],
                 [action: "getFieldValue",
-                 sleep: 5000,
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that before transition value of field _labels should be: $testLabel :$it$i",
+                 sleep: info?.isCloud? 5000 : 0,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that before transition value of field _labels should be: $testLabel :$it$i",
                  parameters:[
                          issue: value,
                          field: "Labels"
@@ -180,16 +180,16 @@ def component = 'component1'
                  }
                 ],
                 [action    : 'transitionIssue',
-                 ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_11_TC_ $i to check _$it$i:",
-                 sleep:5000,
+                 ext       : ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_11_TC_ $i to check _$it$i:",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_11_TC_ $i _validate that the after transition value of field _labels should be clear: $testLabel :$it$i _",
-                 sleep:5000,
+                 ext       : ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_11_TC_ $i _validate that the after transition value of field _labels should be clear: $testLabel :$it$i _",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
                          field: "Labels"
@@ -204,7 +204,7 @@ def component = 'component1'
     }
 }
 
-// CLEAR_FIELDS_POSTFUNCTION_TS_26_Verify the run as specific user
+// CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_26_Verify the run as specific user
 [
         'runAsSpecificUser',
 ].each {
@@ -212,14 +212,14 @@ def component = 'component1'
         gint.taskHelper.add([
                 [action: 'updateIssue',
                  ext: " : add field component to check $it _" + i,
-                 sleep:5000,
+                sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
                          components: component,
                  ]],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the before transition value of field component should be: $component :$it$i",
-                 sleep:5000,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the before transition value of field component should be: $component :$it$i",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
                          field: "Components"
@@ -230,16 +230,16 @@ def component = 'component1'
                  }
                 ],
                 [action    : 'transitionIssue',
-                 ext: ": CLEAR_FIELDS_POSTFUNCTION_TS_26_TC_ $i _to check $it _ Verify the run as specific user: ",
-                 sleep:5000,
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_26_TC_ $i _to check $it _ Verify the run as specific user: ",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the after transition value of field component should be clear: $component :$it$i",
-                 sleep:5000,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the after transition value of field component should be clear: $component :$it$i",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
                          field: "Components"
@@ -250,8 +250,8 @@ def component = 'component1'
                  }
                 ],
                 [action    : 'getIssueHistoryList',
-                 ext: ": CLEAR_FIELDS_POSTFUNCTION_TS_26_TC_ $i _to check $it _ Verify the run as specific user: ",
-                 sleep:5000,
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_26_TC_ $i _to check $it _ Verify the run as specific user: ",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
                          outputType: "text",
@@ -268,16 +268,17 @@ def component = 'component1'
     }
 }
 
-// CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_01_Verify the run as user in field assignee option
+// CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_01_Verify the run as user in field assignee option
 [
         'runAsUserInFieldAssignee'
-].each {
-    def userInFieldAssignee1 = info?.isCloud? info?.userDisplayName : user
+].collect {
     relatedIssuesMap.eachWithIndex { key, value, i ->
+        def userInFieldAssignee1 = info?.isCloud? info?.userDisplayName : user
+        def getFixVersions = info?.isCloud ? "Fix versions  . . . . . . . . : 1" : "Fix Version/s . . . . . . . . : 1"
         gint.taskHelper.add([
                 [action: 'assignIssue',
                  ext: ": target issue to check run as user in field assignee related issue: " + it+i ,
-                 sleep:5000,
+                sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
                          assignee: user
@@ -285,15 +286,15 @@ def component = 'component1'
                 ],
                 [action: 'assignIssue',
                  ext: ": current issue to check run as user in field assignee related issue: " + it+i ,
-                 sleep:5000,
+                sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: key,
                          assignee: user
                  ],
                 ],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the after transition value of field _assignee should be: $userInFieldAssignee1 :$it$i",
-                 sleep:5000,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the after transition value of field _assignee should be: $userInFieldAssignee1 :$it$i",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
                          field: "Assignee"
@@ -304,63 +305,49 @@ def component = 'component1'
                  }
                 ],
                 [action: 'updateIssue',
-                 ext: " : add field fix versions_target issue to check $it _" + i,
-                 sleep:5000,
-                 parameters: [
-                         issue: value,
-                         fixVersions: fixVersions,
-                 ]
-                ],
-                [action: 'updateIssue',
                  ext: " : add field fix versions_ current issue to check $it _" + i,
-                 sleep:5000,
+                sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
                          fixVersions: fixVersions,
                  ]
                 ],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the before transition value of field fix versions should be: $fixVersions :$it$i",
-                 sleep:5000,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the before transition value of field fix versions should be: $fixVersions :$it$i",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
                          field: "fixVersions"
                  ],
-                 finalClosure:{Task task ->
-                     def actualValue = "$task.outData"
-                     assert actualValue.contains("Fix versions  . . . . . . . . : $fixVersions")
-                 }
+                        data: [ getFixVersions ],
                 ],
                 [action    : 'transitionIssue',
-                 ext: ": CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_01_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
-                 sleep:5000,
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_01_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the value of field fix versions should not be: $fixVersions : after transition_ $it$i",
-                 sleep:5000,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the value of field fix versions should not be: $fixVersions : after transition_ $it$i",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
                          field: "fixVersions"
                  ],
-                 finalClosure:{Task task ->
-                     def actualValue = "$task.outData"
-                     assert !actualValue.contains("Fix versions  . . . . . . . . : $fixVersions")
-                 }
+                 failData: [ getFixVersions ],
                 ],
                 [action    : 'getIssueHistoryList',
-                 ext: ": CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_01_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
-                 sleep:5000,
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_01_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
                          outputType: "text",
                          select: "Field:Fix Version",
                          columns: "Author,'From String','To String'"
                  ],
-                 data      : ["$userInFieldAssignee1","$fixVersions", ""],
+                 data      : [ "$userInFieldAssignee1","$fixVersions", "" ],
                  finalClosure:{Task task ->
                      def actualValue = "$task.outData"
                      assert actualValue.contains(userInFieldAssignee1) && actualValue.toString().contains(fixVersions.toString()) && actualValue.contains(" ")
@@ -369,8 +356,8 @@ def component = 'component1'
         ])
     }
 }
-*/
-// CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_02_Verify the run as user in field reporter option
+
+// CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_02_Verify the run as user in field reporter option
 [
         'runAsUserInFieldReporter',
 ].each {
@@ -379,8 +366,8 @@ def component = 'component1'
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the value of field assignee should be: $userInFieldAssignee1 : after transition_ $it$i",
-                 sleep:5000,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the value of field assignee should be: $userInFieldAssignee1 : after transition_ $it$i",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
                          field: "Reporter"
@@ -392,15 +379,15 @@ def component = 'component1'
                 ],
                 [action: 'assignIssue',
                  ext: ": to check run as user in field reporter related issue: " +it + i ,
-                 sleep:5000,
+                sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
                          assignee: userInFieldAssignee1
                  ],
                 ],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the value of field assignee should be: $userInFieldAssignee1 : before transition_ $it$i",
-                 sleep:5000,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the value of field assignee should be: $userInFieldAssignee1 : before transition_ $it$i",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
                          field: "Assignee"
@@ -411,16 +398,16 @@ def component = 'component1'
                  }
                 ],
                 [action    : 'transitionIssue',
-                 ext: ": CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_02_ TC_ $i _ to check $it _Verify the run as user in field reporter option : ",
-                 sleep:5000,
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_02_ TC_ $i _ to check $it _Verify the run as user in field reporter option : ",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the value of field assignee should be clear: $userInFieldAssignee1 : after transition_ $it$i",
-                 sleep:5000,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the value of field assignee should be clear: $userInFieldAssignee1 : after transition_ $it$i",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
                          field: "Assignee"
@@ -432,8 +419,8 @@ def component = 'component1'
                  }
                 ],
                 [action    : 'getIssueHistoryList',
-                 ext: ": CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_02_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
-                 sleep:5000,
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_02_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
                          outputType: "text",
@@ -450,7 +437,7 @@ def component = 'component1'
     }
 }
 
-// CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_03_Verify the run as user in field creator option
+// CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_03_Verify the run as user in field creator option
 [
         'runAsUserInFieldCreator'
 ].each {
@@ -459,15 +446,15 @@ def component = 'component1'
         gint.taskHelper.add([
                 [action: 'updateIssue',
                  ext: " : add field affects versions_target issue to check $it _" + i,
-                 sleep:5000,
+                sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
                          affectsVersions: affectsVersions,
                  ]
                 ],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the before transition value of field affects versions should be: $fixVersions :$it$i",
-                 sleep:5000,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the before transition value of field affects versions should be: $fixVersions :$it$i",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
                          field: "affectsVersions"
@@ -478,16 +465,16 @@ def component = 'component1'
                  }
                 ],
                 [action    : 'transitionIssue',
-                 ext: ": CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_03_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
-                 sleep:5000,
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_03_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
                 [action    : 'getIssueHistoryList',
-                 ext: ": CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_03_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
-                 sleep:5000,
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_03_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
+                sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
                          outputType: "text",
@@ -504,7 +491,7 @@ def component = 'component1'
     }
 }
 
-// CLEAR_FIELDS_POSTFUNCTION_TS_31-Verify the Conditional Execution
+// CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_31-Verify the Conditional Execution
 [
         'clearFieldsIfConditionalExecutionTrue'
 ].each {
@@ -513,15 +500,15 @@ def component = 'component1'
             gint.taskHelper.add([
                     [action: 'updateIssue',
                      ext: " : add field labels to before transition issue with_ $it$i _  : ",
-                     sleep:5000,
+                    sleep: info?.isCloud? 5000 : 0,
                      parameters: [
                              issue: value,
                              labels: testLabel,
                      ],
                     ],
                     [action: "getFieldValue",
-                     ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that before transition value of field _labels should be: $testLabel :$it$i",
-                     sleep:5000,
+                     ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that before transition value of field _labels should be: $testLabel :$it$i",
+                    sleep: info?.isCloud? 5000 : 0,
                      parameters:[
                              issue: value,
                              field: "Labels"
@@ -540,8 +527,8 @@ def component = 'component1'
                      ]
                     ],
                     [action: "getFieldValue",
-                     ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that priority of the issue should not be high: $testLabel :$it$i",
-                     sleep:5000,
+                     ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that priority of the issue should not be high: $testLabel :$it$i",
+                    sleep: info?.isCloud? 5000 : 0,
                      parameters:[
                              issue: key,
                              field: "Priority"
@@ -552,7 +539,7 @@ def component = 'component1'
                      }
                     ],
                     [action    : 'transitionIssue',
-                     ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_31_Case_01_ TC_$i _check $it _When condition false: ",
+                     ext       : ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_31_Case_01_ TC_$i _check $it _When condition false: ",
                      sleep     : 5000,
                      parameters: [
                              issue     : key,
@@ -560,7 +547,7 @@ def component = 'component1'
                      ]
                     ],
                     [action    : 'getFieldValue',
-                     ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_31_Case_01_ TC_$i _check $it _When condition false_labels should not clear: ",
+                     ext       : ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_31_Case_01_ TC_$i _check $it _When condition false_labels should not clear: ",
                      sleep     : 5000,
                      parameters: [
                              issue: value,
@@ -581,8 +568,8 @@ def component = 'component1'
                      ]
                     ],
                     [action: "getFieldValue",
-                     ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that priority of the issue should be high: $testLabel :$it$i",
-                     sleep:5000,
+                     ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that priority of the issue should be high: $testLabel :$it$i",
+                    sleep: info?.isCloud? 5000 : 0,
                      parameters:[
                              issue: key,
                              field: "Priority"
@@ -593,7 +580,7 @@ def component = 'component1'
                      }
                     ],
                     [action    : 'transitionIssue',
-                     ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_31_Case_02 TC_$i _check $it _When condition true: ",
+                     ext       : ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_31_Case_02 TC_$i _check $it _When condition true: ",
                      sleep     : 5000,
                      parameters: [
                              issue     : key,
@@ -601,7 +588,7 @@ def component = 'component1'
                      ]
                     ],
                     [action    : 'getFieldValue',
-                     ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_31_Case_02_TC_$i _check $it _When condition true_labels should be clear: ",
+                     ext       : ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_31_Case_02_TC_$i _check $it _When condition true_labels should be clear: ",
                      sleep     : 5000,
                      parameters: [
                              issue: value,

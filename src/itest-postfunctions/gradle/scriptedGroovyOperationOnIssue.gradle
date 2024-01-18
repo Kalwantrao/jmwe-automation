@@ -12,11 +12,6 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-def defaultFields = [
-        "throwExceptions=false",
-        "correlationId=",
-]
-
 def script = [
         setLabels : [ "groovyExpression=issue.setFieldValue('Labels','test_label')","scriptDescription=" ],
         currentUser : [ "groovyExpression=issue.setFieldValue('Labels','runAsCurrentUser')","scriptDescription=" ],
@@ -32,42 +27,55 @@ def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugi
 // Configuration
 
 ['setLabelByScript'].each {
-    def fields = defaultFields + script.setLabels
+    def fields = defaultFieldsServer + script.setLabels
     addTransitionFunction(it, 'postfunction', fields, functionKey )
 }
 
 ['runAsCurrentUser'].each {
-    def fields = defaultFields + script.currentUser + runAsUser.currentUser
+    def fields = defaultFieldsServer + script.currentUser + runAsUser.currentUser
     addTransitionFunction(it , 'postfunction', fields, functionKey )
-    moveTransitionFunction (it, 4)
+    if(!isCloud) {
+        moveTransitionFunction(it, 4)
+    }
 }
 ['runAsUserInFieldReporter'].each {
-    def fields = defaultFields + script.userInFieldReporter + runAsUser.userInFieldReporter
+    def fields = defaultFieldsServer + script.userInFieldReporter + runAsUser.userInFieldReporter
     addTransitionFunction(it , 'postfunction', fields, functionKey )
-    moveTransitionFunction (it, 4)
+    if(!isCloud) {
+        moveTransitionFunction(it, 4)
+    }
 }
 ['runAsUserInFieldCreator'].each {
-    def fields = defaultFields + script.userInFieldCreator + runAsUser.userInFieldCreator
+    def fields = defaultFieldsServer + script.userInFieldCreator + runAsUser.userInFieldCreator
     addTransitionFunction(it , 'postfunction', fields, functionKey )
-    moveTransitionFunction (it, 4)
+    if(!isCloud) {
+        moveTransitionFunction(it, 4)
+    }
 }
 
 ['runAsUserFromScript'].each {
-    def fields = defaultFields + script.userFromScript + runAsUser.userFromScript
+    def fields = defaultFieldsServer + script.userFromScript + runAsUser.userFromScript
     addTransitionFunction(it, 'postfunction', fields, functionKey )
-    moveTransitionFunction (it, 4)
+    if(!isCloud) {
+        moveTransitionFunction(it, 4)
+    }
 }
 
 ['runAsUserInFieldAssignee'].each {
-    def fields = defaultFields + script.userInFieldAssignee + runAsUser.userInFieldAssignee
+    def fields = defaultFieldsServer + script.userInFieldAssignee + runAsUser.userInFieldAssignee
     addTransitionFunction(it, 'postfunction', fields, functionKey )
-    moveTransitionFunction (it, 4)
+    if(!isCloud) {
+        moveTransitionFunction(it, 4)
+    }
 }
 ['runAsSpecificUser'].each {
-    def fields = defaultFields + script.specificUser + runAsUser.specificUser
+    def fields = defaultFieldsServer + script.specificUser + runAsUser.specificUser
     addTransitionFunction(it, 'postfunction', fields, functionKey )
-    moveTransitionFunction (it, 4)
+    if(!isCloud) {
+        moveTransitionFunction(it, 4)
+    }
 }
+
 createWorkflowScheme()
 createProject()
 
@@ -75,15 +83,19 @@ createProject()
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
 // checking the current status To Do and previous status In Progress
-['setLabelByScript',].each {
+[
+        'setLabelByScript'
+].each {
     gint.taskHelper.add([
             [action    : 'transitionIssue', ext: " : " + it,
+             sleep: info?.isCloud ? 5000 : 0,
              parameters: [
                      transition: it,
                      issue     : { -> defaultIssue[] },
              ],
             ],
             [action: 'getFieldValue', ext: ": Chack :" + it,
+             sleep: info?.isCloud ? 5000 : 0,
              parameters: [
                      issue: {-> defaultIssue[]},
                      field : "Labels",
@@ -93,6 +105,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 
     ])
 }
+
 [
         'runAsCurrentUser',
         'runAsUserInFieldReporter',
@@ -101,12 +114,14 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 ].each {
         gint.taskHelper.add([
                 [action    : 'transitionIssue', ext: " : " + it ,
+                 sleep: info?.isCloud ? 5000 : 0,
                  parameters: [
                          transition: it ,
                          issue     : { -> defaultIssue[] },
                  ],
                 ],
                 [action    : 'getIssueHistoryList', ext: ": Chack :" + it ,
+                 sleep: info?.isCloud ? 5000 : 0,
                  parameters: [
                          issue: { -> defaultIssue[] },
                          outputType: "Text",
@@ -121,7 +136,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 
 gint.taskHelper.add(
         action: 'assignIssue',
-        sleepAfter: 2000,
+        sleep: info?.isCloud ? 5000 : 0,
         parameters:[
                 issue: {->defaultIssue[]},
                 assignee: testUser
@@ -134,12 +149,14 @@ gint.taskHelper.add(
 ].each {
     gint.taskHelper.add([
             [action    : 'transitionIssue', ext: " : " + it ,
+             sleep: info?.isCloud ? 5000 : 0,
              parameters: [
                      transition: it ,
                      issue     : { -> defaultIssue[] },
              ],
             ],
             [action    : 'getIssueHistoryList', ext: ": Chack :" + it ,
+             sleep: info?.isCloud ? 5000 : 0,
              parameters: [
                      issue: { -> defaultIssue[] },
                      outputType: "Text",
@@ -148,6 +165,5 @@ gint.taskHelper.add(
              ],
              data      : ["$testUser","$it"],
             ]
-
     ])
 }

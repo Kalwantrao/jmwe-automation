@@ -20,9 +20,9 @@ def selectUser = [
         currentUser : [ "assignmentType=currentUser"  ],
         Reporter : [ "assignmentType=reporter" ],
         ProjectLead : [ "assignmentType=projectLead" ],
-        UserReturnFromScript: ["assignmentType=script","script=$groovyExpression.returnsReporter"],
+        //UserReturnFromScript: ["assignmentType=script","script=$groovyExpression.returnsReporter"],
         //UserWhoIsDefaultAssigneeOfProject: [ "assignmentType=projectDefault"],
-        UserWhoLastCommented: ["assignmentType=lastCommenter"],
+        //UserWhoLastCommented: ["assignmentType=lastCommenter"],
         //UserByUserName : ["assignmentType=specificUser","user=$jmwe_qaUserId"],
         //UserWhoIsComponentLead : ["assignmentType=componentLead","component=$component1Id"],
         //ReturnFromUserObjectFieldAssignee:["assignmentType=userFromField", "field=assignee"],
@@ -33,6 +33,23 @@ def selectUser = [
         AdminRoleMember: ["assignmentType=roleMember", "role=$jiraAdminRoleId", "multipleUserBehavior=alphabetical"],
 ]
 
+def throwException = [
+        no : ["throwIfNoMatch="],
+        yes : ["throwIfNoMatch=yes"],
+]
+
+def assignmentBehavior = [
+        force : [ "assignmentBehavior=force" ],
+        automatic : [ "useValuesFromTransitionedIssue=","assignmentBehavior=onlyAutomatic" ],
+        ifTransitionValueChanged : [ "useValuesFromTransitionedIssue", "assignmentBehavior=preferTransition" ],
+        ifTransitionUserValueIsNotRoleMember : [ "useValuesFromTransitionedIssue","assignmentBehavior=ifRoleMember" ]
+]
+
+def skipIfAssigned = [
+        no : [ "skipIfAlreadyAssigned=no" ],
+        yes : [ "skipIfAlreadyAssigned=yes" ]
+]
+
 def multipleUser = [
         alphabetical : [ "multipleUserBehavior=alphabetical" ],
         roundRobin: [ "multipleUserBehavior=roundRobin" ],
@@ -41,49 +58,39 @@ def multipleUser = [
         scripted : [ "multipleUserBehavior=scripted", "multipleUsersScript=$groovyExpression.returnsReporter" ]
 ]
 
-def throwException = [
-        no: ["throwIfNoMatch="],
-        yes : ["throwIfNoMatch=yes"]
-]
-
-def assignmentBehaviour = [
-        force : ["assignmentBehavior=force" ],
-        automatic : ["useValuesFromTransitionedIssue=","assignmentBehavior=onlyAutomatic"],
-        ifTransitionValueChanged : ["useValuesFromTransitionedIssue", "assignmentBehavior=preferTransition"],
-        ifTransitionUserValueIsNotRoleMember : ["useValuesFromTransitionedIssue","assignmentBehavior=ifRoleMember"]
-]
-
-def skipIfAssigned = [
-        no : [ "skipIfAlreadyAssigned=no" ],
-        yes : [ "skipIfAlreadyAssigned=yes" ]
-]
-
 selectUser.eachWithIndex { userType, userValues, userIndex ->
-    relatedIssue.eachWithIndex { targetIssue, value, issueIndex ->
-        def transition = 'assign_issue_to_'+ userType + issueIndex
-        def fields = defaultFieldsServer + userValues + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.false
+    relatedIssue.take(1).eachWithIndex { targetIssue, value, issueIndex ->
+        def transition = "assign_current_issue_to_$userType"
+        def fields = defaultFieldsServer + userValues + "selectedLinkType=$value" + throwException.no + assignmentBehavior.force + skipIfAssigned.no + conditionalExecution.false
         if(!isCloud) {
             addTransitionFunction(transition, 'postfunction', fields, functionKey)
         }
     }
 }
 
-['assign_issue_to_currentUser_if_condition_true'].each {
-    relatedIssue.eachWithIndex { targetIssue, value, issueIndex ->
-        def fields = defaultFieldsServer + selectUser.currentUser + "selectedLinkType=$value" + throwException.no + assignmentBehaviour.force + skipIfAssigned.no + conditionalExecution.true
+relatedIssue.eachWithIndex { targetIssue, value, issueIndex ->
+    def transition = "assign_issue_to_currentUser" + issueIndex
+    def fields = defaultFieldsServer + selectUser.currentUser + "selectedLinkType=$value" + throwException.no + assignmentBehavior.force + skipIfAssigned.no + conditionalExecution.false
+    if(!isCloud) {
+        addTransitionFunction(transition, 'postfunction', fields, functionKey)
+    }
+}
+
+[
+        'assign_currentIssue_issue_to_currentUser_if_condition_true'
+].each {
+    relatedIssue.take(1)eachWithIndex { targetIssue, value, issueIndex ->
+        def fields = defaultFieldsServer + selectUser.currentUser + "selectedLinkType=$value" + throwException.no + assignmentBehavior.force + skipIfAssigned.no + conditionalExecution.true
         if(!isCloud) {
             addTransitionFunction(it + issueIndex, 'postfunction', fields, functionKey)
         }
     }
 }
 
-
 createWorkflowScheme()
 createProject()
 
 addComponent(1)
-
-// set issue status to In Progress
 
 def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
@@ -189,6 +196,133 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
     }
 }
 
+selectUser.eachWithIndex { userType, userValues, userIndex ->
+    def transition = "assign_current_issue_to_$userType"
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+        if(!isCloud) {
+            gint.taskHelper.add([
+                    [action    : 'updateIssue',
+                     ext       : ": unassign current issue_ASSIGN_ISSUE_PF :" + transition,
+                     parameters: [
+                             issue   : value,
+                             assignee: " ",
+                     ]
+                    ],
+                    [action    : 'transitionIssue',
+                     ext       : ":by_ $transition:ASSIGN_ISSUE_PF_:",
+                     parameters: [
+                             issue     : key,
+                             transition: transition,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     ext       : ":Of current issue_after transition issue by:$transition:ASSIGN_ISSUE_PF_:",
+                     parameters: [
+                             issue: value,
+                             field: "Assignee"
+                     ],
+                     data      : ["Assignee  . . . . . . . . . . : $user"],
+                    ],
+            ])
+        }
+    }
+}
+
+relatedIssuesMap.eachWithIndex { key, value, i ->
+    def transition = "assign_issue_to_currentUser" + i
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'updateIssue',
+                 ext       : ": unassign current issue_ASSIGN_ISSUE_PF :" + transition,
+                 parameters: [
+                         issue   : value,
+                         assignee: " ",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ":by_ $transition:ASSIGN_ISSUE_PF_:",
+                 parameters: [
+                         issue     : key,
+                         transition: transition,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 ext       : ":Of current issue_after transition issue by:$transition:ASSIGN_ISSUE_PF_:",
+                 parameters: [
+                         issue: value,
+                         field: "Assignee"
+                 ],
+                 data      : ["Assignee  . . . . . . . . . . : $user"],
+                ],
+        ])
+    }
+}
+
+[
+        'assign_currentIssue_issue_to_currentUser_if_condition_true'
+].each {
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+        def transition = it + i
+        if (!isCloud) {
+            gint.taskHelper.add([
+                    [action    : 'updateIssue',
+                     ext       : ": unassign current issue_ASSIGN_ISSUE_PF :" + transition,
+                     parameters: [
+                             issue   : value,
+                             assignee: " ",
+                     ]
+                    ],
+                    [action: 'setFieldValue',
+                    ext: ":Set priority of issue to Low_before transition_ $transition:",
+                    parameters: [
+                            issue: key,
+                            field: "Priority",
+                            value: 'Low'
+                    ]
+                    ],
+                    [action    : 'transitionIssue',
+                     ext       : ":by_ $transition:ASSIGN_ISSUE_PF_:when condition false:",
+                     parameters: [
+                             issue     : key,
+                             transition: transition,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     ext       : ":Of current issue_after transition issue by:$transition:ASSIGN_ISSUE_PF_:when condition false:",
+                     parameters: [
+                             issue: value,
+                             field: "Assignee"
+                     ],
+                     failData      : ["Assignee  . . . . . . . . . . : $user"],
+                    ],
+                    [action: 'setFieldValue',
+                     ext: ":Set priority of issue to High_before transition_ $transition:",
+                     parameters: [
+                             issue: key,
+                             field: "Priority",
+                             value: 'High'
+                     ]
+                    ],
+                    [action    : 'transitionIssue',
+                     ext       : ":by_ $transition:ASSIGN_ISSUE_PF_:when condition true:",
+                     parameters: [
+                             issue     : key,
+                             transition: transition,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     ext       : ":Of current issue_after transition issue by:$transition:ASSIGN_ISSUE_PF_:when condition true:",
+                     parameters: [
+                             issue: value,
+                             field: "Assignee"
+                     ],
+                     data      : ["Assignee  . . . . . . . . . . : $user"],
+                    ],
+            ])
+        }
+    }
+}
+/*
 [
         'assign_issue_to_currentUser',
         'assign_issue_to_Reporter',
@@ -229,7 +363,9 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
     }
 }
 
-['assign_issue_to_currentUser_if_condition_true'].each {
+[
+        // 'assign_issue_to_currentUser_if_condition_true'
+].each {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         if(!isCloud) {
             gint.taskHelper.add([
@@ -344,6 +480,7 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
         )
     }
 }
+
 [
         'assignIssueToCurrentUser',
         'assignIssueToCurrentUserIfConditionTrue',
@@ -518,3 +655,4 @@ relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
         }
     }
 }
+ */

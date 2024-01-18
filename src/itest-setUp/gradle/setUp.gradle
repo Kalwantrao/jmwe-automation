@@ -1,0 +1,335 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+
+def info =  gint.getJiraHelper().getServerInfoWithVerify()
+
+
+ext.getStatusIds = { status ->
+    def statusIds = []
+    gint.taskHelper.add([
+            [action: 'getStatusList',
+             ext: ":get status id for status : $status",
+             parameters: [
+                     columns: "id",
+                     select: "name:$status"
+             ],
+             finalClosure: { Task task ->
+                 statusIds.add("$task.outData")
+                 gint.helper.log("Status", task.outData)
+             },
+            ],
+    ]
+    )
+    return statusIds
+}
+
+def ToDoId = getStatusIds("To Do")
+def InProgressId = getStatusIds("In Progress")
+def InReviewId = getStatusIds("In Review")
+def DoneId = getStatusIds("Done")
+
+
+def checkIds = {
+
+    assert ToDoId.contains("[$ToDoServer]")
+    assert InProgressId.contains("[$InProgressServer]")
+    assert InReviewId.contains("[$InReviewServer]")
+    assert DoneId.contains("[$DoneServer]")
+}
+
+checkIds.call()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+
+def screenList = new ArrayList<String>()
+
+gint.taskHelper.addTearDown(
+        [action    : 'createProject',ext: ': FOR WORKFLOW',
+         parameters: [
+                 project: TestProject,
+                 lead: '@Self',
+                 template: info?.isCloud? projectTemplateCloud : projectTemplateServer
+         ],
+        ],
+)
+
+gint.taskHelper.addTearDown("addScreen",[
+        [action: 'addScreen',
+         ext: ": for transition screen :",
+         parameters:[
+                 screen: screen,
+         ]]
+]
+)
+def fieldsListCloud = [
+        "Summary",
+        "Issue Type",
+        "Components",
+        "Description",
+        "Reporter",
+        "Fix versions",
+        "Priority",
+        "Labels",
+        "Security Level",
+        "Environment",
+        "Attachment",
+        "Affects versions",
+        "Linked Issues",
+        "Assignee",
+        "Epic Link",
+        "Parent Link",
+        "Epic Name",
+        "Parent"
+]
+def fieldsListServer = [
+        "Epic Name",
+        "Summary",
+        "Issue Type",
+        "Reporter",
+        "Component/s",
+        "Description",
+        "Fix Version/s",
+        "Priority",
+        "Labels",
+        "Time Tracking",
+        "Security Level",
+        "Attachment",
+        "Due Date",
+        "Linked Issues",
+        "Assignee",
+        "Epic Link",
+        "Affects Version/s",
+        "Parent Link",
+        "Original story points",
+        "Story Points",
+]
+def fieldsList = info?.isCloud ? fieldsListCloud : fieldsListServer
+fieldsList.eachWithIndex { it, index->
+    gint.taskHelper.addTearDown("addScreenFields",[
+            [action: 'addScreenFields',
+             ext: ": adding field _to screen $screen _ $index",
+            dependsOn: 'addScreen',
+            parameters:[
+                    screen: screen,
+                    field: it
+            ],
+            ]
+    ]
+    )
+}
+
+def usersList = [testUser,testUser1,testUser2,inactiveAdmin,testAdmin]
+usersList.eachWithIndex { it, index ->
+    def additionalParams = info?.isCloud? [] : [ userPassword : it]
+    gint.taskHelper.addTearDown("addUsers",[
+            [action: 'addUser',
+             ext: ": creating user with username _ $it :",
+             parameters:[
+                     userId: it,
+                     userEmail: it + "@gmail.com",
+             ] + additionalParams ,
+            ]
+    ]
+    )
+}
+
+def projectRolesList = ['testprojectrole','emptyprojectrole']
+
+projectRolesList.each {
+    gint.taskHelper.addTearDown("addProjectRoles",[
+            [action: 'addProjectRole',
+             dependsOn: "addUsers",
+             ext: ": creating Project Role _ $it :",
+             parameters:[
+                     name: it
+             ],
+            ]
+    ]
+    )
+}
+
+def groupList = ['testgroup']
+
+groupList.each {
+    gint.taskHelper.addTearDown("addUserGroups",[
+            [action: 'addGroup',
+             ext: ": creating group _ $it :",
+             dependsOn: "addUsers",
+             parameters:[
+                     group: it
+             ],
+            ]
+    ]
+    )
+}
+
+[testUser1,testUser2].each {
+    gint.taskHelper.addTearDown("addProjectRoleActors",[
+            [action: 'addProjectRoleActors',
+             dependsOn: "addProjectRoles",
+             ext: ": user _$it _ adding to project role_ $testRole and group _ $testGroup :",
+             parameters:[
+                     project: projectName,
+                     role: testRole,
+                     userId: it,
+                     group: testGroup
+             ],
+            ]
+    ]
+    )
+}
+
+gint.taskHelper.addTearDown("createScreenScheme",[
+        [action: 'createScreenScheme',
+         dependsOn: "addScreenFields",
+         ext: ": creating screen scheme with name_ $projectName and screen _$screen :",
+         parameters:[
+                 screenScheme: projectName,
+                 screen: projectName,
+         ],
+        ]
+]
+)
+
+gint.taskHelper.addTearDown("createIssueTypeScreenScheme",[
+        [action: 'createIssueTypeScreenScheme',
+         dependsOn: "createScreenScheme",
+         ext: ": creating issue type screen scheme with name_ $projectName and screen scheme_$projectName :",
+         parameters:[
+                 issueTypeScreenScheme: projectName,
+                 screenScheme: projectName,
+         ],
+        ]
+]
+)
+
+def issueTypes = ["Task","Epic","Initiative","Story","Sub-task"]
+gint.taskHelper.addTearDown([
+        [action: 'createIssueTypeScheme',
+         //ext: ": creating issue type scheme with name_ $projectName and screen scheme_$projectName :",
+         parameters:[
+                 issueTypeScheme: projectName,
+                 issueType: "Task",
+         ],
+        ]
+]
+)
+
+issueTypes.each{
+    gint.taskHelper.addTearDown([
+            [action: 'updateIssueTypeScheme',
+             ext: ": $it:",
+             parameters:[
+                     issueTypeScheme: projectName,
+                     issueType: it,
+             ],
+            ]
+    ]
+    )
+}
+
+*/
+
+// Ignore below tasks they are under trial
+/*
+gint.taskHelper.addTearDown("getScreenList",[
+        [action: 'getScreenList',
+         ext: ": for clean :",
+         parameters:[
+                 columns: "id",
+         ],
+                finalClosure: { Task task->
+                    screenList.add(task.outData)
+                }
+        ]
+]
+)
+/*
+
+myIterableList.eachWithIndex { it, index->
+    gint.taskHelper.addTearDown("removeScreen",[
+            [action: 'removeScreen',
+             ext: ": for clean :remove screen _ $index",
+             parameters:[
+                     screen: it,
+             ],
+            ]
+    ]
+    )
+}
+
+
+ */
+
+
+/*
+
+# Use the official OpenJDK 11 base image
+FROM openjdk:11
+
+# Set environment variables for Java and Gradle
+ENV JAVA_HOME=/usr/local/openjdk-11
+ENV PATH=$PATH:$JAVA_HOME/bin
+ENV GRADLE_HOME=/opt/gradle
+ENV PATH=$PATH:$GRADLE_HOME/bin
+
+# Install Gradle
+RUN apt-get update && \
+    apt-get install -y wget && \
+    wget https://services.gradle.org/distributions/gradle-8.5.0-bin.zip -P /tmp && \
+    unzip -d /opt/gradle /tmp/gradle-8.5.0-bin.zip && \
+    rm -rf /tmp/*
+
+# Pull the bobswift/acli image
+RUN docker pull bobswift/acli
+
+# Set environment variable for ACLI_HOME
+ENV ACLI_HOME=/opt/acli
+
+# Create ACLI directory
+# RUN mkdir -p $ACLI_HOME
+
+# Add properties to acli.properties
+RUN echo "jiraCloud=jira --server https://automationgint.atlassian.net/ --user kalwantrao.patil@appfire.com --password Kalwant$appfire4 --token N2RGb8Vc05tfgLJvWGT56CC6" >> $ACLI_HOME/acli.properties
+
+# Set working directory
+WORKDIR /app
+
+# Clone the code from Git
+RUN git clone https://github.com/Kalwantrao/jmwe-automation.git .&& \
+git checkout cloud
+
+# Run Gradle itestServer task
+RUN gradle itestServer
+
+# Your additional instructions, if any
+
+# Specify the command to run your application
+
+ */

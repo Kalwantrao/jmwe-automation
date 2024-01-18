@@ -12,10 +12,6 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-tearDown()
-//tearDownUsers()
-addWorkflow()
-
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:setsecurityfromrole'
 
 def defaultFields = [
@@ -31,99 +27,117 @@ def securityLevel = [
         level1 : [ "selectedSecurityLevelId=$securityLevelId.lavel1"],
         level2 : [ "selectedSecurityLevelId=$securityLevelId.lavel2"]
 ]
-// Configuration for validator
+
 ['setLevel1IfAdminRole'].each {
-    def fields = defaultFields + projectRole.admin + securityLevel.level1 + conditionalExecution.false
-    addTransitionFunction(it, 'postfunction', fields, functionKey )
+    def fields = defaultFieldsServer + projectRole.admin + securityLevel.level1 + conditionalExecution.false
+    if(!isCloud) {
+        addTransitionFunction(it, 'postfunction', fields, functionKey)
+    }
 }
 
 ['setLevel2IfTestRole'].each {
-    def fields = defaultFields + projectRole.testRole + securityLevel.level2 + conditionalExecution.false
-    addTransitionFunction(it , 'postfunction', fields, functionKey )
+    def fields = defaultFieldsServer + projectRole.testRole + securityLevel.level2 + conditionalExecution.false
+    if(!isCloud) {
+        addTransitionFunction(it, 'postfunction', fields, functionKey)
+    }
 }
 
 ['setLevel1IfAdminRoleWhenConditionTrue'].each {
-    def fields = defaultFields + projectRole.admin + securityLevel.level1 + conditionalExecution.true
-    addTransitionFunction(it, 'postfunction', fields, functionKey )
+    def fields = defaultFieldsServer + projectRole.admin + securityLevel.level1 + conditionalExecution.true
+    if(!isCloud) {
+        addTransitionFunction(it, 'postfunction', fields, functionKey)
+    }
 }
 
 createWorkflowScheme()
 createProject()
 
-
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue', priority: 'High'], 'defaultIssue1')
 
-// checking the current status To Do and previous status In Progress
-['setLevel1IfAdminRoleWhenConditionTrue'].each {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: " :  labels " + it,
-             parameters: [
-                     transition: it,
-                     issue     : { -> defaultIssue[] },
-             ],
-            ],
-            [action    : 'getFieldValue', ext: ": Chack field value should be added to parent issue" + it,
-             parameters: [
-                     issue: { -> defaultIssue[] },
-                     field: "Security Level",
-             ],
-             failData  : ["Security Level  . . . . . . . : Level1"],
-            ]
-    ])
+[
+        'setLevel1IfAdminRoleWhenConditionTrue'
+].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: " :  labels " + it,
+                 parameters: [
+                         transition: it,
+                         issue     : { -> defaultIssue[] },
+                 ],
+                ],
+                [action    : 'getFieldValue', ext: ": Chack field value should be added to parent issue" + it,
+                 parameters: [
+                         issue: { -> defaultIssue[] },
+                         field: "Security Level",
+                 ],
+                 failData  : ["Security Level  . . . . . . . : Level1"],
+                ]
+        ])
+    }
 }
 
 [
         'setLevel2IfTestRole'
 ].each {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: " : Security Level "+ it,
-             parameters: [
-                     transition: it,
-                     issue     : { -> defaultIssue[] },
-             ],
-            ],
-            [action: 'getFieldValue', ext: ": Security Level :" +it,
-             parameters: [
-                     issue: {-> defaultIssue[]},
-                     field : "Security Level",
-             ],
-             failData:[ "Security Level  . . . . . . . : Level2" ],
-            ]
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: " : Security Level " + it,
+                 parameters: [
+                         transition: it,
+                         issue     : { -> defaultIssue[] },
+                 ],
+                ],
+                [action    : 'getFieldValue', ext: ": Security Level :" + it,
+                 parameters: [
+                         issue: { -> defaultIssue[] },
+                         field: "Security Level",
+                 ],
+                 failData  : ["Security Level  . . . . . . . : Level2"],
+                ]
+        ])
+    }
 }
-['setLevel1IfAdminRole',].each {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: " :  "+ it,
-             parameters: [
-                     transition: it,
-                     issue     : { -> defaultIssue[] },
-             ],
-            ],
-            [action: 'getFieldValue', ext: ": " + it,
-             parameters: [
-                     issue: {-> defaultIssue[]},
-                     field : "Security Level",
-             ],
-             data:[ "Security Level  . . . . . . . : Level1" ]
-            ]
-    ])
+[
+        'setLevel1IfAdminRole'
+].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: " :  " + it,
+                 parameters: [
+                         transition: it,
+                         issue     : { -> defaultIssue[] },
+                 ],
+                ],
+                [action    : 'getFieldValue', ext: ": " + it,
+                 parameters: [
+                         issue: { -> defaultIssue[] },
+                         field: "Security Level",
+                 ],
+                 data      : ["Security Level  . . . . . . . : Level1"]
+                ]
+        ])
+    }
 }
 
-['setLevel1IfAdminRoleWhenConditionTrue',].each {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: " :  when condition true ",
-             parameters: [
-                     transition: it,
-                     issue     : { -> defaultIssue1[] },
-             ],
-            ],
-            [action: 'getFieldValue', ext: ": when condition is true",
-             parameters: [
-                     issue: {-> defaultIssue1[]},
-                     field : "Security Level",
-             ],
-             data:[ "Security Level  . . . . . . . : Level1" ]
-            ]
-    ])
+[
+        'setLevel1IfAdminRoleWhenConditionTrue'
+].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: " :  when condition true ",
+                 parameters: [
+                         transition: it,
+                         issue     : { -> defaultIssue1[] },
+                 ],
+                ],
+                [action    : 'getFieldValue', ext: ": when condition is true",
+                 parameters: [
+                         issue: { -> defaultIssue1[] },
+                         field: "Security Level",
+                 ],
+                 data      : ["Security Level  . . . . . . . : Level1"]
+                ]
+        ])
+    }
 }

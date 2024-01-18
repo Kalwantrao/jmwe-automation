@@ -12,9 +12,6 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-tearDown()
-addWorkflow()
-
 def functionKey =  'com.innovalog.jmwe.jira-misc-workflow-extensions:separationofduties-condition'
 
 def separationOfDutiesConditionOptions = [

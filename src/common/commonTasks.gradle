@@ -108,6 +108,7 @@ ext.associateWorkflow = { workflowName ->
     }
 }
 ext.createProject = {
+    def additionalParams = info?.isCloud? [] : [issueSecurityScheme: projectName]
     gint.taskHelper.addSetUp(
             [action: 'createProject',
              retrySleep: 5000,
@@ -119,8 +120,7 @@ ext.createProject = {
                      workflowScheme: workflowScheme,
                      issueTypeScreenScheme: projectName,
                      issueTypeScheme: projectName,
-                     issueSecurityScheme: projectName
-             ],
+             ] + additionalParams,
             ]
     )
 }

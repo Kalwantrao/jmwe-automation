@@ -12,9 +12,6 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-tearDown()
-addWorkflow()
-
 def cloudFields = [
 		"condition.id=e96e5f36-5d19-4cd7-b8d7-f13bfb41877d",
         "condition.config-e96e5f36-5d19-4cd7-b8d7-f13bfb41877d={\"expression\":\"!! issue.assignee\"}"

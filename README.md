@@ -20,6 +20,11 @@ To run this project, you will need to set the following environment variables
 - `GRADLE_HOME`
 
 ## Pre-requisites in Jira Instance:
+#### Run the gradle tasks for the initial set-up on your server or cloud jira instance
+- For server `gradle setup-server`
+- For cloud `gradle setup-cloud`
+
+## The above task will create below things in your instance
 
 #### Create screen with name "AUTOMATION" in Jira and add the following system fields:
     Assignee
@@ -41,18 +46,25 @@ To run this project, you will need to set the following environment variables
 
 #### Create issueType scheme "AUTOMATION" and add following issueTypes : 
     Task
-    Bug
-    Story
-    Epic
-    Initiative
-    Sub-task
-
+#### Add issueType screen scheme with name "AUTOMATION" and associate screen "AUTOMATION" to it
 #### Add screen "AUTOMATION" to issueType scheme as default for all issuetypes
+
+
+## Manual Steps needs to be done after running the setup tasks
+
+#### Add the following issuetypes to issuetype scheme "AUTOMATION" :
+    Initiative
+    Epic
+    Task
+    Story
+    Bug
+    Subtask
+
 #### Create issuetype hierarchy level as initiative should be parent of epic:
     Initiative
     Epic
     Task
-#### Add issueType screen scheme with name "AUTOMATION" and associate screen "AUTOMATION" to it
+
 #### Create issue security scheme with name "AUTOMATION" and add below security levels -
     Level1 - Allow jira admin users to access this level
     Level2
@@ -78,10 +90,13 @@ To run this project, you will need to set the following environment variables
 - Clone the project  from bitbucket- [jmwe-automation-tests-gint](https://bitbucket.org/appfire/jmwe-automation-tests-gint/src/master/) repository.
 
 - Update the gradle.properties file as per your setting values provided in acli.properties file for jira instance.
-  `jira`= `jiraServer`
+  `server`= `jiraServer`
+  `cloud`= `jiraCloud`
+
 
 - Open the command prompt in project’s root directory.
-- Use command to run the scripts of jmwe-extensions using gradle: `./gradlew itestServer`
+- Use command to run the scripts of jmwe-extensions for server using gradle: `./gradlew itestServer`
+- Use command to run the scripts of jmwe-extensions for cloud using gradle: `./gradlew itestServer`
 - Use command to run the single extension using gradle:
    `./gradlew itestServer-currentStatusCondition` ,
 

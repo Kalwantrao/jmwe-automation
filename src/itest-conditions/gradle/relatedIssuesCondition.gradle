@@ -13,6 +13,7 @@ apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssuesCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linked-issues-condition'
+//def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__LinkedIssueStatusCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linked-issues-condition'
 
 def defaultFieldsCloud= [
 		"condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9",
@@ -40,7 +41,7 @@ def linkedIssuesMode = [
 
 def requireRelatedIssue = info?.isCloud ? requireRelatedIssuesConditionCloud : relatedIssueServer
 def checkRelatedIssue = info?.isCloud ? checkRelatedIssuesConditionCloud : relatedIssueServer
-def forbidRelatedIssue = info?.isCloud ? checkRelatedIssuesConditionCloud : relatedIssueServer
+def forbidRelatedIssue = info?.isCloud ? forbidRelatedIssuesConditionCloud : relatedIssueServer
 
 def fieldsToRemove = [ "currentIssue", "parentIssue", "epicOfTheCurrentIssue","parentPortfolio" ]
 
@@ -99,7 +100,7 @@ requireRelatedIssue.eachWithIndex { key, value, i ->
 
 checkRelatedIssue.eachWithIndex { key, value, i ->
 	def transition = 'verify_check_related_issues_' + key
-	def cloud = defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={$value"
+	def cloud = defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9=$value"
 	def server = defaultFieldsServer + "selectedLinkType=$value" + linkedIssuesMode.checkLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
 	addTransitionFunction( transition, 'condition', info?.isCloud ? cloud : server, functionKey)
 }
@@ -162,8 +163,9 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 [
 		'verify_require_certain_related_issues_subtask',
 ].collect {
-	gint.taskHelper.add("Validate that current issue must have atleast one subtask",[
+	gint.taskHelper.add([
 			[action    : 'transitionIssue',
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext       : ":RELATED_ISSUES_CONDITION_TC_14_Case_01 -$it _when issue having one subtask:",
 			 expected  : 0,
 			 parameters: [
@@ -172,6 +174,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			 ]
 			],
 			[action    : 'transitionIssue',
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext       : ":RELATED_ISSUES_CONDITION_TC_14_Case_02 -$it _when issue not having subtask:",
 			 expected  : -1,
 			 parameters: [
@@ -189,8 +192,9 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 [
 		'verify_require_certain_related_issues_issueBelongsToEpic',
 ].collect {
-	gint.taskHelper.add("Validate that epic must have atleast one issue",[
+	gint.taskHelper.add([
 			[action    : 'transitionIssue',
+			 sleep: info?.isCloud? 5000 : 500,
 			 expected  : -1,
 			 ext       : ":RELATED_ISSUES_CONDITION_TC_17_Case_01 -$it _when epic not having issueBelongsToEpic:",
 			 parameters: [
@@ -207,6 +211,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 			],
 			],
 			[action    : 'transitionIssue',
+			 sleep: info?.isCloud? 5000 : 500,
 			 expected  : 0,
 			 ext       : ":RELATED_ISSUES_CONDITION_TC_17_Case_02 -$it _when epic having one issueBelongsToEpic:",
 			 parameters: [
@@ -451,6 +456,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 	def clonesLink = info?.isCloud ? 'clones' : clonesLinkType
 	gint.taskHelper.add("$it",[
 			[action: 'getLinkList',
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext: ": validate that issue has 0 issue linked to it through $clonesLink link type for _ $it: ",
 			 parameters: [
 					 issue: {-> issueLinks[]},
@@ -464,6 +470,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 			 }
 			],
 			[action    : 'transitionIssue',
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_01 -$it _when current issue not have issues linked to it through the clones link type:",
 			 expected  : -1,
 			 parameters: [
@@ -472,6 +479,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 			 ]
 			],
 			[action: 'linkIssue', ext: ": by clones link type to check _$it:",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 toIssue: {-> toIssueLink[]},
@@ -479,6 +487,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 			 ]
 			],
 			[action: 'getLinkList',
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext: ": validate that issue has 1 issue linked to it through clones link type for _ $it: ",
 			 parameters: [
 					 issue: {-> issueLinks[]},
@@ -517,6 +526,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 	def clonesLink = info?.isCloud ? 'clones' : clonesLinkType
 	gint.taskHelper.add("$it",[
 			[action: 'getLinkList',
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext: ": validate that issue has 0 issue linked to it through is $clonesLink by link type for _ $it: ",
 			 parameters: [
 					 issue: {->toIssueLink[]},
@@ -538,6 +548,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 			 ]
 			],
 			[action: 'linkIssue',
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext: ": by is cloned by link type to check _$it:",
 			 parameters: [
 					 issue: {-> toIssueLink[]},
@@ -546,6 +557,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 			 ]
 			],
 			[action: 'getLinkList',
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext: ": validate that issue has 1 issue linked to it through is $clonesLink by link type for _ $it: ",
 			 parameters: [
 					 issue: {-> toIssueLink[]},
@@ -604,6 +616,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 			 ]
 			],
 			[action: 'linkIssue',
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext: ": by duplicates link type to check _$it:",
 			 parameters: [
 					 issue: {-> issueLinks[]},
@@ -612,6 +625,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 			 ]
 			],
 			[action: 'getLinkList',
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext: ": validate that issue has 1 issue linked to it through duplicates link type for _ $it: ",
 			 parameters: [
 					 issue: {->issueLinks[]},
@@ -661,9 +675,6 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				 assert output.contains("0 links for issue")
 			 }
 			],
-	]
-	)
-	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TC_34_Case_02 -$it _when current issue not having issues linked to it through the is duplicated by link type:",
 			 expected  : -1,
@@ -673,6 +684,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 			 ]
 			],
 			[action: 'linkIssue',
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext: ": by duplicates link type to check _$it:",
 			 parameters: [
 					 issue: {-> toIssueLink[]},
@@ -681,6 +693,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 			 ]
 			],
 			[action: 'getLinkList',
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext: ": validate that issue has 1 issue linked to it through is duplicated by link type for _ $it: ",
 			 parameters: [
 					 issue: {->issueLinks[]},
@@ -730,9 +743,6 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				 assert output.contains("0 links for issue")
 			 }
 			],
-	]
-	)
-	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TC_37_Case_02 -$it _when current issue not having issues linked to it through the relates to link type:",
 			 expected  : -1,
@@ -742,6 +752,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 			 ]
 			],
 			[action: 'linkIssue',
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext: ": by relates to link type to check _$it:",
 			 parameters: [
 					 issue: {-> issueLinks[]},
@@ -750,6 +761,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 			 ]
 			],
 			[action: 'getLinkList',
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext: ": validate that issue has 1 issue linked to it through relates to link type for _ $it: ",
 			 parameters: [
 					 issue: {->issueLinks[]},
@@ -800,9 +812,6 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 					 assert output.contains("0 links for issue")
 				 }
 				],
-		]
-		)
-		gint.taskHelper.add([
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TC_38_Case_02 -$it _The following Groovy expression:$returnsLinkedIssues not returns issues:",
 				 expected  : -1,
@@ -880,7 +889,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				],
 				[action    : 'updateIssue',
 				 ext       : ":change the issue type to check when jql search not returns any issues for:" + it,
-				 sleepAfter: 5000,
+				 sleepAfter: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue    : { -> jqlIssue[] },
 						 issueType: "Bug",
@@ -898,7 +907,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TC_40_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
 				 expected  : -1,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -906,7 +915,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				],
 				[action    : 'updateIssue',
 				 ext       : ":change the issue type after checking when jql search not returns any issues for:" + it,
-				 sleepAfter: 5000,
+				 sleepAfter: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue    : { -> jqlIssue[] },
 						 issueType: "Task",
@@ -938,7 +947,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TC_42_Case_01 _$it _when current issue not having at least 2 issues linked to it through the relates to link type:",
 				 expected  : -1,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -946,7 +955,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				],
 				[action    : 'linkIssue',
 				 ext: ": 1 by relates to link type to check _$it _min issue constraints option:",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue2[] },
@@ -955,7 +964,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				],
 				[action    : 'linkIssue',
 				 ext: ": 2 by relates to link type to check _$it _min issue constraints option:",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue3[] },
@@ -978,7 +987,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TC_42_Case_02 _$it _when current issue having at least 2 issues linked to it through the relates to link type:",
 				 expected  : 0,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -986,7 +995,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				],
 				[action    : 'deleteLink',
 				 ext: ": 1 by relates to link type after checking _$it _min issue constraints option:",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue2[] },
@@ -995,7 +1004,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				],
 				[action    : 'deleteLink',
 				 ext: ": 2 by relates to link type after checking _$it _min issue constraints option:",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue3[] },
@@ -1027,7 +1036,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				],
 				[action    : 'linkIssue',
 				 ext: ": 1 by relates to link type to $it _check max issue constraints option:",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> toIssueLink[] },
@@ -1050,14 +1059,14 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TC_43_Case_01 _$it _when current issue not having more than 2 issues linked to it through the relates to link type:",
 				 expected  : 0,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
 				 ]
 				],
 				[action    : 'linkIssue', ext: ": 2nd issue link by relates to link to check_ $it  _min_issue constraints:",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue2[] },
@@ -1066,7 +1075,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				],
 				[action    : 'linkIssue',
 				 ext: ': 3rd issue linked to check max_issue constraints:',
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue3[] },
@@ -1089,7 +1098,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TC_43_Case_02 _$it _when current issue having more than 3 issues linked to it through the relates to link type:",
 				 expected  : -1,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -1097,7 +1106,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				],
 				[action    : 'deleteLink',
 				 ext: ": 1 by relates to link type to $it _check max issue constraints option:",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> toIssueLink[] },
@@ -1105,7 +1114,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				 ]
 				],
 				[action    : 'deleteLink', ext: ":2 issues linked to check_ $it max_issue constraints:",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue2[] },
@@ -1113,7 +1122,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				 ]
 				],
 				[action    : 'deleteLink', ext: ": issues linked to check_ $it _max_issue constraints:",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue3[] },
@@ -1143,13 +1152,10 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 					 assert output.contains("0 links for issue")
 				 }
 				],
-		]
-		)
-		gint.taskHelper.add([
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_01 _$it _when current issue not have at least 3 and at most 6 issues linked to it through the relates to link type:",
 				 expected  : -1,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -1157,7 +1163,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				],
 				[action    : 'linkIssue',
 				 ext: ": 1 by relates to link type to $it _check max issue constraints option:",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> toIssueLink[] },
@@ -1165,7 +1171,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				 ]
 				],
 				[action    : 'linkIssue', ext: ": 2 by relates to link type to check min and max issue constraints option:" + it,
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue2[] },
@@ -1173,7 +1179,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				 ]
 				],
 				[action    : 'linkIssue', ext: ": 3 by relates to link type to check min and max issue constraints option2:" + it,
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue3[] },
@@ -1196,7 +1202,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_02 _$it _when current issue having at least 3 issues linked to it through the relates to link type:",
 				 expected  : 0,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -1204,7 +1210,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				],
 				[action    : 'deleteLink',
 				 ext: ": 1 by relates to link type to $it _ after checking max issue constraints option:",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> toIssueLink[] },
@@ -1212,7 +1218,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				 ]
 				],
 				[action    : 'deleteLink', ext: ": 2 by relates to link type after checking min and max issue constraints option:" + it,
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue2[] },
@@ -1220,7 +1226,7 @@ transitionByUserTaskForSuccess('verify_require_certain_related_issues_subtask', 
 				 ]
 				],
 				[action    : 'deleteLink', ext: ": 3 by relates to link type after checking min and max issue constraints option2:" + it,
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue3[] },
@@ -1242,16 +1248,18 @@ def relatesToIssuesList = [
 ]
 
 relatesToIssuesList.eachWithIndex { key, value, i ->
-	gint.taskHelper.add(
-			[action    : 'linkIssue',
-			 ext: ": by duplicates link type to check max issue constraints option:" + key,
-			 sleepAfter: 3000,
-			 parameters: [
-					 issue  : { -> issueLinks[] },
-					 toIssue: value,
-					 link   : 'duplicates'
-			 ],
-			])
+	if(!isCloud) {
+		gint.taskHelper.add(
+				[action    : 'linkIssue',
+				 ext       : ": by duplicates link type to check max issue constraints option:" + key,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: value,
+						 link   : 'duplicates'
+				 ],
+				])
+	}
 }
 
 [
@@ -1272,13 +1280,10 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 					 assert output.contains("0 links for issue")
 				 }
 				],
-		]
-		)
-		gint.taskHelper.add([
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_03 _$it _when current issue more than 6 ie 7 issues linked to it through the duplicates link type:",
 				 expected  : -1,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -1293,28 +1298,32 @@ transitionByUserTaskForSuccess('Verify_Issue_constraints_min_three_max_six_linkB
 
 // delete link between issues to while check the issue constraint options for max 6 issues by relates to link type
 relatesToIssuesList.eachWithIndex { key, value, i ->
-	gint.taskHelper.add(
-			[action    : 'deleteLink',
-			 ext: ": by duplicates link type to check max issue constraints option:" + key,
-			 parameters: [
-					 issue  : { -> issueLinks[] },
-					 toIssue: value,
-					 link   : 'duplicates'
-			 ],
-			])
+	if(!isCloud) {
+		gint.taskHelper.add(
+				[action    : 'deleteLink',
+				 ext       : ": by duplicates link type to check max issue constraints option:" + key,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: value,
+						 link   : 'duplicates'
+				 ],
+				])
+	}
 }
 
 relatesToIssuesList.eachWithIndex { key, value, i ->
-	gint.taskHelper.add(
-			[action    : 'linkIssue',
-			 ext: ": by relates to link type to check max issue constraints option:" + key,
-			 sleepAfter: 3000,
-			 parameters: [
-					 issue  : { -> issueLinks[] },
-					 toIssue: value,
-					 link   : 'relates to'
-			 ],
-			])
+	if(!isCloud) {
+		gint.taskHelper.add(
+				[action    : 'linkIssue',
+				 ext       : ": by relates to link type to check max issue constraints option:" + key,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: value,
+						 link   : 'relates to'
+				 ],
+				])
+	}
 }
 
 [
@@ -1338,7 +1347,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_04 _$it _when current issue have 6  issues linked to it through the relates to link type:",
 				 expected  : 0,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -1346,7 +1355,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action    : 'linkIssue',
 				 ext: ": 7th issue by relates to link type to check_ $it _max issue constraints option:" ,
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { ->toIssueLink[] },
@@ -1369,7 +1378,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_04 _$it _when current issue have at 7 issues linked to it through the relates to link type:",
 				 expected  : -1,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -1382,28 +1391,33 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 // RELATED_ISSUES_CONDITION_TC_14-verify require certain related issues and subtask of the current issue_by non admin user
 transitionByUserTaskForError('Verify_Issue_constraints_min_three_max_six_linkByRelatesTo', testUserForServer, {->defaultIssue[]}, -1)
 
-gint.taskHelper.add(
-		[action    : 'deleteLink',
-		 ext: ": 7th issue linked by relates to link type to check max issue constraints option:",
-		 sleepAfter: 3000,
-		 parameters: [
-				 issue  : { -> issueLinks[] },
-				 toIssue: { ->toIssueLink[] },
-				 link   : 'relates to'
-		 ],
-		])
+if(!isCloud) {
+	gint.taskHelper.add(
+			[action    : 'deleteLink',
+			 ext       : ": 7th issue linked by relates to link type to check max issue constraints option:",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue  : { -> toIssueLink[] },
+					 toIssue: { -> issueLinks[] },
+					 link   : 'relates to',
+			 ],
+			]
+	)
+}
 
 // delete link between issues while check the issue constraint options for max 6 issues by relates to link type
 relatesToIssuesList.eachWithIndex { key, value, i ->
-	gint.taskHelper.add(
-			[action    : 'deleteLink',
-			 ext: ": by relates to link type to check max issue constraints option:" + key,
-			 parameters: [
-					 issue  : { -> issueLinks[] },
-					 toIssue: value,
-					 link   : 'relates to'
-			 ],
-			])
+	if(!isCloud) {
+		gint.taskHelper.add(
+				[action    : 'deleteLink',
+				 ext       : ": by relates to link type to check max issue constraints option:" + key,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: value,
+						 link   : 'relates to'
+				 ],
+				])
+	}
 }
 
 // RELATED_ISSUES_CONDITION_TS- The current issue must have at least 2 and at most 2 issues linked to it through the relates to link type
@@ -1431,7 +1445,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_ TC_01_Case_01 _$it _when current issue not have at least 2 and at most 2 issues linked to it through the relates to link type:",
 				 expected  : -1,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -1439,7 +1453,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action    : 'linkIssue',
 				 ext: ": by relates to link type to check $it _ link 1st issue:" ,
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue2[] },
@@ -1448,7 +1462,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action    : 'linkIssue',
 				 ext: ": by relates to link type to check $it _ link 2nd issues:" ,
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue3[] },
@@ -1471,7 +1485,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_TC_01_Case_02 _$it _when current issue have 2 issues linked to it through the relates to link type:",
 				 expected  : 0,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -1479,7 +1493,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action    : 'linkIssue',
 				 ext: ": by relates to link type to check $it _link 3rd issue:" ,
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue4[] },
@@ -1502,7 +1516,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_TC_01_Case_03 _$it _when current issue have more than 2 issues linked to it through the relates to link type:",
 				 expected  : -1,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -1560,7 +1574,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_TC_02_Case_01 _$it _when current issue not have linked min 2 and max 2 linked issues:",
 				 expected  : -1,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -1568,7 +1582,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action    : 'linkIssue',
 				 ext: ": by duplicates link type to check $it _ link 1st issue:" ,
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue2[] },
@@ -1577,7 +1591,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action    : 'linkIssue',
 				 ext: ": by duplicates link type to check $it _ link 2nd issue:" ,
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue3[] },
@@ -1600,7 +1614,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_TC_02_Case_02 _$it _when current issue have 2 issues linked to it through the duplicates link type:",
 				 expected  : -1,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -1608,7 +1622,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action    : 'linkIssue',
 				 ext: ": by relates to link type to check $it _link 1st issue:" ,
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue2[] },
@@ -1617,7 +1631,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action    : 'linkIssue',
 				 ext: ": by relates to link type to check $it _link 2nd issue:" ,
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue3[] },
@@ -1640,7 +1654,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TC_02_Case_03 _$it _when current issue have more than 2 issues linked to it through the duplicates link type:",
 				 expected  : 0,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -1663,7 +1677,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action    : 'deleteLink',
 				 ext: ": by relates to link type to check _$it _unlink 1st issue:" ,
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue2[] },
@@ -1672,7 +1686,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action    : 'deleteLink',
 				 ext: ": by relates to link type to check $it _unlink 2nd issue:" ,
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue3[] },
@@ -1687,67 +1701,69 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 [
 		'verify_condition_on_related_issues_checkAssignee'
 ].each {
+	if(!isCloud) {
 		gint.taskHelper.add([
-			[action    : 'linkIssue',
-			 ext: ": by relates to link type to check $it _link 1st issue:" ,
-			 sleepAfter: 3000,
-			 parameters: [
-					 issue  : { -> issueLinks[] },
-					 toIssue: { -> toIssueLink[] },
-					 link   : 'relates to'
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_49_Case_01 -$it _when current issue not having at least 1 issues linked to it through the relates to link type which respect the following condition_issue must have assignee $testUser:",
-			 expected  : -1,
-			 sleep: 5000,
-			 parameters: [
-					 issue     : {->issueLinks[]},
-					 transition: it ,
-			 ]
-			],
-			[action    : 'assignIssue',
-			 ext: ": linked issue to _ $testUser to_ $it :",
-			 sleepAfter: 3000,
-			 parameters: [
-					 issue  : { -> toIssueLink[] },
-					 assignee: testUser,
-			 ],
-			],
-			[action    : 'assignIssue',
-			 ext: ": current issue to_ $testUser to_ $it :",
-			 sleepAfter: 3000,
-			 parameters: [
-					 issue  : {->issueLinks[]},
-					 assignee: testUser,
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_49_Case_02 -$it _when current issue having at least 1 issues linked to it through the relates to link type which respect the following condition_issue must have assignee $testUser:",
-			 expected  : 0,
-			 sleep: 5000,
-			 parameters: [
-					 issue     : {->issueLinks[]},
-					 transition: it ,
-			 ]
-			],
-			[action    : 'assignIssue', ext: ": to _ UNASSIGNED issue- after_ $it :",
-			 sleepAfter: 3000,
-			 parameters: [
-					 issue  : { -> toIssueLink[] },
-					 assignee: " ",
-			 ],
-			],
-			[action    : 'deleteLink',
-			 ext: ": by relates to link type to check $it _link 1st issue:" ,
-			 sleepAfter: 3000,
-			 parameters: [
-					 issue  : { -> issueLinks[] },
-					 toIssue: { -> toIssueLink[] },
-					 link   : 'relates to'
-			 ],
-			],
-	])
+				[action    : 'linkIssue',
+				 ext       : ": by relates to link type to check $it _link 1st issue:",
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> toIssueLink[] },
+						 link   : 'relates to'
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_49_Case_01 -$it _when current issue not having at least 1 issues linked to it through the relates to link type which respect the following condition_issue must have assignee $testUser:",
+				 expected  : -1,
+				 sleep     : info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue     : { -> issueLinks[] },
+						 transition: it,
+				 ]
+				],
+				[action    : 'assignIssue',
+				 ext       : ": linked issue to _ $testUser to_ $it :",
+				 sleepAfter: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue   : { -> toIssueLink[] },
+						 assignee: testUser,
+				 ],
+				],
+				[action    : 'assignIssue',
+				 ext       : ": current issue to_ $testUser to_ $it :",
+				 sleepAfter: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue   : { -> issueLinks[] },
+						 assignee: testUser,
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_49_Case_02 -$it _when current issue having at least 1 issues linked to it through the relates to link type which respect the following condition_issue must have assignee $testUser:",
+				 expected  : 0,
+				 sleep     : info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue     : { -> issueLinks[] },
+						 transition: it,
+				 ]
+				],
+				[action    : 'assignIssue', ext: ": to _ UNASSIGNED issue- after_ $it :",
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue   : { -> toIssueLink[] },
+						 assignee: " ",
+				 ],
+				],
+				[action    : 'deleteLink',
+				 ext       : ": by relates to link type to check $it _link 1st issue:",
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> toIssueLink[] },
+						 link   : 'relates to'
+				 ],
+				],
+		])
+	}
 }
 
 //                                          RELATED_ISSUES_CONDITION => CHECK RELATED ISSUES TESTS
@@ -1757,9 +1773,17 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 		'verify_check_related_issues_subtask',
 ].collect {
 	gint.taskHelper.add([
+			[action: 'updateIssue',
+			 ext: ":  change issue priority to low satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->parent[]},
+					 priority: "Low",
+			 ]
+			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the parent issue does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->parent[]},
 					 field: "Priority",
@@ -1769,13 +1793,10 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 						assert !output.contains("Priority  . . . . . . . . . . : High")
 					}
 			],
-	]
-	)
-	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_01_Case_01 -$it _when issue having subtask not respecting given condition :",
 			 expected  : -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->parent[]},
 					 transition: it ,
@@ -1783,7 +1804,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ":  change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->parent[]},
 					 priority: "High",
@@ -1791,7 +1812,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the parent issue have High priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->parent[]},
 					 field: "Priority",
@@ -1804,7 +1825,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_01_Case_02 -$it _when issue having subtask respecting given condition:",
 			 expected  : 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->parent[]},
 					 transition: it ,
@@ -1812,7 +1833,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to low satisfy the criteria after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->parent[]},
 					 priority: "Low",
@@ -1828,7 +1849,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	gint.taskHelper.add([
 			[action: 'getFieldValue',
 			 ext: ": Validate that the parent issue does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->epic[]},
 					 field: "Priority",
@@ -1843,7 +1864,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 expected  : -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_02_Case_01 -$it _when epic having issueBelongsToEpic not respecting condition:",
 			 parameters: [
 					 issue     : {->epic[]},
@@ -1851,7 +1872,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 ]
 			],
 			[action: 'updateIssue', ext: ":  change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->epic[]},
 					 priority: "High",
@@ -1859,7 +1880,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the parent issue have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->epic[]},
 					 field: "Priority",
@@ -1871,7 +1892,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action    : 'transitionIssue',
 			 expected  : 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_02_Case_02 -$it _when epic having issueBelongsToEpic respecting condition:",
 			 parameters: [
 					 issue     : {->epic[]},
@@ -1879,7 +1900,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to low after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->epic[]},
 					 priority: "Low",
@@ -1896,7 +1917,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 		gint.taskHelper.add([
 				[action: 'getFieldValue',
 				 ext: ": Validate that the initiative does not have high priority: $it",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue: {->epic[]},
 						 field: "Priority",
@@ -1912,14 +1933,14 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_03_Case_01 -$it _when parent issue not having issues child issues in portfolio hierarchy respecting given condition:",
 				 expected  : -1,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> initiative[] },
 						 transition: it,
 				 ]
 				],
 				[action    : 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> initiative[] },
 						 priority: "High",
@@ -1927,7 +1948,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action: 'getFieldValue',
 				 ext: ": Validate that the initiative have high priority: $it",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue: {->initiative[]},
 						 field: "Priority",
@@ -1940,14 +1961,14 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_03_Case_02 -$it _when parent issue having issues child issues in portfolio hierarchy respecting given condition:",
 				 expected  : 0,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> initiative[] },
 						 transition: it,
 				 ]
 				],
 				[action    : 'updateIssue', ext: ": change issue priority to low after checking: $it",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> initiative[] },
 						 priority: "Low",
@@ -1971,7 +1992,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through any link does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -1981,13 +2002,10 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 assert !output.contains("Priority  . . . . . . . . . . : High")
 			 }
 			],
-	]
-	)
-	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_04_Case_01 -$it _current issue not having issue linked to it through any link type which respect given condition:",
 			 expected  : -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
@@ -1995,7 +2013,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
@@ -2003,7 +2021,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through any link have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -2016,7 +2034,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_04_Case_02 -$it _current issue having issue linked to it through any link type which respect given condition:",
 			 expected  : 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
@@ -2024,7 +2042,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to low after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
@@ -2054,7 +2072,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through any link does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -2064,20 +2082,17 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 assert !output.contains("Priority  . . . . . . . . . . : High")
 			 }
 			],
-	]
-	)
-	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
@@ -2085,7 +2100,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through any link have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -2098,7 +2113,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
@@ -2106,7 +2121,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to Low after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
@@ -2136,7 +2151,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through is blocked by link does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -2146,20 +2161,17 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 assert !output.contains("Priority  . . . . . . . . . . : High")
 			 }
 			],
-	]
-	)
-	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_06_Case_01 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
 			 expected  : -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
@@ -2167,7 +2179,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through is blocked by link have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -2180,7 +2192,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_06_Case_02 -$it _when current issue not having issues linked to it through the is blocked by link type:",
 			 expected  : 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
@@ -2188,7 +2200,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to Low after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks []},
 					 priority: "Low",
@@ -2211,6 +2223,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	def clonesLink = info?.isCloud ? 'clones' : clonesLinkType
 	gint.taskHelper.add([
 			[action: "linkIssue", ext: ": link issues to check _$it :",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {-> issueLinks[]},
 					 toIssue: {-> toIssueLink[]},
@@ -2219,7 +2232,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through clones link does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -2229,20 +2242,17 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 assert !output.contains("Priority  . . . . . . . . . . : High")
 			 }
 			],
-	]
-	)
-	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
 			 expected: -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleepAfter: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
@@ -2250,7 +2260,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through clones link have high priority: $it",
-			 sleepAfter: 3000,
+			 sleepAfter: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -2263,7 +2273,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
 			 expected: 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
@@ -2271,7 +2281,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to Low after checking: $it",
-			 sleepAfter: 3000,
+			 sleepAfter: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
@@ -2294,6 +2304,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	def clonesLink = info?.isCloud ? 'clones' : clonesLinkType
 	gint.taskHelper.add([
 			[action: "linkIssue", ext: ": link issues to check _$it :",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {-> toIssueLink[]},
 					 toIssue: {-> issueLinks[]},
@@ -2302,7 +2313,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through clones link does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -2312,20 +2323,17 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 assert !output.contains("Priority  . . . . . . . . . . : High")
 			 }
 			],
-	]
-	)
-	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
 			 expected: -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
@@ -2333,7 +2341,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through clones link have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -2346,7 +2354,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
 			 expected: 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
@@ -2354,7 +2362,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to Low after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
@@ -2384,7 +2392,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through duplicates link does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -2394,20 +2402,17 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 assert !output.contains("Priority  . . . . . . . . . . : High")
 			 }
 			],
-	]
-	)
-	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
@@ -2415,7 +2420,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through duplicates link have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -2428,7 +2433,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
@@ -2436,7 +2441,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to Low after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
@@ -2460,14 +2465,14 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	gint.taskHelper.add([
 			[action: "linkIssue", ext: ": link issues to check _$it :",
 			 parameters: [
-					 issue: {-> toIssueLink[]},
-					 toIssue: {-> issueLinks[]},
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
 					 link: 'relates to',
 			 ]
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through relates to link does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -2477,20 +2482,17 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 assert !output.contains("Priority  . . . . . . . . . . : High")
 			 }
 			],
-	]
-	)
-	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
@@ -2498,7 +2500,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through relates to link have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -2511,7 +2513,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
@@ -2519,7 +2521,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to Low after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
@@ -2560,20 +2562,17 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 					 assert !output.contains("Priority  . . . . . . . . . . : High")
 				 }
 				],
-		]
-		)
-		gint.taskHelper.add([
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 				 expected  : -1,
-				 sleep     : 5000,
+				 sleep     : info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
 				 ]
 				],
 				[action    : 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> issueLinks[] },
 						 priority: "High",
@@ -2594,7 +2593,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 				 expected  : 0,
-				 sleep     : 5000,
+				 sleep     : info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -2602,7 +2601,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action    : 'updateIssue',
 				 ext       : ": change issue priority to Low after checking: $it",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> issueLinks[] },
 						 priority: "Low",
@@ -2637,13 +2636,10 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 					 assert !output.contains("Priority  . . . . . . . . . . : High")
 				 }
 				],
-				]
-				)
-		gint.taskHelper.add([
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_13_case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
 				 expected: -1,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
@@ -2651,7 +2647,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action    : 'updateIssue',
 				 ext: ": change issue priority to High for checking: $it",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> defaultIssue[] },
 						 priority: "High",
@@ -2672,7 +2668,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_13_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
 				 expected: 0,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
@@ -2680,7 +2676,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action    : 'updateIssue',
 				 ext: ": change issue priority to Low after checking: $it",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> defaultIssue[] },
 						 priority: "Low",
@@ -2699,7 +2695,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	gint.taskHelper.add([
 			[action: 'getFieldValue',
 			 ext: ": Validate that the parent issue does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->parent[]},
 					 field: "Priority",
@@ -2709,13 +2705,10 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 assert !output.contains("Priority  . . . . . . . . . . : High")
 			 }
 			],
-	]
-	)
-	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_01_Case_01 -$it _when issue having subtask not respecting given condition :",
 			 expected  : 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->parent[]},
 					 transition: it ,
@@ -2723,7 +2716,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ":  change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->parent[]},
 					 priority: "High",
@@ -2731,7 +2724,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the parent issue have High priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->parent[]},
 					 field: "Priority",
@@ -2744,7 +2737,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_01_Case_02 -$it _when issue having subtask respecting given condition:",
 			 expected  : -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->parent[]},
 					 transition: it ,
@@ -2752,7 +2745,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to low satisfy the criteria after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->parent[]},
 					 priority: "Low",
@@ -2768,7 +2761,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	gint.taskHelper.add([
 			[action: 'getFieldValue',
 			 ext: ": Validate that the parent issue does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->epic[]},
 					 field: "Priority",
@@ -2783,7 +2776,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 expected  : 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_02_Case_01 -$it _when epic having issueBelongsToEpic not respecting condition:",
 			 parameters: [
 					 issue     : {->epic[]},
@@ -2791,7 +2784,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 ]
 			],
 			[action: 'updateIssue', ext: ":  change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->epic[]},
 					 priority: "High",
@@ -2799,7 +2792,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the parent issue have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->epic[]},
 					 field: "Priority",
@@ -2811,7 +2804,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action    : 'transitionIssue',
 			 expected  : -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_02_Case_02 -$it _when epic having issueBelongsToEpic respecting condition:",
 			 parameters: [
 					 issue     : {->epic[]},
@@ -2819,7 +2812,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to low after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->epic[]},
 					 priority: "Low",
@@ -2836,7 +2829,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 		gint.taskHelper.add([
 				[action: 'getFieldValue',
 				 ext: ": Validate that the initiative does not have high priority: $it",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue: {->epic[]},
 						 field: "Priority",
@@ -2852,14 +2845,14 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_03_Case_01 -$it _when parent issue not having issues child issues in portfolio hierarchy respecting given condition:",
 				 expected  : 0,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> initiative[] },
 						 transition: it,
 				 ]
 				],
 				[action    : 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> initiative[] },
 						 priority: "High",
@@ -2867,7 +2860,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action: 'getFieldValue',
 				 ext: ": Validate that the initiative have high priority: $it",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue: {->initiative[]},
 						 field: "Priority",
@@ -2880,14 +2873,14 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_03_Case_02 -$it _when parent issue having issues child issues in portfolio hierarchy respecting given condition:",
 				 expected  : -1,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> initiative[] },
 						 transition: it,
 				 ]
 				],
 				[action    : 'updateIssue', ext: ": change issue priority to low after checking: $it",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> initiative[] },
 						 priority: "Low",
@@ -2911,7 +2904,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through any link does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -2927,7 +2920,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_04_Case_01 -$it _current issue not having issue linked to it through any link type which respect given condition:",
 			 expected  : 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
@@ -2935,7 +2928,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
@@ -2943,7 +2936,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through any link have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -2956,7 +2949,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_04_Case_02 -$it _current issue having issue linked to it through any link type which respect given condition:",
 			 expected  : -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
@@ -2964,7 +2957,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to low after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
@@ -2994,7 +2987,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through any link does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -3010,14 +3003,14 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
@@ -3025,7 +3018,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through any link have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -3038,7 +3031,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
@@ -3046,7 +3039,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to Low after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
@@ -3076,7 +3069,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through is blocked by link does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -3092,14 +3085,14 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_06_Case_01 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
 			 expected  : 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
@@ -3107,7 +3100,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through is blocked by link have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -3120,7 +3113,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_06_Case_02 -$it _when current issue not having issues linked to it through the is blocked by link type:",
 			 expected  : -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
@@ -3128,7 +3121,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to Low after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks []},
 					 priority: "Low",
@@ -3159,7 +3152,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through clones link does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -3175,14 +3168,14 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
 			 expected: 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
@@ -3190,7 +3183,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through clones link have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -3203,7 +3196,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
 			 expected: -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
@@ -3211,7 +3204,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to Low after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
@@ -3242,7 +3235,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through clones link does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -3258,14 +3251,14 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
 			 expected: 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
@@ -3273,7 +3266,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through clones link have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -3286,7 +3279,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
 			 expected: -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
@@ -3294,7 +3287,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to Low after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
@@ -3324,7 +3317,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through duplicates link does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -3340,14 +3333,14 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
@@ -3355,7 +3348,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through duplicates link have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -3368,7 +3361,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
@@ -3376,7 +3369,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to Low after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
@@ -3399,14 +3392,14 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	gint.taskHelper.add([
 			[action: "linkIssue", ext: ": link issues to check _$it :",
 			 parameters: [
-					 issue: {-> toIssueLink[]},
-					 toIssue: {-> issueLinks[]},
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
 					 link: 'relates to',
 			 ]
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through relates to link does not have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -3416,20 +3409,17 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 assert !output.contains("Priority  . . . . . . . . . . : High")
 			 }
 			],
-	]
-	)
-	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
@@ -3437,7 +3427,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'getFieldValue',
 			 ext: ": Validate that the issues link to current issue through relates to link have high priority: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 field: "Priority",
@@ -3450,7 +3440,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -1,
-			 sleep: 5000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
@@ -3458,7 +3448,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 			[action: 'updateIssue',
 			 ext: ": change issue priority to Low after checking: $it",
-			 sleepAfter: 3000,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
@@ -3505,14 +3495,14 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 				 expected  : 0,
-				 sleep     : 5000,
+				 sleep     : info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
 				 ]
 				],
 				[action    : 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> issueLinks[] },
 						 priority: "High",
@@ -3533,7 +3523,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 				 expected  : -1,
-				 sleep     : 5000,
+				 sleep     : info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
@@ -3541,7 +3531,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action    : 'updateIssue',
 				 ext       : ": change issue priority to Low after checking: $it",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> issueLinks[] },
 						 priority: "Low",
@@ -3581,7 +3571,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_13_case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
 				 expected: 0,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
@@ -3589,7 +3579,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action    : 'updateIssue',
 				 ext: ": change issue priority to High for checking: $it",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> defaultIssue[] },
 						 priority: "High",
@@ -3610,7 +3600,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				[action    : 'transitionIssue',
 				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_13_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
 				 expected: -1,
-				 sleep: 5000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
@@ -3618,7 +3608,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				],
 				[action    : 'updateIssue',
 				 ext: ": change issue priority to Low after checking: $it",
-				 sleepAfter: 3000,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> defaultIssue[] },
 						 priority: "Low",
@@ -3627,6 +3617,8 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 		])
 	}
 }
+
+
 
 
 

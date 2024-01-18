@@ -12,9 +12,6 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
-tearDown()
-addWorkflow()
-
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:SetFieldValue-function'
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
 
@@ -48,87 +45,116 @@ def options = [
         copyOnlyIfNotSet: ["copyOnlyIfNotSet=yes"],
 ]
 
+def defaultFieldsCloud = [
+        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
+]
+
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + selectField.labels + valueType.template +  conditionalExecution.false +  options.noOption + "selectedLinkType=$value" + runAsUser.currentUser
-    addTransitionFunction('template' + i, 'postfunction', fields, functionKey)
+    def server = defaultFieldsServer + selectField.labels + valueType.template +  conditionalExecution.false +  options.noOption + "selectedLinkType=$value" + runAsUser.currentUser
+    if(!isCloud) {
+        addTransitionFunction('template' + i, 'postfunction', server, functionKey)
+    }
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
     def fields = defaultFieldsServer + selectField.labels + valueType.expression +  conditionalExecution.false +  options.noOption + "selectedLinkType=$value" + runAsUser.currentUser
-    addTransitionFunction('expression' + i, 'postfunction', fields, functionKey)
+    if(!isCloud) {
+        addTransitionFunction('expression' + i, 'postfunction', fields, functionKey)
+    }
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
     def fields = defaultFieldsServer + selectField.labels + conditionalExecution.false + options.copyOnlyIfNotSet + valueType.copyOnlyIfNotSet + "selectedLinkType=$value" + runAsUser.currentUser
-    addTransitionFunction('copyOnlyIfNotSet' + i, 'postfunction', fields, functionKey)
+    if(!isCloud) {
+        addTransitionFunction('copyOnlyIfNotSet' + i, 'postfunction', fields, functionKey)
+    }
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
     def fields = defaultFieldsServer + selectField.components +  conditionalExecution.false + options.createMissingValues+ valueType.createMissingValueComponent + "selectedLinkType=$value" + runAsUser.currentUser
-    addTransitionFunction('createMissingValueComponent' + i, 'postfunction', fields, functionKey)
+    if(!isCloud) {
+        addTransitionFunction('createMissingValueComponent' + i, 'postfunction', fields, functionKey)
+    }
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
     def fields = defaultFieldsServer + selectField.labels + options.ignoreEmptyValue +  conditionalExecution.false + valueType.ignoreEmptyValue + "selectedLinkType=$value" + runAsUser.currentUser
-    addTransitionFunction('ignoreEmptyValue' + i, 'postfunction', fields, functionKey)
+    if(!isCloud) {
+        addTransitionFunction('ignoreEmptyValue' + i, 'postfunction', fields, functionKey)
+    }
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
     def fields = defaultFieldsServer + selectField.labels + options.appendValues + conditionalExecution.false + valueType.appendValues + "selectedLinkType=$value" + runAsUser.currentUser
-    addTransitionFunction('appendValues' + i, 'postfunction', fields, functionKey)
+    if(!isCloud) {
+        addTransitionFunction('appendValues' + i, 'postfunction', fields, functionKey)
+    }
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
     def fields = defaultFieldsServer + selectField.labels + conditionalExecution.true + options.noOption +  valueType.conditionalExecution + "selectedLinkType=$value" + runAsUser.currentUser
-    addTransitionFunction('conditionalExecution' + i, 'postfunction', fields, functionKey)
+    if(!isCloud) {
+        addTransitionFunction('conditionalExecution' + i, 'postfunction', fields, functionKey)
+    }
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
     def fields = defaultFieldsServer + selectField.labels + runAsUser.specificUser +  conditionalExecution.false + options.noOption +  valueType.runAsSpecificUser + "selectedLinkType=$value"
-    addTransitionFunction('runAsSpecificUser' + i, 'postfunction', fields, functionKey)
-    moveTransitionFunction('runAsSpecificUser'+ i, 4)
+    if(!isCloud) {
+        addTransitionFunction('runAsSpecificUser' + i, 'postfunction', fields, functionKey)
+        moveTransitionFunction('runAsSpecificUser' + i, 4)
+    }
 }
 relatedIssue.eachWithIndex { key, value, i ->
     def fields = defaultFieldsServer + selectField.labels + runAsUser.userInFieldAssignee +  conditionalExecution.false + options.noOption + valueType.runAsUserInFieldAssignee + "selectedLinkType=$value"
-    addTransitionFunction('runAsUserInFieldAssignee' + i, 'postfunction', fields, functionKey)
-    moveTransitionFunction('runAsUserInFieldAssignee'+ i, 4)
+    if(!isCloud) {
+        addTransitionFunction('runAsUserInFieldAssignee' + i, 'postfunction', fields, functionKey)
+        moveTransitionFunction('runAsUserInFieldAssignee' + i, 4)
+    }
 }
 relatedIssue.eachWithIndex { key, value, i ->
     def fields = defaultFieldsServer + selectField.labels + runAsUser.userInFieldReporter +  conditionalExecution.false + options.noOption + valueType.runAsUserInFieldReporter + "selectedLinkType=$value"
-    addTransitionFunction('runAsUserInFieldReporter' + i, 'postfunction', fields, functionKey)
-    moveTransitionFunction('runAsUserInFieldReporter'+ i, 4)
+    if(!isCloud) {
+        addTransitionFunction('runAsUserInFieldReporter' + i, 'postfunction', fields, functionKey)
+        moveTransitionFunction('runAsUserInFieldReporter' + i, 4)
+    }
 }
 relatedIssue.eachWithIndex { key, value, i ->
     def fields = defaultFieldsServer + selectField.labels + runAsUser.userInFieldCreator +  conditionalExecution.false + options.noOption + valueType.runAsUserInFieldCreator + "selectedLinkType=$value"
-    addTransitionFunction('runAsUserInFieldCreator' + i, 'postfunction', fields, functionKey)
-    moveTransitionFunction('runAsUserInFieldCreator'+ i, 4)
+    if(!isCloud) {
+        addTransitionFunction('runAsUserInFieldCreator' + i, 'postfunction', fields, functionKey)
+        moveTransitionFunction('runAsUserInFieldCreator' + i, 4)
+    }
 }
 relatedIssue.eachWithIndex { key, value, i ->
     def fields = defaultFieldsServer + selectField.labels + runAsUser.userFromScript +  conditionalExecution.false + options.noOption + valueType.runAsUserReturnFromScript + "selectedLinkType=$value"
-    addTransitionFunction('runAsUserReturnFromScript' + i, 'postfunction', fields, functionKey)
-    moveTransitionFunction('runAsUserReturnFromScript'+ i, 4)
+    if(!isCloud) {
+        addTransitionFunction('runAsUserReturnFromScript' + i, 'postfunction', fields, functionKey)
+        moveTransitionFunction('runAsUserReturnFromScript' + i, 4)
+    }
 }
 
 createWorkflowScheme()
 createProject()
 
 (1..2).each {
-    gint.taskHelper.addSetUp([
-            [action: 'addVersion', ext: ': create versions : ' + it,
-             parameters: [
-                     project: projectName,
-                     version: it
-             ]
-            ],
-            [action: 'addComponent', ext: ': create Component : ' + it,
-             parameters: [
-                     project: projectName,
-                     component: 'component' + it
-             ],
-            ]
-    ])
+    if(!isCloud) {
+        gint.taskHelper.addSetUp([
+                [action    : 'addVersion', ext: ': create versions : ' + it,
+                 parameters: [
+                         project: projectName,
+                         version: it
+                 ]
+                ],
+                [action    : 'addComponent', ext: ': create Component : ' + it,
+                 parameters: [
+                         project  : projectName,
+                         component: 'component' + it
+                 ],
+                ]
+        ])
+    }
 }
-// set issue status to In Progress
 
 def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
@@ -137,25 +163,18 @@ def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name",
 def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[]} ], 'BelongsToEpic')
 def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Initiative')
 def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
-def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue', description: expressionValue], 'issueLinks')
+def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
 def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
-def isBlockedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isBlockedBy')
 def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
-def isClonedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isClonedBy')
 def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
-def isDuplicatedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isDuplicatedBy')
-def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesTo')
-def jqlIssue = createIssue([type: 'Task', summary: "JQL_ISSUE"], 'jqlIssue')
-
+def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
+def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
 
 def linkIssuesMap = [
         blocks : {->blocks[]},
-        'is blocked by' : {->isBlockedBy[]},
-        clones : {->clones[]},
-        'is cloned by' : {->isClonedBy[]},
+        "$clonesLinkType" : {->clones[]},
         duplicates : {->duplicates[]},
-        'is duplicated by' : {->isDuplicatedBy[]},
         'relates to': {->relatesTo[]}
 ]
 
@@ -173,102 +192,117 @@ def relatedIssuesMap = [
         {->epic_initiative[]} : {-> initiative[]},
         {->blocks[]} : {->issueLinks[]},
         {->issueLinks[]} : {->blocks[]},
-        {->issueLinks[]} : {->isBlockedBy[]},
+        {->blocks[]} : {->issueLinks[]},
         {->issueLinks[]} : {->clones[]},
-        {->issueLinks[]} : {->isClonedBy[]},
+        {->clones[]} : {->issueLinks[]},
         {->issueLinks[]} : {->duplicates[]},
-        {->issueLinks[]} : {->isDuplicatedBy[]},
+        {->duplicates[]} : {->issueLinks[]},
         {->issueLinks[]} : {->relatesTo[]},
-        {->issueLinks[]} : {->relatesTo[]},
-        {->issueLinks[]} : {->jqlIssue[]},
+        {->relatesTo[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->jqlIssue[]}
 ]
+
+def getCurrentUserName = info?.isCloud? info?.userDisplayName : user
+
 def testLabel = "label1"
 
 relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
-    gint.taskHelper.add(
-            action: 'updateIssue', ext: ': add description to copy it in specific field : ' + index,
-            parameters: [
-                    issue: targetIssue,
-                    description: expressionValue
-            ]
-    )
-}
-
-relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
-    gint.taskHelper.add(
-            action: 'setFieldValue', ext: ': set labels to issue to check SET_FIELD_VALUE_PF_copyOnlyIfNotSet option  : ' + index,
-            parameters: [
-                    issue: targetIssue,
-                    field: "Labels",
-                    value: testLabel
-            ]
-    )
-}
-
-['copyOnlyIfNotSet'].collect {
-    relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ': check SET_FIELD_VALUE_PF_copyOnlyIfNotSet when field is not empty :' + i,
-                 sleepAfter: 3000,
-                 parameters: [
-                         issue     : currentIssue,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getFieldValue',
-                 ext       : ": check SET_FIELD_VALUE_PF_copyOnlyIfNotSet when field is not empty:"  + i,
-                 parameters: [
-                         issue: targetIssue,
-                         field: "Labels"
-                 ],
-                 failData      : [/Labels  . . . . . . . . . . . : $it/],
-                 data      : [/Labels  . . . . . . . . . . . : $testLabel/],
-                ],
-        ])
-    }
-}
-relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
-    gint.taskHelper.add(
-            action: 'setFieldValue', ext: ': removing the labels from issue to check SET_FIELD_VALUE_PF_copyOnlyIfNotSet option : ' + index,
-            parameters: [
-                    issue: targetIssue,
-                    field: "Labels",
-                    value: " "
-            ]
-    )
-}
-['copyOnlyIfNotSet'].collect {
-    relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ': check SET_FIELD_VALUE_PF_copyOnlyIfNotSet when field is empty :' + i,
-                 sleepAfter: 3000,
-                 parameters: [
-                         issue     : currentIssue,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getFieldValue',
-                 ext       : ": check SET_FIELD_VALUE_PF_copyOnlyIfNotSet when field is empty :" + i,
-                 parameters: [
-                         issue: targetIssue,
-                         field: "Labels"
-                 ],
-                 data      : [/Labels  . . . . . . . . . . . : $it/],
-                 failData      : [/Labels  . . . . . . . . . . . : $testLabel/],
-                ],
-        ])
+    if(!isCloud) {
+        gint.taskHelper.add(
+                action: 'updateIssue', ext: ': add description to copy it in specific field : ' + index,
+                parameters: [
+                        issue      : targetIssue,
+                        description: expressionValue
+                ]
+        )
     }
 }
 
 relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
-    gint.taskHelper.add(
-            action: 'setFieldValue', ext: ': remove the labels from issue to check SET_FIELD_VALUE_PF: ' + index,
-            parameters: [
-                    issue: targetIssue,
-                    field: "Labels",
-                    value: " "
-            ]
-    )
+    if(!isCloud) {
+        gint.taskHelper.add(
+                action: 'setFieldValue', ext: ': set labels to issue to check SET_FIELD_VALUE_PF_copyOnlyIfNotSet option  : ' + index,
+                parameters: [
+                        issue: targetIssue,
+                        field: "Labels",
+                        value: testLabel
+                ]
+        )
+    }
+}
+
+['copyOnlyIfNotSet'].collect {
+    relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
+        if(!isCloud) {
+            gint.taskHelper.add([
+                    [action    : 'transitionIssue', ext: ': check SET_FIELD_VALUE_PF_copyOnlyIfNotSet when field is not empty :' + i,
+                     sleepAfter: 3000,
+                     parameters: [
+                             issue     : currentIssue,
+                             transition: it + i,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     ext       : ": check SET_FIELD_VALUE_PF_copyOnlyIfNotSet when field is not empty:" + i,
+                     parameters: [
+                             issue: targetIssue,
+                             field: "Labels"
+                     ],
+                     failData  : [/Labels  . . . . . . . . . . . : $it/],
+                     data      : [/Labels  . . . . . . . . . . . : $testLabel/],
+                    ],
+            ])
+        }
+    }
+}
+relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
+    if(!isCloud) {
+        gint.taskHelper.add(
+                action: 'setFieldValue', ext: ': removing the labels from issue to check SET_FIELD_VALUE_PF_copyOnlyIfNotSet option : ' + index,
+                parameters: [
+                        issue: targetIssue,
+                        field: "Labels",
+                        value: " "
+                ]
+        )
+    }
+}
+['copyOnlyIfNotSet'].collect {
+    relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
+        if (!isCloud) {
+            gint.taskHelper.add([
+                    [action    : 'transitionIssue', ext: ': check SET_FIELD_VALUE_PF_copyOnlyIfNotSet when field is empty :' + i,
+                     sleepAfter: 3000,
+                     parameters: [
+                             issue     : currentIssue,
+                             transition: it + i,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     ext       : ": check SET_FIELD_VALUE_PF_copyOnlyIfNotSet when field is empty :" + i,
+                     parameters: [
+                             issue: targetIssue,
+                             field: "Labels"
+                     ],
+                     data      : [/Labels  . . . . . . . . . . . : $it/],
+                     failData  : [/Labels  . . . . . . . . . . . : $testLabel/],
+                    ],
+            ])
+        }
+    }
+}
+
+relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
+    if(!isCloud) {
+        gint.taskHelper.add(
+                action: 'setFieldValue', ext: ': remove the labels from issue to check SET_FIELD_VALUE_PF: ' + index,
+                parameters: [
+                        issue: targetIssue,
+                        field: "Labels",
+                        value: " "
+                ]
+        )
+    }
 }
 
 [
@@ -276,98 +310,108 @@ relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
         'expression'
 ].collect {
     relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ": check SET_FIELD_VALUE_PF value set by : " + it + i,
-                 sleepAfter: 3000,
-                 parameters: [
-                         issue     : currentIssue,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getFieldValue',
-                 ext       : ": check SET_FIELD_VALUE_PF value set by : " + it + i,
-                 parameters: [
-                         issue: targetIssue,
-                         field: "Labels"
-                 ],
-                 data      : [/Labels  . . . . . . . . . . . : $it/],
-                ],
-        ])
+        if(!isCloud) {
+            gint.taskHelper.add([
+                    [action    : 'transitionIssue', ext: ": check SET_FIELD_VALUE_PF value set by : " + it + i,
+                     sleepAfter: 3000,
+                     parameters: [
+                             issue     : currentIssue,
+                             transition: it + i,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     ext       : ": check SET_FIELD_VALUE_PF value set by : " + it + i,
+                     parameters: [
+                             issue: targetIssue,
+                             field: "Labels"
+                     ],
+                     data      : [/Labels  . . . . . . . . . . . : $it/],
+                    ],
+            ])
+        }
     }
 }
 relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
-    gint.taskHelper.add(
-            action: 'setFieldValue', ext: ': set the labels from issue to check SET_FIELD_VALUE_PF_ignoreEmptyValue: ' + index,
-            parameters: [
-                    issue: targetIssue,
-                    field: "Labels",
-                    value: testLabel
-            ]
-    )
+    if(!isCloud) {
+        gint.taskHelper.add(
+                action: 'setFieldValue', ext: ': set the labels from issue to check SET_FIELD_VALUE_PF_ignoreEmptyValue: ' + index,
+                parameters: [
+                        issue: targetIssue,
+                        field: "Labels",
+                        value: testLabel
+                ]
+        )
+    }
 }
 
 ['ignoreEmptyValue'].collect {
     relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ': check SET_FIELD_VALUE_PF_Ignore empty values'  + i,
-                 sleepAfter: 3000,
-                 parameters: [
-                         issue     : currentIssue,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getFieldValue',
-                 ext       : "check SET_FIELD_VALUE_PF_Ignore empty values" + i,
-                 parameters: [
-                         issue: targetIssue,
-                         field: "Labels"
-                 ],
-                 data      : [/Labels  . . . . . . . . . . . : $testLabel/],
-                ],
-        ])
+        if(!isCloud) {
+            gint.taskHelper.add([
+                    [action    : 'transitionIssue', ext: ': check SET_FIELD_VALUE_PF_Ignore empty values' + i,
+                     sleepAfter: 3000,
+                     parameters: [
+                             issue     : currentIssue,
+                             transition: it + i,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     ext       : "check SET_FIELD_VALUE_PF_Ignore empty values" + i,
+                     parameters: [
+                             issue: targetIssue,
+                             field: "Labels"
+                     ],
+                     data      : [/Labels  . . . . . . . . . . . : $testLabel/],
+                    ],
+            ])
+        }
     }
 }
 ['appendValues'].collect {
     relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ':check SET_FIELD_VALUE_PF_Add source value to destination field: '  + i,
-                 sleepAfter: 3000,
-                 parameters: [
-                         issue     : currentIssue,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getFieldValue',
-                 ext       : "check SET_FIELD_VALUE_PF_Add source value to destination field: " + i,
-                 parameters: [
-                         issue: targetIssue,
-                         field: "Labels"
-                 ],
-                 data      : [/Labels  . . . . . . . . . . . : $it $testLabel/],
-                ],
-        ])
+        if(!isCloud) {
+            gint.taskHelper.add([
+                    [action    : 'transitionIssue', ext: ':check SET_FIELD_VALUE_PF_Add source value to destination field: ' + i,
+                     sleepAfter: 3000,
+                     parameters: [
+                             issue     : currentIssue,
+                             transition: it + i,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     ext       : "check SET_FIELD_VALUE_PF_Add source value to destination field: " + i,
+                     parameters: [
+                             issue: targetIssue,
+                             field: "Labels"
+                     ],
+                     data      : [/Labels  . . . . . . . . . . . : $it $testLabel/],
+                    ],
+            ])
+        }
     }
 }
 
 
 ['createMissingValueComponent'].collect {
     relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ':check SET_FIELD_VALUE_PF_createMissingValueComponent: '+ i,
-                 parameters: [
-                         issue     : currentIssue,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getFieldValue',
-                 ext       : "check SET_FIELD_VALUE_PF_createMissingValueComponent:" + i,
-                 parameters: [
-                         issue: targetIssue,
-                         field: "Component/s"
-                 ],
-                 data      : ["Component/s . . . . . . . . . : $it"],
-                ],
-        ])
+        if(!isCloud) {
+            gint.taskHelper.add([
+                    [action    : 'transitionIssue', ext: ':check SET_FIELD_VALUE_PF_createMissingValueComponent: ' + i,
+                     parameters: [
+                             issue     : currentIssue,
+                             transition: it + i,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     ext       : "check SET_FIELD_VALUE_PF_createMissingValueComponent:" + i,
+                     parameters: [
+                             issue: targetIssue,
+                             field: "Component/s"
+                     ],
+                     data      : ["Component/s . . . . . . . . . : $it"],
+                    ],
+            ])
+        }
     }
 }
 
@@ -377,119 +421,134 @@ relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
         'runAsUserReturnFromScript',
 ].each {
     relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ':check SET_FIELD_VALUE_PF:' + it + i,
-                 parameters: [
-                         issue     : currentIssue,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getIssueHistoryList',
-                 ext       : ": :check SET_FIELD_VALUE_PF:" + it + i,
-                 parameters: [
-                         issue: targetIssue,
-                         outputType: "text",
-                         select: ["Field:labels","Author:$user"],
-                         columns: "Author,Field,'To String'"
-                 ],
-                 data      : ["$user", "labels", "$it"],
-                ],
-        ])
+        if(!isCloud) {
+            gint.taskHelper.add([
+                    [action    : 'transitionIssue', ext: ':check SET_FIELD_VALUE_PF:' + it + i,
+                     parameters: [
+                             issue     : currentIssue,
+                             transition: it + i,
+                     ]
+                    ],
+                    [action    : 'getIssueHistoryList',
+                     ext       : ": :check SET_FIELD_VALUE_PF:" + it + i,
+                     parameters: [
+                             issue     : targetIssue,
+                             outputType: "text",
+                             select    : ["Field:labels", "Author:$user"],
+                             columns   : "Author,Field,'To String'"
+                     ],
+                     data      : ["$user", "labels", "$it"],
+                    ],
+            ])
+        }
     }
 }
 ['runAsUserInFieldAssignee'].each {
     relatedIssuesMap.eachWithIndex { key, targetIssue, i ->
-        gint.taskHelper.add(
-                [action    : 'transitionIssue', ext: ': when assignee field is empty_check SET_FIELD_VALUE_PF:' + it + i,
-                 expected: -3,
-                 parameters: [
-                         issue     : key,
-                         transition: it + i,
-                 ]
-                ],
-        )
+        if(!isCloud) {
+            gint.taskHelper.add(
+                    [action    : 'transitionIssue', ext: ': when assignee field is empty_check SET_FIELD_VALUE_PF:' + it + i,
+                     expected  : -3,
+                     parameters: [
+                             issue     : key,
+                             transition: it + i,
+                     ]
+                    ],
+            )
+        }
     }
 }
 relatedIssuesMap.eachWithIndex{ key, targetIssue,  i ->
-    gint.taskHelper.add(
-            action: 'assignIssue', ext: ": to $testUser " + i,
-            parameters: [
-                    issue: key,
-                    userId: testUser
-            ]
-    )
+    if(!isCloud) {
+        gint.taskHelper.add(
+                action: 'assignIssue', ext: ": to $testUser " + i,
+                parameters: [
+                        issue : key,
+                        userId: testUser
+                ]
+        )
+    }
 }
+
 [
         'runAsUserInFieldAssignee',
         'runAsSpecificUser'
 ].each {
     relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ':check SET_FIELD_VALUE_PF:' + it + i,
-                 parameters: [
-                         issue     : currentIssue,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getIssueHistoryList',
-                 ext       : ":check SET_FIELD_VALUE_PF:" + it + i,
-                 parameters: [
-                         issue: targetIssue,
-                         outputType: "text",
-                         select: ["Author:$testUser","Field:labels"],
-                         columns: "Author,Field,'To String'"
-                 ],
-                 data      : ["$testUser", "labels", "$it"],
-                ],
-        ])
+        if(!isCloud) {
+            gint.taskHelper.add([
+                    [action    : 'transitionIssue', ext: ':check SET_FIELD_VALUE_PF:' + it + i,
+                     parameters: [
+                             issue     : currentIssue,
+                             transition: it + i,
+                     ]
+                    ],
+                    [action    : 'getIssueHistoryList',
+                     ext       : ":check SET_FIELD_VALUE_PF:" + it + i,
+                     parameters: [
+                             issue     : targetIssue,
+                             outputType: "text",
+                             select    : ["Author:$testUser", "Field:labels"],
+                             columns   : "Author,Field,'To String'"
+                     ],
+                     data      : ["$testUser", "labels", "$it"],
+                    ],
+            ])
+        }
     }
 }
 ['conditionalExecution'].each {
     relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ':check SET_FIELD_VALUE_PF:' + it +' : when false' + i,
-                 parameters: [
-                         issue     : currentIssue,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getFieldValue',
-                 ext       : ":check SET_FIELD_VALUE_PF: $it when false" +  i,
-                 parameters: [
-                         issue: targetIssue,
-                         field: "Labels"
-                 ],
-                 failData      : [/Labels  . . . . . . . . . . . : conditionalExecution/],
-                ],
-        ])
+        if(!isCloud) {
+            gint.taskHelper.add([
+                    [action    : 'transitionIssue', ext: ':check SET_FIELD_VALUE_PF:' + it + ' : when false' + i,
+                     parameters: [
+                             issue     : currentIssue,
+                             transition: it + i,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     ext       : ":check SET_FIELD_VALUE_PF: $it when false" + i,
+                     parameters: [
+                             issue: targetIssue,
+                             field: "Labels"
+                     ],
+                     failData  : [/Labels  . . . . . . . . . . . : conditionalExecution/],
+                    ],
+            ])
+        }
     }
 }
 relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue,  i ->
-    gint.taskHelper.add(
-            action: 'updateIssue', ext: ": set priority High to check conditional execution true_check SET_FIELD_VALUE_PF:" + i,
-            parameters: [
-                    issue: currentIssue,
-                    priority: 'High'
-            ]
-    )
+    if(!isCloud) {
+        gint.taskHelper.add(
+                action: 'updateIssue', ext: ": set priority High to check conditional execution true_check SET_FIELD_VALUE_PF:" + i,
+                parameters: [
+                        issue   : currentIssue,
+                        priority: 'High'
+                ]
+        )
+    }
 }
 ['conditionalExecution'].each {
     relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ': check SET_FIELD_VALUE_PF:' + it +' : when true' + i,
-                 parameters: [
-                         issue     : currentIssue,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getFieldValue',
-                 ext       : ":check SET_FIELD_VALUE_PF: $it when true" +  i,
-                 parameters: [
-                         issue: targetIssue,
-                         field: "Labels"
-                 ],
-                 data      : [/Labels  . . . . . . . . . . . : conditionalExecution/],
-                ],
-        ])
+        if (!isCloud) {
+            gint.taskHelper.add([
+                    [action    : 'transitionIssue', ext: ': check SET_FIELD_VALUE_PF:' + it + ' : when true' + i,
+                     parameters: [
+                             issue     : currentIssue,
+                             transition: it + i,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     ext       : ":check SET_FIELD_VALUE_PF: $it when true" + i,
+                     parameters: [
+                             issue: targetIssue,
+                             field: "Labels"
+                     ],
+                     data      : [/Labels  . . . . . . . . . . . : conditionalExecution/],
+                    ],
+            ])
+        }
     }
 }

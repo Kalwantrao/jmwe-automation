@@ -37,9 +37,10 @@ def previousStatusServer = [
         select_done_with_include_current_status : [ defaultFieldsServer + "issue_statuses=$Done","includeCurrent=yes" ],
         select_done_with_reverse : [ defaultFieldsServer + "issue_statuses=$Done", "not=yes" ],
         select_previousStatus_toDo_inProgress_inReview_Done : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done" ],
-        select_previousStatus_toDo_inProgress_inReview_Done_with_all_options : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "mostRecentOnly=yes","includeCurrent=yes","not=yes" ],
+       // select_previousStatus_toDo_inProgress_inReview_Done_with_all_options : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "mostRecentOnly=yes","includeCurrent=yes","not=yes" ],
         select_all_previousStatus_with_most_recent_status_only : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "mostRecentOnly=yes" ],
         select_all_previousStatus_with_all_options : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "mostRecentOnly=yes", "includeCurrent=yes","not=yes"  ],
+        select_all_previousStatus_with_most_recent_status_only_include_currentStatus : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "mostRecentOnly=yes","includeCurrent=yes", ],
 ]
 
 previousStatusServer.eachWithIndex { transitions, fields, i->
@@ -69,7 +70,7 @@ def transitionByUserTask =  { transition, userId, issue, expected ->
 // HIDE_TRANSITION_CONDITION_TC_06_Verify transition tab eg $it after apply_Hide Transition Condition_ on ToDo status and current status of Issue is also ToDo
 [
         'hideTransitionCondition',
-        'select_previousStatus_toDo_inProgress_inReview_Done_with_all_options'
+        //'select_previousStatus_toDo_inProgress_inReview_Done_with_all_options'
 ].each {
     if(!isCloud) {
         gint.taskHelper.add([
@@ -450,14 +451,14 @@ def defaultIssue2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultI
                 ],
                 ],
                 [action    : 'transitionIssue',
-                 ext       : ": PREVIOUS_STATUS_CONDITION_TC_Verify for the option: all_when all status selected:",
+                 ext       : ":to In Progress PREVIOUS_STATUS_CONDITION_TC_Verify for the option: all_when all status selected:",
                  parameters: [
                          transition: "In Progress",
                          issue     : { -> defaultIssue2[] },
                  ],
                 ],
                 [action    : 'transitionIssue',
-                 ext       : ": PREVIOUS_STATUS_CONDITION_TC_Verify for the option: all_when all status selected:",
+                 ext       : ": to TO DO PREVIOUS_STATUS_CONDITION_TC_Verify for the option: all_when all status selected:",
                  parameters: [
                          transition: "To Do",
                          issue     : { -> defaultIssue2[] },
@@ -486,34 +487,76 @@ def defaultIssue3 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultI
                  expected  : -1,
                  parameters: [
                          transition: it,
-                         issue     : { -> defaultIssue2[] },
+                         issue     : { -> defaultIssue3[] },
                  ],
                 ],
                 [action    : 'transitionIssue',
                  ext       : ": PREVIOUS_STATUS_CONDITION_TC_Verify for the $it _:",
                  parameters: [
                          transition: "In Progress",
-                         issue     : { -> defaultIssue2[] },
+                         issue     : { -> defaultIssue3[] },
                  ],
                 ],
                 [action    : 'transitionIssue',
                  ext       : ": PREVIOUS_STATUS_CONDITION_TC_Verify for the option:$it _:",
                  parameters: [
                          transition: "To Do",
-                         issue     : { -> defaultIssue2[] },
+                         issue     : { -> defaultIssue3[] },
                  ],
                 ],
                 [action    : 'transitionIssue',
                  ext       : ": PREVIOUS_STATUS_CONDITION_TC_Verify for the all option and all status selected_when previous status of issue is In Progress: $it",
-                 expected  : -1,
+                 expected  : 0,
                  parameters: [
                          transition: it,
-                         issue     : { -> defaultIssue2[] },
+                         issue     : { -> defaultIssue3[] },
                  ],
                 ],
         ])
     }
 }
+
+def defaultIssue4 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue4')
+
+[
+        'select_all_previousStatus_with_most_recent_status_only_include_currentStatus'
+].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : ": PREVIOUS_STATUS_CONDITION_TC_Verify for_ $it:",
+                 expected  : 0,
+                 parameters: [
+                         transition: it,
+                         issue     : { -> defaultIssue4[] },
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ":to INPROGRESS_PREVIOUS_STATUS_CONDITION_TC_Verify for the $it _:",
+                 parameters: [
+                         transition: "In Progress",
+                         issue     : { -> defaultIssue4[] },
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": to TODO_ PREVIOUS_STATUS_CONDITION_TC_Verify for the option:$it _:",
+                 parameters: [
+                         transition: "To Do",
+                         issue     : { -> defaultIssue4[] },
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ": PREVIOUS_STATUS_CONDITION_TC_Verify for the all option and all status selected_when previous status of issue is In Progress: $it",
+                 expected  : 0,
+                 parameters: [
+                         transition: it,
+                         issue     : { -> defaultIssue4[] },
+                 ],
+                ],
+        ])
+    }
+}
+
 /*
 1. Check transition by logging into other user = DONE
     - Check reverse option by logging into other user = DONE
@@ -541,23 +584,16 @@ def defaultIssue3 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultI
     - Most recent status only  = Done
 6. All Previous Status with the
     - Most recent status only
-    - Include current status
+    - Include current status = DONE
 7. All Previous Status with the
     - Most recent status only
     - Include current status
-    - Ignore Auto-transitions (loops)
-8. All Previous Status with the
-    - Most recent status only
-    - Include current status
-    - Ignore Auto-transitions (loops)
-    - Reverse condition
+    - Ignore Auto-transitions (loops) = PENDING
 
-9. One Previous Status with the  "Do it for all the individual statuses"
-    - Most recent status only
-10. One Previous Status with the
+9. One Previous Status with the
     - Most recent status only
     - Include current status
-11. One Previous Status with the
+10. One Previous Status with the
     - Most recent status only
     - Include current status
     - Ignore Auto-transitions (loops)

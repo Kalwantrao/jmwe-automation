@@ -14,14 +14,18 @@ apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:AddFieldValueToParent-function'
 
-['verify_the_field_dropdown_for_field_affectsVersions'].each {
+[
+        'verify_the_field_dropdown_for_field_affectsVersions'
+].each {
     def fields = defaultFieldsServer + "field=versions" + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', fields, functionKey)
     }
 }
 
-['verify_the_condition_execution_if_issues_priority_is_high'].each {
+[
+        'verify_the_condition_execution_if_issues_priority_is_high'
+].each {
     def fields = defaultFieldsServer +  "field=versions" + conditionalExecution.true
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', fields, functionKey)
@@ -52,7 +56,9 @@ def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->parent[]}], 'subtask')
 
 // ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_08- Verify the Field dropdown_selected field_affects versions
-['verify_the_field_dropdown_for_field_affectsVersions',].each {
+[
+        'verify_the_field_dropdown_for_field_affectsVersions'
+].each {
     if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'setFieldValue',
@@ -83,7 +89,9 @@ def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->p
 }
 
 // ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_09- Verify the field dropdown, when selected field value is empty
-['verify_the_field_dropdown_for_field_affectsVersions',].each {
+[
+        'verify_the_field_dropdown_for_field_affectsVersions'
+].each {
     if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'setFieldValue',
@@ -122,7 +130,9 @@ def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->p
 }
 
 // ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_10- Check when selected field value is empty of the current issue but parent issue have a value
-['verify_the_field_dropdown_for_field_affectsVersions',].each {
+[
+        'verify_the_field_dropdown_for_field_affectsVersions'
+].each {
     if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'setFieldValue',
@@ -168,8 +178,11 @@ def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->p
     }
 }
 
+
 // ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_11- Check when selected field has two different values in parent and current issue
-['verify_the_field_dropdown_for_field_affectsVersions',].each {
+[
+        'verify_the_field_dropdown_for_field_affectsVersions'
+].each {
     if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'setFieldValue',
@@ -224,7 +237,9 @@ def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->p
 }
 
 // ADD_FIELD_VALUE_TO_PARENT_ISSUE_PF_TC_12- Verify the Condition Execution
-['verify_the_condition_execution_if_issues_priority_is_high',].each {
+[
+        'verify_the_condition_execution_if_issues_priority_is_high'
+].each {
     if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'setFieldValue',

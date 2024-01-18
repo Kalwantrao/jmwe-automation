@@ -17,14 +17,10 @@ relatedIssue.remove("currentIssue")
 def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CommentLinkedIssuesFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentLinkedIssues-function'
 def expressionComment = "expression"
 
-def commentIssuePfFields = [
-        "restrictToInternal=no",
-        "sendNotification=no",
-        "correlationId=",
-]
 def defaultFieldsCloud = [
         "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
 ]
+
 def commentType = [
         template : [ "valueType=template", "value=template" ],
         expression : [ "valueType=expression", "value=$groovyExpression.getDescription" ],
@@ -45,8 +41,8 @@ def commentVisibility = [
 ]
 
 def commentTypeOptionServer = [
-        template : commentIssuePfFields + commentType.template + commentVisibility.notSelected +  conditionalExecution.false + runAsUser.currentUser,
-        //expression: commentIssuePfFields + commentType.expression + commentVisibility.notSelected+ conditionalExecution.false + runAsUser.currentUser
+        template : defaultFieldsServer + commentType.template + commentVisibility.notSelected +  conditionalExecution.false + runAsUser.currentUser,
+        expression: defaultFieldsServer + commentType.expression + commentVisibility.notSelected+ conditionalExecution.false + runAsUser.currentUser
 ]
 def commentTypeOptionCloud = [
         template: defaultFieldsCloud ,
@@ -64,14 +60,14 @@ commentTypeOption.eachWithIndex{ transition, fields, number ->
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'addCommentIfConditionTrue'
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":true,\"targetIssue\":\"$value\",\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"currentUser\"}"
-    def server = commentIssuePfFields + commentType.addCommentIfConditionTrue + commentVisibility.notSelected+  "selectedLinkType=$value" + conditionalExecution.true + runAsUser.currentUser
+    def server = defaultFieldsServer + commentType.addCommentIfConditionTrue + commentVisibility.notSelected+  "selectedLinkType=$value" + conditionalExecution.true + runAsUser.currentUser
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsSpecificUser'
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"thisUser\",\"runAs\":\"accountId:$cloudUserId\"}"
-    def server = commentIssuePfFields + commentType.runAsSpecificUser + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.specificUser
+    def server = defaultFieldsServer + commentType.runAsSpecificUser + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.specificUser
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud){
         moveTransitionFunction ( transition + i, 4)
@@ -81,7 +77,7 @@ relatedIssue.eachWithIndex { key, value, i ->
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldAssignee'
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"userField\",\"runAsField\":\"assignee\"}"
-    def server = commentIssuePfFields + commentType.runAsUserInFieldAssignee + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldAssignee
+    def server = defaultFieldsServer + commentType.runAsUserInFieldAssignee + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldAssignee
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud){
         moveTransitionFunction ( transition + i, 4)
@@ -91,7 +87,7 @@ relatedIssue.eachWithIndex { key, value, i ->
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldReporter'
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"userField\",\"runAsField\":\"reporter\"}"
-    def server = commentIssuePfFields + commentType.runAsUserInFieldReporter + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldReporter
+    def server = defaultFieldsServer + commentType.runAsUserInFieldReporter + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldReporter
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud){
         moveTransitionFunction ( transition + i, 4)
@@ -101,7 +97,7 @@ relatedIssue.eachWithIndex { key, value, i ->
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldCreator'
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"userField\",\"runAsField\":\"creator\"}"
-    def server = commentIssuePfFields + commentType.runAsUserInFieldCreator + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldCreator
+    def server = defaultFieldsServer + commentType.runAsUserInFieldCreator + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldCreator
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud){
         moveTransitionFunction ( transition + i, 4)
@@ -111,7 +107,7 @@ relatedIssue.eachWithIndex { key, value, i ->
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsUserFromScript'
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"userFromScript\",\"runAsScript\":\"$nunjuckExpression.returnsReporter\"}"
-    def server = commentIssuePfFields + commentType.runAsUserFromScript + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userFromScript
+    def server = defaultFieldsServer + commentType.runAsUserFromScript + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userFromScript
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud){
         moveTransitionFunction ( transition + i, 4)
@@ -121,22 +117,21 @@ relatedIssue.eachWithIndex { key, value, i ->
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'visibleToJiraAdminRoles'
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$jiraAdminRoleId,\"runAsType\":\"currentUser\"}"
-    def server = commentIssuePfFields + commentType.visibleToJiraAdminRoles + commentVisibility.jiraAdminRoles +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
+    def server = defaultFieldsServer + commentType.visibleToJiraAdminRoles + commentVisibility.jiraAdminRoles +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'visibleToJiraSoftwareUsers'
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"$testGroupIdCloud\",\"runAsType\":\"currentUser\"}"
-    def server = commentIssuePfFields + commentType.visibleToJiraSoftwareUsers + commentVisibility.jiraSoftwareUsers +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
+    def server = defaultFieldsServer + commentType.visibleToJiraSoftwareUsers + commentVisibility.jiraSoftwareUsers +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 createWorkflowScheme()
 createProject()
 
-// set issue status to In Progress
-
+def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
 def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
 def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
@@ -145,24 +140,16 @@ def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Init
 def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
 def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
 def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
-def isBlockedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isBlockedBy')
 def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
-def isClonedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isClonedBy')
 def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
-def isDuplicatedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isDuplicatedBy')
 def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
 def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
-
 updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
 
 def linkIssuesMap = [
-
         blocks : {->blocks[]},
-        'is blocked by' : {->isBlockedBy[]},
-        clones : {->clones[]},
-        'is cloned by' : {->isClonedBy[]},
+        "$clonesLinkType" : {->clones[]},
         duplicates : {->duplicates[]},
-        'is duplicated by' : {->isDuplicatedBy[]},
         'relates to': {->relatesTo[]}
 ]
 
@@ -179,14 +166,14 @@ def relatedIssuesMap = [
         {->epic_initiative[]} : {-> initiative[]},
         {->blocks[]} : {->issueLinks[]},
         {->issueLinks[]} : {->blocks[]},
-        {->issueLinks[]} : {->isBlockedBy[]},
+        {->blocks[]} : {->issueLinks[]},
         {->issueLinks[]} : {->clones[]},
-        {->issueLinks[]} : {->isClonedBy[]},
+        {->clones[]} : {->issueLinks[]},
         {->issueLinks[]} : {->duplicates[]},
-        {->issueLinks[]} : {->isDuplicatedBy[]},
+        {->duplicates[]} : {->issueLinks[]},
         {->issueLinks[]} : {->relatesTo[]},
-        {->issueLinks[]} : {->relatesTo[]},
-        {->issueLinks[]} : {->jqlIssue[]},
+        {->relatesTo[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->jqlIssue[]}
 ]
 
 def getCurrentUserName = info?.isCloud? info?.userDisplayName : user
@@ -201,42 +188,23 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
     )
 }
 
-commentTypeOption.eachWithIndex{ type, fieldValues, number ->
-    relatedIssuesMap.eachWithIndex { key, value, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ": check comment related issue by :" + type + i,
-                 parameters: [
-                         issue     : key,
-                         transition: type + i,
-                 ],
-                ],
-                [action: 'getComments', ext: " : check comment related issue by :" + type + i,
-                 parameters: [
-                         issue: value
-                 ],
-                 data:[   /$getCurrentUserName added a comment on/,
-                          /$type/
-                 ],
-                ]
-        ]
-        )
-    }
-}
-
 [
+        'template',
         'runAsUserInFieldReporter',
         'runAsUserInFieldCreator',
         'runAsUserFromScript',
 ].each {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: it + ': check comment related issue for :' + it + i,
+                [action    : 'transitionIssue', ext: it + ': add comment by template :' + i,
+                 sleep: info?.isCloud ? 5000 : 0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
-                [action: 'getComments', ext: " : check comment related issue for :" + it + i,
+                [action: 'getComments', ext: " : add comment by template :" + it + i,
+                 sleep: info?.isCloud ? 5000 : 0,
                  parameters: [
                          issue: value
                  ],
@@ -253,13 +221,15 @@ commentTypeOption.eachWithIndex{ type, fieldValues, number ->
 ].each {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: it + ': comment related issue ' + i,
+                [action    : 'transitionIssue', ext: it + ': ' + i,
+                 sleep: info?.isCloud ? 5000 : 0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
-                [action: 'getComments', ext: " : comment related issue" + it + i,
+                [action: 'getComments', ext: " : " + it + i,
+                 sleep: info?.isCloud ? 5000 : 0,
                  parameters: [
                          issue: value
                  ],
@@ -274,13 +244,15 @@ commentTypeOption.eachWithIndex{ type, fieldValues, number ->
 ].each {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: it + ': comment related issue' + i,
+                [action    : 'transitionIssue', ext: it + ': ' + i,
+                 sleep: info?.isCloud ? 5000 : 0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
-                [action: 'getComments', ext: " : comment related issue" + it + i,
+                [action: 'getComments', ext: " : " + it + i,
+                 sleep: info?.isCloud ? 5000 : 0,
                  parameters: [
                          issue: value
                  ],
@@ -293,13 +265,16 @@ commentTypeOption.eachWithIndex{ type, fieldValues, number ->
 ['addCommentIfConditionTrue'].collect {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: it + ': when conditional validation false do not add comment to related issues: ' + i,
+                [action    : 'transitionIssue',
+                 ext: it + ': when conditional validation false do not add comment: ' + i,
+                 sleep: info?.isCloud ? 5000 : 0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
-                [action: 'getComments', ext: it +" : when conditional validation false do not add comment to related issues:" + i,
+                [action: 'getComments', ext: it +" : when conditional validation false do not add comment :" + i,
+                 sleep: info?.isCloud ? 5000 : 0,
                  parameters: [
                          issue: value
                  ],
@@ -312,6 +287,7 @@ commentTypeOption.eachWithIndex{ type, fieldValues, number ->
 relatedIssuesMap.eachWithIndex{ key, value, i ->
     gint.taskHelper.add([
             [action: 'updateIssue' , ext: " : target issue_ to check conditional validation and assignee field : " + i,
+             sleep: info?.isCloud ? 5000 : 0,
              parameters: [
                      issue: value,
                      priority : 'High',
@@ -319,6 +295,7 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
              ],
             ],
             [action: 'updateIssue' , ext: " : current issue_ to check conditional validation and assignee field : " + i,
+             sleep: info?.isCloud ? 5000 : 0,
              parameters: [
                      issue: key,
                      priority : 'High',
@@ -332,13 +309,15 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
 ['addCommentIfConditionTrue'].collect {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: it + ': when execution validation true add comment: ' + i,
+                [action    : 'transitionIssue', ext: it + ': when conditional validation true do add comment: ' + i,
+                 sleep: info?.isCloud ? 5000 : 0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
-                [action: 'getComments', ext: it +" : when conditional execution true add comment :" + i,
+                [action: 'getComments', ext: it +" : when conditional validation true do add comment :" + i,
+                 sleep: info?.isCloud ? 5000 : 0,
                  parameters: [
                          issue: value
                  ],
@@ -347,20 +326,21 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
         ])
     }
 }
-
 [
         'runAsSpecificUser',
         'runAsUserInFieldAssignee'
 ].each {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: it + ': check comment related issue :' + i,
+                [action    : 'transitionIssue', ext: it + ' :' + i,
+                 sleep: info?.isCloud ? 5000 : 0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
-                [action: 'getComments', ext: " :check comment related issue :" + it + i,
+                [action: 'getComments', ext: " : " + it + i,
+                 sleep: info?.isCloud ? 5000 : 0,
                  parameters: [
                          issue: value
                  ],
@@ -371,4 +351,3 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
         ])
     }
 }
-

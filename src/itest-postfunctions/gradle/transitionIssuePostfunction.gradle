@@ -12,8 +12,7 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory + '/src/common/utils.gradle'
 
-tearDown()
-addWorkflow()
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__TransitionIssueFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionIssue-function'
 
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
 def groovyScript = '''def trigger = !issue.subtasks.collect { it.status.name }.any { it != 'Done'}'''
@@ -27,6 +26,7 @@ def transitions = [
         byName : [ "transitionType=rawValue","transitions=In Progress" ],
         calculated : ["transitionType=expression","calculatedTransition='21'","transitions='21'" ]
 ]
+
 def options = [
         allUnselected : ["skipConditions=no","skipValidators=no","skipPermissions=no","triggerEvent=no"],
         skipConditions : [ no : ["skipConditions=no"], yes : ["skipConditions=yes"] ],
@@ -34,12 +34,14 @@ def options = [
         skipPermissions : [ no : ["skipPermissions=no"], yes : ["skipPermissions=yes"] ],
         triggerManualEvent : [ no : ["triggerEvent=no"], yes : ["triggerEvent=yes"]]
 ]
+
 def addFields = [
         noField : ["fieldsToSet={}"],
         copyFromCurrentIssue : ["fieldsToSet={\"labels\":{\"action\":\"copy\"}}"],
         setByScript : ["fieldsToSet={\"labels\":{\"action\":\"script\",\"value\":\"$groovyExpression.getDescription\"}}"],
         setByTemplate : ["fieldsToSet={\"labels\":{\"action\":\"template\",\"value\":\"$labelsByTemplate\"}}"]
 ]
+
 def addComment = [
         not : ["commentType=", "comment="],
         commentAddedBytemplate : ["commentType=template","comment=commentAddedBytemplate"],
@@ -54,6 +56,7 @@ def addComment = [
         commentVisibleToTestGroup : ["commentType=template", "comment=commentVisibleToTestGroup"],
         commentVisibleToTestProjectRole : ["commentType=template", "comment=commentVisibleToTestProjectRole"],
 ]
+
 def commentVisibility = [
         notSelected : [ "restrictToGroup=", "restrictToProjectRole=" ],
         jiraAdminGroups : [ "restrictToGroup=$jiraAdminGrooup", "restrictToProjectRole=" ],
@@ -61,118 +64,132 @@ def commentVisibility = [
         jiraSoftwareUsers : ["restrictToGroup=$testGroup", "restrictToProjectRole="],
 ]
 
-def functionKey = info?.isCloud ? functionKey.transitionIssuePostfunctionCloud : functionKey.transitionIssuePostfunctionServer
+def defaultFieldsCloud = [
+        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
+]
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'transitionIssuePF_checkTargetIssues'
+    def transition = 'transition_issue_to_in_progress'
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\"}"
     def server = defaultFieldsServer +  "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser + conditionalExecution.false
     addTransitionFunction(transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    moveTransitionFunction(transition + i, 4)
+    if(!isCloud){
+        moveTransitionFunction(transition + i, 4)
+    }
 }
 
 statusList.eachWithIndex { key, value, i ->
-    def transition = 'transitionIssuePF_checkStatus'
+    def transition = 'transition_current_issue_to_' + key
     def server = defaultFieldsServer + transitions.specifyName + "transitions=$value" + conditionalExecution.false + "selectedLinkType=$relatedIssue.currentIssue" + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"${value}@@${workflow}\",\"runAsType\":\"currentUser\"}"
-    addTransitionFunction(transition + i,'postfunction', info?.isCloud ? cloud : server, functionKey)
-    moveTransitionFunction(transition + i, 4)
+    addTransitionFunction(transition ,'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud){
+        moveTransitionFunction(transition , 4)
+    }
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'triggerCalculatedTransition_transitionIssue'
+relatedIssue.take(1).eachWithIndex { key, value, i ->
+    def transition = 'check_trigger_calculated_transition'
     def server = defaultFieldsServer + conditionalExecution.false +  "selectedLinkType=$value" + transitions.calculated + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"21\",\"runAsType\":\"currentUser\"}"
     addTransitionFunction(transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    moveTransitionFunction(transition + i, 4)
+    if(!isCloud){
+        moveTransitionFunction(transition + i, 4)
+    }
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'transitionIssueIfConditionTrue'
+relatedIssue.take(1).eachWithIndex { key, value, i ->
+    def transition = 'transition_issue_to_in_progress_only_if_condition_true'
     def server = defaultFieldsServer + conditionalExecution.true +  "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\"}"
     addTransitionFunction(transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    moveTransitionFunction(transition + i, 4)
+    if(!isCloud){
+        moveTransitionFunction(transition + i, 4)
+    }
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'addLabelsAfterTransition_template_transitionIssue'
+relatedIssue.take(1).eachWithIndex { key, value, i ->
+    def transition = 'transition_issue_to_in_progress_and_add_labels_set_by_template'
     def server = defaultFieldsServer + conditionalExecution.false +  "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.setByTemplate + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\",\"fields\":{\"labels\":{\"value\":\"$labelsByTemplate\"}}}"
     addTransitionFunction(transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    moveTransitionFunction(transition + i, 4)
+    if(!isCloud){
+        moveTransitionFunction(transition + i, 4)
+    }
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = 'commentAddedBytemplate'
     def server = defaultFieldsServer + conditionalExecution.false +  "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.commentAddedBytemplate + commentVisibility.notSelected + runAsUser.currentUser
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\"}"
     addTransitionFunction(transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    moveTransitionFunction(transition + i, 4)
+    if(!isCloud){
+        moveTransitionFunction(transition + i, 4)
+    }
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = 'commentVisibleToJiraAdminRoles'
     def server = defaultFieldsServer + conditionalExecution.false +  "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.commentVisibleToJiraAdminRoles + commentVisibility.jiraAdminRoles + runAsUser.currentUser
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$jiraAdminRoleId}"
     addTransitionFunction(transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    moveTransitionFunction(transition + i, 4)
+    if(!isCloud){
+        moveTransitionFunction(transition + i, 4)
+    }
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = 'runAsSpecificUser'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"thisUser\",\"runAs\":\"accountId:$cloudUserId\"}"
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"thisUser\",\"runAs\":\"accountId:$currentUserKey\"}"
     def server = defaultFieldsServer +   "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.specificUser
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    moveTransitionFunction ( transition + i, 4)
+    if(!isCloud){
+        moveTransitionFunction(transition + i, 4)
+    }
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldAssignee'
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userField\",\"runAsField\":\"assignee\"}"
     def server = defaultFieldsServer +   "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.userInFieldAssignee
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    moveTransitionFunction ( transition + i, 4)
+    if(!isCloud){
+        moveTransitionFunction(transition + i, 4)
+    }
 }
 
-
-
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldReporter'
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userField\",\"runAsField\":\"reporter\"}"
     def server = defaultFieldsServer +   "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.userInFieldReporter
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    moveTransitionFunction ( transition + i, 4)
+    if(!isCloud){
+        moveTransitionFunction(transition + i, 4)
+    }
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldCreator'
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userField\",\"runAsField\":\"creator\"}"
     def server = defaultFieldsServer +  "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.userInFieldCreator
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    moveTransitionFunction ( transition + i, 4)
+    if(!isCloud){
+        moveTransitionFunction(transition + i, 4)
+    }
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = 'runAsUserFromScript'
     def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userFromScript\",\"runAsScript\":\"$nunjuckExpression.returnsReporter\"}"
     def server = defaultFieldsServer + "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.userFromScript
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    moveTransitionFunction ( transition + i, 4)
+    if(!isCloud){
+        moveTransitionFunction(transition + i, 4)
+    }
 }
-def runAsUserTransitions = [
-        'runAsSpecificUser',
-        'runAsUserInFieldAssignee'
-]
-def runAsUserTransitions1 = [
-        'runAsUserInFieldReporter',
-        'runAsUserInFieldCreator',
-        'runAsUserFromScript'
-]
+
 createWorkflowScheme()
 createProject()
-
-// set issue status to In Progress
 
 def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
@@ -183,24 +200,18 @@ def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Init
 def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
 def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
 def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
-def isBlockedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isBlockedBy')
 def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
-def isClonedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isClonedBy')
 def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
-def isDuplicatedBy = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'isDuplicatedBy')
 def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
 def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 
 updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
 
 def linkIssuesMap = [
-         blocks : {->blocks[]},
-         'is blocked by' : {->isBlockedBy[]},
-         clones : {->clones[]},
-         'is cloned by' : {->isClonedBy[]},
-         duplicates : {->duplicates[]},
-         'is duplicated by' : {->isDuplicatedBy[]},
-         'relates to': {->relatesTo[]}
+        blocks : {->blocks[]},
+        "$clonesLinkType" : {->clones[]},
+        duplicates : {->duplicates[]},
+        'relates to': {->relatesTo[]}
 ]
 
 linkIssuesMap.eachWithIndex { key, value, i ->
@@ -217,73 +228,30 @@ def relatedIssuesMap = [
         {->epic_initiative[]} : {-> initiative[]},
         {->blocks[]} : {->issueLinks[]},
         {->issueLinks[]} : {->blocks[]},
-        {->issueLinks[]} : {->isBlockedBy[]},
+        {->blocks[]} : {->issueLinks[]},
         {->issueLinks[]} : {->clones[]},
-        {->issueLinks[]} : {->isClonedBy[]},
+        {->clones[]} : {->issueLinks[]},
         {->issueLinks[]} : {->duplicates[]},
-        {->issueLinks[]} : {->isDuplicatedBy[]},
+        {->duplicates[]} : {->issueLinks[]},
         {->issueLinks[]} : {->relatesTo[]},
-        {->issueLinks[]} : {->relatesTo[]},
-        {->issueLinks[]} : {->jqlIssue[]},
+        {->relatesTo[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->jqlIssue[]}
 ]
 
-relatedIssuesMap.eachWithIndex{ key, value, i ->
-    gint.taskHelper.add(
-            action: 'updateIssue' , ext: " : add description to add in comment : " + i,
-            parameters: [
-                    issue: value,
-                    description : expressionComment
-            ]
-    )
-}
-
-['transitionIssueIfConditionTrue'].collect {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ': when condition returns false as priority not high' + it + i,
-                 sleepAfter: 5000,
-                 parameters: [
-                         issue     : key,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getFieldValue',
-                 sleep: 5000,
-                 ext       : " :when condition false priority is not high :" + it + i,
-                 parameters: [
-                         issue: value,
-                         field: "Status"
-                 ],
-                 failData      : [/Status  . . . . . . . . . . . : In Progress/],
-                ],
-        ])
-    }
-}
-relatedIssuesMap.eachWithIndex{ key, value,  i ->
-    gint.taskHelper.add(
-            action: 'updateIssue', ext: ": set priority High to check conditional execution true " + i,
-            parameters: [
-                    issue: key,
-                    priority: 'High'
-            ]
-    )
-}
 [
-        'transitionIssueIfConditionTrue',
-        'transitionIssuePF_checkTargetIssues',
-        'triggerCalculatedTransition_transitionIssue'
+        'transition_issue_to_in_progress',
 ].collect {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action    : 'transitionIssue', ext: ': when ' + it+ i,
-                 sleep: 5000,
+                 sleep: info?.isCloud? 5000 :  0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 sleep: 5000,
+                 sleep: info?.isCloud? 5000 :  0,
                  ext       : " :when :" + it + i,
                  parameters: [
                          issue: value,
@@ -291,7 +259,17 @@ relatedIssuesMap.eachWithIndex{ key, value,  i ->
                  ],
                  data      : [/Status  . . . . . . . . . . . : In Progress/],
                 ],
-                [action    : 'transitionIssue', ext: ': current issue to original status to check next option' + it+ i,
+                [action    : 'transitionIssue',
+                 sleep: info?.isCloud? 5000 :  0,
+                 ext: ": current issue to TO DO status after checking:" + it+ i,
+                 parameters: [
+                         issue     : key,
+                         transition: "To Do",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 sleep: info?.isCloud? 5000 :  0,
+                 ext: ": target issue to TO DO status after checking:" + it+ i,
                  parameters: [
                          issue     : value,
                          transition: "To Do",
@@ -300,21 +278,139 @@ relatedIssuesMap.eachWithIndex{ key, value,  i ->
         ])
     }
 }
+
 [
-        'transitionIssuePF_checkStatus',
+        'transition_issue_to_in_progress_only_if_condition_true'
 ].collect {
-    statusList.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: it + key + i,
-                 sleepAfter: 5000,
+                [action: 'updateIssue',
+                 sleep: info?.isCloud? 5000 : 0,
+                 ext: ": set priority Low to check conditional execution false: for transition:" + it + i,
                  parameters: [
-                         issue     : { -> current[] },
+                         issue: key,
+                         priority: 'Low'
+                 ]
+                ],
+                [action    : 'transitionIssue', ext: ': when condition returns false as priority not high' + it + i,
+                 sleep: info?.isCloud? 5000 : 0,
+                 parameters: [
+                         issue     : key,
                          transition: it + i,
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 sleep: 5000,
-                 ext       : it + i,
+                 sleep: info?.isCloud? 5000 : 0,
+                 ext       : ": OF status after transition the issue with:" + it + i +": and condition is false:",
+                 parameters: [
+                         issue: value,
+                         field: "Status"
+                 ],
+                 failData      : [/Status  . . . . . . . . . . . : In Progress/],
+                ],
+                [action: 'updateIssue',
+                 sleep: info?.isCloud? 5000 : 0,
+                 ext: ": set priority High to check conditional execution true_for transition:" + it + i,
+                 parameters: [
+                         issue: key,
+                         priority: 'High'
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext: ": when condition returns true_priority is high:" + it + i,
+                 sleep: info?.isCloud? 5000 : 0,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: info?.isCloud? 5000 : 0,
+                 ext       : ": OF status after transition the issue with:" + it + i +": and condition is true:",
+                 parameters: [
+                         issue: value,
+                         field: "Status"
+                 ],
+                 data      : [ /Status  . . . . . . . . . . . : In Progress/ ],
+                ],
+                [action    : 'transitionIssue',
+                 sleep: info?.isCloud? 5000 :  0,
+                 ext: ": current issue to TO DO status after checking:" + it+ i,
+                 parameters: [
+                         issue     : key,
+                         transition: "To Do",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 sleep: info?.isCloud? 5000 :  0,
+                 ext: ": linked issue to TO DO status after checking:" + it+ i,
+                 parameters: [
+                         issue     : value,
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
+}
+
+[
+        'check_trigger_calculated_transition'
+].collect {
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext: ": to check:" + it+ i,
+                 sleep: info?.isCloud? 5000 :  0,
+                 parameters: [
+                         issue     : key,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: info?.isCloud? 5000 :  0,
+                 ext       : " :to check :" + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Status"
+                 ],
+                 data      : [/Status  . . . . . . . . . . . : In Progress/],
+                ],
+                [action    : 'transitionIssue',
+                 sleep: info?.isCloud? 5000 :  0,
+                 ext: ": current issue to TO DO status after checking:" + it+ i,
+                 parameters: [
+                         issue     : key,
+                         transition: "To Do",
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 sleep: info?.isCloud? 5000 :  0,
+                 ext: ": target issue to TO DO status after checking:" + it+ i,
+                 parameters: [
+                         issue     : value,
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
+}
+
+[
+        'transition_current_issue_to_',
+].collect {
+    statusList.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext: it + key + i,
+                 sleep: info?.isCloud? 5000 :  0,
+                 parameters: [
+                         issue     : { -> current[] },
+                         transition: it + key,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: info?.isCloud? 5000 :  0,
+                 ext       : it + key+ i,
                  parameters: [
                          issue: { -> current[] },
                          field: "Status"
@@ -322,8 +418,9 @@ relatedIssuesMap.eachWithIndex{ key, value,  i ->
                  data      : [/Status  . . . . . . . . . . . : $value/],
                  failData  : [/Status  . . . . . . . . . . . : To Do/]
                 ],
-                [action    : 'transitionIssue', ext: it + i + ': To Do' + key,
-                 sleep: 5000,
+                [action    : 'transitionIssue',
+                 ext: it + i + ":from $key to To Do",
+                 sleep: info?.isCloud? 5000 :  0,
                  parameters: [
                          issue     : { -> current[] },
                          transition: "To Do",
@@ -333,31 +430,41 @@ relatedIssuesMap.eachWithIndex{ key, value,  i ->
     }
 }
 
+// Need ACLI support to addTransitionScreen to existing workflow transition - ACLI-3646
 [
-        'addLabelsAfterTransition_template_transitionIssue',
+        //'transition_issue_to_in_progress_and_add_labels_set_by_template',
 ].collect {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: ':' + it + i,
-                 sleepAfter: 5000,
+                [action    : 'transitionIssue',
+                 ext: ":" + it + i,
+                 sleep: info?.isCloud? 5000 :  0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 sleep: 5000,
-                 ext       : it + i,
+                 sleep: info?.isCloud? 5000 :  0,
+                 ext       : " :to check :" + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Status"
+                 ],
+                 data      : [/Status  . . . . . . . . . . . : In Progress/],
+                ],
+                [action    : 'getFieldValue',
+                 sleep: info?.isCloud? 5000 :  0,
+                 ext       : ": $it "+ i,
                  parameters: [
                          issue: value,
                          field : "Labels"
                  ],
-                 data      : [
-                         /Labels  . . . . . . . . . . . : $labelsByTemplate/
-                 ],
+                 data      : [ /Labels  . . . . . . . . . . . : $labelsByTemplate/ ],
                 ],
-                [action    : 'transitionIssue', ext: ': To Do' + it+ i,
-                 sleep: 5000,
+                [action    : 'transitionIssue',
+                 ext: ": To Do after checking: " + it+ i,
+                 sleep: info?.isCloud? 5000 :  0,
                  parameters: [
                          issue     : value,
                          transition: "To Do",
@@ -367,21 +474,22 @@ relatedIssuesMap.eachWithIndex{ key, value,  i ->
     }
 }
 
+// Need ACLI support to addTransitionScreen to existing workflow transition - ACLI-3646
 [
-        'commentAddedBytemplate',
-        'commentVisibleToJiraAdminRoles',
+        //'commentAddedBytemplate',
+        //'commentVisibleToJiraAdminRoles',
 ].collect {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action    : 'transitionIssue', ext: ':' + it + i,
-                 sleepAfter: 5000,
+                 sleep: info?.isCloud? 5000 :  0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 sleep: 5000,
+                 sleep: info?.isCloud? 5000 :  0,
                  ext       : it + i,
                  parameters: [
                          issue: value,
@@ -391,7 +499,7 @@ relatedIssuesMap.eachWithIndex{ key, value,  i ->
                  failData  : [/Status  . . . . . . . . . . . : To Do/]
                 ],
                 [action: 'getComments', ext: " : add comment by template :" + it + i,
-                 sleep: 5000,
+                 sleep: info?.isCloud? 5000 :  0,
                  parameters: [
                          issue: value
                  ],
@@ -399,8 +507,9 @@ relatedIssuesMap.eachWithIndex{ key, value,  i ->
                           /$it/
                  ],
                 ],
-                [action    : 'transitionIssue', ext: ': To Do' + it+ i,
-                 sleepAfter: 5000,
+                [action    : 'transitionIssue',
+                 ext: ": To Do:" + it+ i,
+                 sleep: info?.isCloud? 5000 :  0,
                  parameters: [
                          issue     : value,
                          transition: "To Do",
@@ -410,27 +519,19 @@ relatedIssuesMap.eachWithIndex{ key, value,  i ->
     }
 }
 
-
-relatedIssuesMap.eachWithIndex { key, value, i ->
-    gint.taskHelper.add([
-            [action: 'assignIssue', ext: ": assign the issue to current $testUser to check run as user in field assignee option: " + i,
-             parameters:[
-                     issue: value,
-                     assignee: testUser
-             ],
-            ],
-            [action: 'assignIssue', ext: ": assign the issue to current $testUser to check run as user in field assignee option on link issue: " + i,
-             parameters:[
-                     issue: { -> issueLinks[] },
-                     assignee: testUser
-             ],
-            ],
-    ]
-    )
-}
-runAsUserTransitions.each {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+[
+        'runAsSpecificUser',
+        'runAsUserInFieldAssignee'
+].each {
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
             gint.taskHelper.add([
+                    [action: 'assignIssue',
+                     ext: ": assign the issue to $testUser to check run as user in field assignee option: " + it + i,
+                     parameters:[
+                             issue: key,
+                             assignee: testUser
+                     ],
+                    ],
                     [action    : 'transitionIssue', ext: ': Check run as :  ' + it + i,
                      parameters: [
                              issue     : key,
@@ -438,7 +539,7 @@ runAsUserTransitions.each {
                      ]
                     ],
                     [action    : 'getFieldValue',
-                     ext       : " :run as :" + it + i,
+                     ext       : " :Check:" + it + i,
                      parameters: [
                              issue: value,
                              field: "Status"
@@ -454,7 +555,8 @@ runAsUserTransitions.each {
                                 ],
                             data:[ "$testUser", "status", "In Progress" ],
                     ],
-                    [action    : 'transitionIssue', ext: ': current issue to original status to check next option for : ' + it + i,
+                    [action    : 'transitionIssue',
+                     ext: ': current issue to original status to check next option for : ' + it + i,
                      parameters: [
                              issue     : value,
                              transition: "To Do",
@@ -464,8 +566,13 @@ runAsUserTransitions.each {
 
         }
 }
-runAsUserTransitions1.each {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+
+[
+        'runAsUserInFieldReporter',
+        'runAsUserInFieldCreator',
+        'runAsUserFromScript'
+].each {
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action    : 'transitionIssue', ext: ': Check run as :  ' + it + i,
                  parameters: [
@@ -497,6 +604,5 @@ runAsUserTransitions1.each {
                  ]
                 ],
         ])
-
     }
 }
