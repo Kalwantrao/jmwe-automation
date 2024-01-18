@@ -168,11 +168,11 @@ project.ext.statusList = [
         done: "Done"
 ]
 
-//project.ext.defaultFieldsCloud= [
-//        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
-//        "condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9",
-//        "validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a",
-//]
+project.ext.defaultFieldsCloud= [
+postfunction:    [  "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249"],
+condition:      [ "condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9"],
+validator:[        "validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a"],
+]
 
 project.ext.defaultFieldsServer = [
         "restrictToInternal=no",
