@@ -10,7 +10,8 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-postfunctions/postfunction.gradle'
 
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:AssignIssue-function'
 
@@ -90,7 +91,9 @@ relatedIssue.eachWithIndex { targetIssue, value, issueIndex ->
 createWorkflowScheme()
 createProject()
 
-addComponent(1)
+if(!isCloud) {
+    addComponent(1)
+}
 
 def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
@@ -106,8 +109,9 @@ def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates'
 def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
 def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 
-updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
-
+if(!isCloud) {
+    updateIssue([issue: { -> epic_initiative[] }, field: "Parent Link", value: { ->initiative[]}], "parent initiative child epic")
+}
 def linkIssuesMap = [
         blocks : {->blocks[]},
         "$clonesLinkType" : {->clones[]},

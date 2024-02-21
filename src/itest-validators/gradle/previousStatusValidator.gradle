@@ -10,7 +10,8 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:previousstatus-validator'
 
@@ -23,19 +24,25 @@ def defaultFields = [
 statusList.eachWithIndex { status, value, i ->
 	def transition = "verify_previous_status_of_the_issue_must_be_" + status
 	def fields = defaultFields + "status=$value" + conditionalValidation.no
-	addTransitionFunction(transition, 'validator', fields, functionKey)
+	if(!isCloud) {
+		addTransitionFunction(transition, 'validator', fields, functionKey)
+	}
 }
 
 statusList.eachWithIndex { status, value, i ->
 	def transition = "verify_previous_status_mostRecentOnly_of_the_issue_must_be_" + status
 	def fields = defaultFields + "status=$value" +"mostRecentOnly=yes" + conditionalValidation.no
-	addTransitionFunction(transition, 'validator', fields, functionKey)
+	if(!isCloud) {
+		addTransitionFunction(transition, 'validator', fields, functionKey)
+	}
 }
 
 statusList.eachWithIndex { status, value, i ->
 	def transition = "verify_previous_status_of_the_issue_if_condition_true_must_be_" + status
 	def fields = defaultFields + "status=$value" + conditionalValidation.yes
-	addTransitionFunction(transition, 'validator', fields, functionKey)
+	if(!isCloud) {
+		addTransitionFunction(transition, 'validator', fields, functionKey)
+	}
 }
 
 
@@ -47,391 +54,409 @@ def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultI
 
 // PREVIOUS_STATUS_VALIDATOR_TS_21_TC_01-Verify for the Issue must have been in Status In Progress at some point before its current Status
 ['verify_previous_status_of_the_issue_must_be_inProgress'].each {
-	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_21_TC_01_Case_01- $it _when not in selected status:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			 data: [ "$errorMessage" ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : change the issues previous status to in progress to check_ $it:",
-			 parameters: [
-					 issue     : { -> defaultIssue[] },
-					 transition: "In Progress",
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : change the issues status ToDo to check_ $it:",
-			 parameters: [
-					 issue     : { -> defaultIssue[] },
-					 transition: "To Do",
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_21_TC_01_Case_02- $it _when in selected status:",
-			 expected  : 0,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			 failData:["$errorMessage"]
-			],
-	])
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_21_TC_01_Case_01- $it _when not in selected status:",
+				 expected  : -3,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				 data      : ["$errorMessage"],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : change the issues previous status to in progress to check_ $it:",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: "In Progress",
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : change the issues status ToDo to check_ $it:",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: "To Do",
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_21_TC_01_Case_02- $it _when in selected status:",
+				 expected  : 0,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				 failData  : ["$errorMessage"]
+				],
+		])
+	}
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_21_TC_02-Verify for the Issue must have been in Status in review at some point before its current Status
 ['verify_previous_status_of_the_issue_must_be_inReview'].each {
-	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_21_TC_02_Case_01- $it _when not in selected status:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			 data: [ "$errorMessage" ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : change the issues previous status to in review to check_ $it:",
-			 parameters: [
-					 issue     : { -> defaultIssue[] },
-					 transition: "In Review",
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : change the issues status ToDo to check_ $it:",
-			 parameters: [
-					 issue     : { -> defaultIssue[] },
-					 transition: "To Do",
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_21_TC_02_Case_02- $it _when in selected status:",
-			 expected  : 0,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			 failData:["$errorMessage"]
-			],
-	])
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_21_TC_02_Case_01- $it _when not in selected status:",
+				 expected  : -3,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				 data      : ["$errorMessage"],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : change the issues previous status to in review to check_ $it:",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: "In Review",
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : change the issues status ToDo to check_ $it:",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: "To Do",
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_21_TC_02_Case_02- $it _when in selected status:",
+				 expected  : 0,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				 failData  : ["$errorMessage"]
+				],
+		])
+	}
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_21_TC_03-Verify for the Issue must have been in Status done at some point before its current Status
 ['verify_previous_status_of_the_issue_must_be_done'].each {
-	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_21_TC_03_Case_01- $it _when not in selected status:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			 data: [ "$errorMessage" ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : change the issues previous status to Done to check_ $it:",
-			 parameters: [
-					 issue     : { -> defaultIssue[] },
-					 transition: "Done",
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : change the issues status ToDo to check_ $it:",
-			 parameters: [
-					 issue     : { -> defaultIssue[] },
-					 transition: "To Do",
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_21_TC_03_Case_02- $it _when in selected status:",
-			 expected  : 0,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			 failData:["$errorMessage"]
-			],
-	])
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_21_TC_03_Case_01- $it _when not in selected status:",
+				 expected  : -3,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				 data      : ["$errorMessage"],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : change the issues previous status to Done to check_ $it:",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: "Done",
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : change the issues status ToDo to check_ $it:",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: "To Do",
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_21_TC_03_Case_02- $it _when in selected status:",
+				 expected  : 0,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				 failData  : ["$errorMessage"]
+				],
+		])
+	}
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_23_TC_01-Verify for the Most recent status only option with the default configuration
 ['verify_previous_status_mostRecentOnly_of_the_issue_must_be_inProgress'].each {
-	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_01_Case_01- $it _when not in selected status:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			 data: [ "$errorMessage" ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : change the issues previous status to in progress to check_ $it:",
-			 parameters: [
-					 issue     : { -> defaultIssue[] },
-					 transition: "In Progress",
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : change the issues status ToDo to check_ $it:",
-			 parameters: [
-					 issue     : { -> defaultIssue[] },
-					 transition: "To Do",
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_01_Case_02- $it _when in selected status:",
-			 expected  : 0,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			 failData:["$errorMessage"]
-			],
-			[action    : 'transitionIssue',
-			 ext: " : change the issues status ToDo again to check_ $it:",
-			 parameters: [
-					 issue     : { -> defaultIssue[] },
-					 transition: "To Do",
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_01_Case_03- $it _when not in selected status:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			 data: [ "$errorMessage" ],
-			],
-	])
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_01_Case_01- $it _when not in selected status:",
+				 expected  : -3,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				 data      : ["$errorMessage"],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : change the issues previous status to in progress to check_ $it:",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: "In Progress",
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : change the issues status ToDo to check_ $it:",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: "To Do",
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_01_Case_02- $it _when in selected status:",
+				 expected  : 0,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				 failData  : ["$errorMessage"]
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : change the issues status ToDo again to check_ $it:",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: "To Do",
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_01_Case_03- $it _when not in selected status:",
+				 expected  : -3,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				 data      : ["$errorMessage"],
+				],
+		])
+	}
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_23_TC_02-Verify for the Most recent status only option with the default configuration
 ['verify_previous_status_mostRecentOnly_of_the_issue_must_be_inReview'].each {
-	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_02_Case_01- $it _when not in selected status:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			 data: [ "$errorMessage" ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : change the issues previous status to in review to check_ $it:",
-			 parameters: [
-					 issue     : { -> defaultIssue[] },
-					 transition: "In Review",
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : change the issues status ToDo to check_ $it:",
-			 parameters: [
-					 issue     : { -> defaultIssue[] },
-					 transition: "To Do",
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_02_Case_02- $it _when in selected status:",
-			 expected  : 0,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			 failData:["$errorMessage"]
-			],
-			[action    : 'transitionIssue',
-			 ext: " : change the issues status ToDo again to check_ $it:",
-			 parameters: [
-					 issue     : { -> defaultIssue[] },
-					 transition: "To Do",
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_01_Case_03- $it _when not in selected status:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			 data: [ "$errorMessage" ],
-			],
-	])
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_02_Case_01- $it _when not in selected status:",
+				 expected  : -3,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				 data      : ["$errorMessage"],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : change the issues previous status to in review to check_ $it:",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: "In Review",
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : change the issues status ToDo to check_ $it:",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: "To Do",
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_02_Case_02- $it _when in selected status:",
+				 expected  : 0,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				 failData  : ["$errorMessage"]
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : change the issues status ToDo again to check_ $it:",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: "To Do",
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_01_Case_03- $it _when not in selected status:",
+				 expected  : -3,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				 data      : ["$errorMessage"],
+				],
+		])
+	}
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_23_TC_03-Verify for the Most recent status only option with the default configuration
 ['verify_previous_status_mostRecentOnly_of_the_issue_must_be_done'].each {
-	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_03_Case_01- $it _when not in selected status:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			 data: [ "$errorMessage" ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : change the issues previous status to Done to check_ $it:",
-			 parameters: [
-					 issue     : { -> defaultIssue[] },
-					 transition: "Done",
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : change the issues status ToDo to check_ $it:",
-			 parameters: [
-					 issue     : { -> defaultIssue[] },
-					 transition: "To Do",
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_03_Case_02- $it _when in selected status:",
-			 expected  : 0,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			 failData:["$errorMessage"]
-			],
-			[action    : 'transitionIssue',
-			 ext: " : change the issues status ToDo again to check_ $it:",
-			 parameters: [
-					 issue     : { -> defaultIssue[] },
-					 transition: "To Do",
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_01_Case_03- $it _when not in selected status:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			 data: [ "$errorMessage" ],
-			],
-	])
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_03_Case_01- $it _when not in selected status:",
+				 expected  : -3,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				 data      : ["$errorMessage"],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : change the issues previous status to Done to check_ $it:",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: "Done",
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : change the issues status ToDo to check_ $it:",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: "To Do",
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_03_Case_02- $it _when in selected status:",
+				 expected  : 0,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				 failData  : ["$errorMessage"]
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : change the issues status ToDo again to check_ $it:",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: "To Do",
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_23_TC_01_Case_03- $it _when not in selected status:",
+				 expected  : -3,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				 data      : ["$errorMessage"],
+				],
+		])
+	}
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_24_TC_01-Verify for the Conditional validation
 ['verify_previous_status_of_the_issue_if_condition_true_must_be_inProgress'].each {
-	gint.taskHelper.add([
-			[action: 'updateIssue',
-			 ext: ":change priority of issue to low to check _$it :",
-			 parameters: [
-					 issue: {->defaultIssue1[]},
-					 priority: 'Low',
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_24_TC_01_Case_01- $it _when not in selected status_condition not true:",
-			 expected  : 0,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue1[] },
-			 ],
-			 failData: [ "$errorMessage" ],
-			],
-			[action: 'updateIssue',
-			 ext: ":change priority of issue to high to check _$it :",
-			 parameters: [
-					 issue: {->defaultIssue1[]},
-					 priority: 'High',
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_24_TC_01_Case_02- $it _when not in selected status_condition true:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue1[] },
-			 ],
-			 data:["$errorMessage"]
-			],
-	])
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action    : 'updateIssue',
+				 ext       : ":change priority of issue to low to check _$it :",
+				 parameters: [
+						 issue   : { -> defaultIssue1[] },
+						 priority: 'Low',
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_24_TC_01_Case_01- $it _when not in selected status_condition not true:",
+				 expected  : 0,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue1[] },
+				 ],
+				 failData  : ["$errorMessage"],
+				],
+				[action    : 'updateIssue',
+				 ext       : ":change priority of issue to high to check _$it :",
+				 parameters: [
+						 issue   : { -> defaultIssue1[] },
+						 priority: 'High',
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_24_TC_01_Case_02- $it _when not in selected status_condition true:",
+				 expected  : -3,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue1[] },
+				 ],
+				 data      : ["$errorMessage"]
+				],
+		])
+	}
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_24_TC_02-Verify for the Conditional validation
 ['verify_previous_status_of_the_issue_if_condition_true_must_be_inReview'].each {
-	gint.taskHelper.add([
-			[action: 'updateIssue',
-			 ext: ":change priority of issue to low to check _$it :",
-			 parameters: [
-					 issue: {->defaultIssue1[]},
-					 priority: 'Low',
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_24_TC_02_Case_01- $it _when not in selected status_condition not true:",
-			 expected  : 0,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue1[] },
-			 ],
-			 failData: [ "$errorMessage" ],
-			],
-			[action: 'updateIssue',
-			 ext: ":change priority of issue to high to check _$it :",
-			 parameters: [
-					 issue: {->defaultIssue1[]},
-					 priority: 'High',
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_24_TC_02_Case_02- $it _when not in selected status_condition true:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue1[] },
-			 ],
-			 data:["$errorMessage"]
-			],
-	])
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action    : 'updateIssue',
+				 ext       : ":change priority of issue to low to check _$it :",
+				 parameters: [
+						 issue   : { -> defaultIssue1[] },
+						 priority: 'Low',
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_24_TC_02_Case_01- $it _when not in selected status_condition not true:",
+				 expected  : 0,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue1[] },
+				 ],
+				 failData  : ["$errorMessage"],
+				],
+				[action    : 'updateIssue',
+				 ext       : ":change priority of issue to high to check _$it :",
+				 parameters: [
+						 issue   : { -> defaultIssue1[] },
+						 priority: 'High',
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_24_TC_02_Case_02- $it _when not in selected status_condition true:",
+				 expected  : -3,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue1[] },
+				 ],
+				 data      : ["$errorMessage"]
+				],
+		])
+	}
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_24_TC_03-Verify for the Conditional validation
 ['verify_previous_status_of_the_issue_if_condition_true_must_be_done'].each {
-	gint.taskHelper.add([
-			[action: 'updateIssue',
-			 ext: ":change priority of issue to low to check _$it :",
-			 parameters: [
-					 issue: {->defaultIssue1[]},
-					 priority: 'Low',
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_24_TC_03_Case_01- $it _when not in selected status_condition not true:",
-			 expected  : 0,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue1[] },
-			 ],
-			 failData: [ "$errorMessage" ],
-			],
-			[action: 'updateIssue',
-			 ext: ":change priority of issue to high to check _$it :",
-			 parameters: [
-					 issue: {->defaultIssue1[]},
-					 priority: 'High',
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: " : PREVIOUS_STATUS_VALIDATOR_TS_24_TC_03_Case_02- $it _when not in selected status_condition true:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue1[] },
-			 ],
-			 data:["$errorMessage"]
-			],
-	])
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action    : 'updateIssue',
+				 ext       : ":change priority of issue to low to check _$it :",
+				 parameters: [
+						 issue   : { -> defaultIssue1[] },
+						 priority: 'Low',
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_24_TC_03_Case_01- $it _when not in selected status_condition not true:",
+				 expected  : 0,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue1[] },
+				 ],
+				 failData  : ["$errorMessage"],
+				],
+				[action    : 'updateIssue',
+				 ext       : ":change priority of issue to high to check _$it :",
+				 parameters: [
+						 issue   : { -> defaultIssue1[] },
+						 priority: 'High',
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : " : PREVIOUS_STATUS_VALIDATOR_TS_24_TC_03_Case_02- $it _when not in selected status_condition true:",
+				 expected  : -3,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue1[] },
+				 ],
+				 data      : ["$errorMessage"]
+				],
+		])
+	}
 }
 

@@ -10,27 +10,27 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+// apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
 
 def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__UserCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition'
 
-def defaultFieldsCloud = [ "condition.id=85e260ad-0ccf-433d-bd76-2fcda1e4bb6d" ]
-
 def whichUser = [
-		currentUser : ["fromUserType=currentUser"],
-		userInFieldAssignee : [ "fromUserType=userInField", "userField=assignee" ],
-		userInFieldReporter : [  "fromUserType=userInField", "userField=reporter"],
-		userInFieldCreator : [  "fromUserType=userInField", "userField=creator"],
+		currentUser :         info?.isCloud? /"fromUserType":"currentUser"/ : ["fromUserType=currentUser"],
+		userInFieldAssignee : info?.isCloud? /"fromUserType":"userInField", "userField":"assignee"/ : [ "fromUserType=userInField", "userField=assignee" ],
+		userInFieldReporter : info?.isCloud? /"fromUserType":"userInField", "userField":"reporter"/ : [  "fromUserType=userInField", "userField=reporter"],
+		userInFieldCreator :  info?.isCloud? /"fromUserType":"userInField", "userField":"creator"/ : [  "fromUserType=userInField", "userField=creator"],
 ]
 
+
 def userMode = [
-		allUsers : [ "conditionMode=all-user-condition" ],
-		atLeastOne : [ "conditionMode=any-user-condition" ],
+		allUsers :   info?.isCloud? /"conditionMode":"all-user-condition"/ : [ "conditionMode=all-user-condition" ],
+		atLeastOne : info?.isCloud? /"conditionMode":"any-user-condition"/ : [ "conditionMode=any-user-condition" ],
 ]
 
 def fieldEmpty = [
-		no : [ "fieldEmpty=no" ],
-		yes : [ "fieldEmpty=yes" ],
+		no : info?.isCloud? /"fieldEmpty":true/ : [ "fieldEmpty=no" ],
+		yes : info?.isCloud? /"fieldEmpty":true/ : [ "fieldEmpty=yes" ],
 ]
 
 def userCriteria = [
@@ -43,7 +43,49 @@ def userCriteria = [
 		inAdminGroup : "groupsToCheck=jira-administrators",
 		inTestGroup : "groupsToCheck=$testGroup",
 		watcher : "isWatcher=yes",
+		voter : "isVoter=yes",
 		checkUser : "usersToCheck=$currentUserKey",
+]
+def currentUserConditionCriteriaCloud = [
+		reporter : /"userCriteria":{"isReporter":true},"expression":"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))"/,
+		assignee : /userCriteria":{"isAssignee":true},"expression":"let selectedUser = user; ((!!user && (false || (!!issue.assignee && user.accountId == issue.assignee.accountId))))"/,
+		inFieldAssignee : /"userCriteria":{"userFieldsToCheck":["assignee"]},"expression":"let selectedUser = user; ((!!user && (false || ((!!issue.assignee && issue.assignee.accountId == user.accountId)))))"/,
+		returnFromScript : /"userCriteria":{"usersConditionScript":"$returnsReporter"},"expression":"let selectedUser = user; ((!!user && (false || ($returnsReporter))))"/,
+		inAdminRole : /"userCriteria":{"rolesToCheck":[$jiraAdminRoleId]},"expression":"let selectedUser = user; ((!!user && (false || ([$jiraAdminRoleId].some(roleId => (new User(user.accountId)).getProjectRoles(project).map(role => role.id).includes(roleId))))))"/,
+		inAdminGroup : /"userCriteria":{"groupsToCheck":["$jiraAdminGroupIdCloud"]},"expression":"let selectedUser = user; ((!!user && (false || ([$jiraAdminGroupIdCloud].some(groupId => (new User(user.accountId)).groupIds.includes(groupId))))))"/,
+		inTestGroup : /"userCriteria":{"groupsToCheck":["$testGroupIdCloud"]},"expression":"let selectedUser = user; ((!!user && (false || ([$testGroupIdCloud].some(groupId => (new User(user.accountId)).groupIds.includes(groupId))))))"/,
+		watcher : /"userCriteria":{"isWatcher":true},"expression":"let selectedUser = user; ((!!user && (false || (!!issue.watchers && issue.watchers.map(watcher => watcher.accountId).includes(user.accountId)))))"/,
+]
+def userInFieldAssigneeUserConditionCriteriaCloud = [
+		reporter : /"userCriteria":{"isReporter":true},"expression":"let selectedUser = !!issue && !!issue.assignee && issue.assignee; ((!!issue && !!issue.assignee && (false || (!!issue.reporter && issue.assignee.accountId == issue.reporter.accountId))))"/,
+		returnFromScript : /"userCriteria":{"usersConditionScript":"$returnsReporter"},"expression":"let selectedUser = !!issue && !!issue.assignee && issue.assignee; ((!!issue && !!issue.assignee && (false || ($returnsReporter))))"/,
+		inAdminRole : /"userCriteria":{"rolesToCheck":[$jiraAdminRoleId]},"expression":"let selectedUser = !!issue && !!issue.assignee && issue.assignee; ((!!issue && !!issue.assignee && (false || ([$jiraAdminRoleId].some(roleId => (new User(issue.assignee.accountId)).getProjectRoles(project).map(role => role.id).includes(roleId))))))"/,
+		inAdminGroup : /"userCriteria":{"groupsToCheck":["$jiraAdminGroupIdCloud"]},"expression":"let selectedUser = !!issue && !!issue.assignee && issue.assignee; ((!!issue && !!issue.assignee && (false || ([$jiraAdminGroupIdCloud].some(groupId => (new User(issue.assignee.accountId)).groupIds.includes(groupId))))))"/,
+		inTestGroup : /"userCriteria":{"groupsToCheck":["$testGroupIdCloud"]},"expression":"let selectedUser = !!issue && !!issue.assignee && issue.assignee; ((!!issue && !!issue.assignee && (false || ([$testGroupIdCloud].some(groupId => (new User(issue.assignee.accountId)).groupIds.includes(groupId))))))"/,
+		watcher : /"userCriteria":{"isWatcher":true},"expression":"let selectedUser = !!issue && !!issue.assignee && issue.assignee; ((!!issue && !!issue.assignee && (false || (!!issue.watchers && issue.watchers.map(watcher => watcher.accountId).includes(issue.assignee.accountId)))))"/,
+		checkUser : /"userCriteria":{"usersToCheck":["$currentUserKey"]},"expression":"let selectedUser = !!issue && !!issue.assignee && issue.assignee; ((!!issue && !!issue.assignee && (false || ([$currentUserKey].some(userId => (issue.assignee.accountId == userId))))))"/,
+]
+
+def userInFieldReporterUserConditionCriteriaCloud = [
+		assignee : /"userCriteria":{"isAssignee":true},"expression":"let selectedUser = !!issue && !!issue.reporter && issue.reporter; ((!!issue && !!issue.reporter && (false || (!!issue.assignee && issue.reporter.accountId == issue.assignee.accountId))))"/,
+		returnFromScript : /"userCriteria":{"usersConditionScript":"$returnsReporter"},"expression":"let selectedUser = !!issue && !!issue.reporter && issue.reporter; ((!!issue && !!issue.reporter && (false || ($returnsReporter))))"/,
+		inFieldAssignee : /"userCriteria":{"userFieldsToCheck":["assignee"]},"expression":"let selectedUser = !!issue && !!issue.reporter && issue.reporter; ((!!issue && !!issue.reporter && (false || ((!!issue.assignee && issue.assignee.accountId == issue.reporter.accountId)))))"/,
+		inAdminRole : /"userCriteria":{"rolesToCheck":[$jiraAdminRoleId]},"expression":"let selectedUser = !!issue && !!issue.reporter && issue.reporter; ((!!issue && !!issue.reporter && (false || ([$jiraAdminRoleId].some(roleId => (new User(issue.reporter.accountId)).getProjectRoles(project).map(role => role.id).includes(roleId))))))"/,
+		inAdminGroup : /"userCriteria":{"groupsToCheck":["$jiraAdminGroupIdCloud"]},"expression":"let selectedUser = !!issue && !!issue.reporter && issue.reporter; ((!!issue && !!issue.reporter && (false || ([$jiraAdminGroupIdCloud].some(groupId => (new User(issue.reporter.accountId)).groupIds.includes(groupId))))))"/,
+		inTestGroup : /"userCriteria":{"groupsToCheck":["$testGroupIdCloud"]},"expression":"let selectedUser = !!issue && !!issue.reporter && issue.reporter; ((!!issue && !!issue.reporter && (false || ([$testGroupIdCloud].some(groupId => (new User(issue.reporter.accountId)).groupIds.includes(groupId))))))"/,
+		watcher : /"userCriteria":{"isWatcher":true},"expression":"let selectedUser = !!issue && !!issue.reporter && issue.reporter; ((!!issue && !!issue.reporter && (false || (!!issue.watchers && issue.watchers.map(watcher => watcher.accountId).includes(issue.reporter.accountId)))))"/,
+		checkUser : /"userCriteria":{"usersToCheck":["$currentUserKey"]},"expression":"let selectedUser = !!issue && !!issue.reporter && issue.reporter; ((!!issue && !!issue.reporter && (false || ([$currentUserKey].some(userId => (issue.reporter.accountId == userId))))))"/,
+]
+def userInFieldCreatorUserConditionCriteriaCloud = [
+		reporter : /"userCriteria":{"isReporter":true},"expression":"let selectedUser = !!issue && !!issue.creator && issue.creator; ((!!issue && !!issue.creator && (false || (!!issue.reporter && issue.creator.accountId == issue.reporter.accountId))))"/,
+		assignee : /"userCriteria":{"isAssignee":true},"expression":"let selectedUser = !!issue && !!issue.creator && issue.creator; ((!!issue && !!issue.creator && (false || (!!issue.assignee && issue.creator.accountId == issue.assignee.accountId))))"/,
+		inFieldAssignee : /"userCriteria":{"userFieldsToCheck":["assignee"]},"expression":"let selectedUser = !!issue && !!issue.creator && issue.creator; ((!!issue && !!issue.creator && (false || ((!!issue.assignee && issue.assignee.accountId == issue.creator.accountId)))))"/,
+		returnFromScript : /"userCriteria":{"usersConditionScript":"$returnsReporter"},"expression":"let selectedUser = !!issue && !!issue.creator && issue.creator; ((!!issue && !!issue.creator && (false || ($returnsReporter))))"/,
+		inAdminRole : /"userCriteria":{"rolesToCheck":[$jiraAdminRoleId]},"expression":"let selectedUser = !!issue && !!issue.creator && issue.creator; ((!!issue && !!issue.creator && (false || ([$jiraAdminRoleId].some(roleId => (new User(issue.creator.accountId)).getProjectRoles(project).map(role => role.id).includes(roleId))))))"/,
+		inAdminGroup : /"userCriteria":{"groupsToCheck":["$jiraAdminGroupIdCloud"]},"expression":"let selectedUser = !!issue && !!issue.creator && issue.creator; ((!!issue && !!issue.creator && (false || ([$jiraAdminGroupIdCloud].some(groupId => (new User(issue.creator.accountId)).groupIds.includes(groupId))))))"/,
+		inTestGroup : /"userCriteria":{"groupsToCheck":["$testGroupIdCloud"]},"expression":"let selectedUser = !!issue && !!issue.creator && issue.creator; ((!!issue && !!issue.creator && (false || ([$testGroupIdCloud].some(groupId => (new User(issue.creator.accountId)).groupIds.includes(groupId))))))"/,
+		watcher : /"userCriteria":{"isWatcher":true},"expression":"let selectedUser = user; ((!!user && (false || (!!issue.watchers && issue.watchers.map(watcher => watcher.accountId).includes(user.accountId)))))"/,
+		checkUser : /"userCriteria":{"usersToCheck":["$currentUserKey"]},"expression":"let selectedUser = !!issue && !!issue.creator && issue.creator; ((!!issue && !!issue.creator && (false || ([$currentUserKey].some(userId => (issue.creator.accountId == userId))))))"/,
 ]
 
 def reverse = [
@@ -58,63 +100,66 @@ def userInFieldCreatorUserConditionCriteria = info?.isCloud ? userInFieldCreator
 
 currentUserConditionCriteria.eachWithIndex { criteria, userFields, i ->
 	def transition = "verify_current_user_should_be_" + criteria
-	def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d=$userFields"
+	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.currentUser,$userMode.allUsers,$userFields}"
 	def server = defaultFieldsServer + userFields +  whichUser.currentUser + reverse.no + userMode.allUsers + fieldEmpty.no
 	addTransitionFunction(transition, 'condition', info?.isCloud ? cloud : server, functionKey )
 }
 
 userInFieldAssigneeUserConditionCriteria.eachWithIndex { criteria, userFields, i ->
 	def transition = "verify_user_in_field_assignee_should_be_" + criteria
-	def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d=$userFields"
+	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.userInFieldAssignee,$userMode.allUsers,$userFields}"
 	def server = defaultFieldsServer + userFields + whichUser.userInFieldAssignee + reverse.no + userMode.allUsers + fieldEmpty.no
 	addTransitionFunction(transition, 'condition', info?.isCloud ? cloud : server,  functionKey )
 }
 
 userInFieldReporterUserConditionCriteria.eachWithIndex { criteria, userFields, i ->
 	def transition = "verify_user_in_field_reporter_should_be_" + criteria
-	def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d=$userFields"
+	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.userInFieldReporter,$userMode.allUsers,$userFields}"
 	def server = defaultFieldsServer + whichUser.userInFieldReporter + userFields + reverse.no + userMode.allUsers + fieldEmpty.no
 	addTransitionFunction(transition, 'condition', info?.isCloud ? cloud : server, functionKey )
 }
 
 userInFieldCreatorUserConditionCriteria.eachWithIndex { criteria, userFields, i ->
 	def transition = "verify_user_in_field_creator_should_be_" + criteria
-	def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d=$userFields"
+	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.userInFieldCreator,$userMode.allUsers,$userFields}"
 	def server = defaultFieldsServer + whichUser.userInFieldCreator + userFields + reverse.no + userMode.allUsers + fieldEmpty.no
 	addTransitionFunction(transition, 'condition', info?.isCloud ? cloud : server, functionKey )
 }
 
 ['verify_current_user_should_be_in_assignee_reporter'].each {
 	def server =  defaultFieldsServer + whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + reverse.no + userMode.allUsers + fieldEmpty.no
-	def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)&&(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
+	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.currentUser,$userMode.allUsers,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)&&(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
 	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['verify_current_user_should_be_in_at_least_one_field_assignee_reporter'].each {
 	def server =  defaultFieldsServer + whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + reverse.no + userMode.atLeastOne + fieldEmpty.no
-	def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"any-user-condition\",\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)||(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
+	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.currentUser,$userMode.atLeastOne,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)||(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
 	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)}
 
 ['verify_user_in_field_creator_should_be_in_at_least_one_field_reporter_assignee'].each {
 	def server =  defaultFieldsServer + whichUser.userInFieldCreator + userCriteria.inFieldAssignee + userCriteria.reporter + reverse.no + userMode.atLeastOne + fieldEmpty.no
-	def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"userField\":\"creator\",\"fromUserType\":\"userInField\",\"fieldEmpty\":false,\"conditionMode\":\"any-user-condition\",\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},\"expression\":\"let selectedUser = !!issue && !!issue.creator && issue.creator; ((!!issue && !!issue.creator && (false || (!!issue.reporter && issue.creator.accountId == issue.reporter.accountId)||(!!issue.assignee && issue.creator.accountId == issue.assignee.accountId))))\"}"
+	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.userInFieldCreator,\"fieldEmpty\":false,$userMode.atLeastOne,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},\"expression\":\"let selectedUser = !!issue && !!issue.creator && issue.creator; ((!!issue && !!issue.creator && (false || (!!issue.reporter && issue.creator.accountId == issue.reporter.accountId)||(!!issue.assignee && issue.creator.accountId == issue.assignee.accountId))))\"}"
 	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)}
 
 ['currentUser_should_not_be_in_fields_assignee_reporter_reverse'].each {
 	def server =  defaultFieldsServer + whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + reverse.yes + userMode.atLeastOne + fieldEmpty.no
-	def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true,\"reverse\":true},\"expression\":\"let selectedUser = user; !((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)&&(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
+	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.currentUser,$userMode.allUsers,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true,\"reverse\":true},\"expression\":\"let selectedUser = user; !((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)&&(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
 	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)}
 
-['user_in_field_reporter_should_be_in_field_assignee_or_field_empty'].each {
-	def server =  defaultFieldsServer + whichUser.userInFieldReporter + userCriteria.inFieldAssignee + reverse.no + userMode.atLeastOne + fieldEmpty.yes
-	def cloud = defaultFieldsCloud + "condition.config-85e260ad-0ccf-433d-bd76-2fcda1e4bb6d={\"problems\":[],\"userField\":\"reporter\",\"fromUserType\":\"userInField\",\"fieldEmpty\":true,\"conditionMode\":\"any-user-condition\",\"userCriteria\":{\"isAssignee\":true},\"expression\":\"let selectedUser = !!issue && issue.reporter; ((!!issue && (!issue.reporter || (!!issue.assignee && issue.reporter.accountId == issue.assignee.accountId))))\"}"
-	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)}
+['user_in_field_assignee_should_be_in_field_reporter_or_field_empty'].each {
+	def server =  defaultFieldsServer + whichUser.userInFieldAssignee + userCriteria.reporter + reverse.no + userMode.atLeastOne + fieldEmpty.yes
+	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.userInFieldAssignee,$userMode.atLeastOne,$fieldEmpty.yes,\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = !!issue && issue.assignee; ((!!issue && (!issue.assignee || (!!issue.reporter && issue.assignee.accountId == issue.reporter.accountId))))\"}"
+	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)
+}
 
 createWorkflowScheme()
 createProject()
 
+
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 def currentUser = info?.isCloud ? info?.userDisplayName : user
+def listOfUsers = [testUser,user]
 
 // USER_CONDITION_TS_26_TC_01_Verify the current user should be reporter
 [
@@ -123,74 +168,59 @@ def currentUser = info?.isCloud ? info?.userDisplayName : user
 		'verify_current_user_should_be_inFieldAssignee',
 		'verify_current_user_should_be_returnFromScript',
 ].each {
-	def fieldToCheck ;
-	if(it == 'verify_current_user_should_be_reporter'){
-		fieldToCheck = "Reporter"
-	}
-	else if(it == 'verify_current_user_should_be_assignee'){
-		fieldToCheck = "Assignee"
-	}
-	else if(it == 'verify_current_user_should_be_inFieldAssignee'){
-		fieldToCheck = "Assignee"
-	}
-	else if(it == 'verify_current_user_should_be_returnFromScript'){
-		fieldToCheck = "Reporter"
-	}
+	listOfUsers.eachWithIndex { userToCheck, index ->
+		def fieldToCheck;
+		if (it == 'verify_current_user_should_be_reporter') {
+			fieldToCheck = "Reporter"
+		} else if (it == 'verify_current_user_should_be_assignee') {
+			fieldToCheck = "Assignee"
+		} else if (it == 'verify_current_user_should_be_inFieldAssignee') {
+			fieldToCheck = "Assignee"
+		} else if (it == 'verify_current_user_should_be_returnFromScript') {
+			fieldToCheck = "Reporter"
+		}
+		def expected;
+		if (userToCheck == user) {
+			expected = 0
+		} else {
+			expected = -1
+		}
 		gint.taskHelper.add([
 				[action    : 'setFieldValue',
-				 sleep: info?.isCloud ? 5000 : 0,
-				 ext: ":Of field_ $fieldToCheck to $currentUser _to check_ $it: ",
+				 sleep     : info?.isCloud ? 5000 : 0,
+				 ext       : ":Of field_ $fieldToCheck to $userToCheck _before transition issue with _ $it: ",
 				 parameters: [
-						 issue     : {->defaultIssue[]},
+						 issue: { -> defaultIssue[] },
 						 field: fieldToCheck,
-						 value: user,
+						 value: userToCheck,
 				 ],
 				],
-				[action      : 'getFieldValue',
-				 sleep: info?.isCloud ? 5000 : 0,
-				 ext: ":Validate that the current user should be in $fieldToCheck _ to check:$it ",
-				 parameters: [
-			        issue: {-> defaultIssue[] },
-					field: fieldToCheck
+				/*[action      : 'getFieldValue',
+				 sleep       : info?.isCloud ? 5000 : 0,
+				 ext         : ":Validate that the $userToCheck should be in $fieldToCheck _ before transition issue:$it ",
+				 parameters  : [
+						 issue: { -> defaultIssue[] },
+						 field: fieldToCheck
 				 ],
 				 finalClosure: { Task task ->
-					def getUserInField = "$task.outData"
-					 assert getUserInField.contains(currentUser)
+					 def getUserInField = "$task.outData"
+					 assert getUserInField.contains(userToCheck)
 				 }
+				],*/
+				[action    : 'transitionIssue',
+				 sleep     : info?.isCloud ? 5000 : 0,
+				 ext       : ":USER_CONDITION_TS_26_TC_01_Case_01_ $it _when current user is $currentUser and _ $fieldToCheck is $userToCheck: ",
+				 expected  : expected,
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: it,
+				 ],
 				],
-			[action    : 'transitionIssue',
-			 sleep: info?.isCloud ? 5000 : 1000,
-			 ext: ":USER_CONDITION_TS_26_TC_01_Case_01_ $it _when current user is in field_ $fieldToCheck: ",
-			 expected  : 0,
-			 parameters: [
-					 issue     : {->defaultIssue[]},
-					 transition: it,
-			 ],
-			],
-			[action    : 'setFieldValue',
-			 sleep: info?.isCloud ? 5000 : 1000,
-			 ext: ":Of field_ $fieldToCheck to $testUser _to check_ $it _when current user is not in field_ $it: ",
-			 parameters: [
-					 issue     : {->defaultIssue[]},
-					 field: fieldToCheck,
-					 value: testUser,
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 sleep: info?.isCloud ? 5000 : 1000,
-			 ext: ":USER_CONDITION_TS_26_TC_01_Case_02_ $it _when current user is not in field _ $fieldToCheck: ",
-			 expected  : -1,
-			 parameters: [
-					 issue     : {->defaultIssue[]},
-					 transition: it,
-			 ],
-			],
-	])
+		])
+	}
 }
 
 // USER_CONDITION_TS_30_TC_05_Verify the current user should be project lead
-def projectLeadList = [ testUser, currentUser ]
-
 [
 		'verify_current_user_should_be_projectLead',
 		'verify_user_in_field_assignee_should_be_projectLead',
@@ -198,13 +228,13 @@ def projectLeadList = [ testUser, currentUser ]
 		'verify_user_in_field_creator_should_be_projectLead',
 
 ].eachWithIndex { String transition, int i ->
-	projectLeadList.eachWithIndex { usersToCheck, idx ->
+	listOfUsers.eachWithIndex { usersToCheck, idx ->
 		def expected;
-		if(usersToCheck == testUser){
-			expected = -1
-		}
-		else if(usersToCheck == currentUser){
+		if(usersToCheck == user){
 			expected = 0
+		}
+		else {
+			expected = -1
 		}
 		def fieldToCheck;
 			if(transition == 'verify_user_in_field_assignee_should_be_projectLead'){
@@ -217,15 +247,16 @@ def projectLeadList = [ testUser, currentUser ]
 		if(!isCloud) {
 			gint.taskHelper.add([
 					[action    : 'setFieldValue',
-					 sleep     : info?.isCloud ? 5000 : 1000,
-					 ext       : ":Of field_ $fieldToCheck _ to $currentUser _when the user_ $usersToCheck _is project lead:$transition  ",
+					 sleep: info?.isCloud ? 5000 : 0,
+					 ext       : ":Of field_ $fieldToCheck _ to $user _when the user_ $usersToCheck _is project lead:$transition  ",
 					 parameters: [
 							 issue: { -> defaultIssue[] },
 							 field: fieldToCheck,
-							 value: currentUser
+							 value: user
 					 ],
 					],
 					[action    : 'updateProject',
+					 sleep: info?.isCloud ? 5000 : 0,
 					 ext       : ":change the project lead to $usersToCheck _to $transition : ",
 					 parameters: [
 							 project: projectName,
@@ -233,6 +264,7 @@ def projectLeadList = [ testUser, currentUser ]
 					 ],
 					],
 					[action      : 'transitionIssue',
+					 sleep: info?.isCloud ? 5000 : 0,
 					 ext         : ":USER_CONDITION_TS_3$idx _Case_01_ $transition _when project lead is $usersToCheck and field _ $fieldToCheck is $currentUser : ",
 					 expected    : expected,
 					 parameters  : [
@@ -256,95 +288,94 @@ def projectLeadList = [ testUser, currentUser ]
 		'verify_user_in_field_assignee_should_be_reporter',
 		//'verify_user_in_field_assignee_should_be_returnFromScript',
 ].each {
-	def fieldToCheck;
-	if(it == 'verify_user_in_field_assignee_should_be_reporter'){
-		fieldToCheck = "Reporter"
-	}
-	else if (it == 'verify_user_in_field_assignee_should_be_returnFromScript'){
-		fieldToCheck = "Reporter"
-	}
-	gint.taskHelper.add([
-			[action    : 'setFieldValue',
-			 sleep : info?.isCloud? 5000 : 0,
-			 ext: ":assign to $testUser _ $it _to check criteria: ",
-			 expected  : 0,
-			 parameters: [
-					 issue     : {->defaultIssue[]},
-					 field: "Assignee",
-					 value: testUser
-			 ],
-			],
-			[action    : 'setFieldValue',
-			 sleep : info?.isCloud? 5000 : 0,
-			 ext: ":Of field_ $fieldToCheck _ to $testUser _ $it _when the user in field assignee is in field _ $fieldToCheck: ",
-			 parameters: [
-					 issue     : {->defaultIssue[]},
-					 field: fieldToCheck,
-					 value: testUser
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 sleep : info?.isCloud? 5000 : 0,
-			 ext: ":USER_CONDITION_TS_40_TC_01_Case_01_ $it _when  not satisfies the criteria: ",
-			 expected  : 0,
-			 parameters: [
-					 issue     : {->defaultIssue[]},
-					 transition: it,
-			 ],
-			 finalClosure: {Task task ->
-				 if(task.result != 0){
-					 gint.helper.log("Check user in field assignee in field", fieldToCheck)
-					 assert task.result == 0
+	listOfUsers.eachWithIndex { userToCheck, idx ->
+		def userInFieldAssignee= testUser;
+		def expected;
+		if(userInFieldAssignee == userToCheck){
+			expected = 0
+		}
+		else{
+			expected = -1
+		}
+
+	def fieldToCheck; if(it == 'verify_user_in_field_assignee_should_be_reporter') {
+			fieldToCheck = "Reporter"
+		} else if (it == 'verify_user_in_field_assignee_should_be_returnFromScript') {
+			fieldToCheck = "Reporter"
+		}
+		gint.taskHelper.add([
+				[action    : 'setFieldValue',
+				 sleep     : info?.isCloud ? 5000 : 0,
+				 ext       : ":Of assignee to $userInFieldAssignee when user in field $fieldToCheck is $userToCheck _before transition issue with_ $it:",
+				 parameters: [
+						 issue: { -> defaultIssue[] },
+						 field: "Assignee",
+						 value: userInFieldAssignee
+				 ],
+				],
+				[action    : 'setFieldValue',
+				 sleep     : info?.isCloud ? 5000 : 0,
+				 ext       : ":Of field_ $fieldToCheck _ to $userToCheck _before transition issue with_ $it: ",
+				 parameters: [
+						 issue: { -> defaultIssue[] },
+						 field: fieldToCheck,
+						 value: userToCheck
+				 ],
+				],
+				[action      : 'transitionIssue',
+				 sleep       : info?.isCloud ? 5000 : 0,
+				 ext         : ":USER_CONDITION_TS_40_TC_01_Case_01_ $it _when user in field assignee is $userInFieldAssignee and user in field $fieldToCheck is $userToCheck:",
+				 expected    : expected,
+				 parameters  : [
+						 issue     : { -> defaultIssue[] },
+						 transition: it,
+				 ],
+				 finalClosure: { Task task ->
+					 if (task.result != 0) {
+						 gint.helper.log("Check user in field assignee should be in field", fieldToCheck)
+						 assert task.result == expected
+					 }
 				 }
-			 }
-			],
-			[action    : 'setFieldValue',
-			 sleep : info?.isCloud? 5000 : 0,
-			 ext: ":Of field_ $fieldToCheck to $user _ $it _to check criteria: ",
-			 parameters: [
-					 issue     : {->defaultIssue[]},
-					 field: fieldToCheck,
-					 value: user
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 sleep : info?.isCloud? 5000 : 0,
-			 ext: ":USER_CONDITION_TS_40_TC_01_Case_02_ $it _when the user in field assignee is not in field _ $fieldToCheck: ",
-			 expected  : -1,
-			 parameters: [
-					 issue     : {->defaultIssue[]},
-					 transition: it,
-			 ],
-			 finalClosure: {Task task ->
-				 if(task.result != -1){
-					 gint.helper.log("Check user in field assignee in field", fieldToCheck)
-					 assert task.result == -1
-				 }
-			 }
-			],
-	])
+				],
+		])
+	}
 }
 
 // USER_CONDITION_TS_40_TC_05_Verify the user in field assignee should be of admin role
-def adminUsersList = [ testUser, currentUser ]
-
+// USER_CONDITION_TS_40_TC_07_Verify the user in field assignee should specific user_checkUser
+// USER_CONDITION_TS_40_TC_14_Verify the user in field reporter should be specific user_checkUser
+// USER_CONDITION_TS_40_TC_13_Verify the user in field reporter should be in admin group
 [
 		'verify_user_in_field_assignee_should_be_inAdminRole',
 		'verify_user_in_field_reporter_should_be_inAdminRole',
+		'verify_user_in_field_assignee_should_be_checkUser',
+		'verify_user_in_field_reporter_should_be_checkUser',
+		'verify_user_in_field_reporter_should_be_inAdminGroup'
 		//'verify_user_in_field_creator_should_be_inAdminRole',
 ].eachWithIndex { transition, index ->
-	adminUsersList.collect {
+	listOfUsers.collect {
 		def expected;
 		if(it == testUser){
 			expected = -1
 		}
-		else if(it == currentUser){
+		else {
 			expected = 0
 		}
+
 		def fieldToCheck;
+
 		if (transition == 'verify_user_in_field_assignee_should_be_inAdminRole') {
 			fieldToCheck = "Assignee"
 		} else if (transition == 'verify_user_in_field_reporter_should_be_inAdminRole') {
+			fieldToCheck = "Reporter"
+		}
+		else if(transition == 'verify_user_in_field_assignee_should_be_checkUser'){
+			fieldToCheck = "Assignee"
+		}
+		else if( transition == 'verify_user_in_field_reporter_should_be_checkUser'){
+			fieldToCheck = "Reporter"
+		}
+		else if( transition == 'verify_user_in_field_reporter_should_be_inAdminGroup'){
 			fieldToCheck = "Reporter"
 		}
 		gint.taskHelper.add([
@@ -369,86 +400,22 @@ def adminUsersList = [ testUser, currentUser ]
 	}
 }
 
-// USER_CONDITION_TS_40_TC_07_Verify the user in field assignee should specific user_checkUser
-// USER_CONDITION_TS_40_TC_14_Verify the user in field reporter should be specific user_checkUser
-
-[
-		'verify_user_in_field_assignee_should_be_checkUser',
-		'verify_user_in_field_reporter_should_be_checkUser'
-].eachWithIndex {transition, index ->
-	def fieldToCheck;
-	if(transition == 'verify_user_in_field_assignee_should_be_checkUser'){
-		fieldToCheck = "Assignee"
-	}
-	else if( transition == 'verify_user_in_field_reporter_should_be_checkUser'){
-		fieldToCheck = "Reporter"
-	}
-	adminUsersList.collect{
-		def expected;
-		if(it == currentUser){
-			expected = 0
-		}
-		else {
-			expected = -1
-		}
-		gint.taskHelper.add([
-				[action    : 'setFieldValue',
-				 ext: ": Of $fieldToCheck to $it _to check $transition : ",
-				 sleep : info?.isCloud? 5000 : 0,
-				 parameters: [
-						 issue     : { ->defaultIssue[] },
-						 field: fieldToCheck,
-						 value: it
-				 ],
-				],
-				[action    : 'getFieldValue',
-				 sleep : info?.isCloud? 5000 : 0,
-				 ext: ": Of $fieldToCheck should be_ $it _to check $transition : ",
-				 parameters: [
-						 issue     : { ->defaultIssue[] },
-						 field: fieldToCheck,
-				 ],
-						finalClosure: {Task task ->
-							assert "$task.outData".contains(it)
-						}
-				],
-				[action    : 'transitionIssue',
-				 sleep : info?.isCloud? 5000 : 0,
-				 ext: ":USER_CONDITION_TS_40_TC_07_Case_01_ $transition _when current user _ $it _ in field $fieldToCheck: ",
-				 expected  : expected,
-				 parameters: [
-						 issue     : {->defaultIssue[]},
-						 transition: transition,
-				 ],
-				 finalClosure: {Task task ->
-					 assert task.result == expected
-				 }
-				],
-		])
-
-	}
-}
-
 // USER_CONDITION_TS_40_TC_08_Verify the user in field reporter should be
 [
 		'verify_user_in_field_reporter_should_be_assignee',
 		'verify_user_in_field_reporter_should_be_inFieldAssignee'
 ].eachWithIndex { transition, index ->
-	adminUsersList.collect {
+	listOfUsers.collect {
 		def userInfieldReporter = currentUser
 		def expected;
-		if(it == currentUser){
-			expected = 0
-		}
-		else {
+		if(it == testUser){
 			expected = -1
 		}
-		def fieldToCheck;
-		if (transition == 'verify_user_in_field_reporter_should_be_assignee') {
-			fieldToCheck = "Assignee"
-		} else if (transition == 'verify_user_in_field_reporter_should_be_inFieldAssignee') {
-			fieldToCheck = "Assignee"
+		else {
+			expected = 0
 		}
+		def fieldToCheck = "Assignee";
+
 		gint.taskHelper.add([
 				[action    : 'setFieldValue',
 				 sleep : info?.isCloud? 5000 : 0,
@@ -468,7 +435,7 @@ def adminUsersList = [ testUser, currentUser ]
 						 value: it
 				 ],
 				],
-				[action    : 'getFieldValue',
+				/*[action    : 'getFieldValue',
 				 sleep : info?.isCloud? 5000 : 0,
 				 ext: ": Of $fieldToCheck should be_ $it _to check $transition : ",
 				 parameters: [
@@ -478,7 +445,7 @@ def adminUsersList = [ testUser, currentUser ]
 				 finalClosure: {Task task ->
 					 assert ("$task.outData").contains(it)
 				 }
-				],
+				],*/
 				[action    : 'transitionIssue',
 				 sleep : info?.isCloud? 5000 : 0,
 				 ext       : ":USER_CONDITION_TS_40_TC_08_Case_01_ to check $transition _when user in field _ $fieldToCheck is _$it: ",
@@ -501,7 +468,7 @@ def adminUsersList = [ testUser, currentUser ]
 		'verify_user_in_field_creator_should_be_assignee',
 		'verify_user_in_field_creator_should_be_inFieldAssignee'
 ].eachWithIndex { transition, index ->
-	adminUsersList.collect {
+	listOfUsers.collect {
 		def userInFieldCreator = currentUser
 		def fieldToCheck;
 		if(transition == 'verify_user_in_field_creator_should_be_reporter'){
@@ -514,11 +481,11 @@ def adminUsersList = [ testUser, currentUser ]
 			fieldToCheck = "Assignee"
 		}
 		def expected;
-		if(it == currentUser){
-			expected = 0
+		if(it == testUser){
+			expected = -1
 		}
 		else {
-			expected = -1
+			expected = 0
 		}
 		gint.taskHelper.add([
 				[action    : 'setFieldValue',
@@ -530,7 +497,7 @@ def adminUsersList = [ testUser, currentUser ]
 						 value: it
 				 ],
 				],
-				[action    : 'getFieldValue',
+				/*[action    : 'getFieldValue',
 				 sleep : info?.isCloud? 5000 : 0,
 				 ext: ": Of $fieldToCheck should be_ $it _to check $transition : ",
 				 parameters: [
@@ -540,7 +507,7 @@ def adminUsersList = [ testUser, currentUser ]
 				 finalClosure: {Task task ->
 					 assert ("$task.outData").contains(it)
 				 }
-				],
+				],*/
 				[action    : 'transitionIssue',
 				 sleep : info?.isCloud? 5000 : 0,
 				 ext       : ":USER_CONDITION_TS_40_TC_15_Case_01_ $transition _when user in field creator is $userInFieldCreator and the user in field $fieldToCheck is $it: ",
@@ -561,13 +528,13 @@ def adminUsersList = [ testUser, currentUser ]
 [
 		'verify_current_user_should_be_in_assignee_reporter'
 ].each {
-	adminUsersList.eachWithIndex { userToCheck, index ->
+	listOfUsers.eachWithIndex { userToCheck, index ->
 		def currentUserName = info?.isCloud? info?.userDisplayName : user
 		def expected;
-		if(userToCheck == currentUserName) {
-			expected = 0
+		if(userToCheck == testUser) {
+			expected = -1
 		}
-		else { expected = -1 }
+		else { expected = 0 }
 
 		["Assignee","Reporter"].eachWithIndex { fieldToCheck, idx ->
 			gint.taskHelper.add([
@@ -580,7 +547,7 @@ def adminUsersList = [ testUser, currentUser ]
 							 value: userToCheck
 					 ],
 					],
-					[action      : 'getFieldValue',
+					/*[action      : 'getFieldValue',
 					 sleep       : info?.isCloud ? 5000 : 0,
 					 ext         : ":Of field $fieldToCheck _to_ $userToCheck _to check_ $it : ",
 					 parameters  : [
@@ -590,7 +557,7 @@ def adminUsersList = [ testUser, currentUser ]
 					 finalClosure: { Task task ->
 						 assert ("$task.outData").contains(userToCheck)
 					 }
-					],
+					],*/
 			]
 			)
 		}
@@ -615,51 +582,61 @@ def adminUsersList = [ testUser, currentUser ]
 // USER_CONDITION_TS_50_TC_04_Verify the mode: at least one of the criteria configured below_ user in field creator
 
 [
-		//'verify_current_user_should_be_in_at_least_one_field_assignee_reporter',
-		//'verify_user_in_field_creator_should_be_in_at_least_one_field_reporter_assignee'
+		'verify_current_user_should_be_in_at_least_one_field_assignee_reporter',
+		'verify_user_in_field_creator_should_be_in_at_least_one_field_reporter_assignee'
 ].each {
-	adminUsersList.eachWithIndex{ userToCheck, int idx ->
-		["Assignee","Reporter"].eachWithIndex { fieldToCheck, int i ->
+	listOfUsers.eachWithIndex{ userToCheck, int idx ->
 			def currentUserName = info?.isCloud? info?.userDisplayName : user
 			def expected;
-			if(userToCheck == currentUserName) {
-				expected = 0
+			if(userToCheck == testUser) {
+				expected = -1
 			}
 			else {
-				expected = -1
+				expected = 0
 			}
 			gint.taskHelper.add([
 				[action    : 'setFieldValue',
 				 sleep     : info?.isCloud ? 5000 : 0,
-				 ext       : ":Of field _ $fieldToCheck set to $userToCheck _to check $it : ",
+				 ext       : ":Of field_ Assignee to $testUser _when user in field reporter is $userToCheck _before transition issue with_ $it : ",
 				 parameters: [
 						 issue: { -> defaultIssue[] },
-						 field: fieldToCheck,
+						 field: "Assignee",
+						 value: testUser
+				 ],
+				],
+				[action    : 'setFieldValue',
+				 sleep     : info?.isCloud ? 5000 : 0,
+				 ext       : ":Of reporter to $userToCheck _when before transition issue with_ $it : ",
+				 parameters: [
+						 issue: { -> defaultIssue[] },
+						 field: "Reporter",
 						 value: userToCheck
 				 ],
 				],
-				[action      : 'getFieldValue',
+				/*[action      : 'getFieldValue',
 				 sleep       : info?.isCloud ? 5000 : 0,
-				 ext         : ":Of field $fieldToCheck _to_ $userToCheck _to check_ $it : ",
+				 ext         : ":Of reporter _should be_ $userToCheck _ $it : ",
 				 parameters  : [
 						 issue: { -> defaultIssue[] },
-						 field: fieldToCheck,
+						 field: "Reporter",
 				 ],
 				 finalClosure: { Task task ->
 					 assert ("$task.outData").contains(userToCheck)
 				 }
-				],
+				],*/
 				[action    : 'transitionIssue',
 				 sleep       : info?.isCloud ? 5000 : 0,
-				 ext       : ":USER_CONDITION_TS_50_TC_01_Case_01_ $it _when current user is_ $currentUserName and user in field_ $fieldToCheck is $userToCheck: ",
+				 ext       : ":USER_CONDITION_TS_50_TC_01_Case_01_ $it _when current user is_ $currentUserName and user in field_ assignee is $testUser and user in field reporter is $userToCheck: ",
 				 expected  : expected,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
 				 ],
+				 finalClosure: { Task task ->
+					 assert task.result == expected
+				 }
 				],
 		])
-	}
 	}
 }
 
@@ -667,13 +644,13 @@ def adminUsersList = [ testUser, currentUser ]
 [
 		'currentUser_should_not_be_in_fields_assignee_reporter_reverse'
 ].each {
-	adminUsersList.eachWithIndex { userToCheck, index ->
+	listOfUsers.eachWithIndex { userToCheck, index ->
 		def currentUserName = info?.isCloud? info?.userDisplayName : user
 		def expected;
-		if(userToCheck == currentUserName) {
-			expected = -1
+		if(userToCheck == testUser) {
+			expected = 0
 		}
-		else { expected = 0 }
+		else { expected = -1 }
 		["Assignee","Reporter"].eachWithIndex { fieldToCheck, idx ->
 			gint.taskHelper.add([
 					[action    : 'setFieldValue',
@@ -685,7 +662,7 @@ def adminUsersList = [ testUser, currentUser ]
 							 value: userToCheck
 					 ],
 					],
-					[action      : 'getFieldValue',
+					/*[action      : 'getFieldValue',
 					 sleep       : info?.isCloud ? 5000 : 0,
 					 ext         : ":Of field $fieldToCheck _to_ $userToCheck _to check_ $it : ",
 					 parameters  : [
@@ -695,7 +672,7 @@ def adminUsersList = [ testUser, currentUser ]
 					 finalClosure: { Task task ->
 						 assert ("$task.outData").contains(userToCheck)
 					 }
-					],
+					],*/
 			]
 			)
 		}
@@ -715,6 +692,53 @@ def adminUsersList = [ testUser, currentUser ]
 		])
 	}
 }
+
+// USER_CONDITION_TS_51_TC_01_Verify the mode: at least one of the criteria configured below with or the field can be empty oprion.
+[
+		'user_in_field_assignee_should_be_in_field_reporter_or_field_empty'
+].each {
+	[user,testUser," "].eachWithIndex { userToCheck, idx ->
+		def expected;
+		if(userToCheck == testUser){
+			expected = -1
+		}
+		else {
+			expected = 0
+		}
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action    : 'setFieldValue',
+				 ext       : ":Of reporter to $user _ and assignee is $userToCheck _before transition issue with_ $it : ",
+				 parameters: [
+						 issue: { -> defaultIssue[] },
+						 field: "Reporter",
+						 value: user
+				 ],
+				],
+				[action    : 'setFieldValue',
+				 ext       : ":Of field assignee to $userToCheck _before transition issue with $it when reporter is $user and assignee is $userToCheck: ",
+				 parameters: [
+						 issue: { -> defaultIssue[] },
+						 field: "Assignee",
+						 value: userToCheck
+				 ],
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":USER_CONDITION_TS_51_TC_01_Case_01_ $it _when reporter is $user _and assignee is $userToCheck: ",
+				 expected  : expected,
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 transition: it,
+				 ],
+				],
+		])
+	}
+	}
+}
+
+
+
+
 
 /*
 // USER_CONDITION_TS_40_TC_09_Verify the user in field assignee should be in field labels
@@ -762,47 +786,6 @@ def adminUsersList = [ testUser, currentUser ]
 }
 
 // USER_CONDITION_TS_40_TC_13_Verify the user in field reporter should be in admin group
-[
-		'verify_user_in_field_reporter_should_be_inAdminGroup',
-].each {
-	gint.taskHelper.add([
-			[action    : 'setFieldValue',
-			 ext: ": of reporter to $testUser _to check $it : ",
-			 expected  : 0,
-			 parameters: [
-					 issue     : { ->defaultIssue[] },
-					 field: "Reporter",
-					 value: testUser
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: ":USER_CONDITION_TS_40_TC_13_Case_01_ $it _when not satisfies the criteria: ",
-			 expected  : -1,
-			 parameters: [
-					 issue     : {->defaultIssue[]},
-					 transition: it,
-			 ],
-			],
-			[action    : 'setFieldValue',
-			 ext: ": of reporter to $user _to check $it : ",
-			 expected  : 0,
-			 parameters: [
-					 issue     : { ->defaultIssue[] },
-					 field: "Reporter",
-					 value: user
-			 ],
-			],
-			[action    : 'transitionIssue',
-			 ext: ":USER_CONDITION_TS_40_TC_13_Case_02_ $it _when satisfies the criteria: ",
-			 expected  : 0,
-			 parameters: [
-					 issue     : {->defaultIssue[]},
-					 transition: it,
-			 ],
-			],
-	])
-}
-
 
 // USER_CONDITION_TS_40_TC_16_Verify the user in field creator should be assignee
 
@@ -902,256 +885,12 @@ def adminUsersList = [ testUser, currentUser ]
 }
 
 // USER_CONDITION_TS_50_TC_01_Verify the mode: at least one of the criteria configured below_ current user
-['verify_current_user_should_be_in_at_least_one_field_assignee_reporter'].each {
-	if(!isCloud) {
-		gint.taskHelper.add([
-				[action    : 'setFieldValue',
-				 ext       : ":assignee value set to $testUser _to check $it : ",
-				 expected  : 0,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Assignee",
-						 value: testUser
-				 ],
-				],
-				[action    : 'setFieldValue',
-				 ext       : ":reporter value set to $testUser _to check $it : ",
-				 expected  : 0,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Reporter",
-						 value: testUser
-				 ],
-				],
-				[action    : 'setFieldValue',
-				 ext       : ":labels value set to empty _to check $it : ",
-				 expected  : 0,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Labels",
-						 value: " "
-				 ],
-				],
-				[action    : 'transitionIssue',
-				 ext       : ":USER_CONDITION_TS_50_TC_01_Case_01_ $it _when not satisfies the criteria: ",
-				 expected  : -1,
-				 parameters: [
-						 issue     : { -> defaultIssue[] },
-						 transition: it,
-				 ],
-				],
-				[action    : 'setFieldValue',
-				 ext       : ":assignee value set to $user _to check $it : ",
-				 expected  : 0,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Assignee",
-						 value: user
-				 ],
-				],
-				[action    : 'transitionIssue',
-				 ext       : ":USER_CONDITION_TS_50_TC_01_Case_02_ $it _when satisfies the criteria: ",
-				 expected  : 0,
-				 parameters: [
-						 issue     : { -> defaultIssue[] },
-						 transition: it,
-				 ],
-				],
-		])
-	}
-}
-
 
 // USER_CONDITION_TS_50_TC_04_Verify the mode: at least one of the criteria configured below_ user in field creator
-['verify_user_in_field_creator_should_be_in_at_least_one_field_reporter_assignee_labels'].each {
-	if(!isCloud) {
-		gint.taskHelper.add([
-				[action    : 'setFieldValue',
-				 ext       : ":assignee value set to $testUser _to check $it : ",
-				 expected  : 0,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Assignee",
-						 value: testUser
-				 ],
-				],
-				[action    : 'setFieldValue',
-				 ext       : ":reporter value set to $testUser _to check $it : ",
-				 expected  : 0,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Reporter",
-						 value: testUser
-				 ],
-				],
-				[action    : 'setFieldValue',
-				 ext       : ":labels value set to empty _to check $it : ",
-				 expected  : 0,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Labels",
-						 value: " "
-				 ],
-				],
-				[action    : 'transitionIssue',
-				 ext       : ":USER_CONDITION_TS_50_TC_04_Case_01_ $it _when not satisfies the criteria: ",
-				 expected  : -1,
-				 parameters: [
-						 issue     : { -> defaultIssue[] },
-						 transition: it,
-				 ],
-				],
-				[action    : 'setFieldValue',
-				 ext       : ":assignee value set to $user _to check $it : ",
-				 expected  : 0,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Reporter",
-						 value: user
-				 ],
-				],
-				[action    : 'transitionIssue',
-				 ext       : ":USER_CONDITION_TS_50_TC_04_Case_02_ $it _when satisfies the criteria: ",
-				 expected  : 0,
-				 parameters: [
-						 issue     : { -> defaultIssue[] },
-						 transition: it,
-				 ],
-				],
-		])
-	}
-}
 
 // USER_CONDITION_TS_22_TC_04_Verify for the Reverse condition checkbox under the current user Condition configuration page
-['currentUser_should_not_be_in_fields_assignee_reporter_reverse'].each {
-	if(!isCloud) {
-		gint.taskHelper.add([
-				[action    : 'setFieldValue',
-				 ext       : ":assignee value set to $testUser _to check $it : ",
-				 expected  : 0,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Assignee",
-						 value: testUser
-				 ],
-				],
-				[action    : 'setFieldValue',
-				 ext       : ":reporter value set to $testUser _to check $it : ",
-				 expected  : 0,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Reporter",
-						 value: testUser
-				 ],
-				],
-				[action    : 'setFieldValue',
-				 ext       : ":labels value set to empty _to check $it : ",
-				 expected  : 0,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Labels",
-						 value: " "
-				 ],
-				],
-				[action    : 'transitionIssue',
-				 ext       : ":USER_CONDITION_TS_22_TC_01_Case_01_ $it _when not satisfies the criteria: ",
-				 expected  : 0,
-				 parameters: [
-						 issue     : { -> defaultIssue[] },
-						 transition: it,
-				 ],
-				],
-				[action    : 'setFieldValue',
-				 ext       : ":assignee value set to $user _to check $it : ",
-				 expected  : 0,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Assignee",
-						 value: user
-				 ],
-				],
-				[action    : 'setFieldValue',
-				 ext       : ":reporter value set to $user _to check $it : ",
-				 expected  : 0,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Reporter",
-						 value: user
-				 ],
-				],
-				[action    : 'setFieldValue',
-				 ext       : ":labels value set to $user _to check $it : ",
-				 expected  : 0,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Labels",
-						 value: user
-				 ],
-				],
-				[action    : 'transitionIssue',
-				 ext       : ":USER_CONDITION_TS_22_TC_01_Case_02_ $it _when satisfies the criteria: ",
-				 expected  : -1,
-				 parameters: [
-						 issue     : { -> defaultIssue[] },
-						 transition: it,
-				 ],
-				],
-		])
-	}
-}
 
-// USER_CONDITION_TS_51_TC_01_Verify the mode: at least one of the criteria configured below with or the field can be empty oprion.
-['user_in_field_assignee_should_be_in_field_labels_or_field_empty'].each {
-	if(!isCloud) {
-		gint.taskHelper.add([
-				[action    : 'setFieldValue',
-				 ext       : ":assignee set to $testUser _to check $it : ",
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Assignee",
-						 value: user
-				 ],
-				],
-				[action    : 'setFieldValue',
-				 ext       : ":labels set to $testUser _to check $it : ",
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Labels",
-						 value: testUser
-				 ],
-				],
-				[action    : 'transitionIssue',
-				 ext       : ":USER_CONDITION_TS_51_TC_01_Case_01_ $it _when not satisfies the criteria: ",
-				 expected  : -1,
-				 parameters: [
-						 issue     : { -> defaultIssue[] },
-						 transition: it,
-				 ],
-				],
-				[action    : 'setFieldValue',
-				 ext       : ":Assignee value set to empty _to check $it : ",
-				 expected  : 0,
-				 parameters: [
-						 issue: { -> defaultIssue[] },
-						 field: "Assignee",
-						 value: " "
-				 ],
-				],
-				[action    : 'transitionIssue',
-				 ext       : ":USER_CONDITION_TS_51_TC_01_Case_02_ $it _when satisfies the criteria_field is empty: ",
-				 expected  : 0,
-				 parameters: [
-						 issue     : { -> defaultIssue[] },
-						 transition: it,
-				 ],
-				],
-		])
-	}
-}
-
-
-
- */
+*/
 
 /*
 1. The current user should match all the following criteria:
@@ -1172,5 +911,14 @@ The user is one of the watchers
 5. Active and inactive users
  */
 
+/* Review by Mitesh
 
+1. Check : current user
+	- with users jmwe_qa
+
+2. Check reverse option
+	- for current  user
+	- user in field
+
+ */
 

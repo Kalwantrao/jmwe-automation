@@ -10,29 +10,19 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-postfunctions/postfunction.gradle'
 
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
-relatedIssue.remove("currentIssue")
+def listOfItemsToRemove = info?.isCloud? ["currentIssue","returnsByNunjucksExpression","returnsFromJqlSearch"] : ["currentIssue"]
+
+listOfItemsToRemove.each {
+    relatedIssue.remove(it)
+}
+
 def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CommentLinkedIssuesFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentLinkedIssues-function'
 def expressionComment = "expression"
 
-def defaultFieldsCloud = [
-        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
-]
-
-def commentType = [
-        template : [ "valueType=template", "value=template" ],
-        expression : [ "valueType=expression", "value=$groovyExpression.getDescription" ],
-        runAsSpecificUser : [ "valueType=template", "value=runAsSpecificUser" ],
-        runAsUserInFieldAssignee : [ "valueType=template", "value=runAsUserInFieldAssignee" ],
-        runAsUserInFieldReporter: [ "valueType=template", "value=runAsUserInFieldReporter" ],
-        runAsUserInFieldCreator : [ "valueType=template", "value=runAsUserInFieldCreator" ],
-        runAsUserFromScript : [ "valueType=template", "value=runAsUserFromScript" ],
-        visibleToJiraSoftwareUsers : ["valueType=template", "value=visibleToJiraSoftwareUsers"],
-        visibleToJiraAdminRoles: ["valueType=template", "value=visibleToJiraAdminRoles"],
-        addCommentIfConditionTrue : ["valueType=template", "value=addCommentIfConditionTrue"]
-]
 def commentVisibility = [
         notSelected : [ "restrictToGroup=", "restrictToProjectRole=" ],
         jiraAdminGroups : [ "restrictToGroup=$jiraAdminGrooup", "restrictToProjectRole=" ],
@@ -40,92 +30,55 @@ def commentVisibility = [
         jiraSoftwareUsers : ["restrictToGroup=$testGroup", "restrictToProjectRole="]
 ]
 
-def commentTypeOptionServer = [
-        template : defaultFieldsServer + commentType.template + commentVisibility.notSelected +  conditionalExecution.false + runAsUser.currentUser,
-        expression: defaultFieldsServer + commentType.expression + commentVisibility.notSelected+ conditionalExecution.false + runAsUser.currentUser
-]
-def commentTypeOptionCloud = [
-        template: defaultFieldsCloud ,
-]
-def commentTypeOption = info?.isCloud ? commentTypeOptionCloud : commentTypeOptionServer
 
-commentTypeOption.eachWithIndex{ transition, fields, number ->
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = "comment_added_by_template_" + i
+    def server = defaultFieldsServer + "valueType=template" + "value=$transition" + "selectedLinkType=$value"
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"selectedLinkType\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",$runAsUser.currentUser}"
+    addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = "comment_added_by_expression_" + i
+    def server = defaultFieldsServer + "valueType=expression" + "value=$groovyExpression.getDescription" + "selectedLinkType=$value"
+    if(!isCloud) {
+        addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    }
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'addCommentIfConditionTrue' + i
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.true,\"selectedLinkType\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",$runAsUser.currentUser}"
+    def server = defaultFieldsServer + "valueType=template" + "value=$transition" + commentVisibility.notSelected+  "selectedLinkType=$value" + conditionalExecution.true + runAsUser.currentUser
+    addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'visibleToJiraAdminRoles'+i
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"selectedLinkType\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$jiraAdminRoleId,$runAsUser.currentUser}"
+    def server = defaultFieldsServer + "valueType=template" + "value=$transition" + commentVisibility.jiraAdminRoles +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
+    addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = 'visibleToJiraSoftwareUsers' + i
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"selectedLinkType\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"$testGroupIdCloud\",$runAsUser.currentUser}"
+    def server = defaultFieldsServer + "valueType=template" + "value=$transition" + commentVisibility.jiraSoftwareUsers +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
+    addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+runAsUser.remove("currentUser")
+
+runAsUser.eachWithIndex { userToCheck, configFields, idx ->
     relatedIssue.eachWithIndex { key, value, i ->
-        def server = fields + "selectedLinkType=$value"
-        def cloud = fields + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"currentUser\"}"
-        addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+        def transition = 'run_as_'+ userToCheck + i
+        def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"selectedLinkType\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",$configFields}"
+        def server = defaultFieldsServer + configFields + "valueType=template" + "value=$transition" + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false
+        addTransitionFunction( transition , 'postfunction', info?.isCloud ? cloud : server, functionKey)
+        if(!isCloud){
+            moveTransitionFunction ( transition, 4)
+        }
     }
-}
-
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'addCommentIfConditionTrue'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":true,\"targetIssue\":\"$value\",\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"currentUser\"}"
-    def server = defaultFieldsServer + commentType.addCommentIfConditionTrue + commentVisibility.notSelected+  "selectedLinkType=$value" + conditionalExecution.true + runAsUser.currentUser
-    addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-}
-
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'runAsSpecificUser'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"thisUser\",\"runAs\":\"accountId:$cloudUserId\"}"
-    def server = defaultFieldsServer + commentType.runAsSpecificUser + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.specificUser
-    addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    if(!isCloud){
-        moveTransitionFunction ( transition + i, 4)
-    }
-}
-
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'runAsUserInFieldAssignee'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"userField\",\"runAsField\":\"assignee\"}"
-    def server = defaultFieldsServer + commentType.runAsUserInFieldAssignee + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldAssignee
-    addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    if(!isCloud){
-        moveTransitionFunction ( transition + i, 4)
-    }
-}
-
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'runAsUserInFieldReporter'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"userField\",\"runAsField\":\"reporter\"}"
-    def server = defaultFieldsServer + commentType.runAsUserInFieldReporter + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldReporter
-    addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    if(!isCloud){
-        moveTransitionFunction ( transition + i, 4)
-    }
-}
-
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'runAsUserInFieldCreator'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"userField\",\"runAsField\":\"creator\"}"
-    def server = defaultFieldsServer + commentType.runAsUserInFieldCreator + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldCreator
-    addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    if(!isCloud){
-        moveTransitionFunction ( transition + i, 4)
-    }
-}
-
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'runAsUserFromScript'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"userFromScript\",\"runAsScript\":\"$nunjuckExpression.returnsReporter\"}"
-    def server = defaultFieldsServer + commentType.runAsUserFromScript + commentVisibility.notSelected +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userFromScript
-    addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    if(!isCloud){
-        moveTransitionFunction ( transition + i, 4)
-    }
-}
-
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'visibleToJiraAdminRoles'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$jiraAdminRoleId,\"runAsType\":\"currentUser\"}"
-    def server = defaultFieldsServer + commentType.visibleToJiraAdminRoles + commentVisibility.jiraAdminRoles +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
-    addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-}
-
-relatedIssue.eachWithIndex { key, value, i ->
-    def transition = 'visibleToJiraSoftwareUsers'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"$testGroupIdCloud\",\"runAsType\":\"currentUser\"}"
-    def server = defaultFieldsServer + commentType.visibleToJiraSoftwareUsers + commentVisibility.jiraSoftwareUsers +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
-    addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 createWorkflowScheme()
@@ -157,7 +110,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
     linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
 }
 
-def relatedIssuesMap = [
+def relatedIssuesMapServer = [
         {->parent[]} : {->subtask[]},
         {->subtask[]} : {->parent[]},
         {->epic[]} : {->issueBelongsToEpic[]},
@@ -175,6 +128,24 @@ def relatedIssuesMap = [
         {->relatesTo[]} : {->issueLinks[]},
         {->issueLinks[]} : {->jqlIssue[]}
 ]
+def relatedIssuesMapCloud = [
+        {->parent[]} : {->subtask[]},
+        {->subtask[]} : {->parent[]},
+        {->epic[]} : {->issueBelongsToEpic[]},
+        {->issueBelongsToEpic[]} : {->epic[]},
+        {-> initiative[]} : {->epic_initiative[]},
+        {->epic_initiative[]} : {-> initiative[]},
+        {->blocks[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->blocks[]},
+        {->blocks[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->clones[]},
+        {->clones[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->duplicates[]},
+        {->duplicates[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->relatesTo[]},
+]
+
+def relatedIssuesMap = info?.isCloud ? relatedIssuesMapCloud : relatedIssuesMapServer
 
 def getCurrentUserName = info?.isCloud? info?.userDisplayName : user
 
@@ -189,10 +160,11 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
 }
 
 [
-        'template',
-        'runAsUserInFieldReporter',
-        'runAsUserInFieldCreator',
-        'runAsUserFromScript',
+        'comment_added_by_template_',
+        'run_as_userInFieldReporter',
+        'run_as_userInFieldCreator',
+        'run_as_userFromScript',
+        'run_as_specificUser',
 ].each {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
@@ -327,8 +299,7 @@ relatedIssuesMap.eachWithIndex{ key, value, i ->
     }
 }
 [
-        'runAsSpecificUser',
-        'runAsUserInFieldAssignee'
+        'run_as_userInFieldAssignee'
 ].each {
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([

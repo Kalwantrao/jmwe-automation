@@ -1,6 +1,5 @@
 apply from: gint.resourceDirectory +'/src/common/tearDown.gradle'
 
-
 ext.addWorkflow = {
     if(skipSetup != "true"){
         gint.taskHelper.addSetUp([
@@ -11,6 +10,35 @@ ext.addWorkflow = {
         ]
         )
     }
+}
+ext.addCustomField = { name, fieldType ->
+    def type;
+    if(fieldType == 'number' || fieldType == 'numberField' || fieldType == 'numberfield'){
+        type = 'com.atlassian.jira.plugin.system.customfieldtypes:float'
+    } else if(fieldType == 'checkbox'){
+        type = 'com.atlassian.jira.plugin.system.customfieldtypes:multicheckboxes'
+    } else if(fieldType == 'labels'){
+        type = 'com.atlassian.jira.plugin.system.customfieldtypes:labels'
+    } else {
+        type = fieldType
+    }
+    gint.taskHelper.addSetUp(
+            action: "addCustomField", ext: ":with name:$name",
+            parameters:[
+                    field: name,
+                    type: type
+            ]
+    )
+}
+
+ext.addFieldToScreen = { screen, fieldName ->
+    gint.taskHelper.addSetUp(
+            action: "addScreenFields", ext: ":to screen $screen: field name:$fieldName",
+            parameters:[
+                    screen: screen,
+                    field: fieldName
+            ]
+    )
 }
 
 ext.addTransitionFunction = { transitions, type, field, functionKey -> // key, type, condition, functionKey, description
@@ -96,6 +124,20 @@ ext.createWorkflowScheme = {
         )
     }
 }
+
+ext.createWorkflowSchemeForSanityTest = {
+    gint.taskHelper.addSetUp([
+            action: 'createWorkflowScheme', ext: ":sanity:",
+            retrySleep: 5000,
+            retry: true,
+            parameters:[
+                    workflowScheme: projectName,
+                    workflow: workflow,
+            ],
+    ]
+    )
+}
+
 ext.associateWorkflow = { workflowName ->
     if(skipSetup == "true") {
         gint.taskHelper.addSetUp([
@@ -108,18 +150,17 @@ ext.associateWorkflow = { workflowName ->
     }
 }
 ext.createProject = {
-    def additionalParams = info?.isCloud? [] : [issueSecurityScheme: projectName]
+    def additionalParams = info?.isCloud? [] : [issueSecurityScheme: issueSecurityScheme]
     gint.taskHelper.addSetUp(
             [action: 'createProject',
-             retrySleep: 5000,
              retry: true,
              parameters:[
                      project: projectName,
                      template: info?.isCloud? projectTemplateCloud : projectTemplateServer,
                      lead: '@Self',
                      workflowScheme: workflowScheme,
-                     issueTypeScreenScheme: projectName,
-                     issueTypeScheme: projectName,
+                     issueTypeScreenScheme: issueTypeScreenScheme,
+                     issueTypeScheme: issueTypeScheme,
              ] + additionalParams,
             ]
     )
@@ -129,7 +170,6 @@ ext.createIssue = { parameters, ext ->
     gint.taskHelper.addSetUp([
             [action: 'createIssue',
              mustRunAfter: 'createProject',
-             retrySleep: 5000,
              retry: true,
              ext: ': '+ ext ,
              project: projectName,

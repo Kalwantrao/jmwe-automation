@@ -10,7 +10,8 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
 
 def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CurrentStatusCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:currentstatus-condition'
 
@@ -60,7 +61,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 					}
 			],
 			[action    : 'transitionIssue',
-			ext: ": CURRENT_STATUS_CONDITION_TC_10-Verify transition tab $it after apply Current Status Condition on ToDo status and current status of Issue is also ToDo:",
+			ext: ": CURRENT_STATUS_CONDITION_TC_10-Verify transition tab $it _when current issue in selected status:",
 			expected  : 0,
 			parameters: [
 					transition: it,
@@ -87,7 +88,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 			 }
 			],
 			[action    : 'transitionIssue',
-			ext: ": CURRENT_STATUS_CONDITION_TC_14-Verify transition eg $it tab on issue screen when apply Reverse condition with ToDo status and current status of issue is also ToDo:",
+			ext: ": CURRENT_STATUS_CONDITION_TC_14-Verify transition eg $it _ when current issue not in selected status:",
 			expected  : -1,
 			parameters: [
 					transition: it,
@@ -191,6 +192,7 @@ transitionByUserTask('SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE_REVERS
 	- unselect the reverse checkbox and check on issue - PENDING
 
  */
+
 
 
 

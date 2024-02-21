@@ -1,0 +1,473 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+//apply from: gint.resourceDirectory + '/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction1.gradle'
+
+def functionKey = 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__DeleteIssueFunction'
+
+def defaultSummary = "test_delete_issue_postfunction"
+
+def listOfTransitions = [
+        defaultConfiguration : [],
+        conditionalExecution : [],
+        runAsUser : []
+]
+
+["linkByisBlockedBy","linkByIsClonedBy","linkByIsDuplicatedBy"].each {
+    relatedIssue.remove(it)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = "delete_issue_by_postfunction_" + key
+    listOfTransitions.defaultConfiguration.add(transition)
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"runAsType\":\"addonUser\"}"
+    if(isCloud) {
+        addTransitionFunction(transition, 'postfunction', cloud, functionKey)
+    }
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def transition = "if_condition_true_" + key
+    listOfTransitions.conditionalExecution.add(transition)
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.true,\"targetIssue\":\"$value\",\"runAsType\":\"addonUser\"}"
+    if(isCloud) {
+        addTransitionFunction(transition, 'postfunction', cloud, functionKey)
+    }
+}
+/*
+// TODO - validating run as user is not possible for delete issue postfunction by ACLI, as after deleting issue we need to verify user from jira logs instead of from issue history
+runAsUser.remove("currentUser")
+runAsUser.eachWithIndex{ user, fields, idx ->
+    relatedIssue.eachWithIndex{ key, value, i->
+        def transition = "delete_issue_by_postfunction_run_as_" + user + "_" + key
+        listOfTransitions.runAsUser.add(transition)
+        def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"targetIssue\":\"$value\",$fields}"
+        if(!isServer) {
+            addTransitionFunction(transition, 'postfunction', cloud, functionKey)
+        }
+    }
+}
+*/
+
+createWorkflowScheme()
+createProject()
+
+
+def createIssues = { parameters, ext ->
+    def savedIssues1 = [:]
+    gint.taskHelper.add([
+            [action: 'createIssue',
+             sleep: info?.isCloud ? 5000 : 0,
+             mustRunAfter: 'createProject',
+             retry: true,
+             ext: ":to check:"+ ext ,
+             project: projectName,
+             parameters: parameters,
+             finalClosure: { Task task ->
+                 def currentIssue1 = gint.searchForIssueKey(task.outData)
+                 savedIssues1[] = currentIssue1
+                 gint.helper.log("Issue created ", savedIssues1[]);
+             },
+            ],
+    ]
+    )
+    return savedIssues1
+}
+
+def updateIssue1 = { parameters,  ext->
+    if(isCloud) {
+        gint.taskHelper.add(
+                action: 'updateIssue',
+                retry: true,
+                sleep: info?.isCloud ? 5000 : 0,
+                ext: ': ' + ext,
+                parameters: parameters,
+        )
+    }
+}
+def linkIssues = { parameters,  ext->
+    if(isCloud) {
+        gint.taskHelper.add(
+                action: 'linkIssue',
+                retry: true,
+                sleep: info?.isCloud ? 5000 : 0,
+                ext: ': ' + ext,
+                parameters: parameters,
+        )
+    }
+}
+def getIssueListBeforeTransition = { summary,type ->
+    if(isCloud) {
+        gint.taskHelper.add([
+                [action    : 'getIssueList',
+                 ext       : " :verify issue exists with summary_ $summary _before transition:",
+                 sleep     : info?.isCloud ? 5000 : 0,
+                 parameters: [
+                         project   : projectName,
+                         jql       : "project = $projectName AND summary ~ $summary AND type = $type",
+                         outputType: "Text",
+                         columns   : "Type,Summary"
+                 ],
+                 data      : ["$type", "$summary"],
+                ],
+        ])
+    }
+}
+
+def getIssueListAfterTransition = { summary, type ->
+    if(isCloud) {
+        gint.taskHelper.add([
+                [action    : 'getIssueList',
+                 ext       : " :verify issue with summary_ $summary _deleted after transition issue:",
+                 sleep     : info?.isCloud ? 5000 : 0,
+                 parameters: [
+                         project   : projectName,
+                         jql       : "project = $projectName AND summary ~ $summary AND type = $type",
+                         outputType: "Text",
+                         columns   : "Type,Summary"
+                 ],
+                 data      : ["0 issues in list"],
+                 failData  : ["$type", "$summary"],
+                ],
+        ])
+    }
+}
+
+def getIssueListAfterTransitionWhenConditionFalse = { summary, type ->
+    if(isCloud) {
+        gint.taskHelper.add([
+                [action    : 'getIssueList',
+                 ext       : " :verify issue with summary_ $summary _after transition issue:when priority is not High",
+                 sleep     : info?.isCloud ? 5000 : 0,
+                 parameters: [
+                         project   : projectName,
+                         jql       : "project = $projectName AND summary ~ $summary AND type = $type",
+                         outputType: "Text",
+                         columns   : "Type,Summary"
+                 ],
+                 failData  : ["0 issues in list"],
+                 data      : ["$type", "$summary"],
+                ],
+        ])
+    }
+}
+
+def transitionIssue = { issue, transition ->
+    if(isCloud) {
+        gint.taskHelper.add([
+                [action    : "transitionIssue",
+                 sleep     : info?.isCloud ? 5000 : 0,
+                 ext       : ":By transition_ $transition",
+                 parameters: [
+                         issue     : issue,
+                         transition: transition
+                 ]
+                ],
+        ])
+    }
+}
+
+def transitionIssueWhenConditionTrue = { issue, transition ->
+    if(isCloud) {
+        gint.taskHelper.add([
+                [action    : "transitionIssue",
+                 sleep     : info?.isCloud ? 5000 : 0,
+                 ext       : ":By transition_ $transition:when priority is High:",
+                 parameters: [
+                         issue     : issue,
+                         transition: transition
+                 ]
+                ],
+        ])
+    }
+}
+
+def setFieldValue = { issue,value, ext ->
+    if(isCloud) {
+        gint.taskHelper.add(
+                action: "setFieldValue",
+                sleep: info?.isCloud ? 5000 : 0,
+                ext: ":Of Priority to $value:to check_$ext",
+                parameters: [
+                        issue: issue,
+                        field: "Priority",
+                        value: value
+                ]
+        )
+    }
+}
+
+listOfTransitions.defaultConfiguration.eachWithIndex { transition, int i ->
+    if(transition == 'delete_issue_by_postfunction_currentIssue') {
+        def currentIssue = createIssues([type: 'Task', summary: transition], 'currentIssue'+ transition)
+        getIssueListBeforeTransition(transition, 'Task')
+        transitionIssue({-> currentIssue[]}, transition)
+        getIssueListAfterTransition(transition, 'Task')
+    }
+    else if(transition == 'delete_issue_by_postfunction_subtask'){
+        def parent = createIssues([type: 'Task', summary: 'JMWE_Issue'], 'parent'+ transition)
+        def subtask = createIssues([type: 'Sub-task', summary: transition, parent: { -> parent[]}], 'Sub-task' + transition)
+        getIssueListBeforeTransition(transition, 'Sub-task')
+        transitionIssue({->parent[]}, transition)
+        getIssueListAfterTransition(transition, 'Sub-task')
+    }
+    else if(transition == 'delete_issue_by_postfunction_parentIssue'){
+        def parent = createIssues([type: 'Task', summary: transition], 'parentIssue'+ transition)
+        def subtask = createIssues([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task'+transition)
+        getIssueListBeforeTransition(transition, 'Task')
+        transitionIssue({->subtask[]}, transition)
+        getIssueListAfterTransition(transition, 'Task')
+    }
+    else if(transition == 'delete_issue_by_postfunction_issueBelongsToEpic'){
+        def epic = createIssues([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic'+ transition)
+        def issueBelongsToEpic = createIssues([type: 'Task', summary: transition, field: "Epic Link", value: {-> epic[]} ], 'BelongsToEpic'+ transition)
+        getIssueListBeforeTransition(transition, 'Task')
+        transitionIssue({->epic[]}, transition)
+        getIssueListAfterTransition(transition, 'Task')
+    }
+    else if(transition == 'delete_issue_by_postfunction_epicOfTheCurrentIssue'){
+        def epic = createIssues([type: 'Epic', summary: transition, field: "Epic Name", value: "JMWE_Issue"], 'EpicIssue'+transition)
+        def issueBelongsToEpic = createIssues([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[]} ], 'IssueBelongsToEpicIssue'+transition)
+        getIssueListBeforeTransition(transition, 'Epic')
+        transitionIssue({->issueBelongsToEpic[]}, transition)
+        getIssueListAfterTransition(transition, 'Epic')
+    }
+    else if(transition == 'delete_issue_by_postfunction_childPortfolio'){
+        def initiative = createIssues([type: 'Initiative', summary: 'JMWE_Issue' ], 'Initiative'+transition)
+        def epic_initiative = createIssues([type: 'Epic', summary: transition, field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative'+transition)
+        updateIssue1([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic before transition_ $transition")
+        getIssueListBeforeTransition(transition, "Epic")
+        transitionIssue({ -> initiative[] }, transition)
+        getIssueListAfterTransition(transition, "Epic")
+    }
+    else if(transition == 'delete_issue_by_postfunction_parentPortfolio'){
+        def initiative = createIssues([type: 'Initiative', summary: transition ], 'InitiativeIssue')
+        def epic_initiative = createIssues([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiativeIssue'+transition)
+        updateIssue1([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic before transition_ $transition")
+        getIssueListBeforeTransition(transition, "Initiative")
+        transitionIssue({->epic_initiative[]}, transition)
+        getIssueListAfterTransition(transition, "Initiative")
+    }
+   else if(transition == 'delete_issue_by_postfunction_linkByAnyLink'){
+        def linkIssue1 = createIssues([type: 'Task', summary: 'JMWE_Issue' ], 'linkIssue1'+transition)
+        def linkIssue2 = createIssues([type: 'Task', summary: transition], 'linkIssue2'+transition)
+        linkIssues([issue: {->linkIssue1[]}, toIssue: {->linkIssue2[]}, link: "blocks"], "by blocks link type To Check Issue link By Any Link Type"+transition)
+        getIssueListBeforeTransition(transition, "Task")
+        transitionIssue({ -> linkIssue1[] }, transition)
+        getIssueListAfterTransition(transition, "Task")
+    }
+    else if(transition == 'delete_issue_by_postfunction_linkByBlock'){
+        def linkIssue1 = createIssues([type: 'Task', summary: 'JMWE_Issue' ], 'linkIssue1'+transition)
+        def linkIssue2 = createIssues([type: 'Task', summary: transition], 'linkIssue2'+transition)
+        linkIssues([issue: {->linkIssue1[]}, toIssue: {->linkIssue2[]}, link: "blocks"], "by blocks link type To Check Issue link By Block Link Type")
+        getIssueListBeforeTransition(transition, "Task")
+        transitionIssue({ -> linkIssue1[] }, transition)
+        getIssueListAfterTransition(transition, "Task")
+    }
+    else if(transition == 'delete_issue_by_postfunction_linkByClones'){
+        def linkIssue1 = createIssues([type: 'Task', summary: 'JMWE_Issue' ], 'linkIssue1'+transition)
+        def linkIssue2 = createIssues([type: 'Task', summary: transition], 'linkIssue2'+transition)
+        linkIssues([issue: {->linkIssue1[]}, toIssue: {->linkIssue2[]}, link: clonesLinkType], "by $clonesLinkType link type To Check Issue link By Clones Link Type")
+        getIssueListBeforeTransition(transition, "Task")
+        transitionIssue({ -> linkIssue1[] }, transition)
+        getIssueListAfterTransition(transition, "Task")
+    }
+    else if(transition == 'delete_issue_by_postfunction_linkByDuplicates'){
+        def linkIssue1 = createIssues([type: 'Task', summary: 'JMWE_Issue' ], 'linkIssue1'+transition)
+        def linkIssue2 = createIssues([type: 'Task', summary: transition], 'linkIssue2'+transition)
+        linkIssues([issue: {->linkIssue1[]}, toIssue: {->linkIssue2[]}, link: "duplicates"], "by Duplicates link type To Check Issue link By Duplicates Link Type")
+        getIssueListBeforeTransition(transition, "Task")
+        transitionIssue({ -> linkIssue1[] }, transition)
+        getIssueListAfterTransition(transition, "Task")
+    }
+    else if(transition == 'delete_issue_by_postfunction_linkByRelatesTo'){
+        def linkIssue1 = createIssues([type: 'Task', summary: 'JMWE_Issue' ], 'linkIssue1'+transition)
+        def linkIssue2 = createIssues([type: 'Task', summary: transition], 'linkIssue2'+transition)
+        linkIssues([issue: {->linkIssue1[]}, toIssue: {->linkIssue2[]}, link: "relates to"], "by Relates To link type To Check Issue link By Relates To Link Type")
+        getIssueListBeforeTransition(transition, "Task")
+        transitionIssue({ -> linkIssue1[] }, transition)
+        getIssueListAfterTransition(transition, "Task")
+    }
+    else if(transition == 'delete_issue_by_postfunction_returnsByNunjucksExpression'){
+        def linkIssue1 = createIssues([type: 'Task', summary: 'JMWE_Issue' ], 'linkIssue1'+transition)
+        def linkIssue2 = createIssues([type: 'Task', summary: transition], 'linkIssue2'+transition)
+        linkIssues([issue: {->linkIssue1[]}, toIssue: {->linkIssue2[]}, link: "blocks"], "by Relates To link type To Check Issue ReturnsByNunjucksExpression")
+        getIssueListBeforeTransition(transition, "Task")
+        transitionIssue({ -> linkIssue1[] }, transition)
+        getIssueListAfterTransition(transition, "Task")
+    }
+    else if(transition == 'delete_issue_by_postfunction_returnsFromJqlSearch'){
+        def linkIssue1 = createIssues([type: 'Task', summary: 'JQL_ISSUE' ], 'linkIssue1'+transition)
+        getIssueListBeforeTransition("JQL_ISSUE", "Task")
+        transitionIssue({ -> linkIssue1[] }, transition)
+        getIssueListAfterTransition("JQL_ISSUE", "Task")
+    }
+}
+
+listOfTransitions.conditionalExecution.eachWithIndex { transition, int i ->
+    if(transition == 'if_condition_true_currentIssue') {
+        def currentIssue1 = createIssues([type: "Task", summary: transition], 'CurrentIssue1'+transition)
+        getIssueListBeforeTransition(transition, "Task")
+        setFieldValue({-> currentIssue1[]},"Low",transition)
+        transitionIssue({ -> currentIssue1[] }, transition)
+        getIssueListAfterTransitionWhenConditionFalse(transition, "Task")
+        setFieldValue({-> currentIssue1[]},"High",transition)
+        transitionIssueWhenConditionTrue({->currentIssue1[]}, transition)
+        getIssueListAfterTransition(transition, "Task")
+    }
+    else if(transition == 'if_condition_true_subtask'){
+        def parent1 = createIssues([type: 'Task', summary: 'JMWE_Issue'], 'parent'+transition)
+        def subtask1 = createIssues([type: 'Sub-task', summary: transition, parent: { -> parent1[]}], 'Sub-task'+transition)
+        getIssueListBeforeTransition(transition, "Sub-task")
+        setFieldValue({-> parent1[]},"Low",transition)
+        transitionIssue({ -> parent1[] }, transition)
+        getIssueListAfterTransitionWhenConditionFalse(transition, "Sub-task")
+        setFieldValue({-> parent1[]},"High",transition)
+        transitionIssueWhenConditionTrue({->parent1[]}, transition)
+        getIssueListAfterTransition(transition, "Sub-task")
+    }
+    else if(transition == 'if_condition_true_parentIssue'){
+        def parent1 = createIssues([type: 'Task', summary: transition], 'parentIssue'+transition)
+        def subtask1 = createIssues([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent1[]}], 'Sub-task'+transition)
+        getIssueListBeforeTransition(transition, "Task")
+        setFieldValue({-> subtask1[]},"Low",transition)
+        transitionIssue({ -> subtask1[] }, transition)
+        getIssueListAfterTransitionWhenConditionFalse(transition, "Task")
+        setFieldValue({-> subtask1[]},"High",transition)
+        transitionIssueWhenConditionTrue({->subtask1[]}, transition)
+        getIssueListAfterTransition(transition, "Task")
+    }
+    else if(transition == 'if_condition_true_issueBelongsToEpic'){
+        def epic = createIssues([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic'+transition)
+        def issueBelongsToEpic = createIssues([type: 'Task', summary: transition, field: "Epic Link", value: {-> epic[]} ], 'BelongsToEpic'+transition)
+        getIssueListBeforeTransition(transition, "Task")
+        setFieldValue({-> epic[]},"Low",transition)
+        transitionIssue({-> epic[] }, transition)
+        getIssueListAfterTransitionWhenConditionFalse(transition, "Task")
+        setFieldValue({-> epic[]},"High",transition)
+        transitionIssueWhenConditionTrue({->epic[]}, transition)
+        getIssueListAfterTransition(transition, "Task")
+    }
+    else if(transition == 'if_condition_true_epicOfTheCurrentIssue'){
+        def epic = createIssues([type: 'Epic', summary: transition, field: "Epic Name", value: "JMWE_Issue"], 'EpicIssue'+transition)
+        def issueBelongsToEpic = createIssues([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[]} ], 'IssueBelongsToEpicIssue'+transition)
+        getIssueListBeforeTransition(transition, "Epic")
+        setFieldValue({-> issueBelongsToEpic[]},"Low",transition)
+        transitionIssue({ -> issueBelongsToEpic[] }, transition)
+        getIssueListAfterTransitionWhenConditionFalse(transition, "Epic")
+        setFieldValue({-> issueBelongsToEpic[]},"High",transition)
+        transitionIssueWhenConditionTrue({->issueBelongsToEpic[]}, transition)
+        getIssueListAfterTransition(transition, "Epic")
+    }
+    else if(transition == 'if_condition_true_childPortfolio'){
+        def initiative = createIssues([type: 'Initiative', summary: 'JMWE_Issue' ], 'Initiative'+transition)
+        def epic_initiative = createIssues([type: 'Epic', summary: transition, field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative'+transition)
+        updateIssue1([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic before transition_ $transition")
+        getIssueListBeforeTransition(transition, "Epic")
+        setFieldValue({-> initiative[]},"Low",transition)
+        transitionIssue({ -> initiative[] }, transition)
+        getIssueListAfterTransitionWhenConditionFalse(transition, "Epic")
+        setFieldValue({-> initiative[]},"High",transition)
+        transitionIssueWhenConditionTrue({->initiative[]}, transition)
+        getIssueListAfterTransition(transition, "Epic")
+    }
+    else if(transition == 'if_condition_true_parentPortfolio'){
+        def initiative = createIssues([type: 'Initiative', summary: transition ], 'InitiativeIssue'+transition)
+        def epic_initiative = createIssues([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiativeIssue'+transition)
+        updateIssue1([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic before transition_ $transition")
+        getIssueListBeforeTransition(transition, "Initiative")
+        setFieldValue({-> epic_initiative[]},"Low",transition)
+        transitionIssue({ -> epic_initiative[] }, transition)
+        getIssueListAfterTransitionWhenConditionFalse(transition, "Initiative")
+        setFieldValue({-> epic_initiative[]},"High",transition)
+        transitionIssueWhenConditionTrue({->epic_initiative[]}, transition)
+        getIssueListAfterTransition(transition, "Initiative")
+    }
+
+    else if(transition == 'if_condition_true_linkByAnyLink'){
+        def linkIssue1 = createIssues([type: 'Task', summary: 'JMWE_Issue' ], 'linkIssue1ToCheckIssuelinkByAnyLinkType'+transition)
+        def linkIssue2 = createIssues([type: 'Task', summary: transition], 'linkIssue2ToCheckIssuelinkByAnyLinkType'+transition)
+        linkIssues([issue: {->linkIssue1[]}, toIssue: {->linkIssue2[]}, link: "blocks"], "by blocks link type To Check Issue link By Any Link Type"+transition)
+        getIssueListBeforeTransition(transition, "Task")
+        setFieldValue({->linkIssue1[]},"Low",transition)
+        transitionIssue({->linkIssue1[]}, transition)
+        getIssueListAfterTransitionWhenConditionFalse(transition, "Task")
+        setFieldValue({->linkIssue1[]},"High",transition)
+        transitionIssueWhenConditionTrue({->linkIssue1[]}, transition)
+        getIssueListAfterTransition(transition, "Task")
+    }
+    else if(transition == 'if_condition_true_linkByBlock'){
+        def linkIssue1 = createIssues([type: 'Task', summary: 'JMWE_Issue' ], 'linkIssue1ToCheckIssuelinkByBlockLinkType'+transition)
+        def linkIssue2 = createIssues([type: 'Task', summary: transition], 'linkIssue2ToCheckIssuelinkByBlockLinkType'+transition)
+        linkIssues([issue: {->linkIssue1[]}, toIssue: {->linkIssue2[]}, link: "blocks"], "by blocks link type To Check Issue link By Block Link Type"+transition)
+        getIssueListBeforeTransition(transition, "Task")
+        setFieldValue({->linkIssue1[]},"Low",transition)
+        transitionIssue({->linkIssue1[]}, transition)
+        getIssueListAfterTransitionWhenConditionFalse(transition, "Task")
+        setFieldValue({->linkIssue1[]},"High",transition)
+        transitionIssueWhenConditionTrue({->linkIssue1[]}, transition)
+        getIssueListAfterTransition(transition, "Task")
+    }
+    else if(transition == 'if_condition_true_linkByClones'){
+        def linkIssue1 = createIssues([type: 'Task', summary: 'JMWE_Issue' ], 'linkIssue1ToCheckIssuelinkByClonesLinkType'+transition)
+        def linkIssue2 = createIssues([type: 'Task', summary: transition], 'linkIssue2ToCheckIssuelinkByClonesLinkType'+transition)
+        linkIssues([issue: {->linkIssue1[]}, toIssue: {->linkIssue2[]}, link: clonesLinkType], "by $clonesLinkType link type To Check Issue link By Clones Link Type"+transition)
+        getIssueListBeforeTransition(transition, "Task")
+        setFieldValue({->linkIssue1[]},"Low",transition)
+        transitionIssue({->linkIssue1[]}, transition)
+        getIssueListAfterTransitionWhenConditionFalse(transition, "Task")
+        setFieldValue({->linkIssue1[]},"High",transition)
+        transitionIssueWhenConditionTrue({->linkIssue1[]}, transition)
+        getIssueListAfterTransition(transition, "Task")
+    }
+    else if(transition == 'if_condition_true_linkByDuplicates'){
+        def linkIssue1 = createIssues([type: 'Task', summary: 'JMWE_Issue' ], 'linkIssue1ToCheckIssuelinkByDuplicatesLinkType'+transition)
+        def linkIssue2 = createIssues([type: 'Task', summary: transition], 'linkIssue2ToCheckIssuelinkByDuplicatesLinkType'+transition)
+        linkIssues([issue: {->linkIssue1[]}, toIssue: {->linkIssue2[]}, link: "duplicates"], "by Duplicates link type To Check Issue link By Duplicates Link Type"+transition)
+        getIssueListBeforeTransition(transition, "Task")
+        setFieldValue({->linkIssue1[]},"Low",transition)
+        transitionIssue({->linkIssue1[]}, transition)
+        getIssueListAfterTransitionWhenConditionFalse(transition, "Task")
+        setFieldValue({->linkIssue1[]},"High",transition)
+        transitionIssueWhenConditionTrue({->linkIssue1[]}, transition)
+        getIssueListAfterTransition(transition, "Task")
+    }
+    else if(transition == 'if_condition_true_linkByRelatesTo'){
+        def linkIssue1 = createIssues([type: 'Task', summary: 'JMWE_Issue' ], 'linkIssue1ToCheckIssuelinkByRelatesToLinkType'+transition)
+        def linkIssue2 = createIssues([type: 'Task', summary: transition], 'linkIssue2ToCheckIssuelinkByRelatesToLinkType'+transition)
+        linkIssues([issue: {->linkIssue1[]}, toIssue: {->linkIssue2[]}, link: "relates to"], "by Relates To link type To Check Issue link By Relates To Link Type"+transition)
+        getIssueListBeforeTransition(transition, "Task")
+        setFieldValue({->linkIssue1[]},"Low",transition)
+        transitionIssue({->linkIssue1[]}, transition)
+        getIssueListAfterTransitionWhenConditionFalse(transition, "Task")
+        setFieldValue({->linkIssue1[]},"High",transition)
+        transitionIssueWhenConditionTrue({->linkIssue1[]}, transition)
+        getIssueListAfterTransition(transition, "Task")
+    }
+    else if(transition == 'if_condition_true_returnsByNunjucksExpression'){
+        def linkIssue1 = createIssues([type: 'Task', summary: 'JMWE_Issue' ], 'linkIssue1ToCheckIssueReturnsByNunjucksExpression'+transition)
+        def linkIssue2 = createIssues([type: 'Task', summary: transition], 'linkIssue2ToCheckIssueReturnsByNunjucksExpression'+transition)
+        linkIssues([issue: {->linkIssue1[]}, toIssue: {->linkIssue2[]}, link: "blocks"], "by Relates To link type To Check Issue ReturnsByNunjucksExpression"+transition)
+        getIssueListBeforeTransition(transition, "Task")
+        setFieldValue({->linkIssue1[]},"Low",transition)
+        transitionIssue({->linkIssue1[]}, transition)
+        getIssueListAfterTransitionWhenConditionFalse(transition, "Task")
+        setFieldValue({->linkIssue1[]},"High",transition)
+        transitionIssueWhenConditionTrue({->linkIssue1[]}, transition)
+        getIssueListAfterTransition(transition, "Task")
+    }
+}
+
+
+
+

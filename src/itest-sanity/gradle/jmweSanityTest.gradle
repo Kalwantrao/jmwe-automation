@@ -1,0 +1,245 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-sanity/sanity.gradle'
+
+String errorMessage = 'test_error_message_during_sanityTesting'
+
+def configFieldsServer = [
+        verify_condition_on_related_issues_checkAssignee : defaultFieldsServer + "selectedLinkType=$linkByRelatesTo" + "conditionMode=requireLinks" + /groovyExpression=issue.get('assignee')?.name == "$user"/ + "minLinkedIssues=1" + "maxLinkedIssues=" + "checkAllLinkedIssues=yes",
+        current_user_should_be_assignee_if_condition_true : defaultFieldsServer + "errorMessage=$errorMessage" + "fromUserType=currentUser" + "isAssignee=yes" + "reverse=" + "conditionMode=all-user-condition" + "fieldEmpty=no" + conditionalValidation.yes,
+        add_comment_to_current_issue_ifConditionTrue : defaultFieldsServer + "valueType=template" + "value=add_comment_to_current_issue_ifConditionTrue" +  "selectedLinkType=$currentIssue" + conditionalExecution.true + runAsUser.currentUser
+]
+
+def configFieldsCloud = [
+        verify_condition_on_related_issues_checkAssignee : defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.assignee && issue.assignee == $testUser\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.assignee && issue.assignee == $testUser)))\"}",
+        current_user_should_be_assignee_if_condition_true : defaultFieldsCloud.validator + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isAssignee\":true},\"errorMessage\":\"$errorMessage\",\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.priority && issue.priority.name == 'High'\",\"expression\":\"let selectedUser = user; (!(!!issue.priority && issue.priority.name == 'High') || (!!user && (false || (!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}",
+        add_comment_to_current_issue_ifConditionTrue : defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.true,\"targetIssue\":\"$currentIssue\",\"comment\":\"add_comment_to_current_issue_ifConditionTrue\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",$runAsUser.currentUser}"
+]
+
+def configFields = info?.isCloud ? configFieldsCloud : configFieldsServer
+
+
+configFields.eachWithIndex { key, value, i ->
+    def type;
+    def functionKey;
+    if(key == 'verify_condition_on_related_issues_checkAssignee'){
+        type = 'condition'
+        functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__LinkedIssuesCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linked-issues-condition'
+    }else if(key == 'current_user_should_be_assignee_if_condition_true'){
+        type ='validator'
+        functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__UserValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-validator'
+    }else if(key == 'add_comment_to_current_issue_ifConditionTrue'){
+        type = 'postfunction'
+        functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__CommentIssueFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function'
+    }
+    gint.taskHelper.addSetUp([
+            [action    : 'addTransition',
+             ext: ':' + key,
+             retry: true,
+             retrySleep: 5000,
+             parameters: [
+                     workflow: projectName,
+                     name    : key,
+                     step    : info?.isCloud ? startStepCloud : startStepServer,
+                     screen  : screen
+             ]
+            ],
+            [action    : 'addTransitionFunction',
+             ext: ':' + key,
+             retry: true,
+             retrySleep: 5000,
+             parameters: [
+                     workflow   : projectName,
+                     transition : key,
+                     functionKey: functionKey,
+                     type       : type,
+                     step       : info?.isCloud ? startStepCloud : startStepServer,
+                     field      : value
+             ],
+            ],
+    ])
+
+}
+
+createWorkflowSchemeForSanityTest()
+createProject()
+
+
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
+def toIssueLink = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'toIssueLink')
+
+// Condition
+[
+        'verify_condition_on_related_issues_checkAssignee',
+].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'linkIssue',
+                 ext       : ":relates to link type to check $it _:RELATED_ISSUES_CONDITION_SANITY:",
+                 sleep: info?.isCloud? 5000 : 500,
+                 parameters: [
+                         issue  : { -> issueLinks[] },
+                         toIssue: { -> toIssueLink[] },
+                         link   : 'relates to'
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ":By $it _RELATED_ISSUES_CONDITION_SANITY_ when current issue not having at least 1 issues linked to it through the relates to link type which respect the following condition_issue must have assignee $testUser:",
+                 expected  : -1,
+                 sleep     : info?.isCloud? 5000 : 500,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'assignIssue',
+                 ext       : ":to_$user _before transition issue with_$it:RELATED_ISSUES_CONDITION_SANITY:",
+                 sleepAfter: info?.isCloud? 5000 : 500,
+                 parameters: [
+                         issue   : { -> toIssueLink[] },
+                         assignee: user,
+                 ],
+                ],
+                [action    : 'assignIssue',
+                 ext       : ": current issue to_ $user before transition issue with_$it:RELATED_ISSUES_CONDITION_SANITY:",
+                 sleepAfter: info?.isCloud? 5000 : 500,
+                 parameters: [
+                         issue   : { -> issueLinks[] },
+                         assignee: user,
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ":By $it _RELATED_ISSUES_CONDITION_SANITY_when current issue having at least 1 issues linked to it through the relates to link type which respect the following condition_issue must have assignee $testUser:",
+                 expected  : 0,
+                 sleep     : info?.isCloud? 5000 : 500,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'assignIssue',
+                 ext: ": to _ UNASSIGNED issue- after_ $it :RELATED_ISSUES_CONDITION_SANITY",
+                 sleep: info?.isCloud? 5000 : 500,
+                 parameters: [
+                         issue   : { -> toIssueLink[] },
+                         assignee: " ",
+                 ],
+                ],
+                [action    : 'deleteLink',
+                 ext       : ": by relates to link type to check $it _:RELATED_ISSUES_CONDITION_SANITY",
+                 sleep: info?.isCloud? 5000 : 500,
+                 parameters: [
+                         issue  : { -> issueLinks[] },
+                         toIssue: { -> toIssueLink[] },
+                         link   : 'relates to'
+                 ],
+                ],
+        ])
+    }
+}
+
+//Validators
+[
+        'current_user_should_be_assignee_if_condition_true'
+].each {
+    ["High","Low"].eachWithIndex { priority, idx ->
+        def expected;
+        if(priority == "High" ){
+            expected = -3
+        }
+        else {
+            expected = 0
+        }
+        gint.taskHelper.add([
+                [action: 'setFieldValue' ,
+                 ext: " : Of priority to $priority to current issue before transition issue with $it:USER_VALIDATOR_SANITY:",
+                 sleep: defaultSleepTime,
+                 parameters: [
+                         issue: { -> issueLinks[] },
+                         field : "Priority",
+                         value: priority
+                 ],
+                ],
+                [action    : 'setFieldValue',
+                 sleep: sleep,
+                 ext       : ":Of assignee to $testUser _before transition issue with_ $it :when priority is $priority:USER_VALIDATOR_SANITY:",
+                 parameters: [
+                         issue: { -> issueLinks[] },
+                         field: "Assignee",
+                         value: testUser
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 sleep: sleep,
+                 ext       : ":USER_VALIDATOR_TS_51_TC_01_Case_01_ $it _when assignee is $testUser and current user is $user:when priority is $priority:USER_VALIDATOR_SANITY:",
+                 expected  : expected,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: it,
+                 ],
+                ],
+        ])
+    }
+}
+
+// Postfunction
+[
+        'add_comment_to_current_issue_ifConditionTrue',
+].each {
+    ["Low","High"].eachWithIndex { priority, idx ->
+        gint.taskHelper.add([
+                [action: 'setFieldValue' ,
+                 ext: " : Of priority to $priority to current issue before transition issue with $it:COMMENT_ISSUE_POSTFUNCTION_SANITY:",
+                 sleep: defaultSleepTime,
+                 parameters: [
+                         issue: { -> issueLinks[] },
+                         field : "Priority",
+                         value: priority
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ":By_ $it _:when priority is $priority:COMMENT_ISSUE_POSTFUNCTION_SANITY",
+                 sleep     : info?.isCloud? 5000 : 500,
+                 parameters: [
+                         issue     : { -> issueLinks[] },
+                         transition: it,
+                 ]
+                ],
+        ])
+        if(priority == "High") {
+            gint.taskHelper.add([
+                    [action      : 'getComments',
+                     ext         : ":verify the comments added by postfunction after transition issue with_ $it _when issue priority is_ $priority:COMMENT_ISSUE_POSTFUNCTION_SANITY:",
+                     sleep       : defaultSleepTime,
+                     parameters  : [
+                             issue: { -> issueLinks[] }
+                     ],
+                     data        : [/$it/],
+                    ]
+            ])
+        } else {
+            gint.taskHelper.add([
+                    [action      : 'getComments',
+                     ext         : ":verify the comments added by postfunction after transition issue with_ $it _when issue priority is_ $priority:COMMENT_ISSUE_POSTFUNCTION_SANITY:",
+                     sleep       : defaultSleepTime,
+                     parameters  : [
+                             issue: { -> issueLinks[] }
+                     ],
+                     failData        : [/$it/],
+                    ]
+            ])
+        }
+    }
+}

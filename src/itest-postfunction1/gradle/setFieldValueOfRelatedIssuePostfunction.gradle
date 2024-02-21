@@ -10,7 +10,8 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction1.gradle'
 
 def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__SetFieldValueOfLinkedIssuesFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:SetFieldValueOfLinkedIssues-function'
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
@@ -426,6 +427,7 @@ relatedIssuesMap.take(1).eachWithIndex{ key, targetIssue,  i ->
         'runAsUserInFieldReporter',
         'runAsUserInFieldCreator',
         'runAsUserInFieldAssignee',
+        'runAsSpecificUser',
         //'runAsUserReturnFromScript',
 ].each {
     relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
@@ -453,33 +455,7 @@ relatedIssuesMap.take(1).eachWithIndex{ key, targetIssue,  i ->
     }
 }
 
-[
-        'runAsSpecificUser'
-].each {
-    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
-        gint.taskHelper.add([
-                [action    : 'transitionIssue',
-                 sleep: info?.isCloud ? 5000 : 0,
-                 ext: ':check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF :' + it + i,
-                 parameters: [
-                         issue     : currentIssue,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getIssueHistoryList',
-                 sleep: info?.isCloud ? 5000 : 0,
-                 ext       : ": " + it + i,
-                 parameters: [
-                         issue: targetIssue,
-                         outputType: "text",
-                         select: ["Author:$testUser","Field:labels"],
-                         columns: "Author,Field,'To String'"
-                 ],
-                 data      : ["$testUser", "labels", "$it"],
-                ],
-        ])
-    }
-}
+
 ['conditionalExecution'].each {
     relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
         gint.taskHelper.add([

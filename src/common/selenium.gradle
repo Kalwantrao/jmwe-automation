@@ -1,0 +1,120 @@
+//gradle -b src/itest-selenium/selenium.gradle -Dbrowser=firefox -Ddelay=3
+
+buildscript {
+    repositories {
+        flatDir { dirs '../../libs' }
+        mavenLocal()
+        maven { url 'https://plugins.gradle.org/m2/' }
+    }
+    dependencies { classpath 'org.gint:gint-atlassian:3.8.4'  }
+    project.ext.seleniumVersion = findProperty('seleniumVersion') ?: System.getenv('SELENIUM_VERSION') ?: '3.14.+'
+    dependencies { // needed here for selenium testing :(
+        ['java', 'support', 'firefox-driver', 'chrome-driver', 'safari-driver', 'edge-driver'].each { entry ->
+            classpath 'org.seleniumhq.selenium:selenium-' + entry + ':' + seleniumVersion
+        }
+    }
+}
+apply plugin: 'org.gint.atlassian'
+
+def info = gint.getJiraHelper().getServerInfoWithVerify()
+def userName = info?.isCloud ? testUserNameCloud : testUserNameServer
+def password = info?.isCloud ? testUserPasswordCloud : testUserPasswordServer
+gint.getJiraHelper().getSeleniumHelper()
+gint.seleniumHelper.addInitializeTask()
+ext.driver = gint.seleniumHelper
+gint.helper.log 'selenium helper', gint.seleniumHelper.class.name
+
+if (!info?.isCloud) {
+    gint.seleniumHelper.addLoginTask(
+            serverInfo: info,
+            sleep: 5000,
+            user: userName,
+            password: password,
+            adminLogin: true,
+    )
+}
+else {
+    gint.getSeleniumHelper().setFindDefaultParameters(wait: gint.helper.getIntegerParameterValue('wait', 30))
+    gint.seleniumHelper.setDelay(20000)
+    gint.getSeleniumHelper().addLoginTask(
+            serverInfo: info,
+            user: userName,
+            password: password,
+            verbose: false,
+            adminLogin: true,
+    )
+}
+
+gint.taskHelper.add(
+        dependsOn: true,
+        inline: {
+            gint.seleniumHelper.gotoUrl(url: info?.url)
+        }
+)
+
+def xpath = [
+        clickTransitionTab : info?.isCloud? "//div[@data-testid='issue.views.issue-base.foundation.status.actions-wrapper']" : "//a[@id='opsbar-transitions_more']",
+]
+
+ext.navigateToIssue = { issueKey,ext ->
+    gint.taskHelper.add(
+            name: "navigateToIssue to check _$ext",
+            sleep: 2000,
+            dependsOn: true,
+            inline: {
+                gint.helper.log("opening issue screen", "to transition issue")
+                gint.seleniumHelper.gotoUrl(url: "${info?.url}/browse/${issueKey}")
+            }
+    )
+}
+
+ext.clickOnTransitionTab = { issueKey, transition, ext ->
+    gint.taskHelper.add(
+            name: "clickOnTransitionTab_ to find the transition $transition in dropdown_$ext",
+            sleep: 5000,
+            dependsOn: true,
+            inline: {
+                gint.helper.log("open transitions dropdown", "to transition issue")
+                driver.findAndClickElement(xpath:xpath.clickTransitionTab, type:"xpath")
+                sleep(1000);
+            }
+    )
+}
+
+ext.clickOnTransition = { transition, ext ->
+    gint.taskHelper.add(
+            name: "clickOnTransition_$transition :$ext",
+            sleep: 5000,
+            dependsOn: true,
+            inline: {
+                gint.helper.log("selecting transition", transition)
+                driver.findAndClickElement(xpath:"//*[contains(text(),'$transition')]", type:"xpath")
+                sleep(3000);
+            }
+    )
+}
+
+ext.transitionIssueSubmit = { transition,ext ->
+    gint.taskHelper.add(
+            name: "transitionIssueSubmit_$transition:$ext",
+            sleepAfter: 5000,
+            dependsOn: true,
+            inline: {
+                gint.helper.log("transitioning issue by transition", transition)
+                driver.findAndClickElement(id:'issue-workflow-transition-submit', type:"id")
+                sleep(5000);
+            }
+    )
+}
+
+ext.closeFlagMessage = { transition ->
+    gint.taskHelper.add(
+            name: "close the Flag_Message displayed by postfunction_$transition",
+            dependsOn: true,
+            inline: {
+                gint.helper.log("closing the flag message displayed by postfunction after transition issue by", transition)
+                driver.findAndClickElement(xpath:"//a[@class='aui-button aui-button-link flag-action-link']", type:"xpath")
+                sleep(1000);
+            }
+    )
+}

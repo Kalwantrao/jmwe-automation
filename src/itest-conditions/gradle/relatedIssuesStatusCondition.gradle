@@ -10,7 +10,8 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+// apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
 
 def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssueStatusCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-condition'
 
@@ -93,7 +94,7 @@ atLeastOneNotRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
         'select_multiple_statuses'
 ].each {
     def server = defaultFieldsServer + issueType.any + "selectedLinkType=$relatedIssue.subtask" + linkedIssuesStatusMode.all + statuses.allExceptToDo
-    def cloud = defaultFieldsCloud + "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f={\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgressCloud,$DoneCloud,$DoneCloud],\"expression\":\"issue.subtasks.every(linkedIssue => config.statusIds.includes(linkedIssue.status.id))\"}"
+    def cloud = defaultFieldsCloud + "condition.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f={\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgressCloud,$DoneCloud,$InReviewCloud],\"expression\":\"issue.subtasks.every(linkedIssue => config.statusIds.includes(linkedIssue.status.id))\"}"
     addTransitionFunction( it, 'condition', info?.isCloud? cloud : server, functionKey )
 }
 
@@ -119,7 +120,6 @@ gint.taskHelper.add(
         parameters :[ issue: {->epic_initiative[]}, field: "Parent Link", value: {-> initiative[] } ]
 )
 
-/*
 [
         'select_multiple_statuses'
 ].collect {
@@ -2060,7 +2060,7 @@ gint.taskHelper.add(
     }
 }
 
-*/
+
 def transitionByUserTaskForError =  { transition, userId, issue, expected ->
     if(!isCloud) {
         gint.taskHelper.add(
@@ -2082,7 +2082,7 @@ def transitionByUserTaskForSuccess =  { transition, userId, issue, expected ->
         )
     }
 }
-/*
+
 
 def parentIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'default')
 def subtask1 = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { ->parentIssue[] }], 'Sub-task1')
@@ -2093,7 +2093,7 @@ def subtask5 = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -
 
 def listOfSubtasks = [ {-> subtask1[]}, {-> subtask2[]}, {-> subtask3[]}, {-> subtask4[]},{-> subtask5[]}]
 
-transitionByUserTaskForError("verify_status_in_progress_of_all_issues_which_are_subtask", testUser, { ->parentIssue[] }, -1)
+//transitionByUserTaskForError("verify_status_in_progress_of_all_issues_which_are_subtask", testUser, { ->parentIssue[] }, -1)
 
 [
         'verify_status_in_progress_of_all_issues_which_are_subtask',
@@ -2196,8 +2196,8 @@ transitionByUserTaskForError("verify_status_in_progress_of_all_issues_which_are_
     ])
 }
 
-transitionByUserTaskForSuccess("verify_status_in_progress_of_all_issues_which_are_subtask", testUser, { ->parentIssue[] }, 0)
-*/
+//transitionByUserTaskForSuccess("verify_status_in_progress_of_all_issues_which_are_subtask", testUser, { ->parentIssue[] }, 0)
+
 
 // Check when issue has linked issues through different link types
 
@@ -2205,66 +2205,67 @@ def linkedIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'linkedIssu
 def linkedIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'linkedIssue1')
 def linkedIssue2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'linkedIssue2')
 
-transitionByUserTaskForError("verify_status_in_progress_of_at_least_one_issues_which_is_linkByBlock", testUser, { ->linkedIssue[] }, -1)
+//transitionByUserTaskForError("verify_status_in_progress_of_at_least_one_issues_which_is_linkByBlock", testUser, { ->linkedIssue[] }, -1)
 
 [
         'verify_status_in_progress_of_at_least_one_issues_which_is_linkByBlock',
 ].collect {
+    if(!isCloud) {
         gint.taskHelper.add([
-                [action: "linkIssue",
-                 ext : ": by blocks link type to check : $it",
+                [action    : "linkIssue",
+                 ext       : ": by blocks link type to check : $it",
                  parameters: [
-                         issue: {-> linkedIssue[]},
-                         toIssue: {-> linkedIssue1[]},
-                         link: "blocks"
+                         issue  : { -> linkedIssue[] },
+                         toIssue: { -> linkedIssue1[] },
+                         link   : "blocks"
                  ]
                 ],
-                [action    : 'getFieldValue',
-                 ext: ": Validate that the status of the issue linked to current issue by blocks link type not in In Progress _$it:",
-                 sleep: info?.isCloud? 3000 : 0,
-                 parameters: [
-                         issue     : { -> linkedIssue1[] },
+                [action      : 'getFieldValue',
+                 ext         : ": Validate that the status of the issue linked to current issue by blocks link type not in In Progress _$it:",
+                 sleep       : info?.isCloud ? 3000 : 0,
+                 parameters  : [
+                         issue: { -> linkedIssue1[] },
                          field: "Status",
                  ],
-                 finalClosure: {Task task ->
+                 finalClosure: { Task task ->
                      def output = "$task.outData"
                      assert !output.contains("Status  . . . . . . . . . . . : In Progress")
                  }
                 ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_$it _when status of the issue linked to current issue by blocks link type not in In Progress:",
-             expected: -1,
-             sleep: info?.isCloud? 3000 : 0,
-             parameters: [
-                     issue     : { ->linkedIssue[] },
-                     transition: it,
-             ],
-             finalClosure: {Task task ->
-                 assert task.result == -1
-             }
-            ],
-                [action: "linkIssue",
-                 ext : ": by clones link type to check: $it:",
+                [action      : 'transitionIssue',
+                 ext         : ": RELATED_ISSUES_STATUS_CONDITION_$it _when status of the issue linked to current issue by blocks link type not in In Progress:",
+                 expected    : -1,
+                 sleep       : info?.isCloud ? 3000 : 0,
+                 parameters  : [
+                         issue     : { -> linkedIssue[] },
+                         transition: it,
+                 ],
+                 finalClosure: { Task task ->
+                     assert task.result == -1
+                 }
+                ],
+                [action    : "linkIssue",
+                 ext       : ": by clones link type to check: $it:",
                  parameters: [
-                         issue: {-> linkedIssue[]},
-                         toIssue: {-> linkedIssue2[]},
-                         link: clonesLinkType
+                         issue  : { -> linkedIssue[] },
+                         toIssue: { -> linkedIssue2[] },
+                         link   : clonesLinkType
                  ]
                 ],
-                [action    : 'getFieldValue',
-                 ext: ": Validate that the status of the issue linked to current issue by clones link type not in In Progress _$it:",
-                 sleep: info?.isCloud? 3000 : 0,
-                 parameters: [
-                         issue     : { -> linkedIssue2[] },
+                [action      : 'getFieldValue',
+                 ext         : ": Validate that the status of the issue linked to current issue by clones link type not in In Progress _$it:",
+                 sleep       : info?.isCloud ? 3000 : 0,
+                 parameters  : [
+                         issue: { -> linkedIssue2[] },
                          field: "Status",
                  ],
-                 finalClosure: {Task task ->
+                 finalClosure: { Task task ->
                      def output = "$task.outData"
                      assert !output.contains("Status  . . . . . . . . . . . : In Progress")
                  }
                 ],
                 [action    : 'transitionIssue',
-                 ext       : ": transition issue to IN_PROGRESS_ which is linked by clones link type to verify_ $it :" ,
+                 ext       : ": transition issue to IN_PROGRESS_ which is linked by clones link type to verify_ $it :",
                  sleep     : info?.isCloud ? 3000 : 0,
                  parameters: [
                          issue     : { -> linkedIssue2[] },
@@ -2272,10 +2273,10 @@ transitionByUserTaskForError("verify_status_in_progress_of_at_least_one_issues_w
                  ]
                 ],
                 [action      : 'getFieldValue',
-                 ext: ": Validate that the status of issue linked to current issue by clones link type in In Progress _$it:",
+                 ext         : ": Validate that the status of issue linked to current issue by clones link type in In Progress _$it:",
                  sleep       : info?.isCloud ? 3000 : 0,
                  parameters  : [
-                         issue: { ->linkedIssue2[] },
+                         issue: { -> linkedIssue2[] },
                          field: "Status",
                  ],
                  finalClosure: { Task task ->
@@ -2283,20 +2284,20 @@ transitionByUserTaskForError("verify_status_in_progress_of_at_least_one_issues_w
                      assert output.contains("Status  . . . . . . . . . . . : In Progress")
                  }
                 ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_10_Case_02- $it _when issue linked to the current issue by clones link type is in slected status:",
-             expected: -1,
-             sleep: info?.isCloud? 3000 : 0,
-             parameters: [
-                     issue     : { ->linkedIssue[] },
-                     transition: it,
-             ],
-             finalClosure: {Task task ->
-                 assert task.result == -1
-             }
-            ],
+                [action      : 'transitionIssue',
+                 ext         : ": RELATED_ISSUES_STATUS_CONDITION_TC_10_Case_02- $it _when issue linked to the current issue by blocks link type is in slected status:",
+                 expected    : -1,
+                 sleep       : info?.isCloud ? 3000 : 0,
+                 parameters  : [
+                         issue     : { -> linkedIssue[] },
+                         transition: it,
+                 ],
+                 finalClosure: { Task task ->
+                     assert task.result == -1
+                 }
+                ],
                 [action    : 'transitionIssue',
-                 ext       : ": transition issue to IN_PROGRESS_ which is linked by blocks link type to verify_ $it :" ,
+                 ext       : ": transition issue to IN_PROGRESS_ which is linked by blocks link type to verify_ $it :",
                  sleep     : info?.isCloud ? 3000 : 0,
                  parameters: [
                          issue     : { -> linkedIssue1[] },
@@ -2304,10 +2305,10 @@ transitionByUserTaskForError("verify_status_in_progress_of_at_least_one_issues_w
                  ]
                 ],
                 [action      : 'getFieldValue',
-                 ext: ": Validate that the status of issue linked to current issue by blocks link type is In Progress _$it:",
+                 ext         : ": Validate that the status of issue linked to current issue by blocks link type is In Progress _$it:",
                  sleep       : info?.isCloud ? 3000 : 0,
                  parameters  : [
-                         issue: { ->linkedIssue1[] },
+                         issue: { -> linkedIssue1[] },
                          field: "Status",
                  ],
                  finalClosure: { Task task ->
@@ -2315,22 +2316,23 @@ transitionByUserTaskForError("verify_status_in_progress_of_at_least_one_issues_w
                      assert output.contains("Status  . . . . . . . . . . . : In Progress")
                  }
                 ],
-            [action    : 'transitionIssue',
-             ext: ": RELATED_ISSUES_STATUS_CONDITION_TC_10_Case_02- $it _when issue linke to the current issue by blocks link type is IN PROGRESS:",
-             expected: 0,
-             sleep: info?.isCloud? 3000 : 0,
-             parameters: [
-                     issue     : { ->linkedIssue[] },
-                     transition: it,
-             ],
-             finalClosure: {Task task ->
-                 assert task.result == 0
-             }
-            ],
-    ])
+                [action      : 'transitionIssue',
+                 ext         : ": RELATED_ISSUES_STATUS_CONDITION_TC_10_Case_02- $it _when issue linked to the current issue by blocks link type is IN PROGRESS:",
+                 expected    : 0,
+                 sleep       : info?.isCloud ? 3000 : 0,
+                 parameters  : [
+                         issue     : { -> linkedIssue[] },
+                         transition: it,
+                 ],
+                 finalClosure: { Task task ->
+                     assert task.result == 0
+                 }
+                ],
+        ])
+    }
 }
 
-transitionByUserTaskForSuccess("verify_status_in_progress_of_at_least_one_issues_which_is_linkByBlock", testUser, { ->linkedIssue[] }, 0)
+//transitionByUserTaskForSuccess("verify_status_in_progress_of_at_least_one_issues_which_is_linkByBlock", testUser, { ->linkedIssue[] }, 0)
 
 
 

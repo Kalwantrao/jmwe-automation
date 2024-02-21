@@ -10,7 +10,10 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+// apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
+
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ScriptedCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-condition'
 
 def cloudFields = [
 		"condition.id=e96e5f36-5d19-4cd7-b8d7-f13bfb41877d",
@@ -20,7 +23,6 @@ def cloudFields = [
 // create transition and configure the condition to it with required options
 
 ['issueMustBeAssignedToSpecificUser'].each {
-	def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ScriptedCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-condition'
 	def fields = info?.isCloud ? cloudFields : defaultFieldsServer + "scriptDescription=" + /groovyExpression=issue.getAsString('assignee') == "$testUser"/
 	addTransitionFunction(it, 'condition', fields, functionKey )
 }

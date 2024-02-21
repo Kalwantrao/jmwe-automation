@@ -1,0 +1,30 @@
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+
+project.ext.projectName='SANITY'
+project.ext.workflowScheme = projectName
+project.ext.workflow = projectName
+project.ext.jqlSearchExpression="project = $projectName and issuetype = Task and summary~JQL_ISSUE"
+
+relatedIssue.put('returnsFromJqlSearch', "jql:$jqlSearchExpression")
+
+tearDown(projectName)
+
+gint.taskHelper.addTearDown([
+        [action: 'deleteWorkflowScheme', ext: ":sanity:",
+         parameters: [
+                 workflowScheme: projectName
+         ]
+        ],
+        [
+                action       : 'deleteWorkflow' ,ext: ":sanity:",
+                dependsOn: true,
+                parameters   : [workflow: projectName]
+        ],
+])
+gint.taskHelper.addSetUp([
+        [
+                action       : 'copyWorkflow' ,
+                parameters   : [workflow: baseWorkflow, name: projectName]
+        ],
+]
+)

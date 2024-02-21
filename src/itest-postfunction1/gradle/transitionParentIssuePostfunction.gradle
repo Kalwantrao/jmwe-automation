@@ -10,8 +10,8 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/utils.gradle'
-
+//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction1.gradle'
 
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
 def templateComment = "test_comment"
@@ -402,7 +402,6 @@ gint.taskHelper.add(
             ]
 )
 [
-        'runAsSpecificUser',
         'runAsUserInFieldAssignee'
 ].each {
         gint.taskHelper.add([
@@ -446,7 +445,8 @@ gint.taskHelper.add(
 [
         'runAsUserInFieldReporter',
         'runAsUserInFieldCreator',
-        'runAsUserFromScript'
+        'runAsUserFromScript',
+        'runAsSpecificUser',
 ].each {
         gint.taskHelper.add([
                 [action    : 'transitionIssue',

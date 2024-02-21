@@ -10,34 +10,40 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+// apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-postfunctions/postfunction.gradle'
 
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
 relatedIssue.remove("currentIssue")
 def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ClearFieldsOfLinkedIssuesFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:ClearFieldValueOfLinkedIssues-function'
 
-def defaultFieldsCloud= [
-        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249"
-]
-
-def fields = [
+def fieldsServer = [
         labels : [ "fields=labels"],
         components : [ "fields=components"],
         fixVersions : [ "fields=fixVersions"],
         affectsVersions : [ "fields=versions"],
         assignee : [ "fields=assignee"]
 ]
+def fieldsCloud = [
+        labels : /"fields":"labels"/,
+        components : /"fields":"components"/,
+        fixVersions : /"fields":"fixVersions"/,
+        affectsVersions : /"fields":"versions"/,
+        assignee : /"fields":"assignee"/
+]
+
+def fields = info?.isCloud ? fieldsCloud : fieldsServer
 
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'clearFieldLabel'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"fields\":\"labels\",\"runAsType\":\"addonUser\"}"
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.labels,$runAsUser.currentUser}"
     def server = defaultFieldsServer + fields.labels + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsSpecificUser'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"fields\":\"components\",\"runAsType\":\"thisUser\",\"runAs\":\"accountId:$testUserIdCloud\"}"
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.components,$runAsUser.specificUser}"
     def server = defaultFieldsServer + fields.components + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.specificUser
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
@@ -47,7 +53,7 @@ relatedIssue.eachWithIndex { key, value, i ->
 
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldAssignee'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"fields\":\"fixVersions\",\"runAsType\":\"userField\",\"runAsField\":\"assignee\"}"
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.fixVersions,$runAsUser.userInFieldAssignee}"
     def server = defaultFieldsServer +fields.fixVersions + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldAssignee
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
@@ -57,7 +63,7 @@ relatedIssue.eachWithIndex { key, value, i ->
 
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldReporter'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"fields\":\"assignee\",\"runAsType\":\"userField\",\"runAsField\":\"reporter\"}"
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.assignee,$runAsUser.userInFieldReporter}"
     def server = defaultFieldsServer +fields.assignee + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldReporter
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
@@ -67,7 +73,7 @@ relatedIssue.eachWithIndex { key, value, i ->
 
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldCreator'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"fields\":\"versions\",\"runAsType\":\"userField\",\"runAsField\":\"creator\"}"
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.affectsVersions,$runAsUser.userInFieldCreator}"
     def server = defaultFieldsServer +fields.affectsVersions + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldCreator
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
@@ -77,7 +83,7 @@ relatedIssue.eachWithIndex { key, value, i ->
 
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'clearFieldsIfConditionalExecutionTrue'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":true,\"conditionalExecutionScript\":\"{{ issue.fields.priority.name == 'High' }}\",\"targetIssue\":\"$value\",\"fields\":\"labels\",\"runAsType\":\"addonUser\"}"
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.true,\"selectedLinkType\":\"$value\",$fields.labels,$runAsUser.currentUser}"
     def server = defaultFieldsServer + fields.labels + "selectedLinkType=$value" + conditionalExecution.true + runAsUser.currentUser
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
@@ -129,7 +135,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
     linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
 }
 
-def relatedIssuesMap = [
+def relatedIssuesMapServer = [
         {->parent[]} : {->subtask[]},
         {->subtask[]} : {->parent[]},
         {->epic[]} : {->issueBelongsToEpic[]},
@@ -147,6 +153,24 @@ def relatedIssuesMap = [
         {->relatesTo[]} : {->issueLinks[]},
         {->issueLinks[]} : {->jqlIssue[]}
 ]
+def relatedIssuesMapCloud = [
+        {->parent[]} : {->subtask[]},
+        {->subtask[]} : {->parent[]},
+        {->epic[]} : {->issueBelongsToEpic[]},
+        {->issueBelongsToEpic[]} : {->epic[]},
+        {-> initiative[]} : {->epic_initiative[]},
+        {->epic_initiative[]} : {-> initiative[]},
+        {->blocks[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->blocks[]},
+        {->blocks[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->clones[]},
+        {->clones[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->duplicates[]},
+        {->duplicates[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->relatesTo[]},
+]
+
+def relatedIssuesMap = info?.isCloud? relatedIssuesMapCloud : relatedIssuesMapServer
 
 def testLabel = 'test_label'
 int fixVersions = 1
@@ -250,7 +274,7 @@ def component = 'component1'
                  }
                 ],
                 [action    : 'getIssueHistoryList',
-                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_26_TC_ $i _to check $it _ Verify the run as specific user: ",
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_26_TC_ $i _to check $it$i _ Verify the run as specific user: ",
                 sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
@@ -258,10 +282,10 @@ def component = 'component1'
                          select: "Field:Component",
                          columns: "Author,'From String','To String'"
                  ],
-                 data      : ["$testUser","$component", ""],
+                 data      : ["$getCurrentUserName","$component", ""],
                  finalClosure:{Task task ->
                      def output = "$task.outData"
-                     assert output.contains(testUser) && output.contains(component) && output.contains(" ")
+                     assert output.contains(getCurrentUserName) && output.contains(component) && output.contains(" ")
                  }
                 ],
         ])
@@ -442,6 +466,7 @@ def component = 'component1'
         'runAsUserInFieldCreator'
 ].each {
     def userInFieldCreator1 = info?.isCloud? info?.userDisplayName : user
+    def affectsVersionToCheck = info?.isCloud? "Affects versions  . . . . . . : $affectsVersions" : "Affects Version/s . . . . . . : $affectsVersions"
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action: 'updateIssue',
@@ -453,7 +478,7 @@ def component = 'component1'
                  ]
                 ],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the before transition value of field affects versions should be: $fixVersions :$it$i",
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the before transition value of field affects versions should be: $affectsVersions :$it$i",
                 sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
@@ -461,7 +486,7 @@ def component = 'component1'
                  ],
                  finalClosure:{Task task ->
                      def actualValue = "$task.outData"
-                     assert actualValue.contains("Affects Version/s . . . . . . : $affectsVersions")
+                     assert actualValue.contains(affectsVersionToCheck)
                  }
                 ],
                 [action    : 'transitionIssue',
@@ -604,8 +629,6 @@ def component = 'component1'
         }
     }
 }
-
-
 
 
 /*

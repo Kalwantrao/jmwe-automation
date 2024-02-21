@@ -10,7 +10,8 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-postfunctions/postfunction.gradle'
 
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:AddFieldValueToParent-function'
 
@@ -36,20 +37,22 @@ createWorkflowScheme()
 createProject()
 
 (1..2).each {
-    gint.taskHelper.addSetUp([
-            [action: 'addVersion', ext: ': create versions : ' + it,
-             parameters: [
-                     project: projectName,
-                     version: it
-             ]
-            ],
-            [action: 'addComponent', ext: ': create Component : ' + it,
-             parameters: [
-                     project: projectName,
-                     component: 'component' + it
-             ],
-            ]
-    ])
+    if(!isCloud) {
+        gint.taskHelper.addSetUp([
+                [action    : 'addVersion', ext: ': create versions : ' + it,
+                 parameters: [
+                         project: projectName,
+                         version: it
+                 ]
+                ],
+                [action    : 'addComponent', ext: ': create Component : ' + it,
+                 parameters: [
+                         project  : projectName,
+                         component: 'component' + it
+                 ],
+                ]
+        ])
+    }
 }
 
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')

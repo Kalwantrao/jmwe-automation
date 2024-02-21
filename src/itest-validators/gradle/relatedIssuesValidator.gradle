@@ -10,13 +10,14 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
 def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssuesValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:issue-linking-validator'
 def errorMessage = "Check link issues"
 
 def defaultFieldsCloud= [
-		"validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a",
+		"validator.id=ba2aae99-33c1-422b-933c-3c16e0739d3a",
 ]
 
 def defaultFieldsServer = [
@@ -56,7 +57,7 @@ def linkedIssuesMode = [
 
 requireRelatedIssue.eachWithIndex { key, value, i ->
 	def transition = 'verify_require_certain_related_issues_' + key
-	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a=$value"
+	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-33c1-422b-933c-3c16e0739d3a=$value"
 	def server = defaultFieldsServer + "selectedLinkType=$value" + linkedIssuesMode.requireLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
 	addTransitionFunction(transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
@@ -82,6 +83,13 @@ requireRelatedIssue.eachWithIndex { key, value, i ->
 	}
 }
 
+['Verify_Issue_constraints_min_two_max_two_linkByRelatesTo'].each {
+	def server = defaultFieldsServer + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireLinks + issueConstraints.minTwoMaxTwo + verifyAllLinkedIssues.yes
+	if(!isCloud){
+		addTransitionFunction(it , 'validator', server, functionKey)
+	}
+}
+
 ['verify_condition_on_related_issues_checkAssignee'].each {
 	def server = defaultFieldsServer + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireSpecificLinkedIssues + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
 	if(!isCloud) {
@@ -91,20 +99,20 @@ requireRelatedIssue.eachWithIndex { key, value, i ->
 
 checkRelatedIssue.eachWithIndex { key, value, i ->
 	def transition = 'verify_check_related_issues_' + key
-	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a=$value"
+	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-33c1-422b-933c-3c16e0739d3a=$value"
 	def server = defaultFieldsServer + "selectedLinkType=$value" + linkedIssuesMode.checkLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
 	addTransitionFunction( transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 forbidRelatedIssue.eachWithIndex { key, value, i ->
 	def transition = 'forbid_certain_related_issues_' + key
-	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a=$value"
+	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-33c1-422b-933c-3c16e0739d3a=$value"
 	def server = defaultFieldsServer + "selectedLinkType=$value" + linkedIssuesMode.forbidLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
 	addTransitionFunction( transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 ['verify_validator_scope_conditional_validation'].each {
-	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.priority && issue.priority.name == 'High'\",\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"!(!!issue.priority && issue.priority.name == 'High') || (issue.subtasks.some(linkedIssue => (true)))\"}"
+	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-33c1-422b-933c-3c16e0739d3a={$conditionalValidation.yes,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"!(!!issue.priority && issue.priority.name == 'High') || (issue.subtasks.some(linkedIssue => (true)))\"}"
 	def server = defaultFieldsServer + "selectedLinkType=$subtask" + conditionalValidation.yes + linkedIssuesMode.requireLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
 	addTransitionFunction(it , 'validator', info?.isCloud? cloud : server, functionKey)
 }
@@ -112,65 +120,58 @@ forbidRelatedIssue.eachWithIndex { key, value, i ->
 createWorkflowScheme()
 createProject()
 
-def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'default')
-def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
-def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { ->parent[] }], 'Sub-task')
-def epicNoChildIssue = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'EpicNoChildIssue')
-def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
-def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {->epic[]}], 'BelongsToEpic')
-def initiativeNoChildIssue = createIssue([type: 'Initiative', summary: 'JMWE_Issue'], 'InitiativeNoChildIssue')
-def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue'], 'Initiative')
-def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
-def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
-def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
-def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
-def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
-def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesTo')
 def relatesToIssue2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesToIssue2')
-def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 def relatesToIssue3 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesToIssue3')
 def relatesToIssue4 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesToIssue4')
 def relatesToIssue5 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesToIssue5')
 def relatesToIssue6 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesToIssue6')
 def relatesToIssue7 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesToIssue7')
 
-updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
-
-def linkIssuesMapServer = [
-		blocks : {->blocks[]},
-		"$clonesLinkType" : {->clones[]},
-		duplicates : {->duplicates[]},
-		'relates to': {->relatesTo[]}
-]
-
-def linkIssuesMapCloud = [
-		blocks : {->blocks[]},
-		clones : {->clones[]},
-		duplicates : {->duplicates[]},
-		'relates to': {->relatesTo[]}
-]
-
-def linkIssuesMap = info?.isCloud? linkIssuesMapCloud : linkIssuesMapServer
-
-
-linkIssuesMap.eachWithIndex { key, value, i ->
-	linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
+def transitionByUserTaskForError =  { transition, userId, issue, expected ->
+	if(!isCloud) {
+		gint.taskHelper.add(
+				[expected    : expected,
+				 name        : ":transition issue by non admin user to check error:" + transition,
+				 cmd         : /acli $userId -a transitionIssue --issue $issue --transition $transition/,
+				]
+		)
+	}
 }
 
+def transitionByUserTaskForSuccess =  { transition, userId, issue, expected ->
+	if(!isCloud) {
+		gint.taskHelper.add(
+				[expected    : expected,
+				 name        : ":transition issue by non admin user to check success:" + transition,
+				 cmd         : /acli $userId -a transitionIssue --issue $issue --transition $transition/,
+				]
+		)
+	}
+}
 
-/*   -----------------------------------------------------------------------------------------------------------------------------------
-     -----------------------------------------------------------------------------------------------------------------------------------
-                                      RELATED_ISSUES_VALIDATOR => REQUIRE CERTAIN RELATED ISSUES
-     -----------------------------------------------------------------------------------------------------------------------------------
-     -----------------------------------------------------------------------------------------------------------------------------------   */
+//                                      RELATED_ISSUES_CONDITION => REQUIRE CERTAIN RELATED ISSUES
 
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_01-verify require certain related issues and subtask of the current issue
+// Create issues
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'default')
+def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { ->parent[] }], 'Sub-task')
+def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
+def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'BelongsToEpic')
+def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue'], 'Initiative')
+def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
+def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
+def toIssueLink = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'toIssueLink')
+def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
+
+// RELATED_ISSUES_CONDITION_TC_14-verify require certain related issues and subtask of the current issue
+
 [
 		'verify_require_certain_related_issues_subtask',
 ].collect {
 	gint.taskHelper.add([
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_01_Case_01 -$it _when issue having one subtask:",
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_14_Case_01 -$it _when issue having one subtask:",
 			 expected  : 0,
 			 parameters: [
 					 issue     : {->parent[]},
@@ -178,7 +179,8 @@ linkIssuesMap.eachWithIndex { key, value, i ->
 			 ]
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_01_Case_02 -$it _when issue not having subtask:",
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_14_Case_02 -$it _when issue not having subtask:",
 			 expected  : -3,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
@@ -187,308 +189,738 @@ linkIssuesMap.eachWithIndex { key, value, i ->
 			],
 	])
 }
+// RELATED_ISSUES_CONDITION_TC_14-verify require certain related issues and subtask of the current issue_by non admin user
+//transitionByUserTaskForError('verify_require_certain_related_issues_subtask', testUserForServer, {->defaultIssue[]}, -3)
+//('verify_require_certain_related_issues_subtask', testUserForServer, {->parent[]}, 0)
 
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_02-verify require certain related issues_issueBelongsToEpic
+// RELATED_ISSUES_CONDITION_TC_17-verify require certain related issues_issueBelongsToEpic
 [
 		'verify_require_certain_related_issues_issueBelongsToEpic',
 ].collect {
 	gint.taskHelper.add([
 			[action    : 'transitionIssue',
-			 expected  : 0,
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_02_Case_01 -$it _when epic having one issueBelongsToEpic:",
+			 sleep: info?.isCloud? 5000 : 500,
+			 expected  : -3,
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_17_Case_01 -$it _when epic not having issueBelongsToEpic:",
 			 parameters: [
 					 issue     : {->epic[]},
 					 transition: it
 			 ]
 			],
-
-			[action    : 'transitionIssue',
-			 expected  : -3,
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_02_Case_02 -$it _when epic not having issueBelongsToEpic:",
+			[action: 'updateIssue',
+			 ext: ": add child issue to epic_to check _$it :",
 			 parameters: [
-					 issue     : {->epicNoChildIssue[]},
+					 issue: {->issueBelongsToEpic[]},
+					 field: "Epic Link",
+					 value: {->epic[]}
+			 ],
+			],
+			[action    : 'transitionIssue',
+			 sleep: info?.isCloud? 5000 : 500,
+			 expected  : 0,
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_17_Case_02 -$it _when epic having one issueBelongsToEpic:",
+			 parameters: [
+					 issue     : {->epic[]},
 					 transition: it ]
 			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_03-verify require certain related issues_child issue in the Portfolio hierarchy
+// RELATED_ISSUES_CONDITION_TC_21-verify require certain related issues_child issue in the Portfolio hierarchy
 [
 		'verify_require_certain_related_issues_childPortfolio',
 ].collect {
 	if(!isCloud) {
-		gint.taskHelper.add([
+		gint.taskHelper.add("Validate that current issue must have atleast one child issue in portfolio hierarchy",[
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_03_Case_01 -$it _current issue must have one child issue in the Portfolio hierarchy:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_21_Case_01 -$it _when current issue not having child issues in the Portfolio hierarchy:",
+				 expected  : -3,
+				 parameters: [
+						 issue     : { -> initiative[] },
+						 transition: it,
+				 ]
+				],
+				[action: 'updateIssue',
+				 ext: ": add child issue to initiative check _$it :",
+				 parameters: [
+						 issue: {->epic_initiative[]},
+						 field: "Parent Link",
+						 value: {->initiative[]}
+				 ]
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_21_Case_02 -$it _current issue have one child issue in the Portfolio hierarchy:",
 				 expected  : 0,
 				 parameters: [
 						 issue     : { -> initiative[] },
 						 transition: it,
 				 ]
 				],
-				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_03_Case_02 -$it _when current issue not having child issues in the Portfolio hierarchy:",
-				 expected  : -3,
-				 parameters: [
-						 issue     : { -> initiativeNoChildIssue[] },
-						 transition: it,
-				 ]
-				],
 		])
 	}
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_04-verify require certain related issues_current issue must have at least 1 issues linked to it through any link type
+// RELATED_ISSUES_CONDITION_TC_26-verify require certain related issues_current issue must have at least 1 issues linked to it through any link type
 [
 		'verify_require_certain_related_issues_linkByAnyLink',
 ].collect {
-	gint.taskHelper.add([
+	gint.taskHelper.add("$it",[
+			[action: 'getLinkList',
+			 ext: ": validate that issue has 0 issue linked to it through any link type for _ $it: ",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 outputType: "Text",
+					 columns: "Link Description",
+					 select: "Link Description:blocks"
+			 ],
+			 finalClosure: { Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("0 links for issue")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_04_Case_01 -$it _current issue having one issue linked to it through any link type:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_26_Case_01 -$it _current issue not having issues linked to it through any link type:",
+			 expected  : -3,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'linkIssue', ext: ": check 1 issue linked by any link type to check _$it:",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'blocks'
+			 ]
+			],
+			[action: 'getLinkList',
+			 ext: ": validate the issue has 1 issue linked through any link for _ $it: ",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 outputType: "Text",
+					 columns: "Link Description",
+					 select: "Link Description:blocks"
+			 ],
+			 finalClosure: { Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("1 links for issue")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_26_Case_02 -$it _current issue having one issue linked to it through any link type:",
 			 expected  : 0,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_04_Case_02 -$it _current issue not having issues linked to it through any link type:",
-			 expected  : -3,
+			[action: 'deleteLink',
+			 ext: ": by blocks link type after checking _$it:",
 			 parameters: [
-					 issue     : {->defaultIssue[]},
-					 transition: it ,
+					 issue: {->issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'blocks'
 			 ]
-			],
-	])
+			],])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_05-verify require certain related issues_current issue must have at least 1 issues linked to it through the blocks link type
+// RELATED_ISSUES_CONDITION_TC_27-verify require certain related issues_current issue must have at least 1 issues linked to it through the blocks link type
 [
 		'verify_require_certain_related_issues_linkByBlock',
 ].collect {
-	gint.taskHelper.add([
+	gint.taskHelper.add("$it",[
+			[action: 'getLinkList',
+			 ext: ": validate that issue has 0 issues linked to it through blocks link type for _ $it: ",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 outputType: "Text",
+					 columns: "Link Description",
+					 select: "Link Description:blocks"
+			 ],
+			 finalClosure: { Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("0 links for issue")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_05_Case_01 -$it _when current issue have at least 1 issue linked to it through the blocks link type:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_27_Case_01 -$it _The current issue not having issues linked to it through the blocks link type:",
+			 expected  : -3,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'linkIssue', ext: ": by blocks link type to check _$it:",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'blocks'
+			 ]
+			],
+			[action: 'getLinkList',
+			 ext: ": validate the issue has 1 issue linked through specific link for _ $it: ",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 outputType: "Text",
+					 columns: "Link Description",
+					 select: "Link Description:blocks"
+			 ],
+			 finalClosure: { Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("1 links for issue")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_27_Case_02 -$it _when current issue have at least 1 issue linked to it through the blocks link type:",
 			 expected  : 0,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_05_Case_02 -$it _The current issue not having issues linked to it through the blocks link type:",
-			 expected  : -3,
+			[action: 'deleteLink',
+			 ext: ": by blocks link type after checking _$it:",
 			 parameters: [
-					 issue     : {->defaultIssue[]},
-					 transition: it ,
+					 issue: {->issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'blocks'
 			 ]
 			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_06-verify require certain related issues_current issue must have at least 1 issues linked to it through the is blocked by link type
+// RELATED_ISSUES_CONDITION_TC_29-verify require certain related issues_current issue must have at least 1 issues linked to it through the is blocked by link type
 [
 		'verify_require_certain_related_issues_linkByisBlockedBy',
 ].collect {
-	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_06_Case_01 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
-			 expected  : 0,
+	gint.taskHelper.add("$it",[
+			[action: 'getLinkList',
+			 ext: ": validate that issue has 0 issue linked to it through is blocked by link type for _ $it: ",
 			 parameters: [
-					 issue     : {->blocks[]},
+					 issue: {-> issueLinks[]},
+					 outputType: "Text",
+					 columns: "Link Description",
+					 select: "Link Description:is blocked by"
+			 ],
+			 finalClosure: { Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("0 links for issue")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_29_Case_01 -$it _when current issue not having issues linked to it through the is blocked by link type:",
+			 expected  : -3,
+			 parameters: [
+					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_06_Case_02 -$it _when current issue not having issues linked to it through the is blocked by link type:",
-			 expected  : -3,
+			[action: 'linkIssue', ext: ": by blocks link type to check _$it:",
 			 parameters: [
-					 issue     : {->defaultIssue[]},
+					 issue: {->toIssueLink[]},
+					 toIssue: {-> issueLinks[]},
+					 link: 'blocks'
+			 ]
+			],
+			[action: 'getLinkList',
+			 ext: ": validate that issue has 1 issue linked to it through is blocked by link type for _ $it: ",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 outputType: "Text",
+					 columns: "Link Description",
+					 select: "Link Description:is blocked by"
+			 ],
+			 finalClosure: { Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("1 links for issue")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_29_Case_02 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
 					 transition: it ,
+			 ]
+			],
+			[action: 'deleteLink',
+			 ext: ": by blocks link type after checking _$it:",
+			 parameters: [
+					 issue: {->toIssueLink[]},
+					 toIssue: {-> issueLinks[]},
+					 link: 'blocks'
 			 ]
 			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_07-verify require certain related issues_current issue must have at least 1 issues linked to it through the clones link type
+// RELATED_ISSUES_CONDITION_TC_31-verify require certain related issues_current issue must have at least 1 issues linked to it through the clones link type
 [
 		'verify_require_certain_related_issues_linkByClones',
 ].collect {
-	gint.taskHelper.add([
+	def clonesLink = info?.isCloud ? 'clones' : clonesLinkType
+	gint.taskHelper.add("$it",[
+			[action: 'getLinkList',
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext: ": validate that issue has 0 issue linked to it through $clonesLink link type for _ $it: ",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 outputType: "Text",
+					 columns: "Link Description",
+					 select: "Link Description:$clonesLink"
+			 ],
+			 finalClosure: { Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("0 links for issue")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type:",
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_01 -$it _when current issue not have issues linked to it through the clones link type:",
+			 expected  : -3,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'linkIssue', ext: ": by clones link type to check _$it:",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: clonesLink
+			 ]
+			],
+			[action: 'getLinkList',
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext: ": validate that issue has 1 issue linked to it through clones link type for _ $it: ",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 outputType: "Text",
+					 columns: "Link Description",
+					 select: "Link Description:$clonesLink"
+			 ],
+			 finalClosure: { Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("1 links for issue")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_02 -$it _when current issue have issue linked to it through the clones link type:",
 			 expected  : 0,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type:",
-			 expected  : -3,
+			[action: 'deleteLink',
+			 ext: ": by clones link type after checking _$it:",
 			 parameters: [
-					 issue     : {->defaultIssue[]},
-					 transition: it ,
+					 issue: {->issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: clonesLink
 			 ]
 			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_08-verify require certain related issues_current issue must have at least 1 issues linked to it through the is cloned by link type
+// RELATED_ISSUES_CONDITION_TC_32-verify require certain related issues_current issue must have at least 1 issues linked to it through the is cloned by link type
 [
 		'verify_require_certain_related_issues_linkByIsClonedBy',
 ].collect {
-	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_08_Case_01 -$it _when current issue have issue linked to it through the is cloned by link type:",
-			 expected  : 0,
+	def clonesLink = info?.isCloud ? 'clones' : clonesLinkType
+	gint.taskHelper.add("$it",[
+			[action: 'getLinkList',
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext: ": validate that issue has 0 issue linked to it through is $clonesLink by link type for _ $it: ",
 			 parameters: [
-					 issue     : {->clones[]},
+					 issue: {->toIssueLink[]},
+					 outputType: "Text",
+					 columns: "Link Description",
+					 select: "Link Description:$clonesLink"
+			 ],
+			 finalClosure: { Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("0 links for issue")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_01 -$it _when current issue not having issues linked to it through the is cloned by link type:",
+			 expected  : -3,
+			 parameters: [
+					 issue     : {-> issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_08_Case_02 -$it _when current issue not having issues linked to it through the is cloned by link type:",
-			 expected  : -3,
+			[action: 'linkIssue',
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext: ": by is cloned by link type to check _$it:",
 			 parameters: [
-					 issue     : {->defaultIssue[]},
+					 issue: {-> toIssueLink[]},
+					 toIssue: {-> issueLinks[]},
+					 link: clonesLink
+			 ]
+			],
+			[action: 'getLinkList',
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext: ": validate that issue has 1 issue linked to it through is $clonesLink by link type for _ $it: ",
+			 parameters: [
+					 issue: {-> toIssueLink[]},
+					 outputType: "Text",
+					 columns: "Link Description",
+					 select: "Link Description:$clonesLink"
+			 ],
+			 finalClosure: { Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("1 links for issue")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_02 -$it _when current issue have issue linked to it through the is cloned by link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {-> issueLinks[]},
 					 transition: it ,
+			 ]
+			],
+			[action: 'deleteLink',
+			 ext: ": by clones link type after checking _$it:",
+			 parameters: [
+					 issue: {->toIssueLink[]},
+					 toIssue: {-> issueLinks[]},
+					 link: clonesLink
 			 ]
 			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_09-verify require certain related issues_current issue must have at least 1 issues linked to it through the duplicates link type
+// RELATED_ISSUES_CONDITION_TC_33-verify require certain related issues_current issue must have at least 1 issues linked to it through the duplicates link type
 [
 		'verify_require_certain_related_issues_linkByDuplicates',
 ].collect {
-	gint.taskHelper.add([
+	gint.taskHelper.add("$it",[
+			[action: 'getLinkList',
+			 ext: ": validate that issue has 0 issue linked to it through duplicates link type for _ $it: ",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 outputType: "Text",
+					 columns: "Link Description",
+					 select: "Link Description:duplicates"
+			 ],
+			 finalClosure: { Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("0 links for issue")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_09_Case_01 -$it _when current issue have issue linked to it through the duplicates link type:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_02 -$it _when current issue not having issues linked to it through the duplicates link type:",
+			 expected  : -3,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'linkIssue',
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext: ": by duplicates link type to check _$it:",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'duplicates'
+			 ]
+			],
+			[action: 'getLinkList',
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext: ": validate that issue has 1 issue linked to it through duplicates link type for _ $it: ",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 outputType: "Text",
+					 columns: "Link Description",
+					 select: "Link Description:duplicates"
+			 ],
+			 finalClosure: { Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("1 links for issue")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_01 -$it _when current issue have issue linked to it through the duplicates link type:",
 			 expected  : 0,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_09_Case_02 -$it _when current issue not having issues linked to it through the duplicates link type:",
-			 expected  : -3,
+			[action: 'deleteLink',
+			 ext: ": by duplicates link type after checking _$it:",
 			 parameters: [
-					 issue     : {->defaultIssue[]},
-					 transition: it ,
+					 issue: {->issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'duplicates'
 			 ]
 			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_10-verify require certain related issues_current issue must have at least 1 issues linked to it through the is duplicated by link type
+// RELATED_ISSUES_CONDITION_TC_34-verify require certain related issues_current issue must have at least 1 issues linked to it through the is duplicated by link type
 [
 		'verify_require_certain_related_issues_linkByIsDuplicatedBy',
 ].collect {
-	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_10_Case_01 -$it _when current issue have issue linked to it through the is duplicated by link type:",
-			 expected  : 0,
+	gint.taskHelper.add("$it",[
+			[action: 'getLinkList',
+			 ext: ": validate that issue has 0 issue linked to it through is duplicated by link type for _ $it: ",
 			 parameters: [
-					 issue     : {->duplicates[]},
-					 transition: it ,
-			 ]
+					 issue: {->issueLinks[]},
+					 outputType: "Text",
+					 columns: "Link Description",
+					 select: "Link Description:is duplicated by"
+			 ],
+			 finalClosure: { Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("0 links for issue")
+			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_10_Case_02 -$it _when current issue not having issues linked to it through the is duplicated by link type:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_34_Case_02 -$it _when current issue not having issues linked to it through the is duplicated by link type:",
 			 expected  : -3,
 			 parameters: [
-					 issue     : {->defaultIssue[]},
+					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-	])
-}
-
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_11-verify require certain related issues_current issue must have at least 1 issues linked to it through the relates to link type
-[
-		'verify_require_certain_related_issues_linkByRelatesTo',
-].collect {
-	gint.taskHelper.add([
+			[action: 'linkIssue',
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext: ": by duplicates link type to check _$it:",
+			 parameters: [
+					 issue: {-> toIssueLink[]},
+					 toIssue: {-> issueLinks[]},
+					 link: 'duplicates'
+			 ]
+			],
+			[action: 'getLinkList',
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext: ": validate that issue has 1 issue linked to it through is duplicated by link type for _ $it: ",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 outputType: "Text",
+					 columns: "Link Description",
+					 select: "Link Description:is duplicated by"
+			 ],
+			 finalClosure: { Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("1 links for issue")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_11_Case_01 -$it _when current issue have issue linked to it through the relates to link type:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_34_Case_01 -$it _when current issue have issue linked to it through the is duplicated by link type:",
 			 expected  : 0,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_11_Case_02 -$it _when current issue not having issues linked to it through the relates to link type:",
-			 expected  : -3,
+			[action: 'deleteLink',
+			 ext: ": by duplicates link type after checking _$it:",
 			 parameters: [
-					 issue     : {->defaultIssue[]},
-					 transition: it ,
+					 issue: {->toIssueLink[]},
+					 toIssue: {-> issueLinks[]},
+					 link: 'duplicates'
 			 ]
 			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_12-verify require certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
+// RELATED_ISSUES_CONDITION_TC_37-verify require certain related issues_current issue must have at least 1 issues linked to it through the relates to link type
+[
+		'verify_require_certain_related_issues_linkByRelatesTo',
+].collect {
+	gint.taskHelper.add("$it",[
+			[action: 'getLinkList',
+			 ext: ": validate that issue has 0 issue linked to it through relates to link type for _ $it: ",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 outputType: "Text",
+					 columns: "Link Description",
+					 select: "Link Description:relates to"
+			 ],
+			 finalClosure: { Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("0 links for issue")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_37_Case_02 -$it _when current issue not having issues linked to it through the relates to link type:",
+			 expected  : -3,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'linkIssue',
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext: ": by relates to link type to check _$it:",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'relates to'
+			 ]
+			],
+			[action: 'getLinkList',
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext: ": validate that issue has 1 issue linked to it through relates to link type for _ $it: ",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 outputType: "Text",
+					 columns: "Link Description",
+					 select: "Link Description:relates to"
+			 ],
+			 finalClosure: { Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("1 links for issue")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TC_37_Case_01 -$it _when current issue have issue linked to it through the relates to link type:",
+			 expected  : 0,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'deleteLink',
+			 ext: ": by relates To link type after checking _$it:",
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'relates to'
+			 ]
+			],
+	])
+}
+
+// RELATED_ISSUES_CONDITION_TC_38-verify require certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
 [
 		'verify_require_certain_related_issues_returnsByGroovyExpression',
 ].collect {
 	if(!isCloud) {
-		gint.taskHelper.add([
+		gint.taskHelper.add("$it",[
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 0 issue linked to it through relates to link type for _ $it: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:relates to"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("0 links for issue")
+				 }
+				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_12_Case_01 -$it _when the following Groovy expression:$returnsLinkedIssues return at least 1 issue:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_38_Case_02 -$it _The following Groovy expression:$returnsLinkedIssues not returns issues:",
+				 expected  : -3,
+				 parameters: [
+						 issue     : { -> issueLinks[] },
+						 transition: it,
+				 ]
+				],
+				[action: 'linkIssue',
+				 ext: ": by relates to link type to check _$it:",
+				 parameters: [
+						 issue: {-> issueLinks[]},
+						 toIssue: {-> toIssueLink[]},
+						 link: 'relates to'
+				 ]
+				],
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 1 issue linked to it through relates to link type for _ $it: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:relates to"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("1 links for issue")
+				 }
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_38_Case_01 -$it _when the following Groovy expression:$returnsLinkedIssues return at least 1 issue:",
 				 expected  : 0,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
 				 ]
 				],
-				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_12_Case_02 -$it _The following Groovy expression:$returnsLinkedIssues not returns issues:",
-				 expected  : -3,
+				[action: 'deleteLink',
+				 ext: ": by relates To link type after checking _$it:",
 				 parameters: [
-						 issue     : { -> defaultIssue[] },
-						 transition: it,
+						 issue: {-> issueLinks[]},
+						 toIssue: {-> toIssueLink[]},
+						 link: 'relates to'
 				 ]
 				],
 		])
 	}
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_13-verify require certain related issues_The following JQL search:issuetype = Task and summary~JQL_ISSUE must return at least 1 issues
+// RELATED_ISSUES_CONDITION_TC_40-verify require certain related issues_The following JQL search:issuetype = Task and summary~JQL_ISSUE must return at least 1 issues
 [
 		'verify_require_certain_related_issues_returnsFromJqlSearch',
 ].collect {
 	if(!isCloud) {
+		gint.taskHelper.add("$it",[
+				[action: 'getIssueList', ext: ": validate that jql expression_ $jqlSearchExpression _must return at least one issue_and check $it: ",
+				 parameters:[
+						 jql: jqlSearchExpression
+				 ],
+				 finalClosure: {Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("1 issues in list")
+				 }
+				],
+		]
+		)
 		gint.taskHelper.add([
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_13_Case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_40_Case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
 				 expected  : 0,
 				 parameters: [
-						 issue     : { -> defaultIssue[] },
+						 issue     : { -> issueLinks[] },
 						 transition: it,
 				 ]
 				],
 				[action    : 'updateIssue',
 				 ext       : ":change the issue type to check when jql search not returns any issues for:" + it,
-				 sleepAfter: 3000,
+				 sleepAfter: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue    : { -> jqlIssue[] },
 						 issueType: "Bug",
 				 ]
 				],
+				[action: 'getIssueList', ext: ": validate that jql expression_ $jqlSearchExpression _should not return any issue_ check $it: ",
+				 parameters:[
+						 jql: jqlSearchExpression
+				 ],
+				 finalClosure: {Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("0 issues in list")
+				 }
+				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_13_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_40_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
 				 expected  : -3,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
-						 issue     : { -> defaultIssue[] },
+						 issue     : { -> issueLinks[] },
 						 transition: it,
 				 ]
 				],
 				[action    : 'updateIssue',
 				 ext       : ":change the issue type after checking when jql search not returns any issues for:" + it,
-				 sleepAfter: 3000,
+				 sleepAfter: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue    : { -> jqlIssue[] },
 						 issueType: "Task",
@@ -498,76 +930,204 @@ linkIssuesMap.eachWithIndex { key, value, i ->
 	}
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_14-verify require certain related issues_The current issue must have at least 2 issues linked to it through the relates to link type
+// RELATED_ISSUES_CONDITION_TC_42_Case_01-verify require certain related issues_The current issue must have at least 2 issues linked to it through the relates to link type
 [
 		'Verify_Issue_constraints_min_two_linkByRelatesTo'
 ].collect {
 	if(!isCloud) {
 		gint.taskHelper.add([
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 0 issue linked to it through relates to link type for _ $it: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:relates to"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("0 links for issue")
+				 }
+				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_14_Case_01 _$it _when current issue not having at least 2 issues linked to it through the relates to link type:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_42_Case_01 _$it _when current issue not having at least 2 issues linked to it through the relates to link type:",
 				 expected  : -3,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
 				 ]
 				],
-				[action    : 'linkIssue', ext: ": by relates to link type to check min issue constraints option:",
+				[action    : 'linkIssue',
+				 ext: ": 1 by relates to link type to check _$it _min issue constraints option:",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue2[] },
 						 link   : 'relates to'
 				 ]
 				],
+				[action    : 'linkIssue',
+				 ext: ": 2 by relates to link type to check _$it _min issue constraints option:",
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> relatesToIssue3[] },
+						 link   : 'relates to'
+				 ]
+				],
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 2 issue linked to it through relates to link type for _ $it: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:relates to"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("2 links for issue")
+				 }
+				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_14_Case_02 _$it _when current issue having at least 2 issues linked to it through the relates to link type:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_42_Case_02 _$it _when current issue having at least 2 issues linked to it through the relates to link type:",
 				 expected  : 0,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
+				 ]
+				],
+				[action    : 'deleteLink',
+				 ext: ": 1 by relates to link type after checking _$it _min issue constraints option:",
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> relatesToIssue2[] },
+						 link   : 'relates to'
+				 ]
+				],
+				[action    : 'deleteLink',
+				 ext: ": 2 by relates to link type after checking _$it _min issue constraints option:",
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> relatesToIssue3[] },
+						 link   : 'relates to'
 				 ]
 				],
 		])
 	}
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_15-verify require certain related issues_The current issue must not have more than 2 issues linked to it through the relates to link type
+// RELATED_ISSUES_CONDITION_TC_43_Case_01-verify require certain related issues_The current issue must not have more than 2 issues linked to it through the relates to link type
 [
 		'Verify_Issue_constraints_max_two_linkByRelatesTo'
 ].collect {
 	if(!isCloud) {
 		gint.taskHelper.add([
-				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_15_Case_01 _$it _when current issue not having more than 2 issues linked to it through the relates to link type:",
-				 expected  : 0,
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 0 issue linked to it through relates to link type for _ $it: ",
 				 parameters: [
-						 issue     : { -> issueLinks[] },
-						 transition: it,
-				 ]
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:relates to"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("0 links for issue")
+				 }
 				],
-				[action    : 'linkIssue', ext: ": by relates to link type to check max issue constraints option:",
+				[action    : 'linkIssue',
+				 ext: ": 1 by relates to link type to $it _check max issue constraints option:",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
-						 toIssue: { -> relatesToIssue3[] },
+						 toIssue: { -> toIssueLink[] },
 						 link   : 'relates to'
 				 ]
 				],
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 1 issue linked to it through relates to link type for _ $it: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:relates to"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("1 links for issue")
+				 }
+				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_15_Case_02 _$it _when current issue having more than 3 issues linked to it through the relates to link type:",
-				 expected  : -3,
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_43_Case_01 _$it _when current issue not having more than 2 issues linked to it through the relates to link type:",
+				 expected  : 0,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
 				 ]
 				],
-				[action    : 'deleteLink', ext: ': issues linked to check min_issue constraints:',
+				[action    : 'linkIssue', ext: ": 2nd issue link by relates to link to check_ $it  _min_issue constraints:",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue2[] },
 						 link   : 'relates to'
 				 ]
 				],
-				[action    : 'deleteLink', ext: ': issues linked to check max_issue constraints:',
+				[action    : 'linkIssue',
+				 ext: ': 3rd issue linked to check max_issue constraints:',
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> relatesToIssue3[] },
+						 link   : 'relates to'
+				 ]
+				],
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 3 issue linked to it through relates to link type for _ $it: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:relates to"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("3 links for issue")
+				 }
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_43_Case_02 _$it _when current issue having more than 3 issues linked to it through the relates to link type:",
+				 expected  : -3,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue     : { -> issueLinks[] },
+						 transition: it,
+				 ]
+				],
+				[action    : 'deleteLink',
+				 ext: ": 1 by relates to link type to $it _check max issue constraints option:",
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> toIssueLink[] },
+						 link   : 'relates to'
+				 ]
+				],
+				[action    : 'deleteLink', ext: ":2 issues linked to check_ $it max_issue constraints:",
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> relatesToIssue2[] },
+						 link   : 'relates to'
+				 ]
+				],
+				[action    : 'deleteLink', ext: ": issues linked to check_ $it _max_issue constraints:",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue3[] },
@@ -578,40 +1138,104 @@ linkIssuesMap.eachWithIndex { key, value, i ->
 	}
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_16- The current issue must have at least 3 and at most 6 issues linked to it through the relates to link type
+// RELATED_ISSUES_CONDITION_TC_44- The current issue must have at least 3 and at most 6 issues linked to it through the relates to link type
 [
 		'Verify_Issue_constraints_min_three_max_six_linkByRelatesTo'
 ].collect {
 	if(!isCloud) {
 		gint.taskHelper.add([
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 0 issue linked to it through relates to link type for _ $it _case_01: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:relates to"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("0 links for issue")
+				 }
+				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_16_Case_01 _$it _when current issue not have at least 3 and at most 6 issues linked to it through the relates to link type:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_01 _$it _when current issue not have at least 3 and at most 6 issues linked to it through the relates to link type:",
 				 expected  : -3,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
 				 ]
 				],
-				[action    : 'linkIssue', ext: ": by relates to link type to check min and max issue constraints option:" + it,
+				[action    : 'linkIssue',
+				 ext: ": 1 by relates to link type to $it _check max issue constraints option:",
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> toIssueLink[] },
+						 link   : 'relates to'
+				 ]
+				],
+				[action    : 'linkIssue', ext: ": 2 by relates to link type to check min and max issue constraints option:" + it,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue2[] },
 						 link   : 'relates to'
 				 ]
 				],
-				[action    : 'linkIssue', ext: ": by relates to link type to check min and max issue constraints option2:" + it,
+				[action    : 'linkIssue', ext: ": 3 by relates to link type to check min and max issue constraints option2:" + it,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue  : { -> issueLinks[] },
 						 toIssue: { -> relatesToIssue3[] },
 						 link   : 'relates to'
 				 ]
 				],
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 3 issue linked to it through relates to link type for _ $it: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:relates to"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("3 links for issue")
+				 }
+				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_16_Case_02 _$it _when current issue having at least 3 issues linked to it through the relates to link type:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_02 _$it _when current issue having at least 3 issues linked to it through the relates to link type:",
 				 expected  : 0,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
+				 ]
+				],
+				[action    : 'deleteLink',
+				 ext: ": 1 by relates to link type to $it _ after checking max issue constraints option:",
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> toIssueLink[] },
+						 link   : 'relates to'
+				 ]
+				],
+				[action    : 'deleteLink', ext: ": 2 by relates to link type after checking min and max issue constraints option:" + it,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> relatesToIssue2[] },
+						 link   : 'relates to'
+				 ]
+				],
+				[action    : 'deleteLink', ext: ": 3 by relates to link type after checking min and max issue constraints option2:" + it,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> relatesToIssue3[] },
+						 link   : 'relates to'
 				 ]
 				],
 		])
@@ -629,136 +1253,592 @@ def relatesToIssuesList = [
 ]
 
 relatesToIssuesList.eachWithIndex { key, value, i ->
-	gint.taskHelper.add(
-			[action    : 'linkIssue', ext: ": by relates to link type to check max issue constraints option:" + key,
-			 parameters: [
-					 issue  : { -> issueLinks[] },
-					 toIssue: value,
-					 link   : 'relates to'
-			 ],
-			])
+	if(!isCloud) {
+		gint.taskHelper.add(
+				[action    : 'linkIssue',
+				 ext       : ": by duplicates link type to check max issue constraints option:" + key,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: value,
+						 link   : 'duplicates'
+				 ],
+				])
+	}
 }
 
 [
 		'Verify_Issue_constraints_min_three_max_six_linkByRelatesTo'
 ].collect {
-	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_16_Case_03 _$it _when current issue have at least 3 and but more than 6 ie 7 issues linked to it through the relates to link type:",
-			 expected  : -3,
-			 parameters: [
-					 issue     : { -> issueLinks[] },
-					 transition: it,
-			 ]
-			],
-	])
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 0 issue linked to it through relates to link type for _ $it _case_02: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:relates to"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("0 links for issue")
+				 }
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_03 _$it _when current issue more than 6 ie 7 issues linked to it through the duplicates link type:",
+				 expected  : -3,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue     : { -> issueLinks[] },
+						 transition: it,
+				 ]
+				],
+		])
+	}
 }
+
+//transitionByUserTaskForSuccess('Verify_Issue_constraints_min_three_max_six_linkByRelatesTo', testUserForServer, {->issueLinks[]}, -3)
+
 
 // delete link between issues to while check the issue constraint options for max 6 issues by relates to link type
 relatesToIssuesList.eachWithIndex { key, value, i ->
-	gint.taskHelper.add(
-			[action    : 'deleteLink', ext: ": by relates to link type to check max issue constraints option:" + key,
-			 parameters: [
-					 issue  : { -> issueLinks[] },
-					 toIssue: value,
-					 link   : 'relates to'
-			 ],
-			])
+	if(!isCloud) {
+		gint.taskHelper.add(
+				[action    : 'deleteLink',
+				 ext       : ": by duplicates link type to check max issue constraints option:" + key,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: value,
+						 link   : 'duplicates'
+				 ],
+				])
+	}
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_16_TC_17 -current issue must have at least 1 and at most 0 issues linked to it through the relates to link type, and at least one of them must respect the following condition
+relatesToIssuesList.eachWithIndex { key, value, i ->
+	if(!isCloud) {
+		gint.taskHelper.add(
+				[action    : 'linkIssue',
+				 ext       : ": by relates to link type to check max issue constraints option:" + key,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: value,
+						 link   : 'relates to'
+				 ],
+				])
+	}
+}
+
+[
+		'Verify_Issue_constraints_min_three_max_six_linkByRelatesTo'
+].collect {
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 6 issue linked to it through relates to link type for _ $it: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:relates to"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("6 links for issue")
+				 }
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_04 _$it _when current issue have 6  issues linked to it through the relates to link type:",
+				 expected  : 0,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue     : { -> issueLinks[] },
+						 transition: it,
+				 ]
+				],
+				[action    : 'linkIssue',
+				 ext: ": 7th issue by relates to link type to check_ $it _max issue constraints option:" ,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { ->toIssueLink[] },
+						 link   : 'relates to'
+				 ],
+				],
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 7 issue linked to it through relates to link type for _ $it: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:relates to"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("7 links for issue")
+				 }
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_04 _$it _when current issue have at 7 issues linked to it through the relates to link type:",
+				 expected  : -3,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue     : { -> issueLinks[] },
+						 transition: it,
+				 ]
+				],
+		])
+	}
+}
+
+// RELATED_ISSUES_CONDITION_TC_14-verify require certain related issues and subtask of the current issue_by non admin user
+//transitionByUserTaskForError('Verify_Issue_constraints_min_three_max_six_linkByRelatesTo', testUserForServer, {->defaultIssue[]}, -3)
+
+if(!isCloud) {
+	gint.taskHelper.add(
+			[action    : 'deleteLink',
+			 ext       : ": 7th issue linked by relates to link type to check max issue constraints option:",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue  : { -> toIssueLink[] },
+					 toIssue: { -> issueLinks[] },
+					 link   : 'relates to',
+			 ],
+			]
+	)
+}
+
+// delete link between issues while check the issue constraint options for max 6 issues by relates to link type
+relatesToIssuesList.eachWithIndex { key, value, i ->
+	if(!isCloud) {
+		gint.taskHelper.add(
+				[action    : 'deleteLink',
+				 ext       : ": by relates to link type to check max issue constraints option:" + key,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: value,
+						 link   : 'relates to'
+				 ],
+				])
+	}
+}
+
+// RELATED_ISSUES_CONDITION_TS- The current issue must have at least 2 and at most 2 issues linked to it through the relates to link type
+[
+		'Verify_Issue_constraints_min_two_max_two_linkByRelatesTo'
+].each {
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 0 issue linked to it through relates to link type for _ $it _case_02: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:relates to"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("0 links for issue")
+				 }
+				],
+		]
+		)
+		gint.taskHelper.add([
+				[action    : 'transitionIssue',
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_ TC_01_Case_01 _$it _when current issue not have at least 2 and at most 2 issues linked to it through the relates to link type:",
+				 expected  : -3,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue     : { -> issueLinks[] },
+						 transition: it,
+				 ]
+				],
+				[action    : 'linkIssue',
+				 ext: ": by relates to link type to check $it _ link 1st issue:" ,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> relatesToIssue2[] },
+						 link   : 'relates to'
+				 ],
+				],
+				[action    : 'linkIssue',
+				 ext: ": by relates to link type to check $it _ link 2nd issues:" ,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> relatesToIssue3[] },
+						 link   : 'relates to'
+				 ],
+				],
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 2 issue linked to it through relates to link type for _ $it _case_02: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:relates to"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("2 links for issue")
+				 }
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_TC_01_Case_02 _$it _when current issue have 2 issues linked to it through the relates to link type:",
+				 expected  : 0,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue     : { -> issueLinks[] },
+						 transition: it,
+				 ]
+				],
+				[action    : 'linkIssue',
+				 ext: ": by relates to link type to check $it _link 3rd issue:" ,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> relatesToIssue4[] },
+						 link   : 'relates to'
+				 ],
+				],
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 3 issue linked to it through relates to link type for _ $it: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:relates to"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("3 links for issue")
+				 }
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_TC_01_Case_03 _$it _when current issue have more than 2 issues linked to it through the relates to link type:",
+				 expected  : -3,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue     : { -> issueLinks[] },
+						 transition: it,
+				 ]
+				],
+				[action    : 'deleteLink',
+				 ext: ": by relates to link type to check _$it min 2 issue and max 2 link constraints option1:",
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { ->relatesToIssue2[] },
+						 link   : 'relates to'
+				 ],],
+				[action    : 'deleteLink',
+				 ext: ": by relates to link type to check _$it min 2 issue and max 2 link constraints option2:" ,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { ->relatesToIssue3[] },
+						 link   : 'relates to'
+				 ],
+				],
+				[action    : 'deleteLink',
+				 ext: ": by relates to link type to _$it _check min 2 issue and max 2 link constraints option3:" ,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { ->relatesToIssue4[] },
+						 link   : 'relates to'
+				 ],
+				]
+		])
+	}
+}
+
+// RELATED_ISSUES_CONDITION_TS- The current issue must have at least 2 and at most 2 issues linked to it through the relates to link type
+[
+		'Verify_Issue_constraints_min_two_max_two_linkByRelatesTo'
+].each {
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 0 issue linked to it through duplicates link type for _ $it _case_01: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:duplicates"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("0 links for issue")
+				 }
+				],
+		]
+		)
+		gint.taskHelper.add([
+				[action    : 'transitionIssue',
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_TC_02_Case_01 _$it _when current issue not have linked min 2 and max 2 linked issues:",
+				 expected  : -3,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue     : { -> issueLinks[] },
+						 transition: it,
+				 ]
+				],
+				[action    : 'linkIssue',
+				 ext: ": by duplicates link type to check $it _ link 1st issue:" ,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> relatesToIssue2[] },
+						 link   : 'duplicates'
+				 ],
+				],
+				[action    : 'linkIssue',
+				 ext: ": by duplicates link type to check $it _ link 2nd issue:" ,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> relatesToIssue3[] },
+						 link   : 'duplicates'
+				 ],
+				],
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 2 issue linked to it through duplicates link type for _ $it _case _01: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:duplicates"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("2 links for issue")
+				 }
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_TC_02_Case_02 _$it _when current issue have 2 issues linked to it through the duplicates link type:",
+				 expected  : -3,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue     : { -> issueLinks[] },
+						 transition: it,
+				 ]
+				],
+				[action    : 'linkIssue',
+				 ext: ": by relates to link type to check $it _link 1st issue:" ,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> relatesToIssue2[] },
+						 link   : 'relates to'
+				 ],
+				],
+				[action    : 'linkIssue',
+				 ext: ": by relates to link type to check $it _link 2nd issue:" ,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> relatesToIssue3[] },
+						 link   : 'relates to'
+				 ],
+				],
+				[action: 'getLinkList',
+				 ext: ": validate that issue has 2 issue linked to it through relates to link type for _ $it: ",
+				 parameters: [
+						 issue: {->issueLinks[]},
+						 outputType: "Text",
+						 columns: "Link Description",
+						 select: "Link Description:relates to"
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("2 links for issue")
+				 }
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_02_Case_03 _$it _when current issue have more than 2 issues linked to it through the duplicates link type:",
+				 expected  : 0,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue     : { -> issueLinks[] },
+						 transition: it,
+				 ]
+				],
+				[action    : 'deleteLink',
+				 ext: ": by duplicates link type to check _ $it _min 2 issue and max 2 link constraints option1:",
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { ->relatesToIssue2[] },
+						 link   : 'duplicates'
+				 ],],
+				[action    : 'deleteLink',
+				 ext: ": by duplicates link type to check _$it _min 2 issue and max 2 link constraints option2:" ,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { ->relatesToIssue3[] },
+						 link   : 'duplicates'
+				 ],
+				],
+				[action    : 'deleteLink',
+				 ext: ": by relates to link type to check _$it _unlink 1st issue:" ,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> relatesToIssue2[] },
+						 link   : 'relates to'
+				 ],
+				],
+				[action    : 'deleteLink',
+				 ext: ": by relates to link type to check $it _unlink 2nd issue:" ,
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> relatesToIssue3[] },
+						 link   : 'relates to'
+				 ],
+				],
+		])
+	}
+}
+
+// RELATED_ISSUES_CONDITION_TC_49 - current issue must have at least 1 and at most 0 issues linked to it through the relates to link type, and at least one of them must respect the following condition
 [
 		'verify_condition_on_related_issues_checkAssignee'
 ].each {
 	if(!isCloud) {
 		gint.taskHelper.add([
+				[action    : 'linkIssue',
+				 ext       : ": by relates to link type to check $it _link 1st issue:",
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> toIssueLink[] },
+						 link   : 'relates to'
+				 ],
+				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_17_Case_01 -$it _when current issue not having at least 1 issues linked to it through the relates to link type which respect the following condition_issue must have assignee $testUser:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_49_Case_01 -$it _when current issue not having at least 1 issues linked to it through the relates to link type which respect the following condition_issue must have assignee $testUser:",
 				 expected  : -3,
+				 sleep     : info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
 				 ]
 				],
 				[action    : 'assignIssue',
-				 ext: ": current issue to _ $testUser to_ $it :",
-				 sleep: 5000,
+				 ext       : ": linked issue to _ $testUser to_ $it :",
+				 sleepAfter: info?.isCloud? 5000 : 500,
 				 parameters: [
-						 issue   : { -> relatesTo[] },
+						 issue   : { -> toIssueLink[] },
 						 assignee: testUser,
 				 ],
 				],
 				[action    : 'assignIssue',
-				 ext: ": target issue to _ $testUser to_ $it :",
-				 sleep: 5000,
+				 ext       : ": current issue to_ $testUser to_ $it :",
+				 sleepAfter: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> issueLinks[] },
 						 assignee: testUser,
 				 ],
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_16_TC_17_Case_02 -$it _when current issue having at least 1 issues linked to it through the relates to link type which respect the following condition_issue must have assignee $testUser:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TC_49_Case_02 -$it _when current issue having at least 1 issues linked to it through the relates to link type which respect the following condition_issue must have assignee $testUser:",
 				 expected  : 0,
-				 sleep: 5000,
+				 sleep     : info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
 				 ]
 				],
-				[action    : 'assignIssue',
-				 ext: ": current issue _ UNASSIGNED issue- after_ $it :",
+				[action    : 'assignIssue', ext: ": to _ UNASSIGNED issue- after_ $it :",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
-						 issue   : { -> relatesTo[] },
+						 issue   : { -> toIssueLink[] },
 						 assignee: " ",
 				 ],
 				],
-				[action    : 'assignIssue',
-				 ext: ": target issue _ UNASSIGNED issue- after_ $it :",
+				[action    : 'deleteLink',
+				 ext       : ": by relates to link type to check $it _link 1st issue:",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
-						 issue   : { -> issueLinks[] },
-						 assignee: " ",
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> toIssueLink[] },
+						 link   : 'relates to'
 				 ],
 				],
 		])
 	}
 }
 
+//                                          RELATED_ISSUES_CONDITION => CHECK RELATED ISSUES TESTS
 
-
-/* -----------------------------------------------------------------------------------------------------------------------------------
-   -----------------------------------------------------------------------------------------------------------------------------------
-                                          RELATED_ISSUES_VALIDATOR => CHECK RELATED ISSUES TESTS
-   ------------------------------------------------------------------------------------------------------------------------------------
-   ----------------------------------------------------------------------------------------------------------------------------------- */
-
-// RELATED_ISSUES_VALIDATOR_TS_17_TC_01 -verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_51 -verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_subtask',
 ].collect {
 	gint.taskHelper.add([
+			[action: 'updateIssue',
+			 ext: ":  change issue priority to low satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->parent[]},
+					 priority: "Low",
+			 ]
+			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the parent issue does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->parent[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_01_Case_01 -$it _when issue having subtask not respecting given condition :",
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_01_Case_01 -$it _when issue having subtask not respecting given condition :",
 			 expected  : -3,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->parent[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ":  change issue priority to high satisfy the criteria to check: $it",
+			[action: 'updateIssue',
+			 ext: ":  change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->parent[]},
 					 priority: "High",
 			 ]
 			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the parent issue have High priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->parent[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_01_Case_02 -$it _when issue having subtask respecting given condition:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_01_Case_02 -$it _when issue having subtask respecting given condition:",
 			 expected  : 0,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->parent[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to low satisfy the criteria after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to low satisfy the criteria after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->parent[]},
 					 priority: "Low",
@@ -767,33 +1847,65 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_17_TC_02-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_51_TC_02-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_issueBelongsToEpic',
 ].collect {
 	gint.taskHelper.add([
+			[action: 'getFieldValue',
+			 ext: ": Validate that the parent issue does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->epic[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
+	]
+	)
+	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 expected  : -3,
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_02_Case_01 -$it _when epic having issueBelongsToEpic not respecting condition:",
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_02_Case_01 -$it _when epic having issueBelongsToEpic not respecting condition:",
 			 parameters: [
 					 issue     : {->epic[]},
 					 transition: it
 			 ]
 			],
 			[action: 'updateIssue', ext: ":  change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->epic[]},
 					 priority: "High",
 			 ]
 			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the parent issue have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->epic[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
 			 expected  : 0,
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_02_Case_02 -$it _when epic having issueBelongsToEpic respecting condition:",
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_02_Case_02 -$it _when epic having issueBelongsToEpic respecting condition:",
 			 parameters: [
 					 issue     : {->epic[]},
 					 transition: it ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to low satisfy the criteria after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to low after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->epic[]},
 					 priority: "Low",
@@ -802,35 +1914,66 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_17_TC_03-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_51_TC_03-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_childPortfolio',
 ].collect {
 	if(!isCloud) {
 		gint.taskHelper.add([
+				[action: 'getFieldValue',
+				 ext: ": Validate that the initiative does not have high priority: $it",
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue: {->epic[]},
+						 field: "Priority",
+				 ],
+				 finalClosure: {Task task ->
+					 def output = "$task.outData"
+					 assert !output.contains("Priority  . . . . . . . . . . : High")
+				 }
+				],
+		]
+		)
+		gint.taskHelper.add([
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_03_Case_01 -$it _when parent issue not having issues child issues in portfolio hierarchy respecting given condition:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_03_Case_01 -$it _when parent issue not having issues child issues in portfolio hierarchy respecting given condition:",
 				 expected  : -3,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> initiative[] },
 						 transition: it,
 				 ]
 				],
 				[action    : 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> initiative[] },
 						 priority: "High",
 				 ]
 				],
+				[action: 'getFieldValue',
+				 ext: ": Validate that the initiative have high priority: $it",
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue: {->initiative[]},
+						 field: "Priority",
+				 ],
+				 finalClosure: {Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("Priority  . . . . . . . . . . : High")
+				 }
+				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_03_Case_02 -$it _when parent issue having issues child issues in portfolio hierarchy respecting given condition:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_03_Case_02 -$it _when parent issue having issues child issues in portfolio hierarchy respecting given condition:",
 				 expected  : 0,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> initiative[] },
 						 transition: it,
 				 ]
 				],
-				[action    : 'updateIssue', ext: ": change issue priority to low satisfy the criteria after checking: $it",
+				[action    : 'updateIssue', ext: ": change issue priority to low after checking: $it",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> initiative[] },
 						 priority: "Low",
@@ -840,361 +1983,705 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	}
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_51_TC_04-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_51_TC_04-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_linkByAnyLink',
 ].collect {
 	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_04_Case_01 -$it _current issue not having issue linked to it through any link type which respect given condition:",
-			 expected  : -3,
+			[action: "linkIssue", ext: ": link issues to check _$it :",
 			 parameters: [
-					 issue     : {->blocks[]},
-					 transition: it ,
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'blocks',
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through any link does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
-					 priority: "High",
-			 ]
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_04_Case_02 -$it _current issue having issue linked to it through any link type which respect given condition:",
-			 expected  : 0,
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_04_Case_01 -$it _current issue not having issue linked to it through any link type which respect given condition:",
+			 expected  : -3,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to low satisfy the criteria after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "High",
+			 ]
+			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through any link have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_04_Case_02 -$it _current issue having issue linked to it through any link type which respect given condition:",
+			 expected  : 0,
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue',
+			 ext: ": change issue priority to low after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
 			 ]
 			],
+			[action: "deleteLink", ext: ": linked issues to check _$it :",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'blocks',
+			 ]
+			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_17_TC_05-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_51_TC_05-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_linkByBlock',
 ].collect {
 	gint.taskHelper.add([
+			[action: "linkIssue", ext: ": link issues to check _$it :",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'blocks',
+			 ]
+			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through any link does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -3,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
 			 ]
 			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through any link have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to Low after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
 			 ]
 			],
+			[action: "deleteLink", ext: ": linked issues to check _$it :",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'blocks',
+			 ]
+			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_17_TC_06-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_51_TC_06-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_linkByisBlockedBy',
 ].collect {
 	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_06_Case_01 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
-			 expected  : -3,
+			[action: "linkIssue", ext: ": link issues to check _$it :",
 			 parameters: [
-					 issue     : {->blocks[]},
+					 issue: {-> toIssueLink[]},
+					 toIssue: {-> issueLinks[]},
+					 link: 'blocks',
+			 ]
+			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through is blocked by link does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_06_Case_01 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
+			 expected  : -3,
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue: {->blocks[]},
+					 issue: {->issueLinks[]},
 					 priority: "High",
 			 ]
 			],
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_06_Case_02 -$it _when current issue not having issues linked to it through the is blocked by link type:",
-			 expected  : 0,
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through is blocked by link have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue     : {->blocks[]},
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_06_Case_02 -$it _when current issue not having issues linked to it through the is blocked by link type:",
+			 expected  : 0,
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to Low after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue: {->blocks[]},
+					 issue: {->issueLinks []},
 					 priority: "Low",
+			 ]
+			],
+			[action: "deleteLink", ext: ": linked issues to check _$it :",
+			 parameters: [
+					 issue: {-> toIssueLink[]},
+					 toIssue: {-> issueLinks[]},
+					 link: 'blocks',
 			 ]
 			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_17_TC_07-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_51_TC_07-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_linkByClones',
 ].collect {
+	def clonesLink = info?.isCloud ? 'clones' : clonesLinkType
 	gint.taskHelper.add([
+			[action: "linkIssue", ext: ": link issues to check _$it :",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: clonesLink,
+			 ]
+			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through clones link does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
-			 expected  : -3,
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
+			 expected: -3,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 sleepAfter: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
 			 ]
 			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through clones link have high priority: $it",
+			 sleepAfter: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
-			 expected  : 0,
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
+			 expected: 0,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to Low after checking: $it",
+			 sleepAfter: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
 			 ]
 			],
+			[action: "deleteLink", ext: ": link issues to check _$it :",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: clonesLink,
+			 ]
+			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_17_TC_08-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_51_TC_08-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_linkByIsClonedBy',
 ].collect {
+	def clonesLink = info?.isCloud ? 'clones' : clonesLinkType
 	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_08_Case_01 -$it _when current issue have issue linked to it through the is cloned by link type:",
-			 expected  : -3,
+			[action: "linkIssue", ext: ": link issues to check _$it :",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue     : {->clones[]},
+					 issue: {-> toIssueLink[]},
+					 toIssue: {-> issueLinks[]},
+					 link: clonesLink,
+			 ]
+			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through clones link does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
+			 expected: -3,
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue: {->clones[]},
+					 issue: {->issueLinks[]},
 					 priority: "High",
 			 ]
 			],
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_08_Case_02 -$it _when current issue not having issues linked to it through the is cloned by link type:",
-			 expected  : 0,
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through clones link have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue     : {->clones[]},
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
+			 expected: 0,
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to Low after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue: {->clones[]},
+					 issue: {->issueLinks[]},
 					 priority: "Low",
+			 ]
+			],
+			[action: "deleteLink", ext: ": link issues to check _$it :",
+			 parameters: [
+					 issue: {-> toIssueLink[]},
+					 toIssue: {-> issueLinks[]},
+					 link: clonesLink,
 			 ]
 			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_17_TC_09-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_51_TC_09-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_linkByDuplicates',
 ].collect {
 	gint.taskHelper.add([
+			[action: "linkIssue", ext: ": link issues to check _$it :",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'duplicates',
+			 ]
+			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through duplicates link does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_09_Case_01 -$it _when current issue have issue linked to it through the duplicates link type_not respecting condition:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -3,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
 			 ]
 			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through duplicates link have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_09_Case_02 -$it _when current issue not having issues linked to it through the duplicates link type_respecting condition:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to Low after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
 			 ]
 			],
-	])
-}
-
-// RELATED_ISSUES_VALIDATOR_TS_17_TC_10-verify Check related issues and verify with different - Target issues
-[
-		'verify_check_related_issues_linkByIsDuplicatedBy',
-].collect {
-	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_10_Case_01 -$it _when current issue have issue linked to it through the is duplicated by link type:",
-			 expected  : -3,
+			[action: "deleteLink", ext: ": linked issues to check _$it :",
 			 parameters: [
-					 issue     : {->duplicates[]},
-					 transition: it ,
-			 ]
-			],
-			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
-			 parameters: [
-					 issue: {->duplicates[]},
-					 priority: "High",
-			 ]
-			],
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_10_Case_02 -$it _when current issue not having issues linked to it through the is duplicated by link type:",
-			 expected  : 0,
-			 parameters: [
-					 issue     : {->duplicates[]},
-					 transition: it ,
-			 ]
-			],
-			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
-			 parameters: [
-					 issue: {->duplicates[]},
-					 priority: "Low",
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'duplicates',
 			 ]
 			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_17_TC_11-verify Check related issues and verify with different - Target issues
+
+// RELATED_ISSUES_CONDITION_TS_51_TC_11-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_linkByRelatesTo',
 ].collect {
 	gint.taskHelper.add([
+			[action: "linkIssue", ext: ": link issues to check _$it :",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'relates to',
+			 ]
+			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through relates to link does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_11_Case_01 -$it _when current issue have issue linked to it through the relates to link type:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -3,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
 			 ]
 			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through relates to link have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_11_Case_02 -$it _when current issue not having issues linked to it through the relates to link type:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to Low after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
 			 ]
 			],
+			[action: "deleteLink", ext: ": linked issues to check _$it :",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {->toIssueLink  []},
+					 link: 'relates to',
+			 ]
+			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_17_TC_12-verify check certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
+// RELATED_ISSUES_CONDITION_TS_51_TC_12-verify check certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
 [
 		'verify_check_related_issues_returnsByGroovyExpression',
 ].collect {
-	if(!isCloud) {
+	if (!isCloud) {
 		gint.taskHelper.add([
+				[action    : "linkIssue", ext: ": link issues to check _$it :",
+				 parameters: [
+						 issue  : { -> toIssueLink[] },
+						 toIssue: { -> issueLinks[] },
+						 link   : 'relates to',
+				 ]
+				],
+				[action      : 'getFieldValue',
+				 ext         : ": Validate that the issues link to current issue through relates to link does not have high priority: $it",
+				 sleepAfter  : 3000,
+				 parameters  : [
+						 issue: { -> issueLinks[] },
+						 field: "Priority",
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert !output.contains("Priority  . . . . . . . . . . : High")
+				 }
+				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_12_Case_01 -$it _when the following Groovy expression:$returnsLinkedIssues return at least 1 issue:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 				 expected  : -3,
+				 sleep     : info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
 				 ]
 				],
-				[action    : 'updateIssue', ext: ": change issue priority to High for checking: $it",
+				[action    : 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> issueLinks[] },
 						 priority: "High",
 				 ]
 				],
+				[action      : 'getFieldValue',
+				 ext         : ": Validate that the issues link to current issue through relates to link have high priority: $it",
+				 sleepAfter  : 3000,
+				 parameters  : [
+						 issue: { -> issueLinks[] },
+						 field: "Priority",
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("Priority  . . . . . . . . . . : High")
+				 }
+				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_12_Case_02 -$it _The following Groovy expression:$returnsLinkedIssues not returns issues:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 				 expected  : 0,
+				 sleep     : info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
 				 ]
 				],
-				[action    : 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+				[action    : 'updateIssue',
+				 ext       : ": change issue priority to Low after checking: $it",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> issueLinks[] },
 						 priority: "Low",
+				 ]
+				],
+				[action    : "deleteLink", ext: ": linked issues to check _$it :",
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> toIssueLink[] },
+						 link   : 'relates to',
 				 ]
 				],
 		])
 	}
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_17_TC_13-verify check certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
+// RELATED_ISSUES_CONDITION_TS_51_TC_13-verify check certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
 [
 		'verify_check_related_issues_returnsFromJqlSearch',
 ].collect {
 	if(!isCloud) {
 		gint.taskHelper.add([
+				[action      : 'getFieldValue',
+				 ext         : ": Validate that the issue returns by jql search should not have high priority: $it",
+				 sleepAfter  : 3000,
+				 parameters  : [
+						 issue: { -> defaultIssue[] },
+						 field: "Priority",
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert !output.contains("Priority  . . . . . . . . . . : High")
+				 }
+				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_13_case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
-				 expected  : -3,
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_13_case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
+				 expected: -3,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
 				 ]
 				],
-				[action    : 'updateIssue', ext: ": change issue priority to High for checking: $it",
+				[action    : 'updateIssue',
+				 ext: ": change issue priority to High for checking: $it",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> defaultIssue[] },
 						 priority: "High",
 				 ]
 				],
+				[action      : 'getFieldValue',
+				 ext         : ": Validate that the issue returns by jql search should have high priority: $it",
+				 sleepAfter  : 3000,
+				 parameters  : [
+						 issue: { -> defaultIssue[] },
+						 field: "Priority",
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("Priority  . . . . . . . . . . : High")
+				 }
+				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_17_TC_13_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
-				 expected  : 0,
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_13_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
+				 expected: 0,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
 				 ]
 				],
-				[action    : 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+				[action    : 'updateIssue',
+				 ext: ": change issue priority to Low after checking: $it",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> defaultIssue[] },
 						 priority: "Low",
@@ -1204,42 +2691,66 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	}
 }
 
+//                                     RELATED_ISSUES_CONDITION => FORBID CERTAIN RELATED ISSUES
 
-
-/* -----------------------------------------------------------------------------------------------------------------------------------
-   -----------------------------------------------------------------------------------------------------------------------------------
-                                     RELATED_ISSUES_VALIDATOR => FORBID CERTAIN RELATED ISSUES
-   -----------------------------------------------------------------------------------------------------------------------------------
-   ----------------------------------------------------------------------------------------------------------------------------------- */
-
-// RELATED_ISSUES_VALIDATOR_TS_18_TC_01-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_55-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_subtask',
 ].collect {
 	gint.taskHelper.add([
+			[action: 'getFieldValue',
+			 ext: ": Validate that the parent issue does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->parent[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_01_Case_01 -$it _when issue having subtask not respecting given condition :",
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_01_Case_01 -$it _when issue having subtask not respecting given condition :",
 			 expected  : 0,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->parent[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ":  change issue priority to high satisfy the criteria to check: $it",
+			[action: 'updateIssue',
+			 ext: ":  change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->parent[]},
 					 priority: "High",
 			 ]
 			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the parent issue have High priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->parent[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_01_Case_02 -$it _when issue having subtask respecting given condition:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_01_Case_02 -$it _when issue having subtask respecting given condition:",
 			 expected  : -3,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->parent[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to low satisfy the criteria after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to low satisfy the criteria after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->parent[]},
 					 priority: "Low",
@@ -1248,33 +2759,65 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_18_TC_02-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_55_TC_02-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_issueBelongsToEpic',
 ].collect {
 	gint.taskHelper.add([
+			[action: 'getFieldValue',
+			 ext: ": Validate that the parent issue does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->epic[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
+	]
+	)
+	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 expected  : 0,
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_02_Case_01 -$it _when epic having issueBelongsToEpic not respecting condition:",
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_02_Case_01 -$it _when epic having issueBelongsToEpic not respecting condition:",
 			 parameters: [
 					 issue     : {->epic[]},
 					 transition: it
 			 ]
 			],
 			[action: 'updateIssue', ext: ":  change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->epic[]},
 					 priority: "High",
 			 ]
 			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the parent issue have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->epic[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
 			 expected  : -3,
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_02_Case_02 -$it _when epic having issueBelongsToEpic respecting condition:",
+			 sleep: info?.isCloud? 5000 : 500,
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_02_Case_02 -$it _when epic having issueBelongsToEpic respecting condition:",
 			 parameters: [
 					 issue     : {->epic[]},
 					 transition: it ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to low satisfy the criteria after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to low after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->epic[]},
 					 priority: "Low",
@@ -1283,35 +2826,66 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_18_TC_03-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_55_TC_03-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_childPortfolio',
 ].collect {
 	if(!isCloud) {
 		gint.taskHelper.add([
+				[action: 'getFieldValue',
+				 ext: ": Validate that the initiative does not have high priority: $it",
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue: {->epic[]},
+						 field: "Priority",
+				 ],
+				 finalClosure: {Task task ->
+					 def output = "$task.outData"
+					 assert !output.contains("Priority  . . . . . . . . . . : High")
+				 }
+				],
+		]
+		)
+		gint.taskHelper.add([
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_03_Case_01 -$it _when parent issue not having issues child issues in portfolio hierarchy respecting given condition:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_03_Case_01 -$it _when parent issue not having issues child issues in portfolio hierarchy respecting given condition:",
 				 expected  : 0,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> initiative[] },
 						 transition: it,
 				 ]
 				],
 				[action    : 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> initiative[] },
 						 priority: "High",
 				 ]
 				],
+				[action: 'getFieldValue',
+				 ext: ": Validate that the initiative have high priority: $it",
+				 sleep: info?.isCloud? 5000 : 500,
+				 parameters: [
+						 issue: {->initiative[]},
+						 field: "Priority",
+				 ],
+				 finalClosure: {Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("Priority  . . . . . . . . . . : High")
+				 }
+				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_03_Case_02 -$it _when parent issue having issues child issues in portfolio hierarchy respecting given condition:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_03_Case_02 -$it _when parent issue having issues child issues in portfolio hierarchy respecting given condition:",
 				 expected  : -3,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> initiative[] },
 						 transition: it,
 				 ]
 				],
-				[action    : 'updateIssue', ext: ": change issue priority to low satisfy the criteria after checking: $it",
+				[action    : 'updateIssue', ext: ": change issue priority to low after checking: $it",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> initiative[] },
 						 priority: "Low",
@@ -1321,361 +2895,725 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	}
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_18_TC_04-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_55_TC_04-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_linkByAnyLink',
 ].collect {
 	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_04_Case_01 -$it _current issue not having issue linked to it through any link type which respect given condition:",
-			 expected  : 0,
+			[action: "linkIssue", ext: ": link issues to check _$it :",
 			 parameters: [
-					 issue     : {->blocks[]},
-					 transition: it ,
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'blocks',
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through any link does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
-					 priority: "High",
-			 ]
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
 			],
+	]
+	)
+	gint.taskHelper.add([
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_04_Case_02 -$it _current issue having issue linked to it through any link type which respect given condition:",
-			 expected  : -3,
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_04_Case_01 -$it _current issue not having issue linked to it through any link type which respect given condition:",
+			 expected  : 0,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to low satisfy the criteria after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 priority: "High",
+			 ]
+			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through any link have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_04_Case_02 -$it _current issue having issue linked to it through any link type which respect given condition:",
+			 expected  : -3,
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue     : {->issueLinks[]},
+					 transition: it ,
+			 ]
+			],
+			[action: 'updateIssue',
+			 ext: ": change issue priority to low after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
 			 ]
 			],
+			[action: "deleteLink", ext: ": linked issues to check _$it :",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'blocks',
+			 ]
+			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_18_TC_05-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_55_TC_05-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_linkByBlock',
 ].collect {
 	gint.taskHelper.add([
+			[action: "linkIssue", ext: ": link issues to check _$it :",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'blocks',
+			 ]
+			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through any link does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
+	]
+	)
+	gint.taskHelper.add([
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
 			 ]
 			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through any link have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -3,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to Low after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
 			 ]
 			],
+			[action: "deleteLink", ext: ": linked issues to check _$it :",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'blocks',
+			 ]
+			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_18_TC_06-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_55_TC_06-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_linkByisBlockedBy',
 ].collect {
 	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_06_Case_01 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
-			 expected  : 0,
+			[action: "linkIssue", ext: ": link issues to check _$it :",
 			 parameters: [
-					 issue     : {->blocks[]},
+					 issue: {-> toIssueLink[]},
+					 toIssue: {-> issueLinks[]},
+					 link: 'blocks',
+			 ]
+			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through is blocked by link does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
+	]
+	)
+	gint.taskHelper.add([
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_06_Case_01 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
+			 expected  : 0,
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue: {->blocks[]},
+					 issue: {->issueLinks[]},
 					 priority: "High",
 			 ]
 			],
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_06_Case_02 -$it _when current issue not having issues linked to it through the is blocked by link type:",
-			 expected  : -3,
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through is blocked by link have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue     : {->blocks[]},
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_06_Case_02 -$it _when current issue not having issues linked to it through the is blocked by link type:",
+			 expected  : -3,
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to Low after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue: {->blocks[]},
+					 issue: {->issueLinks []},
 					 priority: "Low",
+			 ]
+			],
+			[action: "deleteLink", ext: ": linked issues to check _$it :",
+			 parameters: [
+					 issue: {-> toIssueLink[]},
+					 toIssue: {-> issueLinks[]},
+					 link: 'blocks',
 			 ]
 			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_18_TC_07-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_55_TC_07-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_linkByClones',
 ].collect {
+	def clonesLink = info?.isCloud ? 'clones' : clonesLinkType
+	gint.taskHelper.add([
+			[action: "linkIssue", ext: ": link issues to check _$it :",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: clonesLink,
+			 ]
+			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through clones link does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
+	]
+	)
 	gint.taskHelper.add([
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
-			 expected  : 0,
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
+			 expected: 0,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
 			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
 			 ]
 			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through clones link have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
-			 expected  : -3,
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
+			 expected: -3,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to Low after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
 			 ]
 			],
+			[action: "deleteLink", ext: ": link issues to check _$it :",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: clonesLink,
+			 ]
+			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_18_TC_08-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_55_TC_08-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_linkByIsClonedBy',
 ].collect {
+	def clonesLink = info?.isCloud ? 'clones' : clonesLinkType
+	gint.taskHelper.add([
+			[action: "linkIssue", ext: ": link issues to check _$it :",
+			 parameters: [
+					 issue: {-> toIssueLink[]},
+					 toIssue: {-> issueLinks[]},
+					 link: clonesLink,
+			 ]
+			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through clones link does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
+	]
+	)
 	gint.taskHelper.add([
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_08_Case_01 -$it _when current issue have issue linked to it through the is cloned by link type:",
-			 expected  : 0,
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
+			 expected: 0,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue     : {->clones[]},
+					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue: {->clones[]},
+					 issue: {->issueLinks[]},
 					 priority: "High",
 			 ]
 			],
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_08_Case_02 -$it _when current issue not having issues linked to it through the is cloned by link type:",
-			 expected  : -3,
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through clones link have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue     : {->clones[]},
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
+			 expected: -3,
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to Low after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue: {->clones[]},
+					 issue: {->issueLinks[]},
 					 priority: "Low",
+			 ]
+			],
+			[action: "deleteLink", ext: ": link issues to check _$it :",
+			 parameters: [
+					 issue: {-> toIssueLink[]},
+					 toIssue: {-> issueLinks[]},
+					 link: clonesLink,
 			 ]
 			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_18_TC_09-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_55_TC_09-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_linkByDuplicates',
 ].collect {
 	gint.taskHelper.add([
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_09_Case_01 -$it _when current issue have issue linked to it through the duplicates link type_not respecting condition:",
-			 expected  : 0,
+			[action: "linkIssue", ext: ": link issues to check _$it :",
 			 parameters: [
-					 issue     : {->issueLinks[]},
-					 transition: it ,
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'duplicates',
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
-			 parameters: [
-					 issue: {->issueLinks[]},
-					 priority: "High",
-			 ]
-			],
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_09_Case_02 -$it _when current issue not having issues linked to it through the duplicates link type_respecting condition:",
-			 expected  : -3,
-			 parameters: [
-					 issue     : {->issueLinks[]},
-					 transition: it ,
-			 ]
-			],
-			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through duplicates link does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
-					 priority: "Low",
-			 ]
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
 			],
-	])
-}
-
-// RELATED_ISSUES_VALIDATOR_TS_18_TC_10-verify Forbid certain related issues and verify with different - Target issues
-[
-		'forbid_certain_related_issues_linkByIsDuplicatedBy',
-].collect {
+	]
+	)
 	gint.taskHelper.add([
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_10_Case_01 -$it _when current issue have issue linked to it through the is duplicated by link type:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue     : {->duplicates[]},
+					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue: {->duplicates[]},
+					 issue: {->issueLinks[]},
 					 priority: "High",
 			 ]
 			],
-			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_10_Case_02 -$it _when current issue not having issues linked to it through the is duplicated by link type:",
-			 expected  : -3,
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through duplicates link have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue     : {->duplicates[]},
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
+			[action    : 'transitionIssue',
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 expected  : -3,
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to Low after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
-					 issue: {->duplicates[]},
+					 issue: {->issueLinks[]},
 					 priority: "Low",
+			 ]
+			],
+			[action: "deleteLink", ext: ": linked issues to check _$it :",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'duplicates',
 			 ]
 			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_18_TC_11-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_CONDITION_TS_55_TC_11-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_linkByRelatesTo',
 ].collect {
 	gint.taskHelper.add([
+			[action: "linkIssue", ext: ": link issues to check _$it :",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {-> toIssueLink[]},
+					 link: 'relates to',
+			 ]
+			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through relates to link does not have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert !output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_11_Case_01 -$it _when current issue have issue linked to it through the relates to link type:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to High for checking: $it",
+			[action: 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "High",
 			 ]
 			],
+			[action: 'getFieldValue',
+			 ext: ": Validate that the issues link to current issue through relates to link have high priority: $it",
+			 sleep: info?.isCloud? 5000 : 500,
+			 parameters: [
+					 issue: {->issueLinks[]},
+					 field: "Priority",
+			 ],
+			 finalClosure: {Task task ->
+				 def output = "$task.outData"
+				 assert output.contains("Priority  . . . . . . . . . . : High")
+			 }
+			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_11_Case_02 -$it _when current issue not having issues linked to it through the relates to link type:",
+			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -3,
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue     : {->issueLinks[]},
 					 transition: it ,
 			 ]
 			],
-			[action: 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+			[action: 'updateIssue',
+			 ext: ": change issue priority to Low after checking: $it",
+			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
 					 issue: {->issueLinks[]},
 					 priority: "Low",
 			 ]
 			],
+			[action: "deleteLink", ext: ": linked issues to check _$it :",
+			 parameters: [
+					 issue: {-> issueLinks[]},
+					 toIssue: {->toIssueLink  []},
+					 link: 'relates to',
+			 ]
+			],
 	])
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_18_TC_12-verify Forbid certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
+// RELATED_ISSUES_CONDITION_TS_55_TC_12-verify Forbid certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
 [
 		'forbid_certain_related_issues_returnsByGroovyExpression',
 ].collect {
-	if(!isCloud) {
+	if (!isCloud) {
+		gint.taskHelper.add([
+				[action    : "linkIssue", ext: ": link issues to check _$it :",
+				 parameters: [
+						 issue  : { -> toIssueLink[] },
+						 toIssue: { -> issueLinks[] },
+						 link   : 'relates to',
+				 ]
+				],
+				[action      : 'getFieldValue',
+				 ext         : ": Validate that the issues link to current issue through relates to link does not have high priority: $it",
+				 sleepAfter  : 3000,
+				 parameters  : [
+						 issue: { -> issueLinks[] },
+						 field: "Priority",
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert !output.contains("Priority  . . . . . . . . . . : High")
+				 }
+				],
+		]
+		)
 		gint.taskHelper.add([
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_12_Case_01 -$it _when the following Groovy expression:$returnsLinkedIssues return at least 1 issue:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 				 expected  : 0,
+				 sleep     : info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
 				 ]
 				],
-				[action    : 'updateIssue', ext: ": change issue priority to High for checking: $it",
+				[action    : 'updateIssue', ext: ": change issue priority to high satisfy the criteria to check: $it",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> issueLinks[] },
 						 priority: "High",
 				 ]
 				],
+				[action      : 'getFieldValue',
+				 ext         : ": Validate that the issues link to current issue through relates to link have high priority: $it",
+				 sleepAfter  : 3000,
+				 parameters  : [
+						 issue: { -> issueLinks[] },
+						 field: "Priority",
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("Priority  . . . . . . . . . . : High")
+				 }
+				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_12_Case_02 -$it _The following Groovy expression:$returnsLinkedIssues not returns issues:",
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 				 expected  : -3,
+				 sleep     : info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
 						 transition: it,
 				 ]
 				],
-				[action    : 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+				[action    : 'updateIssue',
+				 ext       : ": change issue priority to Low after checking: $it",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> issueLinks[] },
 						 priority: "Low",
+				 ]
+				],
+				[action    : "deleteLink", ext: ": linked issues to check _$it :",
+				 parameters: [
+						 issue  : { -> issueLinks[] },
+						 toIssue: { -> toIssueLink[] },
+						 link   : 'relates to',
 				 ]
 				],
 		])
 	}
 }
 
-// RELATED_ISSUES_VALIDATOR_TS_18_TC_13-verify forbid certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
+// RELATED_ISSUES_CONDITION_TS_55_TC_13-verify forbid certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
 [
 		'forbid_certain_related_issues_returnsFromJqlSearch',
 ].collect {
 	if(!isCloud) {
 		gint.taskHelper.add([
+				[action      : 'getFieldValue',
+				 ext         : ": Validate that the issue returns by jql search should not have high priority: $it",
+				 sleepAfter  : 3000,
+				 parameters  : [
+						 issue: { -> defaultIssue[] },
+						 field: "Priority",
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert !output.contains("Priority  . . . . . . . . . . : High")
+				 }
+				],
+		])
+		gint.taskHelper.add([
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_13_case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
-				 expected  : 0,
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_13_case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
+				 expected: 0,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
 				 ]
 				],
-				[action    : 'updateIssue', ext: ": change issue priority to High for checking: $it",
+				[action    : 'updateIssue',
+				 ext: ": change issue priority to High for checking: $it",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> defaultIssue[] },
 						 priority: "High",
 				 ]
 				],
+				[action      : 'getFieldValue',
+				 ext         : ": Validate that the issue returns by jql search should have high priority: $it",
+				 sleepAfter  : 3000,
+				 parameters  : [
+						 issue: { -> defaultIssue[] },
+						 field: "Priority",
+				 ],
+				 finalClosure: { Task task ->
+					 def output = "$task.outData"
+					 assert output.contains("Priority  . . . . . . . . . . : High")
+				 }
+				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_18_TC_13_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
-				 expected  : -3,
+				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_13_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
+				 expected: -3,
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
 				 ]
 				],
-				[action    : 'updateIssue', ext: ": change issue priority to Low after checking: $it",
+				[action    : 'updateIssue',
+				 ext: ": change issue priority to Low after checking: $it",
+				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> defaultIssue[] },
 						 priority: "Low",
@@ -1684,6 +3622,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 		])
 	}
 }
+
 
 // RELATED_ISSUES_VALIDATOR_TS_42_-Verify Validator scope -Conditional validation
 ['verify_validator_scope_conditional_validation'].collect {

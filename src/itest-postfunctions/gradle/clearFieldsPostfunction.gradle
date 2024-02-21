@@ -10,13 +10,14 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-postfunctions/postfunction.gradle'
 
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
 
 def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ClearFieldsFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:ClearFieldValue-function'
 
-def fields = [
+def fieldsServer = [
         labels : [ "fields=labels"],
         components : [ "fields=components"],
         fixVersions : [ "fields=fixVersions"],
@@ -24,20 +25,26 @@ def fields = [
         assignee : [ "fields=assignee"]
 ]
 
-def defaultFieldsCloud= [
-        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249"
+def fieldsCloud = [
+        labels : /"fields":"labels"/,
+        components : /"fields":"components"/,
+        fixVersions : /"fields":"fixVersions"/,
+        affectsVersions : /"fields":"versions"/,
+        assignee : /"fields":"assignee"/
 ]
+
+def fields = info?.isCloud ? fieldsCloud : fieldsServer
 
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'clearFieldLabel'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"fields\":\"labels\",\"runAsType\":\"addonUser\"}"
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"targetIssue\":\"$value\",$fields.labels,$runAsUser.currentUser}"
     def server = defaultFieldsServer + fields.labels + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsSpecificUser'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"fields\":\"components\",\"runAsType\":\"thisUser\",\"runAs\":\"accountId:$testUserIdCloud\"}"
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"targetIssue\":\"$value\",$fields.components,$runAsUser.specificUser}"
     def server = defaultFieldsServer + fields.components + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.specificUser
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
@@ -47,8 +54,8 @@ relatedIssue.eachWithIndex { key, value, i ->
 
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldAssignee'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"fields\":\"fixVersions\",\"runAsType\":\"userField\",\"runAsField\":\"assignee\"}"
-    def server = defaultFieldsServer +fields.fixVersions + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldAssignee
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"targetIssue\":\"$value\",$fields.fixVersions,$runAsUser.userInFieldAssignee}"
+    def server = defaultFieldsServer + fields.fixVersions + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldAssignee
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(transition + i, 4)
@@ -57,8 +64,8 @@ relatedIssue.eachWithIndex { key, value, i ->
 
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldReporter'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"fields\":\"assignee\",\"runAsType\":\"userField\",\"runAsField\":\"reporter\"}"
-    def server = defaultFieldsServer +fields.assignee + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldReporter
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"targetIssue\":\"$value\",$fields.assignee,$runAsUser.userInFieldReporter}"
+    def server = defaultFieldsServer + fields.assignee + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldReporter
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(transition + i, 4)
@@ -67,7 +74,7 @@ relatedIssue.eachWithIndex { key, value, i ->
 
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldCreator'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"fields\":\"versions\",\"runAsType\":\"userField\",\"runAsField\":\"creator\"}"
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"targetIssue\":\"$value\",$fields.affectsVersions,$runAsUser.userInFieldCreator}"
     def server = defaultFieldsServer +fields.affectsVersions + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldCreator
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
@@ -77,7 +84,7 @@ relatedIssue.eachWithIndex { key, value, i ->
 
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'clearFieldsIfConditionalExecutionTrue'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":true,\"conditionalExecutionScript\":\"{{ issue.fields.priority.name == 'High' }}\",\"targetIssue\":\"$value\",\"fields\":\"labels\",\"runAsType\":\"addonUser\"}"
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.true,\"targetIssue\":\"$value\",$fields.labels,$runAsUser.currentUser}"
     def server = defaultFieldsServer + fields.labels + "selectedLinkType=$value" + conditionalExecution.true + runAsUser.currentUser
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
@@ -105,7 +112,7 @@ createProject()
 }
 
 
-def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
+def currentIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'currentIssue')
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
 def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
 def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
@@ -132,7 +139,7 @@ linkIssuesMap.eachWithIndex { key, value, i ->
 }
 
 def relatedIssuesMap = [
-        {->current[]} : {->current[]},
+        {->currentIssue[]} : {->currentIssue[]},
         {->parent[]} : {->subtask[]},
         {->subtask[]} : {->parent[]},
         {->epic[]} : {->issueBelongsToEpic[]},
@@ -156,7 +163,7 @@ int fixVersions = 1
 def affectsVersions = 1
 def component = 'component1'
 
-// CLEAR_FIELDS_POSTFUNCTION_TS_11-Verify to select fields from the Field(s) picker
+// CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_11-Verify to select fields from the Field(s) picker
 [
         'clearFieldLabel',
 ].collect {
@@ -164,15 +171,15 @@ def component = 'component1'
         gint.taskHelper.add([
                 [action: 'updateIssue',
                  ext: " : add field labels to before transition issue with_ $it$i _  : ",
-                 sleep: 5000,
-                parameters: [
-                        issue: value,
-                        labels: testLabel,
-                ],
+                 sleep: info?.isCloud? 5000 : 0,
+                 parameters: [
+                         issue: value,
+                         labels: testLabel,
+                 ],
                 ],
                 [action: "getFieldValue",
-                 sleep: 5000,
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that before transition value of field _labels should be: $testLabel :$it$i",
+                 sleep: info?.isCloud? 5000 : 0,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that before transition value of field _labels should be: $testLabel :$it$i",
                  parameters:[
                          issue: value,
                          field: "Labels"
@@ -183,16 +190,16 @@ def component = 'component1'
                  }
                 ],
                 [action    : 'transitionIssue',
-                 ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_11_TC_ $i to check _$it$i:",
-                sleep: info?.isCloud? 5000 : 0,
+                 ext       : ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_11_TC_ $i to check _$it$i:",
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_11_TC_ $i _validate that the after transition value of field _labels should be clear: $testLabel :$it$i _",
-                sleep: info?.isCloud? 5000 : 0,
+                 ext       : ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_11_TC_ $i _validate that the after transition value of field _labels should be clear: $testLabel :$it$i _",
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
                          field: "Labels"
@@ -207,7 +214,7 @@ def component = 'component1'
     }
 }
 
-// CLEAR_FIELDS_POSTFUNCTION_TS_26_Verify the run as specific user
+// CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_26_Verify the run as specific user
 [
         'runAsSpecificUser',
 ].each {
@@ -215,14 +222,14 @@ def component = 'component1'
         gint.taskHelper.add([
                 [action: 'updateIssue',
                  ext: " : add field component to check $it _" + i,
-                sleep: info?.isCloud? 5000 : 0,
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
                          components: component,
                  ]],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the before transition value of field component should be: $component :$it$i",
-                sleep: info?.isCloud? 5000 : 0,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the before transition value of field component should be: $component :$it$i",
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
                          field: "Components"
@@ -233,16 +240,16 @@ def component = 'component1'
                  }
                 ],
                 [action    : 'transitionIssue',
-                 ext: ": CLEAR_FIELDS_POSTFUNCTION_TS_26_TC_ $i _to check $it _ Verify the run as specific user: ",
-                sleep: info?.isCloud? 5000 : 0,
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_26_TC_ $i _to check $it _ Verify the run as specific user: ",
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the after transition value of field component should be clear: $component :$it$i",
-                sleep: info?.isCloud? 5000 : 0,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the after transition value of field component should be clear: $component :$it$i",
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
                          field: "Components"
@@ -253,25 +260,25 @@ def component = 'component1'
                  }
                 ],
                 [action    : 'getIssueHistoryList',
-                 ext: ": CLEAR_FIELDS_POSTFUNCTION_TS_26_TC_ $i _to check $it _ Verify the run as specific user: ",
-                sleep: info?.isCloud? 5000 : 0,
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_26_TC_ $i _to check $it _ Verify the run as specific user: ",
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
                          outputType: "text",
                          select: "Field:Component",
                          columns: "Author,'From String','To String'"
                  ],
-                 data      : ["$testUser","$component", ""],
+                 data      : ["$getCurrentUserName","$component", ""],
                  finalClosure:{Task task ->
                      def output = "$task.outData"
-                     assert output.contains(testUser) && output.contains(component) && output.contains(" ")
+                     assert output.contains(getCurrentUserName) && output.contains(component) && output.contains(" ")
                  }
                 ],
         ])
     }
 }
 
-// CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_01_Verify the run as user in field assignee option
+// CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_01_Verify the run as user in field assignee option
 [
         'runAsUserInFieldAssignee'
 ].collect {
@@ -296,7 +303,7 @@ def component = 'component1'
                  ],
                 ],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the after transition value of field _assignee should be: $userInFieldAssignee1 :$it$i",
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the after transition value of field _assignee should be: $userInFieldAssignee1 :$it$i",
                  sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
@@ -316,7 +323,7 @@ def component = 'component1'
                  ]
                 ],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the before transition value of field fix versions should be: $fixVersions :$it$i",
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the before transition value of field fix versions should be: $fixVersions :$it$i",
                  sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
@@ -325,7 +332,7 @@ def component = 'component1'
                  data: [ getFixVersions ],
                 ],
                 [action    : 'transitionIssue',
-                 ext: ": CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_01_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_01_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
                  sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue     : key,
@@ -333,7 +340,7 @@ def component = 'component1'
                  ],
                 ],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the value of field fix versions should not be: $fixVersions : after transition_ $it$i",
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the value of field fix versions should not be: $fixVersions : after transition_ $it$i",
                  sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
@@ -342,7 +349,7 @@ def component = 'component1'
                  failData: [ getFixVersions ],
                 ],
                 [action    : 'getIssueHistoryList',
-                 ext: ": CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_01_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_01_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
                  sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
@@ -360,7 +367,7 @@ def component = 'component1'
     }
 }
 
-// CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_02_Verify the run as user in field reporter option
+// CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_02_Verify the run as user in field reporter option
 [
         'runAsUserInFieldReporter',
 ].each {
@@ -369,8 +376,8 @@ def component = 'component1'
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the value of field assignee should be: $userInFieldAssignee1 : after transition_ $it$i",
-                sleep: info?.isCloud? 5000 : 0,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the value of field reporter should be: $userInFieldReporter1 : before transition_ $it$i",
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
                          field: "Reporter"
@@ -382,15 +389,15 @@ def component = 'component1'
                 ],
                 [action: 'assignIssue',
                  ext: ": to check run as user in field reporter related issue: " +it + i ,
-                sleep: info?.isCloud? 5000 : 0,
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
-                         assignee: user
+                         assignee: userInFieldAssignee1
                  ],
                 ],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the value of field assignee should be: $userInFieldAssignee1 : before transition_ $it$i",
-                sleep: info?.isCloud? 5000 : 0,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the value of field assignee should be: $userInFieldAssignee1 : before transition_ $it$i",
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
                          field: "Assignee"
@@ -401,29 +408,29 @@ def component = 'component1'
                  }
                 ],
                 [action    : 'transitionIssue',
-                 ext: ": CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_02_ TC_ $i _ to check $it _Verify the run as user in field reporter option : ",
-                sleep: info?.isCloud? 5000 : 0,
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_02_ TC_ $i _ to check $it _Verify the run as user in field reporter option : ",
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the value of field assignee should be clear: $userInFieldAssignee1 : after transition_ $it$i",
-                sleep: info?.isCloud? 5000 : 0,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the value of field assignee should be clear: $userInFieldAssignee1 : after transition_ $it$i",
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
                          field: "Assignee"
                  ],
-                        failData:["Assignee  . . . . . . . . . . : $userInFieldAssignee1"],
+                 failData:["Assignee  . . . . . . . . . . : $userInFieldAssignee1"],
                  finalClosure:{Task task ->
                      def actualValue = "$task.outData"
                      assert !actualValue.contains(userInFieldAssignee1)
                  }
                 ],
                 [action    : 'getIssueHistoryList',
-                 ext: ": CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_02_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
-                sleep: info?.isCloud? 5000 : 0,
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_02_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
                          outputType: "text",
@@ -440,44 +447,45 @@ def component = 'component1'
     }
 }
 
-// CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_03_Verify the run as user in field creator option
+// CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_03_Verify the run as user in field creator option
 [
         'runAsUserInFieldCreator'
 ].each {
     def userInFieldCreator1 = info?.isCloud? info?.userDisplayName : user
+    def affectsVersionToCheck = info?.isCloud? "Affects versions  . . . . . . : $affectsVersions" : "Affects Version/s . . . . . . : $affectsVersions"
     relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action: 'updateIssue',
                  ext: " : add field affects versions_target issue to check $it _" + i,
-                sleep: info?.isCloud? 5000 : 0,
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
                          affectsVersions: affectsVersions,
                  ]
                 ],
                 [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that the before transition value of field affects versions should be: $fixVersions :$it$i",
-                sleep: info?.isCloud? 5000 : 0,
+                 ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that the before transition value of field affects versions should be: $affectsVersions :$it$i",
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters:[
                          issue: value,
                          field: "affectsVersions"
                  ],
                  finalClosure:{Task task ->
                      def actualValue = "$task.outData"
-                     assert actualValue.contains("Affects Version/s . . . . . . : $affectsVersions")
+                     assert actualValue.contains(affectsVersionToCheck)
                  }
                 ],
                 [action    : 'transitionIssue',
-                 ext: ": CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_03_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
-                sleep: info?.isCloud? 5000 : 0,
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_03_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue     : key,
                          transition: it + i,
                  ],
                 ],
                 [action    : 'getIssueHistoryList',
-                 ext: ": CLEAR_FIELDS_POSTFUNCTION_TS_28_Case_03_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
-                sleep: info?.isCloud? 5000 : 0,
+                 ext: ": CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_28_Case_03_ TC_ $i _ to check $it _Verify the run as user in field assignee option : ",
+                 sleep: info?.isCloud? 5000 : 0,
                  parameters: [
                          issue: value,
                          outputType: "text",
@@ -494,118 +502,117 @@ def component = 'component1'
     }
 }
 
-// CLEAR_FIELDS_POSTFUNCTION_TS_31-Verify the Conditional Execution
+// CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_31-Verify the Conditional Execution
 [
         'clearFieldsIfConditionalExecutionTrue'
 ].each {
     if(!isCloud){
-    relatedIssuesMap.eachWithIndex { key, value, i ->
-        gint.taskHelper.add([
-                [action: 'updateIssue',
-                 ext: " : add field labels to before transition issue with_ $it$i _  : ",
-                sleep: info?.isCloud? 5000 : 0,
-                 parameters: [
-                         issue: value,
-                         labels: testLabel,
-                 ],
-                ],
-                [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that before transition value of field _labels should be: $testLabel :$it$i",
-                sleep: info?.isCloud? 5000 : 0,
-                 parameters:[
-                         issue: value,
-                         field: "Labels"
-                 ],
-                 finalClosure:{Task task ->
-                     def actualValue = "$task.outData"
-                     assert actualValue.contains("$testLabel")
-                 }
-                ],
-                [action    : 'updateIssue',
-                 ext       : " : set priority of current issue to Low to check $it _when condition returns false: " + i,
-                 sleep: info?.isCloud? 5000 : 0,
-                 parameters: [
-                         issue   : key,
-                         priority: 'Low'
-                 ]
-                ],
-                [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that priority of the issue should not be high: $testLabel :$it$i",
-                sleep: info?.isCloud? 5000 : 0,
-                 parameters:[
-                         issue: key,
-                         field: "Priority"
-                 ],
-                 finalClosure:{Task task ->
-                     def actualValue = "$task.outData"
-                     assert !actualValue.contains("High")
-                 }
-                ],
-                [action    : 'transitionIssue',
-                 ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_31_Case_01_ TC_$i _check $it _When condition false: ",
-                 sleep: info?.isCloud? 5000 : 0,
-                 parameters: [
-                         issue     : key,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getFieldValue',
-                 ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_31_Case_01_ TC_$i _check $it _When condition false_labels should not clear: ",
-                 sleep: info?.isCloud? 5000 : 0,
-                 parameters: [
-                         issue: value,
-                         field: "Labels"
-                 ],
-                 data      : [/Labels  . . . . . . . . . . . : $testLabel/],
-                 finalClosure:{Task task ->
-                     def actualValue = "$task.outData"
-                     assert actualValue.contains("$testLabel")
-                 }
-                ],
-                [action    : 'updateIssue',
-                 ext       : " : set priority of current issue to High to check $it _when condition returns true: " + i,
-                 sleep: info?.isCloud? 5000 : 0,
-                 parameters: [
-                         issue   : key,
-                         priority: 'High'
-                 ]
-                ],
-                [action: "getFieldValue",
-                 ext: ":CLEAR_FIELDS_POSTFUNCTION_validate that priority of the issue should be high: $testLabel :$it$i",
-                sleep: info?.isCloud? 5000 : 0,
-                 parameters:[
-                         issue: key,
-                         field: "Priority"
-                 ],
-                 finalClosure:{Task task ->
-                     def actualValue = "$task.outData"
-                     assert actualValue.contains("High")
-                 }
-                ],
-                [action    : 'transitionIssue',
-                 ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_31_Case_02 TC_$i _check $it _When condition true: ",
-                 sleep: info?.isCloud? 5000 : 0,
-                 parameters: [
-                         issue     : key,
-                         transition: it + i,
-                 ]
-                ],
-                [action    : 'getFieldValue',
-                 ext       : ":CLEAR_FIELDS_POSTFUNCTION_TS_31_Case_02_TC_$i _check $it _When condition true_labels should be clear: ",
-                 sleep: info?.isCloud? 5000 : 0,
-                 parameters: [
-                         issue: value,
-                         field: "Labels"
-                 ],
-                 failData  : [/Labels  . . . . . . . . . . . : $testLabel/],
-                 finalClosure:{Task task ->
-                     def actualValue = "$task.outData"
-                     assert !actualValue.contains("$testLabel")
-                 }
-                ],
-        ])
-    }
+        relatedIssuesMap.eachWithIndex { key, value, i ->
+            gint.taskHelper.add([
+                    [action: 'updateIssue',
+                     ext: " : add field labels to before transition issue with_ $it$i _  : ",
+                     sleep: info?.isCloud? 5000 : 0,
+                     parameters: [
+                             issue: value,
+                             labels: testLabel,
+                     ],
+                    ],
+                    [action: "getFieldValue",
+                     ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that before transition value of field _labels should be: $testLabel :$it$i",
+                     sleep: info?.isCloud? 5000 : 0,
+                     parameters:[
+                             issue: value,
+                             field: "Labels"
+                     ],
+                     finalClosure:{Task task ->
+                         def actualValue = "$task.outData"
+                         assert actualValue.contains("$testLabel")
+                     }
+                    ],
+                    [action    : 'updateIssue',
+                     ext       : " : set priority of current issue to Low to check $it _when condition returns false: " + i,
+                     sleep     : 5000,
+                     parameters: [
+                             issue   : key,
+                             priority: 'Low'
+                     ]
+                    ],
+                    [action: "getFieldValue",
+                     ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that priority of the issue should not be high: $testLabel :$it$i",
+                     sleep: info?.isCloud? 5000 : 0,
+                     parameters:[
+                             issue: key,
+                             field: "Priority"
+                     ],
+                     finalClosure:{Task task ->
+                         def actualValue = "$task.outData"
+                         assert !actualValue.contains("High")
+                     }
+                    ],
+                    [action    : 'transitionIssue',
+                     ext       : ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_31_Case_01_ TC_$i _check $it _When condition false: ",
+                     sleep     : 5000,
+                     parameters: [
+                             issue     : key,
+                             transition: it + i,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     ext       : ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_31_Case_01_ TC_$i _check $it _When condition false_labels should not clear: ",
+                     sleep     : 5000,
+                     parameters: [
+                             issue: value,
+                             field: "Labels"
+                     ],
+                     data      : [/Labels  . . . . . . . . . . . : $testLabel/],
+                     finalClosure:{Task task ->
+                         def actualValue = "$task.outData"
+                         assert actualValue.contains("$testLabel")
+                     }
+                    ],
+                    [action    : 'updateIssue',
+                     ext       : " : set priority of current issue to High to check $it _when condition returns true: " + i,
+                     sleep     : 5000,
+                     parameters: [
+                             issue   : key,
+                             priority: 'High'
+                     ]
+                    ],
+                    [action: "getFieldValue",
+                     ext: ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_validate that priority of the issue should be high: $testLabel :$it$i",
+                     sleep: info?.isCloud? 5000 : 0,
+                     parameters:[
+                             issue: key,
+                             field: "Priority"
+                     ],
+                     finalClosure:{Task task ->
+                         def actualValue = "$task.outData"
+                         assert actualValue.contains("High")
+                     }
+                    ],
+                    [action    : 'transitionIssue',
+                     ext       : ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_31_Case_02 TC_$i _check $it _When condition true: ",
+                     sleep     : 5000,
+                     parameters: [
+                             issue     : key,
+                             transition: it + i,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     ext       : ":CLEAR_FIELDS_OF_RELATED_ISSUE_POSTFUNCTION_TS_31_Case_02_TC_$i _check $it _When condition true_labels should be clear: ",
+                     sleep     : 5000,
+                     parameters: [
+                             issue: value,
+                             field: "Labels"
+                     ],
+                     failData  : [/Labels  . . . . . . . . . . . : $testLabel/],
+                     finalClosure:{Task task ->
+                         def actualValue = "$task.outData"
+                         assert !actualValue.contains("$testLabel")
+                     }
+                    ],
+            ])
+        }
     }
 }
-
 

@@ -1,0 +1,187 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction1.gradle'
+
+def script = [
+        setLabels : [ "groovyExpression=issue.setFieldValue('Labels','test_label')","scriptDescription=" ],
+        currentUser : [ "groovyExpression=issue.setFieldValue('Labels','runAsCurrentUser')","scriptDescription=" ],
+        specificUser : [ "groovyExpression=issue.setFieldValue('Labels','runAsSpecificUser')","scriptDescription=" ],
+        userInFieldAssignee : [ "groovyExpression=issue.setFieldValue('Labels','runAsUserInFieldAssignee')","scriptDescription=" ],
+        userInFieldReporter : [ "groovyExpression=issue.setFieldValue('Labels','runAsUserInFieldReporter')","scriptDescription=" ],
+        userInFieldCreator : [ "groovyExpression=issue.setFieldValue('Labels','runAsUserInFieldCreator')","scriptDescription=" ],
+        userFromScript : [ "groovyExpression=issue.setFieldValue('Labels','runAsUserFromScript')","scriptDescription=" ],
+]
+
+def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ScriptedPostFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-function'
+
+// Configuration
+
+['setLabelByScript'].each {
+    def server = defaultFieldsServer + script.setLabels
+    def cloud = defaultFieldsCloud.postfunction + ""
+    if(!isCloud) {
+        addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    }
+}
+
+['runAsCurrentUser'].each {
+    def server = defaultFieldsServer + script.currentUser + runAsUser.currentUser
+    def cloud = defaultFieldsCloud.postfunction + ""
+    if(!isCloud) {
+        addTransitionFunction(it , 'postfunction', info?.isCloud ? cloud : server, functionKey )
+        moveTransitionFunction(it, 4)
+    }
+}
+['runAsUserInFieldReporter'].each {
+    def server = defaultFieldsServer + script.userInFieldReporter + runAsUser.userInFieldReporter
+    def cloud = defaultFieldsCloud.postfunction + ""
+    if(!isCloud) {
+        addTransitionFunction(it , 'postfunction', info?.isCloud ? cloud : server, functionKey )
+        moveTransitionFunction(it, 4)
+    }
+}
+['runAsUserInFieldCreator'].each {
+    def server = defaultFieldsServer + script.userInFieldCreator + runAsUser.userInFieldCreator
+    def cloud = defaultFieldsCloud.postfunction + ""
+    if(!isCloud) {
+        addTransitionFunction(it , 'postfunction', info?.isCloud ? cloud : server, functionKey )
+        moveTransitionFunction(it, 4)
+    }
+}
+
+['runAsUserFromScript'].each {
+    def server = defaultFieldsServer + script.userFromScript + runAsUser.userFromScript
+    def cloud = defaultFieldsCloud.postfunction + ""
+    if(!isCloud) {
+        addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
+        moveTransitionFunction(it, 4)
+    }
+}
+
+['runAsUserInFieldAssignee'].each {
+    def server = defaultFieldsServer + script.userInFieldAssignee + runAsUser.userInFieldAssignee
+    def cloud = defaultFieldsCloud.postfunction + ""
+    if(!isCloud) {
+        addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
+        moveTransitionFunction(it, 4)
+    }
+}
+['runAsSpecificUser'].each {
+    def server = defaultFieldsServer + script.specificUser + runAsUser.specificUser
+    def cloud = defaultFieldsCloud.postfunction + ""
+    if(!isCloud) {
+        addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
+        moveTransitionFunction(it, 4)
+    }
+}
+
+createWorkflowScheme()
+createProject()
+
+
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+
+// checking the current status To Do and previous status In Progress
+[
+        'setLabelByScript'
+].each {
+    if (!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: " : " + it,
+                 sleep     : info?.isCloud ? 5000 : 0,
+                 parameters: [
+                         transition: it,
+                         issue     : { -> defaultIssue[] },
+                 ],
+                ],
+                [action    : 'getFieldValue', ext: ": Chack :" + it,
+                 sleep     : info?.isCloud ? 5000 : 0,
+                 parameters: [
+                         issue: { -> defaultIssue[] },
+                         field: "Labels",
+                 ],
+                 data      : ["Labels  . . . . . . . . . . . : test_label"],
+                ]
+
+        ])
+    }
+}
+
+[
+        'runAsCurrentUser',
+        'runAsUserInFieldReporter',
+        'runAsUserInFieldCreator',
+        'runAsUserFromScript',
+        'runAsSpecificUser',
+].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: " : " + it,
+                 sleep     : info?.isCloud ? 5000 : 0,
+                 parameters: [
+                         transition: it,
+                         issue     : { -> defaultIssue[] },
+                 ],
+                ],
+                [action    : 'getIssueHistoryList', ext: ": Chack :" + it,
+                 sleep     : info?.isCloud ? 5000 : 0,
+                 parameters: [
+                         issue     : { -> defaultIssue[] },
+                         outputType: "Text",
+                         select    : "Field:labels",
+                         columns   : "Author,'To String'",
+                 ],
+                 data      : ["$user", "$it"],
+                ]
+
+        ])
+    }
+}
+
+if(!isCloud) {
+    gint.taskHelper.add(
+            action: 'assignIssue',
+            sleep: info?.isCloud ? 5000 : 0,
+            parameters: [
+                    issue   : { -> defaultIssue[] },
+                    assignee: testUser
+            ]
+    )
+}
+
+[
+        'runAsUserInFieldAssignee',
+].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: " : " + it,
+                 sleep     : info?.isCloud ? 5000 : 0,
+                 parameters: [
+                         transition: it,
+                         issue     : { -> defaultIssue[] },
+                 ],
+                ],
+                [action    : 'getIssueHistoryList', ext: ": Chack :" + it,
+                 sleep     : info?.isCloud ? 5000 : 0,
+                 parameters: [
+                         issue     : { -> defaultIssue[] },
+                         outputType: "Text",
+                         select    : "Field:labels",
+                         columns   : "Author,'To String'",
+                 ],
+                 data      : ["$testUser", "$it"],
+                ]
+        ])
+    }
+}

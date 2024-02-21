@@ -10,7 +10,8 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
 def customErrorMessage = "custom error message"
 def systemErrorMessage = "You must provide a Comment"
@@ -19,7 +20,8 @@ def defaultFieldsServer = [
         verify_the_error_message: ["errorMessage=$customErrorMessage","groups=","showAsterisk=no","correlationId="],
         verify_the_system_error_message: ["errorMessage=","groups=","showAsterisk=no","correlationId="],
         verify_the_condition_groovy_expression : ["conditionalValidation=yes","conditionalValidationScript=$groovyExpression.getIssuetype","errorMessage=","groups=","showAsterisk=no","correlationId="],
-        comment_required_if_not_from_selectedGroup : ["errorMessage=","groups=jira-administrators","showAsterisk=no","correlationId="]
+        comment_required_if_not_from_selectedGroup : ["errorMessage=","groups=jira-administrators","showAsterisk=no","correlationId="],
+        comment_required_if_user_is_not_belongs_to_testGroup : ["errorMessage=","groups=$testGroup","showAsterisk=no","correlationId="]
 ]
 
 def defaultFieldsCloud = [
@@ -50,57 +52,37 @@ createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
-// COMMENT_REQUIRED_VALIDATOR_TC_09_Verify the Error message_On the issue transition_if the user did not add a comment_added error message must be displayed to the user
 [
         'verify_the_error_message',
-].each {
+        'verify_the_system_error_message'
+].eachWithIndex { transition, fieldValues, i ->
+    def errorMessage;
+    if(transition == 'verify_the_error_message'){
+        errorMessage = customErrorMessage
+    }else if(transition == 'verify_the_system_error_message'){
+        errorMessage = systemErrorMessage
+    }
     gint.taskHelper.add([
             [action    : 'transitionIssue',
-             ext: ":COMMENT_REQUIRED_VALIDATOR_TC_09_Case_ 01-Verify the Error message_On the issue transition_if the user did not add a comment_added error message must be displayed to the user_when comment not provided:",
+             sleep: sleep,
+             ext: ":COMMENT_REQUIRED_VALIDATOR_TC_9_Case_01:By $transition:when comment not provided on transition screen:",
              expected  : -3,
              parameters: [
-                     transition: it,
+                     transition: transition,
                      issue: { -> defaultIssue[] },
              ],
-             data: [ /$customErrorMessage/ ]
+             data: [ errorMessage ]
             ],
             [action    : 'transitionIssue',
-             ext: ":COMMENT_REQUIRED_VALIDATOR_TC_09_Case_02-Verify the Error message_On the issue transition_if the user did not add a comment_added error message must be displayed to the user_when comment provided:",
+             sleep: sleep,
+             ext: ":COMMENT_REQUIRED_VALIDATOR_TC_9_Case_02:By $transition:when comment provided on transition screen:",
              expected  : 0,
              parameters: [
-                     transition: it,
+                     transition: transition,
                      issue: { -> defaultIssue[] },
                      comment: 'test_Comment'
              ],
-             failData: [ /$customErrorMessage/ ]
-            ]
-    ]
-    )
-}
-
-// COMMENT_REQUIRED_VALIDATOR_TC_09_Case_02_Verify the system error message
-[
-        'verify_the_system_error_message',
-].each {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext: ":COMMENT_REQUIRED_VALIDATOR_TC_9_Case_02_A_Verify the system error message_when comment not provided:",
-             expected  : -3,
-             parameters: [
-                     transition: it,
-                     issue: { -> defaultIssue[] },
-             ],
-             data: [ /$systemErrorMessage/ ]
-            ],
-            [action    : 'transitionIssue',
-             ext: ":COMMENT_REQUIRED_VALIDATOR_TC_9_Case_02_B_Verify the system error message_when comment provided:",
-             expected  : 0,
-             parameters: [
-                     transition: it,
-                     issue: { -> defaultIssue[] },
-                     comment: 'test_Comment'
-             ],
-             failData: [ /$systemErrorMessage/ ]
+             failData: [ errorMessage ]
             ]
     ]
     )
@@ -112,6 +94,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 ].each {
     gint.taskHelper.add([
             [action    : 'transitionIssue',
+             sleep: sleep,
              ext: ":COMMENT_REQUIRED_VALIDATOR_TC_13_Case_01-Verify the Condition groovy expression_when condition returns true and comment not provided:",
              expected  : -3,
              parameters: [
@@ -121,6 +104,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
              data: [ /$systemErrorMessage/ ]
             ],
             [action    : 'transitionIssue',
+             sleep: sleep,
              ext: ":COMMENT_REQUIRED_VALIDATOR_TC_13_Case_02-Verify the Condition groovy expression_when condition returns true and comment provided:",
              expected  : 0,
              parameters: [
@@ -131,6 +115,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
              failData: [ /$systemErrorMessage/ ]
             ],
             [action: 'updateIssue',
+             sleep: sleep,
              ext: ': change issue type',
              parameters: [
                      issue: {->defaultIssue[]},
@@ -138,6 +123,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
              ]
             ],
             [action    : 'transitionIssue',
+             sleep: sleep,
              ext: ":COMMENT_REQUIRED_VALIDATOR_TC_13_Case_03-Verify the Condition groovy expression_when condition returns false and comment not provided:",
              expected  : 0,
              parameters: [
@@ -153,33 +139,79 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 
 // COMMENT_REQUIRED_VALIDATOR_TC_10_Verify the Groups allowed to omit the comment dropdown_On selecting the group from the drop-down_that group will be omitted from the validator
 ['comment_required_if_not_from_selectedGroup'].each {
-    gint.taskHelper.add([
-            [action: 'transitionIssue',
-             onlyIf: info?.isServer?
-             ext: ":COMMENT_REQUIRED_VALIDATOR_TC_10_Verify the Groups allowed to omit the comment dropdown_On selecting the group from the drop-down_that group will be omitted from the validator:",
-             expected: 0,
-             parameters:[
-                     issue:  {defaultIssue[]},
-                     transition: it
-             ],
-             failData: [/$systemErrorMessage/]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep     : sleep,
+                 ext       : ":COMMENT_REQUIRED_VALIDATOR_TC_10_Verify the Groups allowed to omit the comment dropdown_On selecting the group from the drop-down_that group will be omitted from the validator:$it",
+                 expected  : 0,
+                 parameters: [
+                         issue     : { defaultIssue[] },
+                         transition: it
+                 ],
+                 failData  : [/$systemErrorMessage/]
+                ],
+        ])
+    }
 }
+/*
+['comment_required_if_user_is_not_belongs_to_testGroup'].each {
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep     : sleep,
+                 ext       : ":COMMENT_REQUIRED_VALIDATOR_TC_10_Verify the Groups allowed to omit the comment dropdown_On selecting the group from the drop-down_that group will be omitted from the validator:$it",
+                 expected  : -3,
+                 parameters: [
+                         issue     : { defaultIssue[] },
+                         transition: it
+                 ],
+                 data  : [/$systemErrorMessage/]
+                ],
+                [action: "removeGroup",
+                 ext: ":before transition issue by_ $it _to check when the configured group is not exists:",
+                parameters: [
+                        group: testGroup
+                ]
+                ],
+                [action    : 'transitionIssue',
+                 sleep     : sleep,
+                 ext       : ":COMMENT_REQUIRED_VALIDATOR_TC_10_when the configured group has removed:transition issue with:$it",
+                 expected  : -3,
+                 parameters: [
+                         issue     : { defaultIssue[] },
+                         transition: it
+                 ],
+                 data  : [/$systemErrorMessage/]
+                ],
+        ])
+    }
+}
+*/
 def transitionByUserTask =  { transition, userId, issue, data, expected ->
-    gint.taskHelper.add(
-            [expected: expected,
-             name: 'check transition trigger by other user'+ transition,
-             onlyIf: info?.isServer?
-             cmd : /acli $userId -a transitionIssue --issue $issue --transition $transition/,
-             data: ( data == null ? data : [:]),
-             finalClosure: {Task task ->
-                 assert task.result == expected
-             }
-            ]
-    )
+    if(!isCloud) {
+        gint.taskHelper.add(
+                [expected    : expected,
+                 name        : 'check transition trigger by other user' + transition,
+                 cmd         : /acli $userId -a transitionIssue --issue $issue --transition $transition/,
+                 data        : (data == null ? data : [:]),
+                 finalClosure: { Task task ->
+                     assert task.result == expected
+                 }
+                ]
+        )
+    }
 }
-//transitionByUserTask('comment_required_if_not_from_selectedGroup', testUser, {->defaultIssue[]}, null, -3)
+transitionByUserTask('comment_required_if_not_from_selectedGroup', testUser, {->defaultIssue[]}, "You must provide a Comment", -3)
+
+gint.taskHelper.add(
+        [action: "addGroup",
+         ext: ":which was deleted to check groups options:",
+         parameters: [
+                 group: testGroup
+         ]
+        ],
+)
 /*
 DONE : 1. If a Comment is not provided, report the following error: You must provide a Comment. - positive and negatives = "Done"
 DONE:  2. If a Comment is not provided, report the following error: customError msg. - positive and negatives = "Done"
@@ -188,3 +220,18 @@ DONE:  3. If a Comment is not provided, report the following error: You must pro
 DONE:  4. If a Comment is not provided, report the following error: You must provide a Comment.
           This validation only applies if the following condition is true:!!issue.get("assignee")     -positive and negatives = "Done"
  */
+
+/*
+
+Reviewd by CHIRAG:16.02.2024
+1. Configure the custom groups allowed to ommit comment :
+    step1: select custom group and check on issue
+    step2: delete the group and check on issue
+2. Configure the custom groups allowed to ommit comment :
+    step1: select custom group and check on issue
+    step2: rename the group and check on issue
+3. Configure two groups allowed to ommit comment : admin and testGroup
+    step1: check on the issue by admin and testgroup member
+    step2: check on the issue by other group member than admin and testgroup
+ */
+

@@ -1,4 +1,4 @@
-ext.tearDown = {
+ext.tearDown = { projectName ->
     gint.taskHelper.addTearDown([
             [action    : 'deleteProject',
             parameters: [
@@ -64,24 +64,31 @@ ext.tearDown = {
             onlyIf: skipSetup != "true",
             mustRunAfter: 'deleteProject',
             parameters: [
-                workflowScheme: workflowScheme
+                workflowScheme: projectName
                   ]
             ],
+            [action: 'deleteWorkflowScheme',ext: ":delete copy:",
+             mustRunAfter: 'deleteProject',
+             parameters: [
+                     workflowScheme: "$projectName: Software Simplified Workflow Scheme"
+             ]
+            ],
+            [action: 'deleteWorkflow', ext: "Copy" ,
+             dependsOn: true,
+             parameters: [
+                     workflow: "Software Simplified Workflow for Project $projectName"
+             ]
+            ]
     ])
     if(skipSetup != "true"){
         gint.taskHelper.addTearDown([
                 [action: 'deleteWorkflow',
+                        sleep: info?.isCloud? 5000 : 0,
                         mustRunAfter: 'deleteWorkflowScheme',
                         parameters: [
                                 workflow: workflow
                                 ]
                         ],
-                [action: 'deleteWorkflow', ext: "Copy" ,
-                        mustRunAfter: 'deleteWorkflowScheme',
-                        parameters: [
-                                workflow: "Copy of $workflow"
-                                ]
-                        ]
         ])
     }
 }

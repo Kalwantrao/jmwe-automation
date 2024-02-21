@@ -10,7 +10,8 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+// apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
 
 def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssuesCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linked-issues-condition'
 //def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__LinkedIssueStatusCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linked-issues-condition'

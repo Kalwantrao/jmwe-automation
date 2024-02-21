@@ -10,7 +10,8 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
 def functionKey =  info?.isCloud ? 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldhassinglevalue-validator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldhassinglevalue-validator'
 
@@ -29,326 +30,232 @@ def excludingSubtasks = [
 fieldsList.eachWithIndex { field, value, i ->
 	def transition = field + '_should_have_single_value'
 	def fields = defaultFieldsServer + conditionalValidation.no + "field=$value"
-	addTransitionFunction( transition, 'validator', fields, functionKey )
+	if(!isCloud) {
+		addTransitionFunction(transition, 'validator', fields, functionKey)
+	}
 }
 
 ['Components_should_have_single_value_excluding_subtask_values'].each {
-	def fields = defaultFieldsServer + excludingSubtasks.yes +  conditionalValidation.no + "field=$fieldsList.Components"
-	addTransitionFunction( it, 'validator', fields, functionKey )
+	def server = defaultFieldsServer + excludingSubtasks.yes +  conditionalValidation.no + "field=$fieldsList.Components"
+	if(!isCloud) {
+		addTransitionFunction(it, 'validator', server, functionKey)
+	}
 }
 
 ['Components_should_have_single_value_only_if_condition_true'].each {
-	def fields = defaultFieldsServer + "field=$fieldsList.Components" + conditionalValidation.yes
-	addTransitionFunction( it, 'validator', fields, functionKey )
+	def server = defaultFieldsServer + "field=$fieldsList.Components" + conditionalValidation.yes
+	if(!isCloud) {
+		addTransitionFunction(it, 'validator', server, functionKey)
+	}
 }
 
 createWorkflowScheme()
 createProject()
 
 (1..4).each {
-	gint.taskHelper.addSetUp([
-			[action: 'addVersion', ext: ': create versions : ' + it,
-				parameters: [
-						project: projectName,
-						version: it
-				]
-			],
-			[action: 'addComponent', ext: ': create Component : ' + it,
-				parameters: [
-						project: projectName,
-						component: 'component' + it
+	if(!isCloud) {
+		gint.taskHelper.addSetUp([
+				[action    : 'addVersion', ext: ': create versions : ' + it,
+				 parameters: [
+						 project: projectName,
+						 version: it
+				 ]
 				],
-			]
-	 ])
+				[action    : 'addComponent', ext: ': create Component : ' + it,
+				 parameters: [
+						 project  : projectName,
+						 component: 'component' + it
+				 ],
+				]
+		])
+	}
 }
 
-def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue', labels: "testLabel1", affectsVersions:1, component: 'component1'], 'defaultIssue')
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->defaultIssue[]}], 'subtask')
 
 // FIELD_HAS_SINGLE_VALUE_VALIDATOR_TS_09_TC_01- Verify with the default configuration for field has single value validator_labels
 [
-		/*'Labels_should_have_single_value'*/
+		//'Labels_should_have_single_value',
+		'Components_should_have_single_value',
+		'AffectsVersions_should_have_single_value',
+		'FixVersions_should_have_single_value'
 ].each {
-				gint.taskHelper.add([
-						[action: 'updateIssue',
-						 ext: ":add label1 to issue to check_ $it :",
-						 parameters: [
-								 issue: {->defaultIssue[]},
-								 labels: "label1",
-								 append: null
-						 ]
-						],
-						[action    : 'transitionIssue',
-						 ext: ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_09_TC_01_Case_01- $it _when field has single value:",
-						 expected  : 0,
-						 parameters: [
-								 transition: it,
-								 issue     : { -> defaultIssue[] },
-						 ],
-						],
-						[action: 'updateIssue',
-						 ext: ":add label2 to issue to check_ $it :",
-						 parameters: [
-								 issue: { -> defaultIssue[] },
-								 labels: "label2",
-								 append: null
-						 ]
-						],
-						[action    : 'transitionIssue',
-						 ext: ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_09_TC_01_Case_02- $it _when field not has single value:",
-						 expected  : -3,
-						 parameters: [
-								 transition: it,
-								 issue     : { -> defaultIssue[] },
-						 ],
-						],
-				])
+	[1,2].eachWithIndex { numberOfValuesForField, int i ->
+	def addFields;
+	if(it == 'Labels_should_have_single_value'){
+		addFields = [labels: "label" + numberOfValuesForField]
+	}
+	else if(it == 'Components_should_have_single_value'){
+		addFields = [components: "component" + numberOfValuesForField]
+	}
+	else if(it == 'AffectsVersions_should_have_single_value'){
+		addFields = [affectsVersions: numberOfValuesForField]
+	}
+	else if(it == 'FixVersions_should_have_single_value'){
+		addFields = [fixVersions: numberOfValuesForField]
+	}
+		def expected;
+		if(numberOfValuesForField == 1){
+			expected = 0
+		}
+		else{
+			expected = -3
+		}
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action    : 'updateIssue',
+				 ext       : ":add field number_ $numberOfValuesForField to issue to check_ $it :",
+				 parameters: [
+						 issue : { -> defaultIssue[] },
+						 append: null
+				 ] + addFields,
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_09_TC_01_Case_01- $it _when field has $numberOfValuesForField values:",
+				 expected  : expected,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				],
+		])
+	}
+	}
 }
 
 // FIELD_HAS_SINGLE_VALUE_VALIDATOR_TS_09_TC_02- Verify with the default configuration for field has single value validator_Components
-[
-		'Components_should_have_single_value'
-].each {
-	gint.taskHelper.add([
-			[action: 'updateIssue',
-			 ext: ":add component1 to issue to check_ $it :",
-			 parameters: [
-					 issue: {->defaultIssue[]},
-					 components: "component1",
-					 append: null
-			 ]
-			],
-			[action    : 'transitionIssue',
-			 ext: ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_09_TC_02_Case_01- $it _when field has single value:",
-			 expected  : 0,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			],
-			[action: 'updateIssue',
-			 ext: ":add component2 to issue to check_ $it :",
-			 parameters: [
-					 issue: { -> defaultIssue[] },
-					 components: "component2",
-					 append: null
-			 ]
-			],
-			[action    : 'transitionIssue',
-			 ext: ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_09_TC_02_Case_02- $it _when field not has single value:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			],
-	])
-}
-
 // FIELD_HAS_SINGLE_VALUE_VALIDATOR_TS_10_TC_01- Verify with the default configuration for field has single value validator_AffectsVersions
-[
-		'AffectsVersions_should_have_single_value'
-].each {
-	gint.taskHelper.add([
-			[action: 'updateIssue',
-			 ext: ":add version 1 to issue to check_ $it :",
-			 parameters: [
-					 issue: {->defaultIssue[]},
-					 affectsVersions: 1,
-					 append: null
-			 ]
-			],
-			[action    : 'transitionIssue',
-			 ext: ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_10_TC_01_Case_01- $it _when field has single value:",
-			 expected  : 0,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			],
-			[action: 'updateIssue',
-			 ext: ":add version 2 to issue to check_ $it :",
-			 parameters: [
-					 issue: { -> defaultIssue[] },
-					 affectsVersions: 2,
-					 append: null
-			 ]
-			],
-			[action    : 'transitionIssue',
-			 ext: ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_10_TC_01_Case_02- $it _when field not has single value:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			],
-	])
-}
-
 // FIELD_HAS_SINGLE_VALUE_VALIDATOR_TS_10_TC_02- Verify with the default configuration for field has single value validator_FixVersions
-[
-		'FixVersions_should_have_single_value'
-].each {
-	gint.taskHelper.add([
-			[action: 'updateIssue',
-			 ext: ":add fix version 1 to issue to check_ $it :",
-			 parameters: [
-					 issue: {->defaultIssue[]},
-					 fixVersions: 1,
-					 append: null
-			 ]
-			],
-			[action    : 'transitionIssue',
-			 ext: ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_10_TC_02_Case_01- $it _when field has single value:",
-			 expected  : 0,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			],
-			[action: 'updateIssue',
-			 ext: ":add fix version 2 to issue to check_ $it :",
-			 parameters: [
-					 issue: { -> defaultIssue[] },
-					 fixVersions: 2,
-					 append: null
-			 ]
-			],
-			[action    : 'transitionIssue',
-			 ext: ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_10_TC_02_Case_02- $it _when field not has single value:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			],
-	])
-}
 
 // FIELD_HAS_SINGLE_VALUE_VALIDATOR_TS_12_TC_01- Verify Field has single value Validator page with_component Excluding values present in sub-tasks
 ['Components_should_have_single_value_excluding_subtask_values'].each {
-	gint.taskHelper.add([
-			[action: 'setFieldValue',
-			 ext: ":remove component to clear field value to check issue to check_ $it :",
-			 parameters: [
-					 issue: {->defaultIssue[]},
-					 field: "Component/s",
-					 value: " "
-			 ]
-			],
-			[action: 'updateIssue',
-			 ext: ":add component1 to issue to check_ $it :",
-			 parameters: [
-					 issue: {->defaultIssue[]},
-					 components: "component1",
-					 append: null
-			 ]
-			],
-			[action: 'updateIssue',
-			 ext: ":add component2 to subtask of issue to check_ $it :",
-			 parameters: [
-					 issue: {->subtask[]},
-					 components: "component2",
-					 append: null
-			 ]
-			],
-			[action    : 'transitionIssue',
-			 ext: ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_12_TC_01_Case_01- $it _when field has single value:",
-			 expected  : 0,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			],
-			[action: 'updateIssue',
-			 ext: ":add label2 to issue to check_ $it :",
-			 parameters: [
-					 issue: { -> defaultIssue[] },
-					 components: "component2",
-					 append: null
-			 ]
-			],
-			[action    : 'transitionIssue',
-			 ext: ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_12_TC_01_Case_02- $it _when field has single value_excluding subtask value:",
-			 expected  : 0,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			],
-			[action: 'updateIssue',
-			 ext: ":add component3 to issue to check_ $it :",
-			 parameters: [
-					 issue: {->defaultIssue[]},
-					 components: "component3",
-					 append: null
-			 ]
-			],
-			[action    : 'transitionIssue',
-			 ext: ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_12_TC_01_Case_03- $it _when field not has single value_excluding subtask value:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			],
-	])
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action    : 'setFieldValue',
+				 ext       : ":remove component to clear field value to check issue to check_ $it :",
+				 parameters: [
+						 issue: { -> defaultIssue[] },
+						 field: "Component/s",
+						 value: " "
+				 ]
+				],
+				[action    : 'updateIssue',
+				 ext       : ":add component1 to issue to check_ $it :",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 components: "component1",
+						 append    : null
+				 ]
+				],
+				[action    : 'updateIssue',
+				 ext       : ":add component2 to subtask of issue to check_ $it :",
+				 parameters: [
+						 issue     : { -> subtask[] },
+						 components: "component2",
+						 append    : null
+				 ]
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_12_TC_01_Case_01- $it _when field has single value:",
+				 expected  : 0,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				],
+				[action    : 'updateIssue',
+				 ext       : ":add label2 to issue to check_ $it :",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 components: "component2",
+						 append    : null
+				 ]
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_12_TC_01_Case_02- $it _when field has single value_excluding subtask value:",
+				 expected  : 0,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				],
+				[action    : 'updateIssue',
+				 ext       : ":add component3 to issue to check_ $it :",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 components: "component3",
+						 append    : null
+				 ]
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_12_TC_01_Case_03- $it _when field not has single value_excluding subtask value:",
+				 expected  : -3,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				],
+		])
+	}
 }
 
 // FIELD_HAS_SINGLE_VALUE_VALIDATOR_TS_15_TC_01- Verify Field has single value _with _components Conditional validation when condition skips
 [
 		'Components_should_have_single_value_only_if_condition_true'
 ].each {
-	gint.taskHelper.add([
-			[action: 'setFieldValue',
-			 ext: ":remove component to clear field value to check issue to check_ $it :",
-			 parameters: [
-					 issue: {->defaultIssue[]},
-					 field: "Component/s",
-					 value: " "
-			 ]
-			],
-			[action: 'updateIssue',
-			 ext: ":add component1 to issue to check_ $it :",
-			 parameters: [
-					 issue: {->defaultIssue[]},
-					 components: "component1",
-					 append: null
-			 ]
-			],
-			[action: 'updateIssue',
-			 ext: ":add component2 to issue to check_ $it :",
-			 parameters: [
-					 issue: { -> defaultIssue[] },
-					 components: "component2",
-					 append: null
-			 ]
-			],
-			[action    : 'transitionIssue',
-			 ext: ":FIELD_HAS_SINGLE_VALUE_VALIDATOR_TS_15_TC_01 -when condition skips:",
-			 expected  : 0,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			],
-			[action: 'setFieldValue',
-			 ext: ":change priority to high to check_ $it :",
-			 parameters: [
-					 issue: {->defaultIssue[]},
-					 field: "Priority",
-					 value : "High"
-			 ]
-			],
-			[action    : 'transitionIssue',
-			 ext: ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_16_TC_01_- $it _when condition pass:",
-			 expected  : -3,
-			 parameters: [
-					 transition: it,
-					 issue     : { -> defaultIssue[] },
-			 ],
-			],
-	])
+	if(!isCloud) {
+		gint.taskHelper.add([
+				[action    : 'setFieldValue',
+				 ext       : ":remove component to clear field value to check issue to check_ $it :",
+				 parameters: [
+						 issue: { -> defaultIssue[] },
+						 field: "Component/s",
+						 value: " "
+				 ]
+				],
+				[action    : 'updateIssue',
+				 ext       : ":add component1 to issue to check_ $it :",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 components: "component1",
+						 append    : null
+				 ]
+				],
+				[action    : 'updateIssue',
+				 ext       : ":add component2 to issue to check_ $it :",
+				 parameters: [
+						 issue     : { -> defaultIssue[] },
+						 components: "component2",
+						 append    : null
+				 ]
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":FIELD_HAS_SINGLE_VALUE_VALIDATOR_TS_15_TC_01 -when condition skips:",
+				 expected  : 0,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				],
+				[action    : 'setFieldValue',
+				 ext       : ":change priority to high to check_ $it :",
+				 parameters: [
+						 issue: { -> defaultIssue[] },
+						 field: "Priority",
+						 value: "High"
+				 ]
+				],
+				[action    : 'transitionIssue',
+				 ext       : ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_16_TC_01_- $it _when condition pass:",
+				 expected  : -3,
+				 parameters: [
+						 transition: it,
+						 issue     : { -> defaultIssue[] },
+				 ],
+				],
+		])
+	}
 }
 
 /*

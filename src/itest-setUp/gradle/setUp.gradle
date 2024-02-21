@@ -13,62 +13,21 @@ apply plugin: 'org.gint.atlassian'
 
 def info =  gint.getJiraHelper().getServerInfoWithVerify()
 
+def screenList = new ArrayList<String>()
 
-ext.getStatusIds = { status ->
-    def statusIds = []
-    gint.taskHelper.add([
-            [action: 'getStatusList',
-             ext: ":get status id for status : $status",
-             parameters: [
-                     columns: "id",
-                     select: "name:$status"
-             ],
-             finalClosure: { Task task ->
-                 statusIds.add("$task.outData")
-                 gint.helper.log("Status", task.outData)
-             },
-            ],
-    ]
-    )
-    return statusIds
+
+def map1 = [currentIssue: "currentIssue:*", subtask: "Subtask:*"]
+def map2 = [issue1: 'value1', issue2: 'value3']
+
+map2.eachWithIndex { key, value, index ->
+    println "key: $key"
+    println "value: $value"
+    // You can also use the key from map1 if needed
+    println "corresponding value in map1: ${map1[key]}"
 }
-
-def ToDoId = getStatusIds("To Do")
-def InProgressId = getStatusIds("In Progress")
-def InReviewId = getStatusIds("In Review")
-def DoneId = getStatusIds("Done")
-
-
-def checkIds = {
-
-    assert ToDoId.contains("[$ToDoServer]")
-    assert InProgressId.contains("[$InProgressServer]")
-    assert InReviewId.contains("[$InReviewServer]")
-    assert DoneId.contains("[$DoneServer]")
-}
-
-checkIds.call()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /*
-
-def screenList = new ArrayList<String>()
-
 gint.taskHelper.addTearDown(
         [action    : 'createProject',ext: ': FOR WORKFLOW',
          parameters: [
@@ -146,13 +105,12 @@ fieldsList.eachWithIndex { it, index->
 
 def usersList = [testUser,testUser1,testUser2,inactiveAdmin,testAdmin]
 usersList.eachWithIndex { it, index ->
-    def additionalParams = info?.isCloud? [] : [ userPassword : it]
+    def additionalParams = info?.isCloud? [userEmail: it + "@jmweGintTest.com",] : [ userEmail: it + "@gmail.com",userPassword : it]
     gint.taskHelper.addTearDown("addUsers",[
             [action: 'addUser',
              ext: ": creating user with username _ $it :",
              parameters:[
                      userId: it,
-                     userEmail: it + "@gmail.com",
              ] + additionalParams ,
             ]
     ]
@@ -208,7 +166,7 @@ groupList.each {
 gint.taskHelper.addTearDown("createScreenScheme",[
         [action: 'createScreenScheme',
          dependsOn: "addScreenFields",
-         ext: ": creating screen scheme with name_ $projectName and screen _$screen :",
+         ext: ": creating screen scheme with name_ $projectName and screen _$projectName :",
          parameters:[
                  screenScheme: projectName,
                  screen: projectName,
@@ -253,7 +211,6 @@ issueTypes.each{
     ]
     )
 }
-
 */
 
 // Ignore below tasks they are under trial
@@ -270,7 +227,6 @@ gint.taskHelper.addTearDown("getScreenList",[
         ]
 ]
 )
-/*
 
 myIterableList.eachWithIndex { it, index->
     gint.taskHelper.addTearDown("removeScreen",[
