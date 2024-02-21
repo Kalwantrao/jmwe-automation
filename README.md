@@ -13,11 +13,11 @@ To run this integration test framework, we need some prerequisites
 
 To run this project, you will need to set the following environment variables
 
-- `JAVA_HOME`
+- [`JAVA_HOME`](https://www.oracle.com/java/technologies/downloads/#java17)`
 
-- `ACLI_HOME`
+- [`ACLI_HOME`](https://appfire.atlassian.net/wiki/download/attachments/60562669/ACLI-10.6.0-amd64-installer.exe?api=v2)
 
-- `GRADLE_HOME`
+- [`GRADLE_HOME`](https://gradle.org/next-steps/?version=7.6.1&format=bin)
 
 ## Pre-requisites in Jira Instance:
 #### Run the gradle tasks for the initial set-up on your server or cloud jira instance
