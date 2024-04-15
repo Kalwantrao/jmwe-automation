@@ -1,0 +1,485 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/itest-postfunction6/postfunction.gradle'
+
+def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
+def templateComment = "test_comment"
+def labelsByTemplate = "test_labels"
+def description = "test_description"
+
+def transitions = [
+        specifyName : ["transitionType=rawValue"],
+        byName : [ "transitionType=rawValue","transitions=In Progress" ],
+        calculated : ["transitionType=expression","calculatedTransition='21'","transitions='21'" ]
+]
+def options = [
+        allUnselected : ["skipConditions=no","skipValidators=no","skipPermissions=no","triggerEvent=no"],
+        skipConditions : [ no : ["skipConditions=no"], yes : ["skipConditions=yes"] ],
+        skipValidators : [ no : ["skipValidators=no"], yes : ["skipValidators=yes"] ],
+        skipPermissions : [ no : ["skipPermissions=no"], yes : ["skipPermissions=yes"] ],
+        triggerManualEvent : [ no : ["triggerEvent=no"], yes : ["triggerEvent=yes"]]
+]
+
+def addFields = [
+        noField : ["fieldsToSet={}"],
+        copyFromCurrentIssue : ["fieldsToSet={\"labels\":{\"action\":\"copy\"}}"],
+        setByScript : ["fieldsToSet={\"labels\":{\"action\":\"script\",\"value\":\"$groovyExpression.getDescription\"}}"],
+        setByTemplate : ["fieldsToSet={\"labels\":{\"action\":\"template\",\"value\":\"$labelsByTemplate\"}}"]
+]
+
+def addComment = [
+        not : ["commentType=", "comment="],
+        template : ["commentType=template","comment=$templateComment"],
+        expression : [ "commentType=expression","comment=$groovyExpression.getDescription" ],
+        runAsSpecificUser : [ "valueType=template", "comment=runAsSpecificUser" ],
+        runAsUserInFieldAssignee : [ "commentType=template", "comment=runAsUserInFieldAssignee" ],
+        runAsUserInFieldReporter: [ "commentType=template", "comment=runAsUserInFieldReporter" ],
+        runAsUserInFieldCreator : [ "commentType=template", "comment=runAsUserInFieldCreator" ],
+        runAsUserFromScript : [ "commentType=template", "comment=runAsUserFromScript" ],
+        commentVisibleToJiraSoftwareUsers : ["commentType=template", "comment=commentVisibleToJiraSoftwareUsers"],
+        commentVisibleToJiraAdminRoles: ["commentType=template", "comment=commentVisibleToJiraAdminRoles"],
+        commentVisibleToTestGroup : ["commentType=template", "comment=commentVisibleToTestGroup"],
+        commentVisibleToTestProjectRole : ["commentType=template", "comment=commentVisibleToTestProjectRole"],
+]
+
+def commentVisibility = [
+        notSelected : [ "restrictToGroup=", "restrictToProjectRole=" ],
+        jiraAdminGroups : [ "restrictToGroup=$jiraAdminGrooup", "restrictToProjectRole=" ],
+        jiraAdminRoles : [ "restrictToGroup=", "restrictToProjectRole=$jiraAdminRoleId" ]
+]
+
+def conditionalExecution = [
+        false : [ "useGroovyCondition=false", "groovyExpression=" ],
+        true : [ "useGroovyCondition=yes", "groovyExpression=$groovyExpression.checkPriorityHigh" ]
+]
+
+def defaultFieldsCloud = [
+        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
+]
+
+def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__TransitionParentIssueFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionParentIssue-function'
+
+statusList.eachWithIndex { key, value, i ->
+    def transition = 'transitionParentIssuePF_checkStatus'
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"${value}@@${workflow}\",\"runAsType\":\"currentUser\"}"
+    def server = defaultFieldsServer + transitions.specifyName + "transitions=$value" + conditionalExecution.false + "selectedLinkType=$relatedIssue.currentIssue" + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
+    addTransitionFunction(transition+ i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud) {
+        moveTransitionFunction(transition + i, 4)
+    }
+}
+
+statusList.eachWithIndex { key, value, i ->
+    def server = defaultFieldsServer + transitions.specifyName + "transitions=$value" + conditionalExecution.true + "selectedLinkType=$relatedIssue.currentIssue" + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"transition\":\"${value}@@${workflow}\",\"runAsType\":\"currentUser\"}"
+    def transition = 'transitionParentIssueIfConditionTrue'
+    addTransitionFunction(transition+ i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud) {
+        moveTransitionFunction(transition + i, 4)
+    }
+}
+
+[
+        'triggerCalculatedTransition_transitionParentIssue'
+].each {
+    def server = defaultFieldsServer + transitions.calculated +  conditionalExecution.false + "selectedLinkType=$relatedIssue.currentIssue" + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"21\",\"runAsType\":\"currentUser\"}"
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud) {
+        moveTransitionFunction(it, 4)
+    }
+}
+
+[
+        'addLabelsAfterTransition_template_transitionParentIssue'
+].each {
+    def server = defaultFieldsServer + conditionalExecution.false + transitions.byName + options.allUnselected + addFields.setByTemplate + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\",\"fields\":{\"labels\":{\"value\":\"$labelsByTemplate\"}}}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud) {
+        moveTransitionFunction(it, 4)
+    }
+}
+
+[
+        'commentAddedBytemplate'
+].each {
+    def server = defaultFieldsServer + conditionalExecution.false + transitions.byName + options.allUnselected + addFields.noField + addComment.template + commentVisibility.notSelected + runAsUser.currentUser
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\",\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":\"\"}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud) {
+        moveTransitionFunction(it, 4)
+    }
+}
+
+['commentVisibleToJiraAdminRoles'].each {
+    def server = defaultFieldsServer + conditionalExecution.false + transitions.byName + options.allUnselected + addFields.noField + addComment.commentVisibleToJiraAdminRoles + commentVisibility.jiraAdminRoles + runAsUser.currentUser
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\",\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$jiraAdminRoleId}"
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud) {
+        moveTransitionFunction(it, 4)
+    }
+}
+
+['runAsSpecificUser'].each {
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"thisUser\",\"runAs\":\"accountId:$currentUserKey\"}"
+    def server = defaultFieldsServer + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.specificUser
+    addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud) {
+        moveTransitionFunction(it, 4)
+    }
+}
+
+['runAsUserInFieldAssignee'].each {
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userField\",\"runAsField\":\"assignee\"}"
+    def server = defaultFieldsServer + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.userInFieldAssignee
+    addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud) {
+        moveTransitionFunction(it, 4)
+    }
+}
+
+['runAsUserInFieldReporter'].each {
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userField\",\"runAsField\":\"reporter\"}"
+    def server = defaultFieldsServer  + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.userInFieldReporter
+    addTransitionFunction(  it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud) {
+        moveTransitionFunction(it, 4)
+    }
+}
+
+['runAsUserInFieldCreator'].each{
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userField\",\"runAsField\":\"creator\"}"
+    def server = defaultFieldsServer + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.userInFieldCreator
+    addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud) {
+        moveTransitionFunction(it, 4)
+    }
+}
+
+runAsUser.eachWithIndex { userType, fields, idx ->
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userFromScript\",$fields}"
+    def server = defaultFieldsServer + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + fields
+    addTransitionFunction( userType, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud) {
+        moveTransitionFunction(userType, 4)
+    }
+}
+
+createWorkflowScheme()
+createProject()
+
+def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
+
+def getCurrentUserName = info?.isCloud? info?.userDisplayName : user
+
+[
+        'transitionParentIssueIfConditionTrue'
+].collect {
+    statusList.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': when condition returns false_priority not high:' + it + key,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : { -> subtask[] },
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : " :when condition false_priority not high :" + it + key,
+                 parameters: [
+                         issue: { -> parent[] },
+                         field: "Status"
+                 ],
+                 failData  : [/Status  . . . . . . . . . . . : $value/],
+                ],
+        ])
+    }
+}
+gint.taskHelper.add(
+        [action    : 'updateIssue', ext: ': change subtask priority to High for conditional execution true',
+         sleep: sleep,
+         parameters: [
+                 issue   : { -> subtask[] },
+                 priority: "High",
+         ]
+        ],
+)
+
+[
+        'transitionParentIssueIfConditionTrue'
+].collect {
+    statusList.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': when conditional execution true priority high ' + it + key,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : { -> subtask[] },
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : " :when conditional execution true_priority high :" + it + key,
+                 parameters: [
+                         issue: { -> parent[] },
+                         field: "Status"
+                 ],
+                 data      : [/Status  . . . . . . . . . . . : $value/],
+                ],
+                [action    : 'transitionIssue', ext: it + ': To Do' + key,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : { -> parent[] },
+                         transition: "To Do",
+                 ]
+                ],
+
+        ])
+    }
+}
+['transitionParentIssuePF_checkStatus'].each {
+    statusList.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: it + key + i,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : { -> subtask[] },
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : it + i,
+                 parameters: [
+                         issue: { -> parent[] },
+                         field: "Status"
+                 ],
+                 data      : [/Status  . . . . . . . . . . . : $value/],
+                 failData  : [/Status  . . . . . . . . . . . : To Do/]
+                ],
+                [action    : 'transitionIssue', ext: it + i + ': To Do' + key,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : { -> parent[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+    }
+}
+
+[
+        'triggerCalculatedTransition_transitionParentIssue',
+].collect {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ':' + it ,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : { ->subtask[] },
+                         transition: it ,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : it ,
+                 parameters: [
+                         issue: { -> parent[] },
+                         field: "Status"
+                 ],
+                 data      : [/Status  . . . . . . . . . . . : In Progress/],
+                 failData  : [/Status  . . . . . . . . . . . : To Do/]
+                ],
+                [action    : 'transitionIssue', ext: ': To Do' + it,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : { ->parent[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+}
+
+// Need ACLI support to addTransitionScreen to existing workflow transition - ACLI-3646
+[
+        //'addLabelsAfterTransition_template_transitionParentIssue',
+].collect {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ':' + it ,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : { ->subtask[] },
+                         transition: it,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : it ,
+                 parameters: [
+                         issue: { ->parent[] },
+                         field : "Labels"
+                 ],
+                 data      : [
+                         /Labels  . . . . . . . . . . . : $labelsByTemplate/
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 ext: ': To Do' + it,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : { ->parent[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+}
+
+// Need ACLI support to addTransitionScreen to existing workflow transition - ACLI-3646
+[
+        //'commentAddedBytemplate',
+        //'commentVisibleToJiraAdminRoles'
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ':' + it,
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : it ,
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Status"
+             ],
+             data      : [/Status  . . . . . . . . . . . : In Progress/],
+             failData  : [/Status  . . . . . . . . . . . : To Do/]
+            ],
+            [action: 'getComments',
+             ext: " : add comment by template :" + it,
+             sleep: sleep,
+             parameters: [
+                     issue: { ->parent[] }
+             ],
+             data:[   /$getCurrentUserName added a comment on/,
+                      /$it/
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ': To Do' + it,
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->parent[] },
+                     transition: "To Do",
+             ]
+            ],
+    ])
+}
+
+gint.taskHelper.add(
+        action: 'assignIssue',
+        ext: "To check run as user in field assignee option",
+        sleep: sleep,
+            parameters:[
+                    issue: {->subtask[]},
+                    assignee: testUser
+            ]
+)
+[
+        'userInFieldAssignee'
+].each {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext: ': Check :  ' + it,
+                        sleep: sleep,
+                        parameters: [
+                                issue     : { ->subtask[] },
+                                transition: it,
+                                ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : " :run as :" + it,
+                 parameters: [
+                         issue: { ->parent[] },
+                         field: "Status"
+                 ],
+                 data      : [/Status  . . . . . . . . . . . : In Progress/],
+                ],
+                [action: 'getIssueHistoryList',
+                 ext: ": postfunction should be triggered by user : $testUser when :"+ it,
+                 sleep: sleep,
+                 parameters: [
+                         issue: { ->parent[] },
+                         outputType: "Text",
+                         columns: "Author,Field,'To String'",
+                         select: ["Author:$testUser","Field:status","To String:In Progress"],
+                 ],
+                 data:[ "$testUser", "status", "In Progress" ],
+                ],
+                [action    : 'transitionIssue',
+                 ext: ': current issue to original status to check next option for : ' + it ,
+                 parameters: [
+                         issue     : { ->subtask[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+}
+runAsUser.remove("userInFieldAssignee")
+runAsUser.eachWithIndex { userType, fields, idx ->
+    def transition = userType
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext: ': Check :  ' + transition,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : { ->subtask[] },
+                         transition:  transition,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : " :run as :" + transition,
+                 parameters: [
+                         issue: { ->parent[] },
+                         field: "Status"
+                 ],
+                 data      : [/Status  . . . . . . . . . . . : In Progress/],
+                ],
+                [action: 'getIssueHistoryList',
+                 ext: ": postfunction should be triggered by user : $getCurrentUserName when :"+ transition,
+                 sleep: sleep,
+                 parameters: [
+                         issue: { ->parent[] },
+                         outputType: "Text",
+                         columns: "Author,Field,'To String'",
+                         select: ["Author:$getCurrentUserName","Field:status","To String:In Progress"],
+                 ],
+                 data:[ "$getCurrentUserName", "status", "In Progress" ],
+                ],
+                [action    : 'transitionIssue',
+                 sleep: sleep,
+                 ext: ': current issue to original status to check next option for : ' + transition,
+                 parameters: [
+                         issue     : { ->subtask[] },
+                         transition: "To Do",
+                 ]
+                ],
+        ])
+}

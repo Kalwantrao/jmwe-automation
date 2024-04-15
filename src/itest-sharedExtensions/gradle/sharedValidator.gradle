@@ -1,0 +1,116 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+    project.ext.seleniumVersion = findProperty('seleniumVersion') ?: System.getenv('SELENIUM_VERSION') ?: '3.14.+'
+    dependencies { // needed here for selenium testing :(
+        ['java', 'support', 'firefox-driver', 'chrome-driver', 'safari-driver', 'edge-driver'].each { entry ->
+            classpath 'org.seleniumhq.selenium:selenium-' + entry + ':' + seleniumVersion
+        }
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/itest-sharedExtensions/sharedExtensions.gradle'
+
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:shared-validator'
+
+
+def sharedValidatorUrl = info?.isCloud? "/rest/jmwe-api/shared-validator/" : "/rest/jmwe/1/shared-validators"
+
+def userValidatorServer = '''
+{
+        "name": "shared validator by automation",
+        "description": "",
+        "draft": false,
+        "draftId": null,
+        "validators": [
+            {
+                "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-validator",
+                "configuration": "<validator type=\\"class\\">\\r\\n  <arg name=\\"isProjectLead\\">no</arg>\\r\\n  <arg name=\\"groupsToCheck\\"></arg>\\r\\n  <arg name=\\"fieldEmpty\\">no</arg>\\r\\n  <arg name=\\"isVoter\\">no</arg>\\r\\n  <arg name=\\"isReporter\\">no</arg>\\r\\n  <arg name=\\"errorMessage\\"></arg>\\r\\n  <arg name=\\"reverse\\"></arg>\\r\\n  <arg name=\\"rolesToCheck\\"></arg>\\r\\n  <arg name=\\"conditionMode\\">all-user-condition</arg>\\r\\n  <arg name=\\"isAssignee\\">yes</arg>\\r\\n  <arg name=\\"userFieldsToCheck\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-validator</arg>\\r\\n  <arg name=\\"userField\\"></arg>\\r\\n  <arg name=\\"usersToCheck\\"></arg>\\r\\n  <arg name=\\"usersConditionScript\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.validators.GenericUserValidator</arg>\\r\\n  <arg name=\\"fromUserType\\">currentUser</arg>\\r\\n  <arg name=\\"isWatcher\\">no</arg>\\r\\n  <arg name=\\"conditionalValidation\\">no</arg>\\r\\n  <arg name=\\"extensionId\\">9b5ab3f1-a07b-463f-9f7e-5730fd611a53</arg>\\r\\n</validator>\\r\\n"
+            }
+        ]
+}
+'''
+def userValidatorCloud = '''
+{
+  "name": "Assign issue postfunction",
+  "description": "For shared action",
+  "postFunctions": [
+    {
+      "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:assigntorolemember",
+      "configuration": "<function type=\\"class\\">\\n  <arg name=\\"groovyExpression\\"></arg>\\n  <arg name=\\"forceSelectedUser\\">no</arg>\\n  <arg name=\\"jira.projectrole.id\\">10002</arg>\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensionsassigntorolemember</arg>\\n  <arg name=\\"throwExceptions\\">false</arg>\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.AssignToRoleMemberFunction</arg>\\n  <arg name=\\"extensionId\\">14240cab-d226-4855-b3ac-a27b26b921d3</arg>\\n  <arg name=\\"useSelectedUser\\">no</arg>\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\n  <arg name=\\"skipIfAssignee\\">no</arg>\\n</function>\\n",
+      "order": 0
+    }
+  ]
+}
+'''
+
+def userValidator = info?.isCloud ? userValidatorCloud : userValidatorServer
+
+if(!isCloud){
+    ext.shared_validatorId = createSharedExtensionSetUp(info?.isCloud ? "POST" : "PUT", sharedValidatorUrl, userValidator, "shared validator")
+}
+
+def savedID = {->shared_validatorId[0] }
+
+[
+        "sharedValidator_currentUserShouldBeAssignee"
+].each {
+    def transition = it
+    def server = defaultFieldsServer + "shared-validator-id=${savedID}"
+    if(!isCloud) {
+        addTransitionFunction(transition, 'validator', server, functionKey)
+    }
+}
+
+createWorkflowScheme()
+createProject()
+
+
+def currentIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'currentIssue')
+
+def listOfUser = [testUser,user]
+
+[
+        'sharedValidator_currentUserShouldBeAssignee'
+].each {
+    listOfUser.each { users ->
+        def expected;
+        if (users == testUser) {
+            expected = -3
+        } else {
+            expected = 0
+        }
+        if (!isCloud) {
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     ext       : ":when user in field assignee is $users and current user is $user:before transition issue with: $it",
+                     parameters: [
+                             issue: { -> currentIssue[] },
+                             field: "Assignee",
+                             value: users
+                     ],
+                    ],
+                    [action    : 'transitionIssue',
+                     ext       : ":by_ $it:when user in field assignee is $users and current user is $user",
+                     expected  : expected,
+                     parameters: [
+                             issue     : { -> currentIssue[] },
+                             transition: it,
+                     ]
+                    ],
+            ])
+        }
+    }
+}
+
+if(!isCloud){
+    tearDownAfter(projectName, ":For tearDownAfter")
+    deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/shared-actions/${savedID}" : "/rest/jmwe/1/shared-actions/${savedID}", "shared validator")
+}

@@ -12,10 +12,10 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 
 def info =  gint.getJiraHelper().getServerInfoWithVerify()
-/*
+
 def screenList = new ArrayList<String>()
 
-
+/*
 def map1 = [currentIssue: "currentIssue:*", subtask: "Subtask:*"]
 def map2 = [issue1: 'value1', issue2: 'value3']
 
@@ -25,6 +25,7 @@ map2.eachWithIndex { key, value, index ->
     // You can also use the key from map1 if needed
     println "corresponding value in map1: ${map1[key]}"
 }
+
 
 
 */
@@ -153,7 +154,7 @@ groupList.each {
              dependsOn: "addProjectRoles",
              ext: ": user _$it _ adding to project role_ $testRole and group _ $testGroup :",
              parameters:[
-                     project: projectName,
+                     project: TestProject,
                      role: testRole,
                      userId: it,
                      group: testGroup
@@ -166,10 +167,10 @@ groupList.each {
 gint.taskHelper.addTearDown("createScreenScheme",[
         [action: 'createScreenScheme',
          dependsOn: "addScreenFields",
-         ext: ": creating screen scheme with name_ $projectName and screen _$projectName :",
+         ext: ": creating screen scheme with name_ $screen and screen _$screen :",
          parameters:[
-                 screenScheme: projectName,
-                 screen: projectName,
+                 screenScheme: screen,
+                 screen: screen,
          ],
         ]
 ]
@@ -178,10 +179,10 @@ gint.taskHelper.addTearDown("createScreenScheme",[
 gint.taskHelper.addTearDown("createIssueTypeScreenScheme",[
         [action: 'createIssueTypeScreenScheme',
          dependsOn: "createScreenScheme",
-         ext: ": creating issue type screen scheme with name_ $projectName and screen scheme_$projectName :",
+         ext: ": creating issue type screen scheme with name_ $screen and screen scheme_$screen :",
          parameters:[
-                 issueTypeScreenScheme: projectName,
-                 screenScheme: projectName,
+                 issueTypeScreenScheme: issueTypeScreenScheme,
+                 screenScheme: screen,
          ],
         ]
 ]
@@ -192,7 +193,7 @@ gint.taskHelper.addTearDown([
         [action: 'createIssueTypeScheme',
          //ext: ": creating issue type scheme with name_ $projectName and screen scheme_$projectName :",
          parameters:[
-                 issueTypeScheme: projectName,
+                 issueTypeScheme: screen,
                  issueType: "Task",
          ],
         ]
@@ -204,7 +205,7 @@ issueTypes.each{
             [action: 'updateIssueTypeScheme',
              ext: ": $it:",
              parameters:[
-                     issueTypeScheme: projectName,
+                     issueTypeScheme: issueTypeScheme,
                      issueType: it,
              ],
             ]

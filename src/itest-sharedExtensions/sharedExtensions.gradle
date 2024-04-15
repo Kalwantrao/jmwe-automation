@@ -1,0 +1,208 @@
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+
+project.ext.projectName='SHAREDEXT'
+project.ext.workflowScheme = "SHAREDEXT"
+project.ext.jqlSearchExpression="project = $projectName and issuetype = Task and summary~JQL_ISSUE"
+
+relatedIssue.put('returnsFromJqlSearch', "jql:$jqlSearchExpression")
+
+//tearDown(projectName)
+//addWorkflow()
+
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import javax.crypto.spec.SecretKeySpec
+import javax.crypto.Mac
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpRequest.BodyPublishers
+import java.net.http.HttpResponse
+import java.net.http.HttpResponse.BodyHandlers
+import java.net.URI
+import java.time.Duration
+
+def userName = info?.isCloud? testUserNameCloud : testUserNameServer
+def password = info?.isCloud ? testUserTokenCloud : testUserPasswordServer
+
+project.ext.jiraUrl = info?.isCloud? "https://mwec-test-mq.herokuapp.com" : info?.url
+// client key = afcb9084-f6ea-386b-b07a-86d908587afe = automation gint
+
+def createJWT(JsonSlurper slurper) {
+    if(isCloud){
+        String userKey = "${info.userKey}";
+        String qsh = "context-qsh";
+        String context = "{\"url\":{\"displayUrl\":\"${info.url}\",\"displayUrlServicedeskHelpCenter\":\"${info.url}\"}}";
+
+        TimeZone.setDefault(TimeZone.getTimeZone('UTC'))
+        def rightNowMilli = System.currentTimeMillis()
+        def rightNowSec = Math.round(rightNowMilli / 1000)
+        def expirationSec = rightNowSec + 1800
+
+        def jtiValue = UUID.randomUUID().toString()
+
+        Map header = [alg: "HS256", typ: "JWT"]
+        Map payload = [exp: expirationSec, iat: rightNowSec,  iss: clientKey, sub: userKey, jti: jtiValue, qsh: qsh, context: context]
+
+        def headerJson = JsonOutput.toJson(header)
+        def payloadJson = JsonOutput.toJson(payload)
+
+        def headerBase64 = headerJson.getBytes("UTF-8").encodeBase64().toString().split("=")[0].replaceAll("\\+", "-").replaceAll("/", "_")
+        def payloadBase64 = payloadJson.getBytes("UTF-8").encodeBase64().toString().split("=")[0].replaceAll("\\+", "-").replaceAll("/", "_")
+
+        def toBeSigned = headerBase64 + "." + payloadBase64
+        SecretKeySpec secretKeySpec = new SecretKeySpec(appSecret.getBytes("UTF-8"), "HmacSHA256")
+        Mac mac = Mac.getInstance("HmacSHA256")
+        mac.init(secretKeySpec)
+        byte[] digest = mac.doFinal(toBeSigned.getBytes("UTF-8"))
+        def signature = digest.encodeBase64().toString().split("=")[0].replaceAll("\\+", "-").replaceAll("/", "_")
+
+        def token = headerBase64 + "." + payloadBase64 + "." + signature
+        return token
+    }
+}
+
+ext.createSharedExtension = { requestType, uriForAction, requestBody, ext ->
+    def ActionID = [];
+    gint.taskHelper.add(
+            name: "create a $ext by $requestType request:BASE",
+            inline: {
+                def URI = new URL(jiraUrl+ uriForAction)
+                def connection = URI.openConnection() as HttpURLConnection
+                connection.requestMethod = requestType
+                connection.setRequestProperty("Content-Type", "application/json")
+                String auth = "${testUserNameServer}:${testUserPasswordServer}"
+                String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes())
+                JsonSlurper slurper = new JsonSlurper()
+                def jwt = createJWT(slurper)
+                if(!isCloud){
+                    connection.setRequestProperty("Authorization", "Basic " + encodedAuth)
+                } else{
+                    connection.setRequestProperty("Authorization", "JWT " + jwt)
+                    gint.helper.log("jwt-token", jwt)
+                }
+                connection.doOutput = true
+                def outputStream = connection.outputStream
+                outputStream.write(requestBody.getBytes("UTF-8"))
+                outputStream.flush()
+
+                try {
+                    def responseCode = connection.responseCode
+                    def inputStream
+                    if (responseCode >= 200 && responseCode < 400) {
+                        inputStream = connection.inputStream
+                    } else {
+                        inputStream = connection.errorStream
+                    }
+                    def response = new StringBuilder()
+                    def reader = new BufferedReader(new InputStreamReader(inputStream))
+                    def line
+                    while ((line = reader.readLine()) != null) {
+                        response.append(line)
+                    }
+                    gint.helper.log("Response",response.toString())
+
+                    def jsonResponse = new groovy.json.JsonSlurper().parseText(response.toString())
+                    ActionID.add(jsonResponse?.id)
+                } catch (Exception e) {
+                    gint.helper.log("Error", "Error creating shared extension: ${e.message}")
+                } finally {
+                    connection.disconnect()
+                }
+            }
+    )
+    return ActionID
+}
+
+ext.createSharedExtensionSetUp = { requestType, uriForAction, requestBody, ext ->
+    def ActionID = [];
+    gint.taskHelper.addSetUp(
+            name: "create a $ext by $requestType request:SETUP",
+            inline: {
+                def URI = new URL(jiraUrl+ uriForAction)
+                def connection = URI.openConnection() as HttpURLConnection
+                connection.requestMethod = requestType
+                connection.setRequestProperty("Content-Type", "application/json")
+                String auth = "${testUserNameServer}:${testUserPasswordServer}"
+                String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes())
+                JsonSlurper slurper = new JsonSlurper()
+                def jwt = createJWT(slurper)
+                if(!isCloud){
+                    connection.setRequestProperty("Authorization", "Basic " + encodedAuth)
+                } else{
+                    connection.setRequestProperty("Authorization", "JWT " + jwt)
+                    gint.helper.log("jwt-token", jwt)
+                }
+                connection.doOutput = true
+                def outputStream = connection.outputStream
+                outputStream.write(requestBody.getBytes("UTF-8"))
+                outputStream.flush()
+
+                try {
+                    def responseCode = connection.responseCode
+                    def inputStream
+                    if (responseCode >= 200 && responseCode < 400) {
+                        inputStream = connection.inputStream
+                    } else {
+                        inputStream = connection.errorStream
+                    }
+                    def response = new StringBuilder()
+                    def reader = new BufferedReader(new InputStreamReader(inputStream))
+                    def line
+                    while ((line = reader.readLine()) != null) {
+                        response.append(line)
+                    }
+                    gint.helper.log("Response",response.toString())
+
+                    def jsonResponse = new groovy.json.JsonSlurper().parseText(response.toString())
+                    ActionID.add(jsonResponse?.id)
+                } catch (Exception e) {
+                    gint.helper.log("Error", "Error creating shared extension: ${e.message}")
+                } finally {
+                    connection.disconnect()
+                }
+            }
+    )
+    return ActionID
+}
+
+ext.deleteSharedExtension = { requestType, uriForAction, ext  ->
+    gint.taskHelper.add(
+            name: "$requestType shared extension_by $requestType Request: $ext",
+            inline: {
+                def URI = new URL( jiraUrl + uriForAction)
+                def connection = URI.openConnection() as HttpURLConnection
+                connection.requestMethod = requestType
+                String auth = "${userName}:${password}"
+                String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes())
+                JsonSlurper slurper = new JsonSlurper()
+                def jwt = createJWT(slurper)
+                if(!isCloud){
+                    connection.setRequestProperty("Authorization", "Basic " + encodedAuth)
+                } else {
+                    connection.setRequestProperty("Authorization", "JWT " + jwt)
+                    gint.helper.log("jwt-token", jwt)
+                }
+
+                try {
+                    def inputStream = connection.inputStream
+                    def response = new StringBuilder()
+                    def reader = new BufferedReader(new InputStreamReader(inputStream))
+                    def line
+                    while ((line = reader.readLine()) != null) {
+                        response.append(line)
+                    }
+                    gint.helper.log(requestType  + "shared extension successfully", "Response: ${response.toString()}")
+                } catch (Exception e) {
+                    gint.helper.log(requestType, "Could not $requestType shared extension: ${e.message}")
+                } finally {
+                    connection.disconnect()
+                }
+            }
+    )
+}
+
+
+
+
+
+

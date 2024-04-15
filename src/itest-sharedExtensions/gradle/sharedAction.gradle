@@ -1,0 +1,138 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/itest-sharedExtensions/sharedExtensions.gradle'
+
+def functionKey = info?.isCloud? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__SharedActionFunction" : "com.innovalog.jmwe.jira-misc-workflow-extensions:shared-action-function"
+
+def sharedActions = info?.isCloud? "/rest/jmwe-api/shared-actions/" : "/rest/jmwe/1/shared-actions/"
+
+def assignIssueToAdminRoleMemberServer = '''
+{
+  "name": "Assign issue postfunction",
+  "description": "For shared action",
+  "postFunctions": [
+    {
+      "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:assigntorolemember",
+      "configuration": "<function type=\\"class\\">\\n  <arg name=\\"groovyExpression\\"></arg>\\n  <arg name=\\"forceSelectedUser\\">no</arg>\\n  <arg name=\\"jira.projectrole.id\\">10002</arg>\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensionsassigntorolemember</arg>\\n  <arg name=\\"throwExceptions\\">false</arg>\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.AssignToRoleMemberFunction</arg>\\n  <arg name=\\"extensionId\\">14240cab-d226-4855-b3ac-a27b26b921d3</arg>\\n  <arg name=\\"useSelectedUser\\">no</arg>\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\n  <arg name=\\"skipIfAssignee\\">no</arg>\\n</function>\\n",
+      "order": 0
+    }
+  ]
+}
+'''
+
+def assignIssueToAdminRoleMemberCloud = '''
+{
+    "name":"Assign issue postfunction",
+    "description":"",
+    "postFunctions":[
+        {
+            "postFunction":"AssignToRoleMemberFunction",
+            "postFunctionId":"d975e787-f1ee-4c69-b857-01c895a18973",
+            "configuration":{"conditionalExecution":false,"sendNotifications":true,"role":10002,"runAsType":"addonUser"}
+            }
+        ],
+    "ruleBuilder":true
+}
+'''
+
+def assignIssueToAdminRoleMember = info?.isCloud ? assignIssueToAdminRoleMemberCloud : assignIssueToAdminRoleMemberServer
+
+def shared_actionId = createSharedExtensionSetUp(info?.isCloud ? "POST" : "PUT", sharedActions, assignIssueToAdminRoleMember, "Shared Action")
+
+def savedID = {->shared_actionId[0] }
+
+[
+        "sharedAction_assign_issue_to_admin_role_user"
+].each {
+    def transition = it
+    def server = defaultFieldsServer + "selectedLinkType=currentIssue:*" + conditionalExecution.false + "shared-action-id=${savedID}"
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"sharedActionId\":\"$savedID\",\"stopAtErrors\":false}"
+    addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud :server, functionKey)
+}
+
+createWorkflowScheme()
+createProject()
+
+def currentIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'currentIssue')
+
+def listOfUser = [
+        inactiveAdmin, testAdmin, testUser1, testUser2
+]
+
+listOfUser.collect{users ->
+    def role;
+    if(users == inactiveAdmin || users == testAdmin){
+        role = 'Administrators'
+    }else if (users == testUser1 || users == testUser2){
+        role = testRole
+    }
+        gint.taskHelper.addSetUp(
+                action: 'removeProjectRoleActors',
+                ext: ":remove user $users from role $role: ",
+                parameters: [
+                        project: projectName,
+                        role   : role,
+                        userId : users,
+                        continue: null
+                ]
+        )
+}
+
+[
+        "@self",testUser1,testUser2
+].collect{users ->
+    def role;
+    if(users == "@self"){
+        role = 'Administrators'
+    }else if (users == testUser1 || users == testUser2){
+        role = testRole
+    }
+        gint.taskHelper.addSetUp(
+                action: 'addProjectRoleActors',
+                ext: ": add user $users to specific role $role _to check ASSIGN_TO_ROLE_MEMBER_PF",
+                parameters: [
+                        project: projectName,
+                        role   : role,
+                        userId : users,
+                        continue: null
+                ]
+        )
+}
+
+[
+        'sharedAction_assign_issue_to_admin_role_user'
+].each {
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             sleep: sleep,
+             ext       : ":by_ $it:",
+             parameters: [
+                     issue     : { ->currentIssue[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : ":Of current issue_after transition issue by:$it:",
+             parameters: [
+                     issue: { ->currentIssue[] },
+                     field: "Assignee"
+             ],
+             data      : ["Assignee  . . . . . . . . . . : $getCurrentUserName"],
+            ],
+    ])
+}
+
+//tearDownAfter(projectName, ":tearDown_to delete the shared action")
+//deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/shared-actions/${savedID}" : "/rest/jmwe/1/shared-actions/${savedID}", "shared action")
+

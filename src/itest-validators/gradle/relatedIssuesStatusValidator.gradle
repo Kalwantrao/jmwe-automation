@@ -46,7 +46,8 @@ atLeastOneRelatedIssuesStatus.remove("currentIssue")
 noRelatedIssuesStatus.remove("currentIssue")
 atLeastOneNotRelatedIssuesStatus.remove("currentIssue")
 
-def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssueStatusValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-validator'
+//def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssueStatusValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-validator'
+def functionKey = info?.isCloud? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__LinkedIssueStatusValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-validator'
 def errorMessage = "Check linked issues status"
 
 def defaultFieldsCloud = ["validator.id=7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f"]
@@ -2371,3 +2372,21 @@ def linkedIssue2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'linkedIss
         ])
     }
 }
+
+/*
+Reviewed by Niharika: 13.03.2024
+1. Select multiple statuses  = DONE
+2. Select status which is not in current workflow = PENDING due to ACLI limitations
+3. Non admin user = DONE
+4. Add custom status from the statuses page(type - gg, search ,status - in jira instance ) = PENDING due to ACLI limitations
+5. Check all modes option for the given use case :
+    Create multiple subtasks -for example- 5 subtasks
+    - Check when all subtask are not in selected
+    - Check when 2 subtask are in selected
+    - Check when all subtask are in selected status = DONE
+6. Select target issue: parent issue of the current subtask
+ and from issueType dropdown: subtask = TODO
+7.Add the multiple condition in the same transition with different statuses and check = TODO
+  For example : 1st configuration- select status: IN PROGRESS
+                2nd configuration- select status: IN REVIEW
+ */

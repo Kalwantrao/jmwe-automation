@@ -10,29 +10,26 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
-apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction1.gradle'
+apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction.gradle'
 
 def script = [
-        setLabels : [ "groovyExpression=issue.setFieldValue('Labels','test_label')","scriptDescription=" ],
-        currentUser : [ "groovyExpression=issue.setFieldValue('Labels','runAsCurrentUser')","scriptDescription=" ],
-        specificUser : [ "groovyExpression=issue.setFieldValue('Labels','runAsSpecificUser')","scriptDescription=" ],
-        userInFieldAssignee : [ "groovyExpression=issue.setFieldValue('Labels','runAsUserInFieldAssignee')","scriptDescription=" ],
-        userInFieldReporter : [ "groovyExpression=issue.setFieldValue('Labels','runAsUserInFieldReporter')","scriptDescription=" ],
-        userInFieldCreator : [ "groovyExpression=issue.setFieldValue('Labels','runAsUserInFieldCreator')","scriptDescription=" ],
-        userFromScript : [ "groovyExpression=issue.setFieldValue('Labels','runAsUserFromScript')","scriptDescription=" ],
+        setSummary : [ "groovyExpression=issue.setFieldValue('Summary','test_summary')","scriptDescription=" ],
+        currentUser : [ "groovyExpression=issue.setFieldValue('Summary','runAsCurrentUser')","scriptDescription=" ],
+        specificUser : [ "groovyExpression=issue.setFieldValue('Summary','runAsSpecificUser')","scriptDescription=" ],
+        userInFieldAssignee : [ "groovyExpression=issue.setFieldValue('Summary','runAsUserInFieldAssignee')","scriptDescription=" ],
+        userInFieldReporter : [ "groovyExpression=issue.setFieldValue('Summary','runAsUserInFieldReporter')","scriptDescription=" ],
+        userInFieldCreator : [ "groovyExpression=issue.setFieldValue('Summary','runAsUserInFieldCreator')","scriptDescription=" ],
+        userFromScript : [ "groovyExpression=issue.setFieldValue('Summary','runAsUserFromScript')","scriptDescription=" ],
 ]
 
-def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ScriptedPostFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-function'
+def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__ScriptedPostFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-function'
 
-// Configuration
+String scriptForSummary = "{{ '/rest/api/2/issue/:issue' | callJira(verb=('PUT'), params={'issue':issue.key}, body={'fields': {'summary': 'test_summary'} }) }}"
 
-['setLabelByScript'].each {
-    def server = defaultFieldsServer + script.setLabels
-    def cloud = defaultFieldsCloud.postfunction + ""
-    if(!isCloud) {
-        addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    }
+['setSummaryByScript'].each {
+    def server = defaultFieldsServer + script.setSummary
+    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"script\":\"$scriptForSummary\",\"scriptDescription\":\"\"}"
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['runAsCurrentUser'].each {
@@ -43,6 +40,7 @@ def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugi
         moveTransitionFunction(it, 4)
     }
 }
+
 ['runAsUserInFieldReporter'].each {
     def server = defaultFieldsServer + script.userInFieldReporter + runAsUser.userInFieldReporter
     def cloud = defaultFieldsCloud.postfunction + ""
@@ -94,28 +92,26 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 
 // checking the current status To Do and previous status In Progress
 [
-        'setLabelByScript'
+        'setSummaryByScript'
 ].each {
-    if (!isCloud) {
         gint.taskHelper.add([
                 [action    : 'transitionIssue', ext: " : " + it,
-                 sleep     : info?.isCloud ? 5000 : 0,
+                 sleep     : sleep,
                  parameters: [
                          transition: it,
                          issue     : { -> defaultIssue[] },
                  ],
                 ],
                 [action    : 'getFieldValue', ext: ": Chack :" + it,
-                 sleep     : info?.isCloud ? 5000 : 0,
+                 sleep     : sleep,
                  parameters: [
                          issue: { -> defaultIssue[] },
-                         field: "Labels",
+                         field: "Summary",
                  ],
-                 data      : ["Labels  . . . . . . . . . . . : test_label"],
+                 data      : ["Summary . . . . . . . . . . . : test_summary"],
                 ]
 
         ])
-    }
 }
 
 [
@@ -128,23 +124,22 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
     if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'transitionIssue', ext: " : " + it,
-                 sleep     : info?.isCloud ? 5000 : 0,
+                 sleep     : sleep,
                  parameters: [
                          transition: it,
                          issue     : { -> defaultIssue[] },
                  ],
                 ],
                 [action    : 'getIssueHistoryList', ext: ": Chack :" + it,
-                 sleep     : info?.isCloud ? 5000 : 0,
+                 sleep     : sleep,
                  parameters: [
                          issue     : { -> defaultIssue[] },
                          outputType: "Text",
-                         select    : "Field:labels",
+                         select    : ["Field:summary","To String:$it"],
                          columns   : "Author,'To String'",
                  ],
-                 data      : ["$user", "$it"],
+                 data      : ["$getCurrentUserName", "$it"],
                 ]
-
         ])
     }
 }
@@ -152,7 +147,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 if(!isCloud) {
     gint.taskHelper.add(
             action: 'assignIssue',
-            sleep: info?.isCloud ? 5000 : 0,
+            sleep: sleep,
             parameters: [
                     issue   : { -> defaultIssue[] },
                     assignee: testUser
@@ -166,18 +161,18 @@ if(!isCloud) {
     if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'transitionIssue', ext: " : " + it,
-                 sleep     : info?.isCloud ? 5000 : 0,
+                 sleep     : sleep,
                  parameters: [
                          transition: it,
                          issue     : { -> defaultIssue[] },
                  ],
                 ],
                 [action    : 'getIssueHistoryList', ext: ": Chack :" + it,
-                 sleep     : info?.isCloud ? 5000 : 0,
+                 sleep     : sleep,
                  parameters: [
                          issue     : { -> defaultIssue[] },
                          outputType: "Text",
-                         select    : "Field:labels",
+                         select    : ["Field:summary","To String:$it"],
                          columns   : "Author,'To String'",
                  ],
                  data      : ["$testUser", "$it"],

@@ -10,8 +10,7 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
-apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction1.gradle'
+apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction.gradle'
 
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:SetFieldValue-function'
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer

@@ -1,0 +1,77 @@
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+
+project.ext.projectName='UIPOSTFUN'
+project.ext.workflowScheme = "UIPOSTFUN"
+project.ext.jqlSearchExpression="project = $projectName and issuetype = Task and summary~JQL_ISSUE"
+
+relatedIssue.put('returnsFromJqlSearch', "jql:$jqlSearchExpression")
+
+tearDown(projectName)
+addWorkflow()
+
+def xpath = [
+        clickTransitionTab : info?.isCloud? "//div[@data-testid='issue.views.issue-base.foundation.status.actions-wrapper']" : "//a[@id='opsbar-transitions_more']",
+]
+
+ext.navigateToIssue = { issueKey,ext ->
+        gint.taskHelper.add(
+                name: "navigateToIssue to check _$ext",
+                sleep: 2000,
+                dependsOn: true,
+                inline: {
+                    gint.helper.log("opening issue screen", "to transition issue")
+                    gint.seleniumHelper.gotoUrl(url: "${info?.url}/browse/${issueKey}")
+                }
+        )
+}
+
+ext.clickOnTransitionTab = { issueKey, transition, ext ->
+    gint.taskHelper.add(
+            name: "clickOnTransitionTab_ to find the transition $transition in dropdown_$ext",
+            sleep: 5000,
+            dependsOn: true,
+            inline: {
+                gint.helper.log("open transitions dropdown", "to transition issue")
+                driver.findAndClickElement(xpath: xpath.clickTransitionTab, type: "xpath")
+                sleep(1000);
+            }
+    )
+}
+
+ext.clickOnTransition = { transition, ext ->
+    gint.taskHelper.add(
+            name: "clickOnTransition_$transition :$ext",
+            sleep: 5000,
+            dependsOn: true,
+            inline: {
+                gint.helper.log("selecting transition", transition)
+                driver.findAndClickElement(xpath: "//*[contains(text(),'$transition')]", type: "xpath")
+                sleep(3000);
+            }
+    )
+}
+
+ext.transitionIssueSubmit = { transition,ext ->
+    gint.taskHelper.add(
+            name: "transitionIssueSubmit_$transition:$ext",
+            sleepAfter: 5000,
+            dependsOn: true,
+            inline: {
+                gint.helper.log("transitioning issue by transition", transition)
+                driver.findAndClickElement(id: 'issue-workflow-transition-submit', type: "id")
+                sleep(5000);
+            }
+    )
+}
+
+ext.closeFlagMessage = { transition ->
+    gint.taskHelper.add(
+            name: "close the Flag_Message displayed by postfunction_$transition",
+            dependsOn: true,
+            inline: {
+                gint.helper.log("closing the flag message displayed by postfunction after transition issue by", transition)
+                driver.findAndClickElement(xpath: "//a[@class='aui-button aui-button-link flag-action-link']", type: "xpath")
+                sleep(1000);
+            }
+    )
+}

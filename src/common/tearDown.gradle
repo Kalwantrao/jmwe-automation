@@ -93,3 +93,97 @@ ext.tearDown = { projectName ->
     }
 }
 
+ext.tearDownAfter = { projectName,tearDownAfter ->
+    gint.taskHelper.add([
+            [action    : 'deleteProject', ext: tearDownAfter,
+             parameters: [
+                     project: projectName,
+             ],
+             finalClosure:{ Task task->
+                 if(task.result == true){
+                     gint.helper.log("project not found", projectName)
+                 }
+                 else{
+                     gint.helper.log("deleting project", projectName)
+                 }
+             }
+            ],
+            [
+                    action    : 'deleteIssueTypeScheme', ext: tearDownAfter,
+                    dependsOn : 'deleteProject',
+                    parameters: [
+                            issueTypeScheme: "$projectName: Software Development Issue Type Scheme" // info?.isCloud ? "$projectName: Software Development Issue Type Scheme" : "$projectName: Scrum Issue Type Scheme"
+                    ]
+            ] ,
+            [
+                    action      : 'deleteIssueTypeScreenScheme',ext: tearDownAfter,
+                    dependsOn   : 'deleteProject',
+                    mustRunAfter: 'deleteIssueTypeScheme',
+                    parameters  : [
+                            issueTypeScreenScheme:  "$projectName: Software Development Issue Type Screen Scheme" //info?.isCloud ? "$projectName: Software Development Issue Type Screen Scheme" : "$projectName: Scrum Issue Type Screen Scheme"
+                    ]
+            ] ,
+            [
+                    action      : 'deleteScreenScheme', ext: 'Bug'+ tearDownAfter,
+                    dependsOn   : 'deleteProject',
+                    mustRunAfter: 'deleteIssueTypeScreenScheme',
+                    parameters  : [
+                            screenScheme: "$projectName: Software Development Bug Screen Scheme" //info?.isCloud ? "$projectName: Software Development Bug Screen Scheme" : "$projectName: Scrum Bug Screen Scheme"
+                    ]
+            ] ,
+            [
+                    action      : 'deleteScreenScheme', ext: 'Default'+ tearDownAfter,
+                    dependsOn   : 'deleteProject',
+                    mustRunAfter: 'deleteIssueTypeScreenScheme',
+                    parameters  : [
+                            screenScheme: "$projectName: Software Development Default Screen Scheme" // info?.isCloud ? "$projectName: Software Development Default Screen Scheme" : "$projectName: Scrum Default Screen Scheme"
+                    ]
+            ] ,
+            [
+                    action      : 'removeScreen', ext: 'Bug'+ tearDownAfter,
+                    dependsOn   : 'deleteProject',
+                    mustRunAfter: 'deleteScreenSchemeBug',
+                    parameters  : [
+                            screen: "$projectName: Software Development Bug Screen" // info?.isCloud ? "$projectName: Software Development Bug Screen" : "$projectName: Scrum Bug Screen"
+                    ]
+            ] ,
+            [
+                    action      : 'removeScreen', ext: 'Default'+ tearDownAfter,
+                    dependsOn   : 'deleteProject',
+                    mustRunAfter: 'deleteScreenSchemeDefault',
+                    parameters  : [
+                            screen: "$projectName: Software Development Default Issue Screen" //info?.isCloud ? "$projectName: Software Development Default Issue Screen" : "$projectName: Scrum Default Issue Screen"
+                    ]
+            ],
+            [action: 'deleteWorkflowScheme', ext: tearDownAfter,
+             onlyIf: skipSetup != "true",
+             mustRunAfter: 'deleteProject',
+             parameters: [
+                     workflowScheme: projectName
+             ]
+            ],
+            [action: 'deleteWorkflowScheme',ext: ":delete copy:"+ tearDownAfter,
+             mustRunAfter: 'deleteProject',
+             parameters: [
+                     workflowScheme: "$projectName: Software Simplified Workflow Scheme"
+             ]
+            ],
+            [action: 'deleteWorkflow', ext: "Copy" +tearDownAfter,
+             dependsOn: true,
+             parameters: [
+                     workflow: "Software Simplified Workflow for Project $projectName"
+             ]
+            ]
+    ])
+    if(skipSetup != "true"){
+        gint.taskHelper.add([
+                [action: 'deleteWorkflow',ext: tearDownAfter,
+                 sleep: info?.isCloud? 5000 : 0,
+                 mustRunAfter: 'deleteWorkflowScheme',
+                 parameters: [
+                         workflow: workflow
+                 ]
+                ],
+        ])
+    }
+}

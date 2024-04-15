@@ -10,11 +10,9 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-// apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
 
-def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssuesCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linked-issues-condition'
-//def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.mwec__LinkedIssueStatusCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linked-issues-condition'
+def functionKey = info?.isCloud? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__LinkedIssuesCondition" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linked-issues-condition'
 
 def defaultFieldsCloud= [
 		"condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9",
@@ -94,7 +92,7 @@ requireRelatedIssue.eachWithIndex { key, value, i ->
 }
 
 ['verify_condition_on_related_issues_checkAssignee'].each {
-	def cloud = defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.assignee && issue.assignee == $testUser\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.assignee && issue.assignee == $testUser)))\"}"
+	def cloud = defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"issue.assignee.accountId == '$currentUserKey'\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (issue.assignee.accountId == '$currentUserKey')))\"}"
 	def server = defaultFieldsServer + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireSpecificLinkedIssues + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
 	addTransitionFunction(it , 'condition', info?.isCloud ? cloud : server, functionKey)
 }
@@ -1702,7 +1700,6 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 [
 		'verify_condition_on_related_issues_checkAssignee'
 ].each {
-	if(!isCloud) {
 		gint.taskHelper.add([
 				[action    : 'linkIssue',
 				 ext       : ": by relates to link type to check $it _link 1st issue:",
@@ -1723,19 +1720,19 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 ]
 				],
 				[action    : 'assignIssue',
-				 ext       : ": linked issue to _ $testUser to_ $it :",
+				 ext       : ": linked issue to _ $user to_ $it :",
 				 sleepAfter: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> toIssueLink[] },
-						 assignee: testUser,
+						 assignee: user,
 				 ],
 				],
 				[action    : 'assignIssue',
-				 ext       : ": current issue to_ $testUser to_ $it :",
+				 ext       : ": current issue to_ $user to_ $it :",
 				 sleepAfter: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> issueLinks[] },
-						 assignee: testUser,
+						 assignee: user,
 				 ],
 				],
 				[action    : 'transitionIssue',
@@ -1764,7 +1761,6 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 ],
 				],
 		])
-	}
 }
 
 //                                          RELATED_ISSUES_CONDITION => CHECK RELATED ISSUES TESTS

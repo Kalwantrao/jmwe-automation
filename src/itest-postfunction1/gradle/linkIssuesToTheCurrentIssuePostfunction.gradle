@@ -10,8 +10,9 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
-apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction1.gradle'
+apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction.gradle'
+
+def functionKey =	info ?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__LinkIssuesFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:link-issues-function'
 
 def jqlExpressionToLinkIssue = "project = $projectName and issueType = Task and summary ~ JMWE_LinkIssue"
 
@@ -54,7 +55,7 @@ def selectedLinkTypeCloud = [
         Blocks: /"selectedLinkType":"$relatedIssue.linkByBlock"/,
         Cloners: /"selectedLinkType":"$relatedIssue.linkByClones"/,
         Duplicate: /"selectedLinkType":"$relatedIssue.linkByDuplicates"/,
-        Related: /"selectedLinkType":"$relatedIssue.linkByRelatesTo"/,
+        Relates: /"selectedLinkType":"$relatedIssue.linkByRelatesTo"/,
 ]
 
 def selectedLinkType = info?.isCloud ? selectedLinkTypeCloud : selectedLinkTypeServer
@@ -70,8 +71,6 @@ def useGroovyFilterCloud = [
 ]
 
 def useGroovyFilter = info ?.isCloud ? useGroovyFilterCloud : useGroovyFilterServer
-
-def functionKey =	info ?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkIssuesFunction' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:link-issues-function'
 
 selectedLinkType.eachWithIndex { key,  value, i ->
         def transition = 'linkIssuesToCurrentIssueByType'

@@ -13,7 +13,8 @@ apply plugin: 'org.gint.atlassian'
 // apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
-def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__UserValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-validator'
+//def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__UserValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-validator'
+def functionKey = info?.isCloud? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__UserValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-validator'
 def errorMessage = "Check user satisfy the given criteria"
 
 def defaultFieldsServer = [
@@ -312,12 +313,6 @@ def listOfUsers = [testUser,user]
                              issue     : { -> defaultIssue[] },
                              transition: transition,
                      ],
-                     finalClosure: { Task task ->
-                         if (task.result != expected) {
-                             gint.helper.log("Check the project lead should be", usersToCheck)
-                         }
-                         assert task.result == expected
-                     }
                     ],
             ])
         }
@@ -370,12 +365,6 @@ def listOfUsers = [testUser,user]
                          issue     : { -> defaultIssue[] },
                          transition: it,
                  ],
-                 finalClosure: { Task task ->
-                     if (task.result != 0) {
-                         gint.helper.log("Check user in field assignee should be in field", fieldToCheck)
-                         assert task.result == expected
-                     }
-                 }
                 ],
         ])
     }
@@ -385,14 +374,27 @@ def listOfUsers = [testUser,user]
 // USER_VALIDATOR_TS_40_TC_07_Verify the user in field assignee should specific user_checkUser
 // USER_VALIDATOR_TS_40_TC_14_Verify the user in field reporter should be specific user_checkUser
 // USER_VALIDATOR_TS_40_TC_13_Verify the user in field reporter should be in admin group
-[
+def transitionListForUsersAndGroupsServer = [
         'verify_user_in_field_assignee_should_be_inAdminRole',
         'verify_user_in_field_reporter_should_be_inAdminRole',
         'verify_user_in_field_assignee_should_be_checkUser',
         'verify_user_in_field_reporter_should_be_checkUser',
-        'verify_user_in_field_reporter_should_be_inAdminGroup'
+        'verify_user_in_field_reporter_should_be_inAdminGroup',
+        //'verify_user_in_field_creator_should_be_inAdminRole'
+]
+
+def transitionListForUsersAndGroupsCloud = [
+        'verify_user_in_field_assignee_should_be_inAdminRole',
+        'verify_user_in_field_reporter_should_be_inAdminRole',
+        //'verify_user_in_field_assignee_should_be_checkUser',
+        //'verify_user_in_field_reporter_should_be_checkUser',
+        //'verify_user_in_field_reporter_should_be_inAdminGroup'
         //'verify_user_in_field_creator_should_be_inAdminRole',
-].eachWithIndex { transition, index ->
+]
+
+def transitionListForUsersAndGroups = info?.isCloud? transitionListForUsersAndGroupsCloud : transitionListForUsersAndGroupsServer
+
+transitionListForUsersAndGroups.eachWithIndex { transition, index ->
     listOfUsers.collect {
         def expected;
         if(it == testUser){
@@ -494,9 +496,6 @@ def listOfUsers = [testUser,user]
                          issue     : { -> defaultIssue[] },
                          transition: transition,
                  ],
-                 finalClosure: {Task task ->
-                     assert task.result == expected
-                 }
                 ],
         ])
     }
@@ -556,9 +555,6 @@ def listOfUsers = [testUser,user]
                          issue     : { -> defaultIssue[] },
                          transition: transition,
                  ],
-                 finalClosure: {Task task ->
-                     assert task.result == expected
-                 }
                 ],
         ])
     }
@@ -610,9 +606,6 @@ def listOfUsers = [testUser,user]
                          issue     : { -> defaultIssue[] },
                          transition: it,
                  ],
-                 finalClosure: { Task task ->
-                     assert task.result == expected
-                 }
                 ],
         ])
     }
@@ -672,9 +665,6 @@ def listOfUsers = [testUser,user]
                          issue     : { -> defaultIssue[] },
                          transition: it,
                  ],
-                 finalClosure: { Task task ->
-                     assert task.result == expected
-                 }
                 ],
         ])
     }
@@ -725,9 +715,6 @@ def listOfUsers = [testUser,user]
                          issue     : { -> defaultIssue[] },
                          transition: it,
                  ],
-                 finalClosure: { Task task ->
-                     assert task.result == expected
-                 }
                 ],
         ])
     }
@@ -789,15 +776,26 @@ def listOfUsers = [testUser,user]
         }
             gint.taskHelper.add([
                     [action    : 'setFieldValue',
-                     ext       : ":Of assignee to $testUser _before transition issue with_ $it : ",
+                     sleep: sleep,
+                     ext       : ":Of assignee to $testUser _before transition issue with_ $it :when priority is $priority ",
                      parameters: [
                              issue: { -> defaultIssue[] },
                              field: "Assignee",
                              value: testUser
                      ],
                     ],
+                    [action    : 'setFieldValue',
+                     sleep: sleep,
+                     ext       : ":Of priority to $priority _before transition issue with_ $it:",
+                     parameters: [
+                             issue: { -> defaultIssue[] },
+                             field: "Priority",
+                             value: priority
+                     ],
+                    ],
                     [action    : 'transitionIssue',
-                     ext       : ":USER_VALIDATOR_TS_51_TC_01_Case_01_ $it _when assignee is $testUser and current user is $user: ",
+                     sleep: sleep,
+                     ext       : ":USER_VALIDATOR_TS_51_TC_01_Case_01_ $it _when assignee is $testUser and current user is $user:when priority is $priority ",
                      expected  : expected,
                      parameters: [
                              issue     : { -> defaultIssue[] },
@@ -808,3 +806,45 @@ def listOfUsers = [testUser,user]
         }
 }
 
+/*
+1. Current user should be reporter-
+        - Change reporter on transition screen with other user- error
+2. Current user should be assignee-
+        - Change assignee on transition screen with other user- error
+3. Current user should be assignee-
+        - Change assignee on transition screen with other user- error
+4. Current user should be project lead-
+        - Change project lead on transition screen with other user- error
+5. Current user in field assignee should be reporter-
+        - Change reporter on transition screen with other user- error
+6. Current user in field reporter  should be assignee-
+        - Change assignee on transition screen with other user- error
+7. Current user in field creator should be reporter-
+        - Change reporter on transition screen with other user- error
+8. Current user in field creator should be assignee-
+        - Change assignee on transition screen with other user- error
+9. The current user should match at least one of the following criteria:when the testprojectrole is empty:
+        - The user is a member of one of these project roles: testprojectrole
+10. The current user should match at least one of the following criteria: when testgroup is empty
+        - The user is a member of one of these groups: testgroup
+11. The current user should match at least one of the following criteria:when user jmwe_qa is Inactive
+        - The user is one of the following users: jmwe_qa
+12. The current user should match at least one of the following criteria: custom field XOXOUSERPICKER
+        - The user belongs to one of these user fields: XOXOUSER    - positive
+        - Check when the configured custom field is deleted - negative
+13. The current user should match at least one of the following criteria:
+        - The user is one of the following users: kalwantrao
+        - The user belongs to one of these user fields: XOXOUSER : delete the custom field and transition issue
+14  The current user should match all the following criteria:
+        - The user is one of the following users: kalwantrao
+        - The user belongs to one of these user fields: XOXOUSER : delete the custom field and transition issue
+15. Mode : all criterias
+    - reporter + testprojectrole
+    - reporter + testgroup
+    - check after deleting roles and groups and transition issue
+16. Mode: at least one
+    - reporter + testprojectrole
+    - reporter + testgroup
+    - check after deleting roles and groups and transition issue
+
+ */

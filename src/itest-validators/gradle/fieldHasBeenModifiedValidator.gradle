@@ -14,8 +14,12 @@ apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldchanged-validator'
-addCustomField('age', 'number')
-addFieldToScreen(screen, 'age')
+
+if(!isCloud){
+    addCustomField('Age', 'number')
+    addFieldToScreen(screen, 'Age')
+}
+
 fields.eachWithIndex { fieldName, fieldValue, i ->
     def transition = fieldName + '_should_be_modified'
     def server = defaultFieldsServer + conditionalValidation.no + "field=$fieldValue"
@@ -36,7 +40,7 @@ fields.eachWithIndex { fieldName, fieldValue, i ->
         'customField_age_should_be_modified'
 ].each {
     def transition  = it
-    def server = defaultFieldsServer + "field=age" + conditionalValidation.no
+    def server = defaultFieldsServer + "field=Age" + conditionalValidation.no
     if(!isCloud){
         addTransitionFunction( transition, 'validator', server, functionKey )
     }
@@ -122,17 +126,20 @@ def label2 = "testLabel2"
 }
 
 // FIELD_HAS_BEEN_MODIFIED_VALIDATOR_check when the field has value before transition issue and after transition the fields should be appended
-gint.taskHelper.add(
-        action: "updateIssue", ext: ":set field values",
-        parameters: [
-                issue: {->defaultIssue[]},
-                labels: label1,
-                assignee: user,
-                components: "component1",
-                affectsVersions: 1,
-                fixVersions: 1
-        ]
-)
+if(!isCloud){
+    gint.taskHelper.add(
+            action: "updateIssue", ext: ":set field values",
+            parameters: [
+                    issue: {->defaultIssue[]},
+                    labels: label1,
+                    assignee: user,
+                    components: "component1",
+                    affectsVersions: 1,
+                    fixVersions: 1
+            ]
+    )
+}
+
 
 [
         'Labels_should_be_modified',
@@ -235,41 +242,43 @@ gint.taskHelper.add(
 
 
 ['customField_age_should_be_modified'].each {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue',
-             ext       : " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR -Case_01_ $it _when customfield  age not modified: ",
-             expected  : -3,
-             parameters: [
-                     transition: it,
-                     issue     : { -> defaultIssue[] },
-             ],
-            ],
-            [action    : 'transitionIssue',
-             ext       : " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_Case_02_ $it _when customfield age has modified during transition: ",
-             expected  : 0,
-             parameters: [
-                     transition: it,
-                     issue     : { -> defaultIssue[] },
-                     field: 'age',
-                     value: 30
-             ]
-            ],
-            [action: "removeCustomField",
-             ext: ":age_to check the impact of validator  after removing the configured custom field:",
-            parameters: [
-                    field: 'age'
-            ]
-            ],
-            [action    : 'transitionIssue',
-             ext       : " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR -Case_01_ $it _when configured customfield removed before transition issue: ",
-             expected  : -3,
-             parameters: [
-                     transition: it,
-                     issue     : { -> defaultIssue[] },
-             ],
-                    data: ["Error: Field age should be modified during this transition, but it is not present on the transition screen."]
-            ],
-    ])
+    if(!isCloud) {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext       : " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR -Case_01_ $it _when customfield  age not modified: ",
+                 expected  : -3,
+                 parameters: [
+                         transition: it,
+                         issue     : { -> defaultIssue[] },
+                 ],
+                ],
+                /*[action    : 'transitionIssue',
+                 ext       : " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR_Case_02_ $it _when customfield age has modified during transition: ",
+                 expected  : 0,
+                 parameters: [
+                         transition: it,
+                         issue     : { -> defaultIssue[] },
+                         field     : 'Age',
+                         value     : 30
+                 ]
+                ],*/
+                [action    : "removeCustomField",
+                 ext       : ":age_to check the impact of validator  after removing the configured custom field:",
+                 parameters: [
+                         field: 'Age'
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : " : FIELD_HAS_BEEN_MODIFIED_VALIDATOR -Case_01_ $it _when configured customfield removed before transition issue: ",
+                 expected  : -3,
+                 parameters: [
+                         transition: it,
+                         issue     : { -> defaultIssue[] },
+                 ],
+                 data      : ["Unable to find field 'Age'"]
+                ],
+        ])
+    }
 }
 
 

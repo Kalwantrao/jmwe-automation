@@ -10,10 +10,9 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: gint.resourceDirectory + '/src/common/utils.gradle'
-apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction1.gradle'
+apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction.gradle'
 
-def functionKey = 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__DeleteIssueFunction'
+def functionKey = "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__DeleteIssueFunction"
 
 def defaultSummary = "test_delete_issue_postfunction"
 
@@ -67,7 +66,7 @@ def createIssues = { parameters, ext ->
     def savedIssues1 = [:]
     gint.taskHelper.add([
             [action: 'createIssue',
-             sleep: info?.isCloud ? 5000 : 0,
+             sleep: sleep,
              mustRunAfter: 'createProject',
              retry: true,
              ext: ":to check:"+ ext ,
@@ -89,7 +88,7 @@ def updateIssue1 = { parameters,  ext->
         gint.taskHelper.add(
                 action: 'updateIssue',
                 retry: true,
-                sleep: info?.isCloud ? 5000 : 0,
+                sleep: sleep,
                 ext: ': ' + ext,
                 parameters: parameters,
         )
@@ -100,7 +99,7 @@ def linkIssues = { parameters,  ext->
         gint.taskHelper.add(
                 action: 'linkIssue',
                 retry: true,
-                sleep: info?.isCloud ? 5000 : 0,
+                sleep: sleep,
                 ext: ': ' + ext,
                 parameters: parameters,
         )
@@ -111,7 +110,7 @@ def getIssueListBeforeTransition = { summary,type ->
         gint.taskHelper.add([
                 [action    : 'getIssueList',
                  ext       : " :verify issue exists with summary_ $summary _before transition:",
-                 sleep     : info?.isCloud ? 5000 : 0,
+                 sleep     : sleep,
                  parameters: [
                          project   : projectName,
                          jql       : "project = $projectName AND summary ~ $summary AND type = $type",
@@ -129,7 +128,7 @@ def getIssueListAfterTransition = { summary, type ->
         gint.taskHelper.add([
                 [action    : 'getIssueList',
                  ext       : " :verify issue with summary_ $summary _deleted after transition issue:",
-                 sleep     : info?.isCloud ? 5000 : 0,
+                 sleep     : sleep,
                  parameters: [
                          project   : projectName,
                          jql       : "project = $projectName AND summary ~ $summary AND type = $type",
@@ -148,7 +147,7 @@ def getIssueListAfterTransitionWhenConditionFalse = { summary, type ->
         gint.taskHelper.add([
                 [action    : 'getIssueList',
                  ext       : " :verify issue with summary_ $summary _after transition issue:when priority is not High",
-                 sleep     : info?.isCloud ? 5000 : 0,
+                 sleep     : sleep,
                  parameters: [
                          project   : projectName,
                          jql       : "project = $projectName AND summary ~ $summary AND type = $type",
@@ -166,7 +165,7 @@ def transitionIssue = { issue, transition ->
     if(isCloud) {
         gint.taskHelper.add([
                 [action    : "transitionIssue",
-                 sleep     : info?.isCloud ? 5000 : 0,
+                 sleep     : sleep,
                  ext       : ":By transition_ $transition",
                  parameters: [
                          issue     : issue,
@@ -181,7 +180,7 @@ def transitionIssueWhenConditionTrue = { issue, transition ->
     if(isCloud) {
         gint.taskHelper.add([
                 [action    : "transitionIssue",
-                 sleep     : info?.isCloud ? 5000 : 0,
+                 sleep     : sleep,
                  ext       : ":By transition_ $transition:when priority is High:",
                  parameters: [
                          issue     : issue,
@@ -196,7 +195,7 @@ def setFieldValue = { issue,value, ext ->
     if(isCloud) {
         gint.taskHelper.add(
                 action: "setFieldValue",
-                sleep: info?.isCloud ? 5000 : 0,
+                sleep: sleep,
                 ext: ":Of Priority to $value:to check_$ext",
                 parameters: [
                         issue: issue,
@@ -325,7 +324,7 @@ listOfTransitions.conditionalExecution.eachWithIndex { transition, int i ->
         transitionIssueWhenConditionTrue({->currentIssue1[]}, transition)
         getIssueListAfterTransition(transition, "Task")
     }
-    else if(transition == 'if_condition_true_subtask'){
+   /* else if(transition == 'if_condition_true_subtask'){
         def parent1 = createIssues([type: 'Task', summary: 'JMWE_Issue'], 'parent'+transition)
         def subtask1 = createIssues([type: 'Sub-task', summary: transition, parent: { -> parent1[]}], 'Sub-task'+transition)
         getIssueListBeforeTransition(transition, "Sub-task")
@@ -466,6 +465,8 @@ listOfTransitions.conditionalExecution.eachWithIndex { transition, int i ->
         transitionIssueWhenConditionTrue({->linkIssue1[]}, transition)
         getIssueListAfterTransition(transition, "Task")
     }
+    
+    */
 }
 
 

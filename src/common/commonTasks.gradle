@@ -11,6 +11,7 @@ ext.addWorkflow = {
         )
     }
 }
+
 ext.addCustomField = { name, fieldType ->
     def type;
     if(fieldType == 'number' || fieldType == 'numberField' || fieldType == 'numberfield'){
@@ -31,6 +32,31 @@ ext.addCustomField = { name, fieldType ->
     )
 }
 
+ext.createGroup = { groupName ->
+    if(!isCloud) {
+        gint.taskHelper.addSetUp([
+                [action    : "addGroup",
+                 ext       : ":with name:$groupName",
+                 parameters: [
+                         group: groupName
+                 ]
+                ]
+        ])
+    }
+}
+ext.addUserToGroup = { groupName, userId ->
+    if(!isCloud) {
+        gint.taskHelper.addSetUp([
+                [action    : "addUserToGroup",
+                 ext       : ":add user_ $userId to group:$groupName",
+                 parameters: [
+                         userId: userId,
+                         group : groupName
+                 ]
+                ]
+        ])
+    }
+}
 ext.addFieldToScreen = { screen, fieldName ->
     gint.taskHelper.addSetUp(
             action: "addScreenFields", ext: ":to screen $screen: field name:$fieldName",
@@ -264,4 +290,20 @@ ext.addProjectRoleActors = {
             ]
     )
 }
+
+ext.statusId = []
+ext.getStatusId = { statusName ->
+    gint.taskHelper.addSetUp(
+            [action: 'getStatusList', ext: ":to get id of status $statusName",
+            parameters:[
+                    columns: "id",
+                    select: "name:$statusName"
+            ],
+            finalClosure:{ Task task ->
+                statusId.add("$task.outData")
+            }]
+    )
+    return statusId
+}
+
 

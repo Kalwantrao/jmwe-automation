@@ -26,7 +26,8 @@ def fieldsList = [
 		components : 'components'
 ]
 
-def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__FieldRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldrequired-validator'
+//def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__FieldRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldrequired-validator'
+def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__FieldRequiredValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldrequired-validator'
 
 fieldsList.eachWithIndex { field, value, i ->
 	def transition = field + '_field_is_required'
@@ -230,7 +231,15 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 3. check with multiple fields and provide value for any one value and check error  = "Done"
  */
 
+/*
+REVIEWED by Chirag:12.03.2024
+1. check with custom field
+		- Add custom field and transition issue
+		- Delete custom field and transition issue
+"An error occurred while executing a Field Required Validator validator: Unable to find field 'customfield_10700' Field Required Validator: root cause: Unable to find field 'customfield_10700'"
 
+2.Check default error message = "This field is required"
+ */
 
 
 

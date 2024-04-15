@@ -1,0 +1,62 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+    project.ext.seleniumVersion = findProperty('seleniumVersion') ?: System.getenv('SELENIUM_VERSION') ?: '3.14.+'
+    dependencies { // needed here for selenium testing :(
+        ['java', 'support', 'firefox-driver', 'chrome-driver', 'safari-driver', 'edge-driver'].each { entry ->
+            classpath 'org.seleniumhq.selenium:selenium-' + entry + ':' + seleniumVersion
+        }
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory + '/src/common/selenium.gradle'
+apply from: gint.resourceDirectory +'/src/itest-jmcf/jmcf.gradle'
+
+gint.getJiraHelper().getSeleniumHelper()
+gint.helper.log 'selenium helper', gint.seleniumHelper.class.name
+
+def driver = gint.seleniumHelper
+
+//createWorkflowScheme()
+//createProject()
+
+def createNewCustomField = {
+    gint.taskHelper.add(
+            name: "create new custom field",
+            dependsOn: true,
+            inline: {
+                gint.helper.log("opening custom field screen", "to add custom field")
+                sleep(5000)
+                def customFieldButton = driver.findElement(xpath:"//a[@data-testid='hero-btn-primary-olt-primary']", type: "xpath")
+                if(customFieldButton != null){
+                    gint.helper.log("element present", customFieldButton)
+                    driver.findSubElement(xpath:"//a[@data-testid='hero-btn-primary-olt-primary']", type: "xpath")
+                }else{
+                    gint.helper.log("not present", customFieldButton)
+                }
+                sleep(5000)
+            }
+    )
+}
+
+navigateToCustomFieldLandingPage()
+
+createNewCustomField()
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,585 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/itest-postfunction2/postfunction.gradle'
+
+def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__CopyFieldValueToParentFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CopyFieldValueToParent-function'
+
+def sourceField = [
+        'labels' ,
+        'components' ,
+        'assignee',
+        'versions',
+        'fixVersions',
+        'priority'
+]
+
+def destField = [
+        sameAsSource : [ "destField=" ],
+        labels : [ "destField=labels" ],
+        components : [ "destField=components" ]
+]
+
+def options = [
+        noOption : ["copyOnlyIfNotSet=no","ignoreEmptyValue=no","createMissingValues=no","appendValues=no"],
+        copyOnlyIfNotSet : "copyOnlyIfNotSet=yes",
+        ignoreEmptyValue : "ignoreEmptyValue=yes",
+        createMissingValues : "createMissingValues=yes",
+        appendValues : "appendValues=yes"
+]
+
+def defaultFieldsCloud = [
+        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
+]
+
+sourceField.each { fieldsName ->
+    def transition = 'valueOfFieldLabelsWillBeCopiedToTheIssuesParent' + fieldsName
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"$fieldsName\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server = defaultFieldsServer + "field=$fieldsName" + destField.sameAsSource +  options.noOption + conditionalExecution.false
+    addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+['valueOfFieldLabelsWillBeCopiedToTheIssuesParent'].each {
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server = defaultFieldsServer + "field=labels" + destField.sameAsSource +  options.noOption + conditionalExecution.false
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+['valueOfFieldLabelsWillBeCopiedToTheIssuesParent_copyOnlyIfNotSet'].each {
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":true,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server = defaultFieldsServer + "field=labels" + destField.sameAsSource +  options.copyOnlyIfNotSet + conditionalExecution.false
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+['valueOfFieldLabelsWillBeCopiedToTheIssuesParent_ignoreEmptyValue'].each {
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":true,\"runAsType\":\"addonUser\"}"
+    def server = defaultFieldsServer + "field=labels" + destField.sameAsSource+  options.ignoreEmptyValue + conditionalExecution.false
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+['valueOfFieldLabelsWillBeCopiedToTheIssuesParent_createMissingValues'].each {
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"components\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":true,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server = defaultFieldsServer + "field=labels" + destField.components +  options.createMissingValues + conditionalExecution.false
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+['valueOfFieldLabelsWillBeCopiedToTheIssuesParent_appendValues'].each {
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":true,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server = defaultFieldsServer + "field=labels" + destField.sameAsSource +  options.appendValues + conditionalExecution.false
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+['valueOfFieldLabelsWillBeCopiedToTheIssuesParent_ifConditionTrue'].each {
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server = defaultFieldsServer + "field=labels" + destField.sameAsSource +  options.noOption + conditionalExecution.true
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+
+createWorkflowScheme()
+createProject()
+
+(1..2).each {
+    gint.taskHelper.addSetUp([
+            [action: 'addVersion', ext: ': create versions : ' + it,
+             parameters: [
+                     project: projectName,
+                     version: it
+             ]
+            ],
+            [action: 'addComponent', ext: ': create Component : ' + it,
+             parameters: [
+                     project: projectName,
+                     component: 'component' + it
+             ],
+            ]
+    ])
+}
+// set issue status to In Progress
+
+def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
+
+def testLabel1 = "testLabel1"
+def testLabel2 = "testLabel2"
+def createMissingValue = "createMissingValueOfComponent"
+
+['valueOfFieldLabelsWillBeCopiedToTheIssuesParent'].collect {
+    sourceField.each { field ->
+        def transition = it + field
+        def fieldToCheck;
+        def data;
+        def fieldValue;
+        if(field == "labels") {
+            fieldToCheck = "Labels"
+            fieldValue = testLabel1
+            data = "Labels  . . . . . . . . . . . : $testLabel1"
+        }
+        else if(field == "components") {
+            fieldToCheck = "Components"
+            fieldValue = 'component1'
+            data = "Components  . . . . . . . . . : component1"
+        }
+        else if(field == "versions") {
+            fieldToCheck = "Affects versions"
+            fieldValue = 1
+            data = "Affects versions  . . . . . . : 1"
+        }else if(field == "assignee") {
+            fieldToCheck = "Assignee"
+            fieldValue = user
+            data = "Assignee  . . . . . . . . . . : $getCurrentUserName"
+        }
+        else if(field == "fixVersions") {
+            fieldToCheck = "Fix versions"
+            fieldValue = 1
+            data = "Fix versions  . . . . . . . . : 1"
+        }
+        else if(field == "priority") {
+            fieldToCheck = "Priority"
+            fieldValue = 'High'
+            data = "Priority  . . . . . . . . . . : High"
+        }
+        gint.taskHelper.add([
+                [action    : 'setFieldValue',
+                 sleep: sleep,
+                 ext       : ":set $fieldToCheck _$fieldValue to subtask of parent to check:$transition",
+                 parameters: [
+                         issue: { -> subtask[] },
+                         field: fieldToCheck,
+                         value: fieldValue
+                 ]
+                ],
+                [action      : 'getFieldValue',
+                 sleep       : sleep,
+                 ext         : ":Validate that the subtask issue has $fieldToCheck value_ $fieldValue :" + transition,
+                 parameters  : [
+                         issue: { -> subtask[] },
+                         field: fieldToCheck
+                 ],
+                ],
+                [action      : 'getFieldValue',
+                 sleep       : sleep,
+                 ext         : ":Validate that the before transition parent not has $fieldToCheck value_$fieldValue :" + transition,
+                 parameters  : [
+                         issue: { -> parent[] },
+                         field: fieldToCheck
+                 ],
+                 failData : [ data ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ': To CHECK_ COPY_FIELD_VALUE_TO_PARENT_ISSUE_PF :' + transition,
+                 sleep     : sleep,
+                 parameters: [
+                         issue     : { -> parent[] },
+                         transition: transition,
+                 ]
+                ],
+                [action      : 'getFieldValue',
+                 sleep       : sleep,
+                 ext         : ":TC_03: The values of field $fieldValue _ $fieldToCheck will be copied to the issues parent_replacing existing values: " + transition,
+                 parameters  : [
+                         issue: { -> parent[] },
+                         field: fieldToCheck
+                 ],
+                 data        : [data],
+                ],
+        ])
+    }
+}
+
+// COPY_FIELD_VALUE_TO_PARENT_ISSUE_Postfunction_TS_01- Verify the copy fields value to parent issue postfunction for the source field labels, same destination field
+
+['valueOfFieldLabelsWillBeCopiedToTheIssuesParent'].collect {
+    gint.taskHelper.add([
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ":set labels _$testLabel1 to subtask issue of subtask to check:$it",
+             parameters: [
+                     issue: { ->subtask[] },
+                     field: "Labels",
+                     value: testLabel1
+             ]
+            ],
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : ":Validate that the subtask has labels value_ $testLabel1 :" + it,
+             parameters: [
+                     issue: { ->subtask[] },
+                     field: "Labels"
+             ],
+             finalClosure:{Task task ->
+                 def output = "$task.outData"
+                 assert output.contains(testLabel1)
+             }
+            ],
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : ":Validate that the before transition subtask not has labels value_ $testLabel1 :" + it,
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Labels"
+             ],
+             finalClosure:{ Task task ->
+                 def output = "$task.outData"
+                 assert !output.contains(testLabel1)
+             }
+            ],
+            [action    : 'transitionIssue',
+             ext: ': To CHECK_ COPY_FIELD_VALUE_TO_PARENT_ISSUE_PF :' + it,
+             sleep: sleep,
+             parameters: [
+                     issue     : { -> subtask[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : ":TC_03: The values of field Labels will be copied from the issues parent_replacing existing values: "  + it,
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Labels"
+             ],
+             data      : [/Labels  . . . . . . . . . . . : $testLabel1/],
+             finalClosure:{Task task ->
+                 def output = "$task.outData"
+                 assert output.contains(testLabel1)
+             }
+            ],
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ":set labels _of parent issue empty after validating:$it",
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Labels",
+                     value: " "
+             ]
+            ],
+    ])
+}
+
+// COPY_FIELD_VALUE_TO_PARENT_ISSUE_Postfunction_TS_02- Verify the copy fields value to parent issue postfunction for the source field labels & same destination field and copy only if not set option when_field has set some value
+
+['valueOfFieldLabelsWillBeCopiedToTheIssuesParent_copyOnlyIfNotSet'].collect {
+    gint.taskHelper.add([
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ': set labels to issue to check COPY_FIELD_VALUE_To_PARENT_ISSUE_PF option  : ',
+             parameters: [
+                     issue: { ->subtask[] },
+                     field: "Labels",
+                     value: testLabel1
+             ]
+            ],
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ': set labels to some value of subtask to check COPY_FIELD_VALUE_To_PARENT_ISSUE_PF option  : ',
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Labels",
+                     value: testLabel2
+             ]
+            ],
+            [action    : 'transitionIssue',
+             sleep: sleep,
+             ext: ': check COPY_FIELD_VALUE_To_PARENT_ISSUE_PF_copyOnlyIfNotSet when field is not empty :' + it,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it ,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : ":COPY_FIELD_VALUE_TO_PARENT_ISSUE_Postfunction_TS_02- Verify the copy fields value to parent issue postfunction for the source field labels & same destination field and copy only if not set option when_field has set some value:" + it,
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Labels"
+             ],
+             failData      : [/Labels  . . . . . . . . . . . : $testLabel1/],
+             data      : [/Labels  . . . . . . . . . . . : $testLabel2/],
+            ],
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ":set labels _of parent issue empty after validating:$it",
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Labels",
+                     value: " "
+             ]
+            ],
+    ])
+}
+
+// COPY_FIELD_VALUE_TO_PARENT_ISSUE_Postfunction_TS_03- Verify the copy fields value to parent issue postfunction for the source field labels & same destination field and copy only if not set option when_field not has any value
+
+['valueOfFieldLabelsWillBeCopiedToTheIssuesParent_copyOnlyIfNotSet'].collect {
+    gint.taskHelper.add([
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ': set labels empty of subtask to check COPY_FIELD_VALUE_To_PARENT_ISSUE_PF option  : ',
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Labels",
+                     value: " "
+             ]
+            ],
+            [action    : 'transitionIssue',
+             sleep: sleep,
+             ext: ': check COPY_FIELD_VALUE_To_PARENT_ISSUE_PF_copyOnlyIfNotSet when field is empty :' + it,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it ,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : ":COPY_FIELD_VALUE_TO_PARENT_ISSUE_Postfunction_TS_03- Verify the copy fields value to parent issue postfunction for the source field labels & same destination field and copy only if not set option when_field not has any value:" + it,
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Labels"
+             ],
+             data      : [/Labels  . . . . . . . . . . . : $testLabel1/],
+             failData      : [/Labels  . . . . . . . . . . . : $testLabel2/],
+            ],
+    ])
+}
+
+// COPY_FIELD_VALUE_TO_PARENT_ISSUE_Postfunction_TS_04- Verify the copy fields value to parent issue postfunction for the source field labels & same destination field and ignore empty value option when_postfunction should ignoring empty value
+
+['valueOfFieldLabelsWillBeCopiedToTheIssuesParent_ignoreEmptyValue'].each {
+    gint.taskHelper.add([
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ': set labels empty of parent issue to check ignoreEmptyValue_option of COPY_FIELD_VALUE_To_PARENT_ISSUE_PF option  : ',
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Labels",
+                     value: " "
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ': To CHECK_ COPY_FIELD_VALUE_To_PARENT_ISSUE_PF_ignoring empty values :' + it,
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : ":COPY_FIELD_VALUE_TO_PARENT_ISSUE_Postfunction_TS_04- Verify the copy fields value to parent issue postfunction for the source field labels & same destination field and ignore empty value option when_postfunction should ignoring empty value:"  + it,
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Labels"
+             ],
+             data      : [/Labels  . . . . . . . . . . . : $testLabel1/],
+            ],
+    ])
+}
+
+// COPY_FIELD_VALUE_TO_PARENT_ISSUE_Postfunction_TS_05- Verify the copy fields value to parent issue postfunction for the source field labels & same destination field and ignore empty value option when_postfunction should not ignore empty value
+
+['valueOfFieldLabelsWillBeCopiedToTheIssuesParentlabels'].collect {
+    gint.taskHelper.add([
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ': set labels empty of parent issue to check ignoreEmptyValue_option of COPY_FIELD_VALUE_To_PARENT_ISSUE_PF option  : ' + it,
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Labels",
+                     value: " "
+             ]
+            ],
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ": set labels empty of subtask issue to check ignoreEmptyValue_option of COPY_FIELD_VALUE_To_PARENT_ISSUE_PF option  : " + it,
+             parameters: [
+                     issue: { ->subtask[] },
+                     field: "Labels",
+                     value: " "
+             ]
+            ],
+            [action    : 'transitionIssue', ext: ': To CHECK_ COPY_FIELD_VALUE_To_PARENT_ISSUE_PF_when not ignoring empty values :' + it,
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : ":COPY_FIELD_VALUE_TO_PARENT_ISSUE_Postfunction_TS_05- Verify the copy fields value to parent issue postfunction for the source field labels & same destination field and ignore empty value option when_postfunction should not ignore empty value :"  + it,
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Labels"
+             ],
+             failData      : [/Labels  . . . . . . . . . . . : $testLabel1/],
+            ],
+    ])
+}
+
+// COPY_FIELD_VALUE_TO_PARENT_ISSUE_Postfunction_TS_07- Verify the copy fields value to parent issue postfunction for the source field labels & same destination field and create missing values option when_postfunction should create missing values
+
+['valueOfFieldLabelsWillBeCopiedToTheIssuesParent_createMissingValues'].each {
+    def getComponentValue = info?.isCloud ? "Components  . . . . . . . . . : $createMissingValue" : "Component/s . . . . . . . . . : $createMissingValue"
+    gint.taskHelper.add([
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ": set labels to $createMissingValue of subtask to check createMissingValues_option of COPY_FIELD_VALUE_To_PARENT_ISSUE_PF  : ",
+             parameters: [
+                     issue: { ->subtask[] },
+                     field: "Labels",
+                     value: createMissingValue
+             ]
+            ],
+            [action    : 'transitionIssue',
+             ext: ': To CHECK_ COPY_FIELD_VALUE_To_PARENT_ISSUE_PF_when create missing values :' + it,
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->subtask[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : ":COPY_FIELD_VALUE_TO_PARENT_ISSUE_Postfunction_TS_07- Verify the copy fields value to parent issue postfunction for the source field labels & same destination field and create missing values option when_postfunction should create missing values :"  + it,
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Components"
+             ],
+             data      : [getComponentValue],
+            ],
+    ])
+}
+
+// COPY_FIELD_VALUE_TO_PARENT_ISSUE_Postfunction_TS_08- Verify the copy fields value to parent issue postfunction for the source field labels & same destination field and append values option when_postfunction should append the new field values
+
+['valueOfFieldLabelsWillBeCopiedToTheIssuesParent_appendValues'].each {
+    gint.taskHelper.add([
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ": set labels to empty value of parent issue to check appendValue_option of COPY_FIELD_VALUE_To_PARENT_ISSUE_PF  : ",
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Labels",
+                     value: " "
+             ]
+            ],
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ": set labels to empty value of subtask issue to check appendValue_option of COPY_FIELD_VALUE_To_PARENT_ISSUE_PF  : " + it,
+             parameters: [
+                     issue: { ->subtask[] },
+                     field: "Labels",
+                     value: " "
+             ]
+            ],
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ": set labels to $testLabel1 of subtask to check appendValues_option of COPY_FIELD_VALUE_To_PARENT_ISSUE_PF  : "+it,
+             parameters: [
+                     issue: { ->subtask[] },
+                     field: "Labels",
+                     value: testLabel1
+             ]
+            ],
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ": set labels to $testLabel2 of parent issue to check appendValues_option of COPY_FIELD_VALUE_To_PARENT_ISSUE_PF  : ",
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Labels",
+                     value: testLabel2
+             ]
+            ],
+            [action    : 'transitionIssue', ext: ': To CHECK_ COPY_FIELD_VALUE_To_PARENT_ISSUE_PF_when append values :' + it,
+             sleep: sleep,
+             parameters: [
+                     issue     : { -> subtask[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : ":COPY_FIELD_VALUE_TO_PARENT_ISSUE_Postfunction_TS_08- Verify the copy fields value to parent issue postfunction for the source field labels & same destination field and append values option when_postfunction should append the new field values:" + it,
+             parameters: [
+                     issue: { -> parent[] },
+                     field: "Labels"
+             ],
+             data      : ["Labels  . . . . . . . . . . . : $testLabel1 $testLabel2"],
+            ],
+    ])
+}
+
+// COPY_FIELD_VALUE_TO_PARENT_ISSUE_Postfunction_TS_09- Verify the copy fields value to parent issue postfunction for the source field labels & same destination field when_conditional execution is true
+['valueOfFieldLabelsWillBeCopiedToTheIssuesParent_ifConditionTrue'].each {
+    gint.taskHelper.add([
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ": set priority to Low of parent to check conditional execution true_option of COPY_FIELD_VALUE_To_PARENT_ISSUE_PF  : ",
+             parameters: [
+                     issue: { ->subtask[] },
+                     field: "Priority",
+                     value: "Low"
+             ]
+            ],
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ": set labels to empty value of parent issue to check conditionalExecution_option of COPY_FIELD_VALUE_To_PARENT_ISSUE_PF  : ",
+             parameters: [
+                     issue: { ->parent[] },
+                     field: "Labels",
+                     value: " "
+             ]
+            ],
+            [action    : 'transitionIssue', ext: ': To CHECK_ COPY_FIELD_VALUE_To_PARENT_ISSUE_PF_when condition false :' + it,
+             sleep: sleep,
+             parameters: [
+                     issue     : { -> parent[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : ":COPY_FIELD_VALUE_TO_PARENT_ISSUE_Postfunction_TS_09_TC_01- Verify the copy fields value to parent issue postfunction for the source field labels & same destination field when_conditional execution is false :" + it,
+             parameters: [
+                     issue: { -> parent[] },
+                     field: "Labels"
+             ],
+             failData      : ["Labels  . . . . . . . . . . . : $testLabel1"],
+            ],
+            [action: 'setFieldValue',
+             sleep: sleep,
+             ext: ": set priority to High of parent to check conditional execution true_option of COPY_FIELD_VALUE_To_PARENT_ISSUE_PF  : ",
+             parameters: [
+                     issue: { ->subtask[] },
+                     field: "Priority",
+                     value: "High"
+             ]
+            ],
+            [action    : 'transitionIssue', ext: ': To CHECK_ COPY_FIELD_VALUE_To_PARENT_ISSUE_PF_when condition true :' + it,
+             sleep: sleep,
+             parameters: [
+                     issue     : { -> subtask[] },
+                     transition: it,
+             ]
+            ],
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : ":COPY_FIELD_VALUE_TO_PARENT_ISSUE_Postfunction_TS_09_TC_02- Verify the copy fields value to parent issue postfunction for the source field labels & same destination field when_conditional execution is true :" + it,
+             parameters: [
+                     issue: { -> parent[] },
+                     field: "Labels"
+             ],
+             data      : ["Labels  . . . . . . . . . . . : $testLabel1"],
+            ],
+    ])
+}

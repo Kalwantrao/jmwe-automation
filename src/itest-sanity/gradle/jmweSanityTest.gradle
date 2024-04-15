@@ -9,8 +9,8 @@ buildscript {
     }
 }
 
+
 apply plugin: 'org.gint.atlassian'
-//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 apply from: gint.resourceDirectory +'/src/itest-sanity/sanity.gradle'
 
 String errorMessage = 'test_error_message_during_sanityTesting'
@@ -22,13 +22,12 @@ def configFieldsServer = [
 ]
 
 def configFieldsCloud = [
-        verify_condition_on_related_issues_checkAssignee : defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.assignee && issue.assignee == $testUser\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.assignee && issue.assignee == $testUser)))\"}",
+        verify_condition_on_related_issues_checkAssignee : defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"issue.assignee.accountId == '$currentUserKey'\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (issue.assignee.accountId == '$currentUserKey')))\"}",
         current_user_should_be_assignee_if_condition_true : defaultFieldsCloud.validator + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"isAssignee\":true},\"errorMessage\":\"$errorMessage\",\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.priority && issue.priority.name == 'High'\",\"expression\":\"let selectedUser = user; (!(!!issue.priority && issue.priority.name == 'High') || (!!user && (false || (!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}",
         add_comment_to_current_issue_ifConditionTrue : defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.true,\"targetIssue\":\"$currentIssue\",\"comment\":\"add_comment_to_current_issue_ifConditionTrue\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",$runAsUser.currentUser}"
 ]
 
 def configFields = info?.isCloud ? configFieldsCloud : configFieldsServer
-
 
 configFields.eachWithIndex { key, value, i ->
     def type;
@@ -75,16 +74,14 @@ configFields.eachWithIndex { key, value, i ->
 createWorkflowSchemeForSanityTest()
 createProject()
 
-
-def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
 def toIssueLink = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'toIssueLink')
+
 
 // Condition
 [
         'verify_condition_on_related_issues_checkAssignee',
 ].each {
-    if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'linkIssue',
                  ext       : ":relates to link type to check $it _:RELATED_ISSUES_CONDITION_SANITY:",
@@ -147,7 +144,6 @@ def toIssueLink = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'toIssueLin
                  ],
                 ],
         ])
-    }
 }
 
 //Validators
@@ -183,7 +179,7 @@ def toIssueLink = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'toIssueLin
                 ],
                 [action    : 'transitionIssue',
                  sleep: sleep,
-                 ext       : ":USER_VALIDATOR_TS_51_TC_01_Case_01_ $it _when assignee is $testUser and current user is $user:when priority is $priority:USER_VALIDATOR_SANITY:",
+                 ext       : ":$it _when assignee is $testUser and current user is $user:when priority is $priority:USER_VALIDATOR_SANITY:",
                  expected  : expected,
                  parameters: [
                          issue     : { -> issueLinks[] },

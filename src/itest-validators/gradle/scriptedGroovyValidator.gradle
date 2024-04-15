@@ -46,13 +46,15 @@ def noCodeFields = [
         "targetText="
 ]
 
-def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ScriptedValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-validator'
+
+//def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ScriptedValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-validator'
+def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__ScriptedValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-validator'
 
 [
         'verify_issue_must_assigned_to_specific_user'
 ].each {
     def server = defaultFieldsServer + "groovyExpression=issue.getAsString(\"assignee\") == \"$getCurrentUserName\""
-    def cloud = defaultFieldsCloud.validator + "validator.config-07ce5526-68d4-42ad-8be6-f0a788113a55={\"conditionalValidation\":false,\"script\":\"!!issue.assignee && issue.assignee.accountId =='$currentUserKey'\",\"expression\":\"!!issue.assignee && issue.assignee.accountId =='$currentUserKey'\",\"scriptDescription\":\"\",\"errorMessage\":\"$errorMessage\"}"
+    def cloud = defaultFieldsCloud.validator + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"conditionalValidation\":false,\"script\":\"!!issue.assignee && issue.assignee.accountId == '$currentUserKey'\",\"expression\":\"!!issue.assignee && issue.assignee.accountId == '$currentUserKey'\",\"scriptDescription\":\"\",\"errorMessage\":\"$errorMessage\"}"
     addTransitionFunction(it, 'validator', info?.isCloud ? cloud : server, functionKey )
 }
 
@@ -206,3 +208,59 @@ def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->d
             ],
     ])
 }
+
+/*
+REVIEWED BY Chirag: 13.03.2024
+1. fix version & affects version field with operators:
+   - field
+        - Equals to
+        - does not equals to
+
+   - Text
+        - Equals to
+        - Does not equals
+Note: Check on transition screen
+2. fix version & affects version field with operators:
+        - empty
+        - not empty
+3. fix version & affects version field with operators:
+   - field
+        - one of
+        - not one of
+   - Text
+       - one of
+       - not one of
+Note: Check on transition screen
+4. story point and original story points fields with operator -
+     - Field
+        - less than
+        - not less than
+        - Greater than
+        - Not greater than
+     - Text
+        - less than
+        - not less than
+        - Greater than
+        - Not greater than
+5. Description fields with the operator :
+       - matches a regular expression
+       - Regex : TEST
+       - does not matches a regular expression
+       - Regex : TEST
+6. fix version & affects version field with operators: to compare integer
+    - Field:
+        - contains value
+        - does not contains value
+    - Text:
+        - contains value
+        - does not contains value
+7. labels and description field with below operators: to compare string and alphanumeric values
+    - Field:
+       - contains value
+       - does not contains value
+    - Text
+       - contains value
+       - does not contains value
+
+ */
+

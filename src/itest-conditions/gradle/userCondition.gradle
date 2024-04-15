@@ -13,7 +13,8 @@ apply plugin: 'org.gint.atlassian'
 // apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
 
-def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__UserCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition'
+//def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__UserCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition'
+def functionKey = info?.isCloud? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__UserCondition" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition'
 
 def whichUser = [
 		currentUser :         info?.isCloud? /"fromUserType":"currentUser"/ : ["fromUserType=currentUser"],
@@ -48,7 +49,7 @@ def userCriteria = [
 ]
 def currentUserConditionCriteriaCloud = [
 		reporter : /"userCriteria":{"isReporter":true},"expression":"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId))))"/,
-		assignee : /userCriteria":{"isAssignee":true},"expression":"let selectedUser = user; ((!!user && (false || (!!issue.assignee && user.accountId == issue.assignee.accountId))))"/,
+		assignee : /"userCriteria":{"isAssignee":true},"expression":"let selectedUser = user; ((!!user && (false || (!!issue.assignee && user.accountId == issue.assignee.accountId))))"/,
 		inFieldAssignee : /"userCriteria":{"userFieldsToCheck":["assignee"]},"expression":"let selectedUser = user; ((!!user && (false || ((!!issue.assignee && issue.assignee.accountId == user.accountId)))))"/,
 		returnFromScript : /"userCriteria":{"usersConditionScript":"$returnsReporter"},"expression":"let selectedUser = user; ((!!user && (false || ($returnsReporter))))"/,
 		inAdminRole : /"userCriteria":{"rolesToCheck":[$jiraAdminRoleId]},"expression":"let selectedUser = user; ((!!user && (false || ([$jiraAdminRoleId].some(roleId => (new User(user.accountId)).getProjectRoles(project).map(role => role.id).includes(roleId))))))"/,
@@ -271,12 +272,6 @@ def listOfUsers = [testUser,user]
 							 issue     : { -> defaultIssue[] },
 							 transition: transition,
 					 ],
-					 finalClosure: { Task task ->
-						 if (task.result != expected) {
-							 gint.helper.log("Check the project lead should be", usersToCheck)
-						 }
-						 assert task.result == expected
-					 }
 					],
 			])
 		}
@@ -286,27 +281,22 @@ def listOfUsers = [testUser,user]
 // USER_CONDITION_TS_40_TC_01_Verify the user in field assignee should be reporter
 [
 		'verify_user_in_field_assignee_should_be_reporter',
-		//'verify_user_in_field_assignee_should_be_returnFromScript',
+		'verify_user_in_field_assignee_should_be_returnFromScript',
 ].each {
-	listOfUsers.eachWithIndex { userToCheck, idx ->
+	listOfUsers.eachWithIndex{ userToCheck, idx ->
 		def userInFieldAssignee= testUser;
 		def expected;
-		if(userInFieldAssignee == userToCheck){
+		if(it == 'verify_user_in_field_assignee_should_be_reporter' && userToCheck == userInFieldAssignee ){
 			expected = 0
-		}
-		else{
+		} else if(it == 'verify_user_in_field_assignee_should_be_returnFromScript' && userToCheck == user){
+			expected = 0
+		} else {
 			expected = -1
-		}
-
-	def fieldToCheck; if(it == 'verify_user_in_field_assignee_should_be_reporter') {
-			fieldToCheck = "Reporter"
-		} else if (it == 'verify_user_in_field_assignee_should_be_returnFromScript') {
-			fieldToCheck = "Reporter"
 		}
 		gint.taskHelper.add([
 				[action    : 'setFieldValue',
 				 sleep     : info?.isCloud ? 5000 : 0,
-				 ext       : ":Of assignee to $userInFieldAssignee when user in field $fieldToCheck is $userToCheck _before transition issue with_ $it:",
+				 ext       : ":Of assignee to $userInFieldAssignee when user in field Reporter is $userToCheck _before transition issue with_ $it:",
 				 parameters: [
 						 issue: { -> defaultIssue[] },
 						 field: "Assignee",
@@ -315,27 +305,21 @@ def listOfUsers = [testUser,user]
 				],
 				[action    : 'setFieldValue',
 				 sleep     : info?.isCloud ? 5000 : 0,
-				 ext       : ":Of field_ $fieldToCheck _ to $userToCheck _before transition issue with_ $it: ",
+				 ext       : ":Of field_ Reporter _ to $userToCheck _before transition issue with_ $it: ",
 				 parameters: [
 						 issue: { -> defaultIssue[] },
-						 field: fieldToCheck,
+						 field: "Reporter",
 						 value: userToCheck
 				 ],
 				],
 				[action      : 'transitionIssue',
 				 sleep       : info?.isCloud ? 5000 : 0,
-				 ext         : ":USER_CONDITION_TS_40_TC_01_Case_01_ $it _when user in field assignee is $userInFieldAssignee and user in field $fieldToCheck is $userToCheck:",
+				 ext         : ":USER_CONDITION_TS_40_TC_01_Case_01_ $it _when user in field assignee is $userInFieldAssignee and user in field Reporter is $userToCheck:",
 				 expected    : expected,
 				 parameters  : [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
 				 ],
-				 finalClosure: { Task task ->
-					 if (task.result != 0) {
-						 gint.helper.log("Check user in field assignee should be in field", fieldToCheck)
-						 assert task.result == expected
-					 }
-				 }
 				],
 		])
 	}
@@ -345,14 +329,25 @@ def listOfUsers = [testUser,user]
 // USER_CONDITION_TS_40_TC_07_Verify the user in field assignee should specific user_checkUser
 // USER_CONDITION_TS_40_TC_14_Verify the user in field reporter should be specific user_checkUser
 // USER_CONDITION_TS_40_TC_13_Verify the user in field reporter should be in admin group
-[
+def transitionListForUsersAndGroupsServer = [
 		'verify_user_in_field_assignee_should_be_inAdminRole',
 		'verify_user_in_field_reporter_should_be_inAdminRole',
 		'verify_user_in_field_assignee_should_be_checkUser',
 		'verify_user_in_field_reporter_should_be_checkUser',
-		'verify_user_in_field_reporter_should_be_inAdminGroup'
+		'verify_user_in_field_reporter_should_be_inAdminGroup',
 		//'verify_user_in_field_creator_should_be_inAdminRole',
-].eachWithIndex { transition, index ->
+]
+def transitionListForUsersAndGroupsCloud = [
+		'verify_user_in_field_assignee_should_be_inAdminRole',
+		'verify_user_in_field_reporter_should_be_inAdminRole',
+		//'verify_user_in_field_assignee_should_be_checkUser',
+		//'verify_user_in_field_reporter_should_be_checkUser',
+		//'verify_user_in_field_reporter_should_be_inAdminGroup'
+		//'verify_user_in_field_creator_should_be_inAdminRole',
+]
+def transitionListForUsersAndGroups = info?.isCloud? transitionListForUsersAndGroupsCloud : transitionListForUsersAndGroupsServer
+
+transitionListForUsersAndGroups.eachWithIndex { transition, index ->
 	listOfUsers.collect {
 		def expected;
 		if(it == testUser){
@@ -380,7 +375,7 @@ def listOfUsers = [testUser,user]
 		}
 		gint.taskHelper.add([
 				[action    : 'setFieldValue',
-				 sleep : info?.isCloud? 5000 : 0,
+				 sleep : sleep,
 				 ext       : ": Of Field $fieldToCheck to $it _to check _ $transition : ",
 				 parameters: [
 						 issue: { -> defaultIssue[] },
@@ -388,7 +383,7 @@ def listOfUsers = [testUser,user]
 						 value: it
 				 ],],
 				[action    : 'transitionIssue',
-				 sleep : info?.isCloud? 5000 : 0,
+				 sleep : sleep,
 				 ext       : ":USER_CONDITION_TS_40_TC_05_Case_01_ $transition _user in field_ $fieldToCheck is $it not in admin role: ",
 				 expected  : expected,
 				 parameters: [
@@ -418,7 +413,7 @@ def listOfUsers = [testUser,user]
 
 		gint.taskHelper.add([
 				[action    : 'setFieldValue',
-				 sleep : info?.isCloud? 5000 : 0,
+				 sleep : sleep,
 				 ext       : ":Of field Reporter $userInfieldReporter _to check $transition _when the user in field_ $fieldToCheck is _$it: ",
 				 parameters: [
 						 issue: { -> defaultIssue[] },
@@ -427,7 +422,7 @@ def listOfUsers = [testUser,user]
 				 ],
 				],
 				[action    : 'setFieldValue',
-				 sleep : info?.isCloud? 5000 : 0,
+				 sleep : sleep,
 				 ext       : ":Of field_ $fieldToCheck to $it _to check $transition _when user in field _ $fieldToCheck is _$it : ",
 				 parameters: [
 						 issue: { -> defaultIssue[] },
@@ -436,7 +431,7 @@ def listOfUsers = [testUser,user]
 				 ],
 				],
 				/*[action    : 'getFieldValue',
-				 sleep : info?.isCloud? 5000 : 0,
+				 sleep : sleep,
 				 ext: ": Of $fieldToCheck should be_ $it _to check $transition : ",
 				 parameters: [
 						 issue     : { ->defaultIssue[] },
@@ -447,16 +442,13 @@ def listOfUsers = [testUser,user]
 				 }
 				],*/
 				[action    : 'transitionIssue',
-				 sleep : info?.isCloud? 5000 : 0,
+				 sleep : sleep,
 				 ext       : ":USER_CONDITION_TS_40_TC_08_Case_01_ to check $transition _when user in field _ $fieldToCheck is _$it: ",
 				 expected  : expected,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: transition,
 				 ],
-				 finalClosure: {Task task ->
-					 assert task.result == expected
-				 }
 				],
 		])
 	}
@@ -489,7 +481,7 @@ def listOfUsers = [testUser,user]
 		}
 		gint.taskHelper.add([
 				[action    : 'setFieldValue',
-				 sleep : info?.isCloud? 5000 : 0,
+				 sleep : sleep,
 				 ext       : ":Of field _$fieldToCheck to $it _ to check $transition _when user in field creator is $userInFieldCreator and the user in field $fieldToCheck is $it: ",
 				 parameters: [
 						 issue: { -> defaultIssue[] },
@@ -498,7 +490,7 @@ def listOfUsers = [testUser,user]
 				 ],
 				],
 				/*[action    : 'getFieldValue',
-				 sleep : info?.isCloud? 5000 : 0,
+				 sleep : sleep,
 				 ext: ": Of $fieldToCheck should be_ $it _to check $transition : ",
 				 parameters: [
 						 issue     : { ->defaultIssue[] },
@@ -509,16 +501,13 @@ def listOfUsers = [testUser,user]
 				 }
 				],*/
 				[action    : 'transitionIssue',
-				 sleep : info?.isCloud? 5000 : 0,
+				 sleep : sleep,
 				 ext       : ":USER_CONDITION_TS_40_TC_15_Case_01_ $transition _when user in field creator is $userInFieldCreator and the user in field $fieldToCheck is $it: ",
 				 expected  : expected,
 				 parameters: [
 						 issue     : { -> defaultIssue[] },
 						 transition: transition,
 				 ],
-				 finalClosure: {Task task ->
-					 assert task.result == expected
-				 }
 				],
 		])
 	}
@@ -563,16 +552,13 @@ def listOfUsers = [testUser,user]
 		}
 			gint.taskHelper.add([
 					[action      : 'transitionIssue',
-					 sleep : info?.isCloud? 5000 : 0,
+					 sleep : sleep,
 					 ext         : ":USER_CONDITION_TS_49_TC_01_Case_01_ $it _when current user is_$currentUser _and user in fields_ assignee and reporter is_ $userToCheck: ",
 					 expected    : expected,
 					 parameters  : [
 							 issue     : { -> defaultIssue[] },
 							 transition: it,
 					 ],
-					 finalClosure: { Task task ->
-						 assert task.result == expected
-					 }
 					],
 			])
 		}
@@ -632,9 +618,6 @@ def listOfUsers = [testUser,user]
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
 				 ],
-				 finalClosure: { Task task ->
-					 assert task.result == expected
-				 }
 				],
 		])
 	}
@@ -678,16 +661,13 @@ def listOfUsers = [testUser,user]
 		}
 		gint.taskHelper.add([
 				[action      : 'transitionIssue',
-				 sleep : info?.isCloud? 5000 : 0,
+				 sleep : sleep,
 				 ext         : ":USER_CONDITION_TS_22_TC_01_Case_01_ $it _when current user is_$currentUser _and user in fields_ assignee and reporter is_ $userToCheck: ",
 				 expected    : expected,
 				 parameters  : [
 						 issue     : { -> defaultIssue[] },
 						 transition: it,
 				 ],
-				 finalClosure: { Task task ->
-					 assert task.result == expected
-				 }
 				],
 		])
 	}

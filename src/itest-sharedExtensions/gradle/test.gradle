@@ -1,0 +1,62 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/itest-sharedExtensions/sharedExtensions.gradle'
+
+def issueTypeID;
+def getIssueTypeList = { issueType ->
+    gint.taskHelper.addTearDown(
+            action: "getIssueTypeList",
+            parameters: [
+                    outputType: "Text",
+                    columns: "id",
+                    select: "name:$issueType"
+            ],
+            finalClosure: {Task task ->
+                def outPut = task.outData
+                def matcher = (outPut =~ /\b\d+\b/)
+                if (matcher.find()) {
+                    issueTypeID = matcher[1].toInteger()
+                    gint.helper.log("issue type id", issueTypeID)
+                } else {
+                    gint.helper.log("issue type id not found in", task.outData)
+                }
+            }
+    )
+    return issueTypeID
+}
+
+def issueTypeID1 = getIssueTypeList("Story")
+//def issueTypeId = {->issueTypeID1}
+
+gint.taskHelper.add(
+        name: " int",
+        inline:{
+            gint.helper.log("issue type id", {->issueTypeID1})
+        }
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -13,7 +13,8 @@ apply plugin: 'org.gint.atlassian'
 //apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
-def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssuesValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:issue-linking-validator'
+//def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssuesValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:issue-linking-validator'
+def functionKey = info?.isCloud? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__LinkedIssuesValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:issue-linking-validator'
 def errorMessage = "Check link issues"
 
 def defaultFieldsCloud= [
@@ -90,11 +91,11 @@ requireRelatedIssue.eachWithIndex { key, value, i ->
 	}
 }
 
+// add this script in config - linkedIssue.get("Fix Version/s")?.any{it.name == "1.0"}
 ['verify_condition_on_related_issues_checkAssignee'].each {
 	def server = defaultFieldsServer + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireSpecificLinkedIssues + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
-	if(!isCloud) {
-		addTransitionFunction(it, 'validator', server, functionKey)
-	}
+	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-33c1-422b-933c-3c16e0739d3a={\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"$errorMessage\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.assignee && issue.assignee.accountId == '$currentUserKey'\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.filter(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)).some(issueLink => (!!issue.assignee && issue.assignee.accountId == '$currentUserKey')))\"}"
+	addTransitionFunction(it, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 checkRelatedIssue.eachWithIndex { key, value, i ->
@@ -112,7 +113,7 @@ forbidRelatedIssue.eachWithIndex { key, value, i ->
 }
 
 ['verify_validator_scope_conditional_validation'].each {
-	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-33c1-422b-933c-3c16e0739d3a={$conditionalValidation.yes,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"!(!!issue.priority && issue.priority.name == 'High') || (issue.subtasks.some(linkedIssue => (true)))\"}"
+	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-33c1-422b-933c-3c16e0739d3a={$conditionalValidation.yes,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"$errorMessage\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"!(!!issue.priority && issue.priority.name == 'High') || (issue.subtasks.some(linkedIssue => (true)))\"}"
 	def server = defaultFieldsServer + "selectedLinkType=$subtask" + conditionalValidation.yes + linkedIssuesMode.requireLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
 	addTransitionFunction(it , 'validator', info?.isCloud? cloud : server, functionKey)
 }
@@ -149,7 +150,7 @@ def transitionByUserTaskForSuccess =  { transition, userId, issue, expected ->
 	}
 }
 
-//                                      RELATED_ISSUES_CONDITION => REQUIRE CERTAIN RELATED ISSUES
+//                                      RELATED_ISSUES_VALIDATOR => REQUIRE CERTAIN RELATED ISSUES
 
 // Create issues
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'default')
@@ -163,7 +164,7 @@ def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks'
 def toIssueLink = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'toIssueLink')
 def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 
-// RELATED_ISSUES_CONDITION_TC_14-verify require certain related issues and subtask of the current issue
+// RELATED_ISSUES_VALIDATOR_TC_14-verify require certain related issues and subtask of the current issue
 
 [
 		'verify_require_certain_related_issues_subtask',
@@ -171,7 +172,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 	gint.taskHelper.add([
 			[action    : 'transitionIssue',
 			 sleep: info?.isCloud? 5000 : 500,
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_14_Case_01 -$it _when issue having one subtask:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_14_Case_01 -$it _when issue having one subtask:",
 			 expected  : 0,
 			 parameters: [
 					 issue     : {->parent[]},
@@ -180,7 +181,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			],
 			[action    : 'transitionIssue',
 			 sleep: info?.isCloud? 5000 : 500,
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_14_Case_02 -$it _when issue not having subtask:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_14_Case_02 -$it _when issue not having subtask:",
 			 expected  : -3,
 			 parameters: [
 					 issue     : {->defaultIssue[]},
@@ -189,11 +190,11 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			],
 	])
 }
-// RELATED_ISSUES_CONDITION_TC_14-verify require certain related issues and subtask of the current issue_by non admin user
+// RELATED_ISSUES_VALIDATOR_TC_14-verify require certain related issues and subtask of the current issue_by non admin user
 //transitionByUserTaskForError('verify_require_certain_related_issues_subtask', testUserForServer, {->defaultIssue[]}, -3)
 //('verify_require_certain_related_issues_subtask', testUserForServer, {->parent[]}, 0)
 
-// RELATED_ISSUES_CONDITION_TC_17-verify require certain related issues_issueBelongsToEpic
+// RELATED_ISSUES_VALIDATOR_TC_17-verify require certain related issues_issueBelongsToEpic
 [
 		'verify_require_certain_related_issues_issueBelongsToEpic',
 ].collect {
@@ -201,7 +202,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			[action    : 'transitionIssue',
 			 sleep: info?.isCloud? 5000 : 500,
 			 expected  : -3,
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_17_Case_01 -$it _when epic not having issueBelongsToEpic:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_17_Case_01 -$it _when epic not having issueBelongsToEpic:",
 			 parameters: [
 					 issue     : {->epic[]},
 					 transition: it
@@ -218,7 +219,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			[action    : 'transitionIssue',
 			 sleep: info?.isCloud? 5000 : 500,
 			 expected  : 0,
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_17_Case_02 -$it _when epic having one issueBelongsToEpic:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_17_Case_02 -$it _when epic having one issueBelongsToEpic:",
 			 parameters: [
 					 issue     : {->epic[]},
 					 transition: it ]
@@ -226,14 +227,14 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TC_21-verify require certain related issues_child issue in the Portfolio hierarchy
+// RELATED_ISSUES_VALIDATOR_TC_21-verify require certain related issues_child issue in the Portfolio hierarchy
 [
 		'verify_require_certain_related_issues_childPortfolio',
 ].collect {
 	if(!isCloud) {
 		gint.taskHelper.add("Validate that current issue must have atleast one child issue in portfolio hierarchy",[
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_21_Case_01 -$it _when current issue not having child issues in the Portfolio hierarchy:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_21_Case_01 -$it _when current issue not having child issues in the Portfolio hierarchy:",
 				 expected  : -3,
 				 parameters: [
 						 issue     : { -> initiative[] },
@@ -249,7 +250,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 				 ]
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_21_Case_02 -$it _current issue have one child issue in the Portfolio hierarchy:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_21_Case_02 -$it _current issue have one child issue in the Portfolio hierarchy:",
 				 expected  : 0,
 				 parameters: [
 						 issue     : { -> initiative[] },
@@ -260,7 +261,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 	}
 }
 
-// RELATED_ISSUES_CONDITION_TC_26-verify require certain related issues_current issue must have at least 1 issues linked to it through any link type
+// RELATED_ISSUES_VALIDATOR_TC_26-verify require certain related issues_current issue must have at least 1 issues linked to it through any link type
 [
 		'verify_require_certain_related_issues_linkByAnyLink',
 ].collect {
@@ -279,7 +280,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_26_Case_01 -$it _current issue not having issues linked to it through any link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_26_Case_01 -$it _current issue not having issues linked to it through any link type:",
 			 expected  : -3,
 			 parameters: [
 					 issue     : {->issueLinks[]},
@@ -307,7 +308,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_26_Case_02 -$it _current issue having one issue linked to it through any link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_26_Case_02 -$it _current issue having one issue linked to it through any link type:",
 			 expected  : 0,
 			 parameters: [
 					 issue     : {->issueLinks[]},
@@ -324,7 +325,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			],])
 }
 
-// RELATED_ISSUES_CONDITION_TC_27-verify require certain related issues_current issue must have at least 1 issues linked to it through the blocks link type
+// RELATED_ISSUES_VALIDATOR_TC_27-verify require certain related issues_current issue must have at least 1 issues linked to it through the blocks link type
 [
 		'verify_require_certain_related_issues_linkByBlock',
 ].collect {
@@ -343,7 +344,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_27_Case_01 -$it _The current issue not having issues linked to it through the blocks link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_27_Case_01 -$it _The current issue not having issues linked to it through the blocks link type:",
 			 expected  : -3,
 			 parameters: [
 					 issue     : {->issueLinks[]},
@@ -371,7 +372,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_27_Case_02 -$it _when current issue have at least 1 issue linked to it through the blocks link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_27_Case_02 -$it _when current issue have at least 1 issue linked to it through the blocks link type:",
 			 expected  : 0,
 			 parameters: [
 					 issue     : {->issueLinks[]},
@@ -389,7 +390,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TC_29-verify require certain related issues_current issue must have at least 1 issues linked to it through the is blocked by link type
+// RELATED_ISSUES_VALIDATOR_TC_29-verify require certain related issues_current issue must have at least 1 issues linked to it through the is blocked by link type
 [
 		'verify_require_certain_related_issues_linkByisBlockedBy',
 ].collect {
@@ -408,7 +409,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_29_Case_01 -$it _when current issue not having issues linked to it through the is blocked by link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_29_Case_01 -$it _when current issue not having issues linked to it through the is blocked by link type:",
 			 expected  : -3,
 			 parameters: [
 					 issue     : {->issueLinks[]},
@@ -436,7 +437,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_29_Case_02 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_29_Case_02 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
 			 expected  : 0,
 			 parameters: [
 					 issue     : {->issueLinks[]},
@@ -454,7 +455,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TC_31-verify require certain related issues_current issue must have at least 1 issues linked to it through the clones link type
+// RELATED_ISSUES_VALIDATOR_TC_31-verify require certain related issues_current issue must have at least 1 issues linked to it through the clones link type
 [
 		'verify_require_certain_related_issues_linkByClones',
 ].collect {
@@ -476,7 +477,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			],
 			[action    : 'transitionIssue',
 			 sleep: info?.isCloud? 5000 : 500,
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_01 -$it _when current issue not have issues linked to it through the clones link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_31_Case_01 -$it _when current issue not have issues linked to it through the clones link type:",
 			 expected  : -3,
 			 parameters: [
 					 issue     : {->issueLinks[]},
@@ -506,7 +507,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_02 -$it _when current issue have issue linked to it through the clones link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_31_Case_02 -$it _when current issue have issue linked to it through the clones link type:",
 			 expected  : 0,
 			 parameters: [
 					 issue     : {->issueLinks[]},
@@ -524,7 +525,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TC_32-verify require certain related issues_current issue must have at least 1 issues linked to it through the is cloned by link type
+// RELATED_ISSUES_VALIDATOR_TC_32-verify require certain related issues_current issue must have at least 1 issues linked to it through the is cloned by link type
 [
 		'verify_require_certain_related_issues_linkByIsClonedBy',
 ].collect {
@@ -545,7 +546,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_01 -$it _when current issue not having issues linked to it through the is cloned by link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_31_Case_01 -$it _when current issue not having issues linked to it through the is cloned by link type:",
 			 expected  : -3,
 			 parameters: [
 					 issue     : {-> issueLinks[]},
@@ -576,7 +577,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_02 -$it _when current issue have issue linked to it through the is cloned by link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_31_Case_02 -$it _when current issue have issue linked to it through the is cloned by link type:",
 			 expected  : 0,
 			 parameters: [
 					 issue     : {-> issueLinks[]},
@@ -594,7 +595,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TC_33-verify require certain related issues_current issue must have at least 1 issues linked to it through the duplicates link type
+// RELATED_ISSUES_VALIDATOR_TC_33-verify require certain related issues_current issue must have at least 1 issues linked to it through the duplicates link type
 [
 		'verify_require_certain_related_issues_linkByDuplicates',
 ].collect {
@@ -613,7 +614,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_02 -$it _when current issue not having issues linked to it through the duplicates link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_31_Case_02 -$it _when current issue not having issues linked to it through the duplicates link type:",
 			 expected  : -3,
 			 parameters: [
 					 issue     : {->issueLinks[]},
@@ -644,7 +645,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_31_Case_01 -$it _when current issue have issue linked to it through the duplicates link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_31_Case_01 -$it _when current issue have issue linked to it through the duplicates link type:",
 			 expected  : 0,
 			 parameters: [
 					 issue     : {->issueLinks[]},
@@ -662,7 +663,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TC_34-verify require certain related issues_current issue must have at least 1 issues linked to it through the is duplicated by link type
+// RELATED_ISSUES_VALIDATOR_TC_34-verify require certain related issues_current issue must have at least 1 issues linked to it through the is duplicated by link type
 [
 		'verify_require_certain_related_issues_linkByIsDuplicatedBy',
 ].collect {
@@ -681,7 +682,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_34_Case_02 -$it _when current issue not having issues linked to it through the is duplicated by link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_34_Case_02 -$it _when current issue not having issues linked to it through the is duplicated by link type:",
 			 expected  : -3,
 			 parameters: [
 					 issue     : {->issueLinks[]},
@@ -712,7 +713,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_34_Case_01 -$it _when current issue have issue linked to it through the is duplicated by link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_34_Case_01 -$it _when current issue have issue linked to it through the is duplicated by link type:",
 			 expected  : 0,
 			 parameters: [
 					 issue     : {->issueLinks[]},
@@ -730,7 +731,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TC_37-verify require certain related issues_current issue must have at least 1 issues linked to it through the relates to link type
+// RELATED_ISSUES_VALIDATOR_TC_37-verify require certain related issues_current issue must have at least 1 issues linked to it through the relates to link type
 [
 		'verify_require_certain_related_issues_linkByRelatesTo',
 ].collect {
@@ -749,7 +750,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_37_Case_02 -$it _when current issue not having issues linked to it through the relates to link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_37_Case_02 -$it _when current issue not having issues linked to it through the relates to link type:",
 			 expected  : -3,
 			 parameters: [
 					 issue     : {->issueLinks[]},
@@ -780,7 +781,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TC_37_Case_01 -$it _when current issue have issue linked to it through the relates to link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TC_37_Case_01 -$it _when current issue have issue linked to it through the relates to link type:",
 			 expected  : 0,
 			 parameters: [
 					 issue     : {->issueLinks[]},
@@ -798,7 +799,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TC_38-verify require certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
+// RELATED_ISSUES_VALIDATOR_TC_38-verify require certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
 [
 		'verify_require_certain_related_issues_returnsByGroovyExpression',
 ].collect {
@@ -818,7 +819,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_38_Case_02 -$it _The following Groovy expression:$returnsLinkedIssues not returns issues:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_38_Case_02 -$it _The following Groovy expression:$returnsLinkedIssues not returns issues:",
 				 expected  : -3,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
@@ -847,7 +848,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_38_Case_01 -$it _when the following Groovy expression:$returnsLinkedIssues return at least 1 issue:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_38_Case_01 -$it _when the following Groovy expression:$returnsLinkedIssues return at least 1 issue:",
 				 expected  : 0,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
@@ -866,7 +867,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 	}
 }
 
-// RELATED_ISSUES_CONDITION_TC_40-verify require certain related issues_The following JQL search:issuetype = Task and summary~JQL_ISSUE must return at least 1 issues
+// RELATED_ISSUES_VALIDATOR_TC_40-verify require certain related issues_The following JQL search:issuetype = Task and summary~JQL_ISSUE must return at least 1 issues
 [
 		'verify_require_certain_related_issues_returnsFromJqlSearch',
 ].collect {
@@ -885,7 +886,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 		)
 		gint.taskHelper.add([
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_40_Case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_40_Case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
 				 expected  : 0,
 				 parameters: [
 						 issue     : { -> issueLinks[] },
@@ -910,7 +911,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_40_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_40_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
 				 expected  : -3,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -930,7 +931,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 	}
 }
 
-// RELATED_ISSUES_CONDITION_TC_42_Case_01-verify require certain related issues_The current issue must have at least 2 issues linked to it through the relates to link type
+// RELATED_ISSUES_VALIDATOR_TC_42_Case_01-verify require certain related issues_The current issue must have at least 2 issues linked to it through the relates to link type
 [
 		'Verify_Issue_constraints_min_two_linkByRelatesTo'
 ].collect {
@@ -950,7 +951,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_42_Case_01 _$it _when current issue not having at least 2 issues linked to it through the relates to link type:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_42_Case_01 _$it _when current issue not having at least 2 issues linked to it through the relates to link type:",
 				 expected  : -3,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -990,7 +991,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_42_Case_02 _$it _when current issue having at least 2 issues linked to it through the relates to link type:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_42_Case_02 _$it _when current issue having at least 2 issues linked to it through the relates to link type:",
 				 expected  : 0,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1020,7 +1021,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 	}
 }
 
-// RELATED_ISSUES_CONDITION_TC_43_Case_01-verify require certain related issues_The current issue must not have more than 2 issues linked to it through the relates to link type
+// RELATED_ISSUES_VALIDATOR_TC_43_Case_01-verify require certain related issues_The current issue must not have more than 2 issues linked to it through the relates to link type
 [
 		'Verify_Issue_constraints_max_two_linkByRelatesTo'
 ].collect {
@@ -1062,7 +1063,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_43_Case_01 _$it _when current issue not having more than 2 issues linked to it through the relates to link type:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_43_Case_01 _$it _when current issue not having more than 2 issues linked to it through the relates to link type:",
 				 expected  : 0,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1101,7 +1102,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_43_Case_02 _$it _when current issue having more than 3 issues linked to it through the relates to link type:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_43_Case_02 _$it _when current issue having more than 3 issues linked to it through the relates to link type:",
 				 expected  : -3,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1138,7 +1139,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 	}
 }
 
-// RELATED_ISSUES_CONDITION_TC_44- The current issue must have at least 3 and at most 6 issues linked to it through the relates to link type
+// RELATED_ISSUES_VALIDATOR_TC_44- The current issue must have at least 3 and at most 6 issues linked to it through the relates to link type
 [
 		'Verify_Issue_constraints_min_three_max_six_linkByRelatesTo'
 ].collect {
@@ -1158,7 +1159,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_01 _$it _when current issue not have at least 3 and at most 6 issues linked to it through the relates to link type:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_44_Case_01 _$it _when current issue not have at least 3 and at most 6 issues linked to it through the relates to link type:",
 				 expected  : -3,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1205,7 +1206,7 @@ def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_02 _$it _when current issue having at least 3 issues linked to it through the relates to link type:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_44_Case_02 _$it _when current issue having at least 3 issues linked to it through the relates to link type:",
 				 expected  : 0,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1286,7 +1287,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_03 _$it _when current issue more than 6 ie 7 issues linked to it through the duplicates link type:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_44_Case_03 _$it _when current issue more than 6 ie 7 issues linked to it through the duplicates link type:",
 				 expected  : -3,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1350,7 +1351,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_04 _$it _when current issue have 6  issues linked to it through the relates to link type:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_44_Case_04 _$it _when current issue have 6  issues linked to it through the relates to link type:",
 				 expected  : 0,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1381,7 +1382,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_44_Case_04 _$it _when current issue have at 7 issues linked to it through the relates to link type:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_44_Case_04 _$it _when current issue have at 7 issues linked to it through the relates to link type:",
 				 expected  : -3,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1393,7 +1394,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	}
 }
 
-// RELATED_ISSUES_CONDITION_TC_14-verify require certain related issues and subtask of the current issue_by non admin user
+// RELATED_ISSUES_VALIDATOR_TC_14-verify require certain related issues and subtask of the current issue_by non admin user
 //transitionByUserTaskForError('Verify_Issue_constraints_min_three_max_six_linkByRelatesTo', testUserForServer, {->defaultIssue[]}, -3)
 
 if(!isCloud) {
@@ -1425,7 +1426,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	}
 }
 
-// RELATED_ISSUES_CONDITION_TS- The current issue must have at least 2 and at most 2 issues linked to it through the relates to link type
+// RELATED_ISSUES_VALIDATOR_TS- The current issue must have at least 2 and at most 2 issues linked to it through the relates to link type
 [
 		'Verify_Issue_constraints_min_two_max_two_linkByRelatesTo'
 ].each {
@@ -1448,7 +1449,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 		)
 		gint.taskHelper.add([
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_ TC_01_Case_01 _$it _when current issue not have at least 2 and at most 2 issues linked to it through the relates to link type:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_ TC_01_Case_01 _$it _when current issue not have at least 2 and at most 2 issues linked to it through the relates to link type:",
 				 expected  : -3,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1488,7 +1489,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_TC_01_Case_02 _$it _when current issue have 2 issues linked to it through the relates to link type:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_TC_01_Case_02 _$it _when current issue have 2 issues linked to it through the relates to link type:",
 				 expected  : 0,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1519,7 +1520,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_TC_01_Case_03 _$it _when current issue have more than 2 issues linked to it through the relates to link type:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_TC_01_Case_03 _$it _when current issue have more than 2 issues linked to it through the relates to link type:",
 				 expected  : -3,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1554,7 +1555,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	}
 }
 
-// RELATED_ISSUES_CONDITION_TS- The current issue must have at least 2 and at most 2 issues linked to it through the relates to link type
+// RELATED_ISSUES_VALIDATOR_TS- The current issue must have at least 2 and at most 2 issues linked to it through the relates to link type
 [
 		'Verify_Issue_constraints_min_two_max_two_linkByRelatesTo'
 ].each {
@@ -1577,7 +1578,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 		)
 		gint.taskHelper.add([
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_TC_02_Case_01 _$it _when current issue not have linked min 2 and max 2 linked issues:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_TC_02_Case_01 _$it _when current issue not have linked min 2 and max 2 linked issues:",
 				 expected  : -3,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1617,7 +1618,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_TC_02_Case_02 _$it _when current issue have 2 issues linked to it through the duplicates link type:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_TC_02_Case_02 _$it _when current issue have 2 issues linked to it through the duplicates link type:",
 				 expected  : -3,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1657,7 +1658,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_02_Case_03 _$it _when current issue have more than 2 issues linked to it through the duplicates link type:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_02_Case_03 _$it _when current issue have more than 2 issues linked to it through the duplicates link type:",
 				 expected  : 0,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1702,11 +1703,10 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	}
 }
 
-// RELATED_ISSUES_CONDITION_TC_49 - current issue must have at least 1 and at most 0 issues linked to it through the relates to link type, and at least one of them must respect the following condition
+// RELATED_ISSUES_VALIDATOR_TC_49 - current issue must have at least 1 and at most 0 issues linked to it through the relates to link type, and at least one of them must respect the following condition
 [
 		'verify_condition_on_related_issues_checkAssignee'
 ].each {
-	if(!isCloud) {
 		gint.taskHelper.add([
 				[action    : 'linkIssue',
 				 ext       : ": by relates to link type to check $it _link 1st issue:",
@@ -1718,7 +1718,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 ],
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_49_Case_01 -$it _when current issue not having at least 1 issues linked to it through the relates to link type which respect the following condition_issue must have assignee $testUser:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_49_Case_01 -$it _when current issue not having at least 1 issues linked to it through the relates to link type which respect the following condition_issue must have assignee $testUser:",
 				 expected  : -3,
 				 sleep     : info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1727,23 +1727,23 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 ]
 				],
 				[action    : 'assignIssue',
-				 ext       : ": linked issue to _ $testUser to_ $it :",
+				 ext       : ": linked issue to _ $user to_ $it :",
 				 sleepAfter: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> toIssueLink[] },
-						 assignee: testUser,
+						 assignee: user,
 				 ],
 				],
 				[action    : 'assignIssue',
-				 ext       : ": current issue to_ $testUser to_ $it :",
+				 ext       : ": current issue to_ $user to_ $it :",
 				 sleepAfter: info?.isCloud? 5000 : 500,
 				 parameters: [
 						 issue   : { -> issueLinks[] },
-						 assignee: testUser,
+						 assignee: user,
 				 ],
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TC_49_Case_02 -$it _when current issue having at least 1 issues linked to it through the relates to link type which respect the following condition_issue must have assignee $testUser:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TC_49_Case_02 -$it _when current issue having at least 1 issues linked to it through the relates to link type which respect the following condition_issue must have assignee $testUser:",
 				 expected  : 0,
 				 sleep     : info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1768,12 +1768,11 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 ],
 				],
 		])
-	}
 }
 
-//                                          RELATED_ISSUES_CONDITION => CHECK RELATED ISSUES TESTS
+//                                          RELATED_ISSUES_VALIDATOR => CHECK RELATED ISSUES TESTS
 
-// RELATED_ISSUES_CONDITION_TS_51 -verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_51 -verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_subtask',
 ].collect {
@@ -1799,7 +1798,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_01_Case_01 -$it _when issue having subtask not respecting given condition :",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_01_Case_01 -$it _when issue having subtask not respecting given condition :",
 			 expected  : -3,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -1828,7 +1827,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_01_Case_02 -$it _when issue having subtask respecting given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_01_Case_02 -$it _when issue having subtask respecting given condition:",
 			 expected  : 0,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -1847,7 +1846,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_51_TC_02-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_51_TC_02-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_issueBelongsToEpic',
 ].collect {
@@ -1870,7 +1869,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 expected  : -3,
 			 sleep: info?.isCloud? 5000 : 500,
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_02_Case_01 -$it _when epic having issueBelongsToEpic not respecting condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_02_Case_01 -$it _when epic having issueBelongsToEpic not respecting condition:",
 			 parameters: [
 					 issue     : {->epic[]},
 					 transition: it
@@ -1898,7 +1897,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 expected  : 0,
 			 sleep: info?.isCloud? 5000 : 500,
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_02_Case_02 -$it _when epic having issueBelongsToEpic respecting condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_02_Case_02 -$it _when epic having issueBelongsToEpic respecting condition:",
 			 parameters: [
 					 issue     : {->epic[]},
 					 transition: it ]
@@ -1914,7 +1913,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_51_TC_03-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_51_TC_03-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_childPortfolio',
 ].collect {
@@ -1936,7 +1935,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 		)
 		gint.taskHelper.add([
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_03_Case_01 -$it _when parent issue not having issues child issues in portfolio hierarchy respecting given condition:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_03_Case_01 -$it _when parent issue not having issues child issues in portfolio hierarchy respecting given condition:",
 				 expected  : -3,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1964,7 +1963,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_03_Case_02 -$it _when parent issue having issues child issues in portfolio hierarchy respecting given condition:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_03_Case_02 -$it _when parent issue having issues child issues in portfolio hierarchy respecting given condition:",
 				 expected  : 0,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -1983,7 +1982,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	}
 }
 
-// RELATED_ISSUES_CONDITION_TS_51_TC_04-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_51_TC_04-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_linkByAnyLink',
 ].collect {
@@ -2008,7 +2007,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_04_Case_01 -$it _current issue not having issue linked to it through any link type which respect given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_04_Case_01 -$it _current issue not having issue linked to it through any link type which respect given condition:",
 			 expected  : -3,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2037,7 +2036,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_04_Case_02 -$it _current issue having issue linked to it through any link type which respect given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_04_Case_02 -$it _current issue having issue linked to it through any link type which respect given condition:",
 			 expected  : 0,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2063,7 +2062,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_51_TC_05-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_51_TC_05-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_linkByBlock',
 ].collect {
@@ -2088,7 +2087,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -3,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2116,7 +2115,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2142,7 +2141,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_51_TC_06-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_51_TC_06-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_linkByisBlockedBy',
 ].collect {
@@ -2167,7 +2166,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_06_Case_01 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_06_Case_01 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
 			 expected  : -3,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2195,7 +2194,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_06_Case_02 -$it _when current issue not having issues linked to it through the is blocked by link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_06_Case_02 -$it _when current issue not having issues linked to it through the is blocked by link type:",
 			 expected  : 0,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2221,7 +2220,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_51_TC_07-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_51_TC_07-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_linkByClones',
 ].collect {
@@ -2248,7 +2247,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
 			 expected: -3,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2276,7 +2275,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
 			 expected: 0,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2302,7 +2301,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_51_TC_08-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_51_TC_08-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_linkByIsClonedBy',
 ].collect {
@@ -2329,7 +2328,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
 			 expected: -3,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2357,7 +2356,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
 			 expected: 0,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2383,7 +2382,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_51_TC_09-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_51_TC_09-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_linkByDuplicates',
 ].collect {
@@ -2408,7 +2407,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -3,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2436,7 +2435,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2463,7 +2462,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 }
 
 
-// RELATED_ISSUES_CONDITION_TS_51_TC_11-verify Check related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_51_TC_11-verify Check related issues and verify with different - Target issues
 [
 		'verify_check_related_issues_linkByRelatesTo',
 ].collect {
@@ -2488,7 +2487,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -3,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2516,7 +2515,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2542,7 +2541,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_51_TC_12-verify check certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
+// RELATED_ISSUES_VALIDATOR_TS_51_TC_12-verify check certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
 [
 		'verify_check_related_issues_returnsByGroovyExpression',
 ].collect {
@@ -2568,7 +2567,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 				 expected  : -3,
 				 sleep     : info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -2596,7 +2595,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 				 expected  : 0,
 				 sleep     : info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -2623,7 +2622,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	}
 }
 
-// RELATED_ISSUES_CONDITION_TS_51_TC_13-verify check certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
+// RELATED_ISSUES_VALIDATOR_TS_51_TC_13-verify check certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
 [
 		'verify_check_related_issues_returnsFromJqlSearch',
 ].collect {
@@ -2642,7 +2641,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_13_case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_13_case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
 				 expected: -3,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -2671,7 +2670,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_13_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_13_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
 				 expected: 0,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -2691,9 +2690,9 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	}
 }
 
-//                                     RELATED_ISSUES_CONDITION => FORBID CERTAIN RELATED ISSUES
+//                                     RELATED_ISSUES_VALIDATOR => FORBID CERTAIN RELATED ISSUES
 
-// RELATED_ISSUES_CONDITION_TS_55-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_55-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_subtask',
 ].collect {
@@ -2711,7 +2710,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_01_Case_01 -$it _when issue having subtask not respecting given condition :",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_01_Case_01 -$it _when issue having subtask not respecting given condition :",
 			 expected  : 0,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2740,7 +2739,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_01_Case_02 -$it _when issue having subtask respecting given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_01_Case_02 -$it _when issue having subtask respecting given condition:",
 			 expected  : -3,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2759,7 +2758,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_55_TC_02-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_55_TC_02-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_issueBelongsToEpic',
 ].collect {
@@ -2782,7 +2781,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 expected  : 0,
 			 sleep: info?.isCloud? 5000 : 500,
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_02_Case_01 -$it _when epic having issueBelongsToEpic not respecting condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_02_Case_01 -$it _when epic having issueBelongsToEpic not respecting condition:",
 			 parameters: [
 					 issue     : {->epic[]},
 					 transition: it
@@ -2810,7 +2809,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			[action    : 'transitionIssue',
 			 expected  : -3,
 			 sleep: info?.isCloud? 5000 : 500,
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_02_Case_02 -$it _when epic having issueBelongsToEpic respecting condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_02_Case_02 -$it _when epic having issueBelongsToEpic respecting condition:",
 			 parameters: [
 					 issue     : {->epic[]},
 					 transition: it ]
@@ -2826,7 +2825,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_55_TC_03-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_55_TC_03-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_childPortfolio',
 ].collect {
@@ -2848,7 +2847,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 		)
 		gint.taskHelper.add([
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_03_Case_01 -$it _when parent issue not having issues child issues in portfolio hierarchy respecting given condition:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_03_Case_01 -$it _when parent issue not having issues child issues in portfolio hierarchy respecting given condition:",
 				 expected  : 0,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -2876,7 +2875,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_03_Case_02 -$it _when parent issue having issues child issues in portfolio hierarchy respecting given condition:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_03_Case_02 -$it _when parent issue having issues child issues in portfolio hierarchy respecting given condition:",
 				 expected  : -3,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -2895,7 +2894,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	}
 }
 
-// RELATED_ISSUES_CONDITION_TS_55_TC_04-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_55_TC_04-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_linkByAnyLink',
 ].collect {
@@ -2923,7 +2922,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	)
 	gint.taskHelper.add([
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_04_Case_01 -$it _current issue not having issue linked to it through any link type which respect given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_04_Case_01 -$it _current issue not having issue linked to it through any link type which respect given condition:",
 			 expected  : 0,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2952,7 +2951,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_04_Case_02 -$it _current issue having issue linked to it through any link type which respect given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_04_Case_02 -$it _current issue having issue linked to it through any link type which respect given condition:",
 			 expected  : -3,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -2978,7 +2977,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_55_TC_05-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_55_TC_05-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_linkByBlock',
 ].collect {
@@ -3006,7 +3005,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	)
 	gint.taskHelper.add([
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -3034,7 +3033,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -3,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -3060,7 +3059,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_55_TC_06-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_55_TC_06-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_linkByisBlockedBy',
 ].collect {
@@ -3088,7 +3087,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	)
 	gint.taskHelper.add([
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_06_Case_01 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_06_Case_01 -$it _when current issue have 1 issue linked to it through the is blocked by link type:",
 			 expected  : 0,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -3116,7 +3115,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_06_Case_02 -$it _when current issue not having issues linked to it through the is blocked by link type:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_06_Case_02 -$it _when current issue not having issues linked to it through the is blocked by link type:",
 			 expected  : -3,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -3142,7 +3141,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_55_TC_07-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_55_TC_07-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_linkByClones',
 ].collect {
@@ -3171,7 +3170,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	)
 	gint.taskHelper.add([
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
 			 expected: 0,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -3199,7 +3198,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
 			 expected: -3,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -3225,7 +3224,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_55_TC_08-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_55_TC_08-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_linkByIsClonedBy',
 ].collect {
@@ -3254,7 +3253,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	)
 	gint.taskHelper.add([
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_07_Case_01 -$it _when current issue have issue linked to it through the clones link type_not respecting given condition:",
 			 expected: 0,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -3282,7 +3281,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_07_Case_02 -$it _when current issue not have issues linked to it through the clones link type_respecting given condition:",
 			 expected: -3,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -3308,7 +3307,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_55_TC_09-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_55_TC_09-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_linkByDuplicates',
 ].collect {
@@ -3336,7 +3335,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	)
 	gint.taskHelper.add([
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -3364,7 +3363,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -3,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -3390,7 +3389,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_55_TC_11-verify Forbid certain related issues and verify with different - Target issues
+// RELATED_ISSUES_VALIDATOR_TS_55_TC_11-verify Forbid certain related issues and verify with different - Target issues
 [
 		'forbid_certain_related_issues_linkByRelatesTo',
 ].collect {
@@ -3415,7 +3414,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : 0,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -3443,7 +3442,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			 }
 			],
 			[action    : 'transitionIssue',
-			 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
+			 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 			 expected  : -3,
 			 sleep: info?.isCloud? 5000 : 500,
 			 parameters: [
@@ -3469,7 +3468,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	])
 }
 
-// RELATED_ISSUES_CONDITION_TS_55_TC_12-verify Forbid certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
+// RELATED_ISSUES_VALIDATOR_TS_55_TC_12-verify Forbid certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
 [
 		'forbid_certain_related_issues_returnsByGroovyExpression',
 ].collect {
@@ -3498,7 +3497,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 		)
 		gint.taskHelper.add([
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_05_Case_01 -$it _when current issue not having at least 1 issue linked to it through the blocks link type_respect given condition:",
 				 expected  : 0,
 				 sleep     : info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -3526,7 +3525,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_05_Case_02 -$it _when current issue having at least 1 issue linked to it through the blocks link type_respect given condition:",
 				 expected  : -3,
 				 sleep     : info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -3553,7 +3552,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 	}
 }
 
-// RELATED_ISSUES_CONDITION_TS_55_TC_13-verify forbid certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
+// RELATED_ISSUES_VALIDATOR_TS_55_TC_13-verify forbid certain related issues_The following Groovy expression:issue.getLinkedIssues() must return at least 1 issues
 [
 		'forbid_certain_related_issues_returnsFromJqlSearch',
 ].collect {
@@ -3574,7 +3573,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 		])
 		gint.taskHelper.add([
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_13_case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_13_case_01 -$it _when the following JQL search:$jqlSearchExpression return 1 issue:",
 				 expected: 0,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -3603,7 +3602,7 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 				 }
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":RELATED_ISSUES_CONDITION_TS_51_TC_13_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
+				 ext       : ":RELATED_ISSUES_VALIDATOR_TS_51_TC_13_Case_02 -$it _The following JQL search:$jqlSearchExpression must return at least 1 issues:",
 				 expected: -3,
 				 sleep: info?.isCloud? 5000 : 500,
 				 parameters: [
@@ -3667,3 +3666,10 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 			],
 	])
 }
+
+/*
+Reviewed by Niharika: 08.03.2024:
+1. Max issue limit should be 1000.
+2. Add check, require and forbid condition on same transition and check = Pending.
+3. Verify transition by admin user and non-admin user = DONE.
+ */

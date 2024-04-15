@@ -1,0 +1,592 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/itest-sharedExtensions/resources/payload_EBA.gradle'
+
+def eventBasedActionsUrl = info?.isCloud? "/rest/jmwe-api/event-actions" : "/rest/jmwe/1/event-actions/"
+
+createWorkflowScheme()
+createProject()
+
+ext.createIssue = { parameters, ext ->
+    def savedIssues = [:]
+    gint.taskHelper.add([
+            [action: 'createIssue',
+                    sleep: sleep,
+             ext: ': '+ ext ,
+             project: projectName,
+             parameters: parameters,
+             finalClosure: { Task task ->
+                 def currentIssue = gint.searchForIssueKey(task.outData)
+                 savedIssues[] = currentIssue
+                 gint.helper.log("Issue created ", savedIssues[]);
+             },
+            ],
+    ]
+    )
+    return savedIssues
+}
+
+
+def issueCreatedEvent = createSharedExtension("POST", eventBasedActionsUrl, issueCreatedEventPayload, "issue created event based action")
+
+def savedIssueCreatedEventId = {->issueCreatedEvent[0] }
+
+def createIssueEvent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'createIssueEvent')
+
+gint.taskHelper.add(
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue created_event based action",
+        parameters:[
+                issue: {-> createIssueEvent[]},
+        ],
+                data: ["issue_created"]
+        ]
+)
+
+deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${savedIssueCreatedEventId}" : "/rest/jmwe/1/event-actions/${savedIssueCreatedEventId}", "issue created EBA")
+
+def issueUpdatedEvent = createSharedExtension("POST", eventBasedActionsUrl, issueUpdatedEventPayload, "issue updated event based action")
+
+def savedIssueUpdatedEventId = {->issueUpdatedEvent[0] }
+
+def updateIssueEvent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'updateIssueEvent')
+
+gint.taskHelper.add([
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue updated_event based action:before updating the issue",
+         parameters:[
+                 issue: {-> updateIssueEvent[]},
+         ],
+         failData: ["issue_updated"]
+        ],
+        [action: "updateIssue",
+         sleep: sleep,
+         ext: ":To check the issue updated_event based action",
+         parameters:[
+                 issue: {-> updateIssueEvent[]},
+                 assignee: "@self"
+         ]
+        ],
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue updated_event based action:after updating the issue",
+         parameters:[
+                 issue: {-> updateIssueEvent[]},
+         ],
+         data: ["issue_updated"]
+        ],
+]
+)
+
+deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${savedIssueUpdatedEventId}" : "/rest/jmwe/1/event-actions/${savedIssueUpdatedEventId}", "issue updated EBA")
+
+def issueDeletedEvent = createSharedExtension("POST", eventBasedActionsUrl, issueDeletedEventPayload, "issue deleted event based action")
+
+def savedIssueDeletedEventId = {->issueDeletedEvent[0] }
+
+def deleteIssueEvent_parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'deleteIssueEvent_parent')
+def deleteIssueEvent_subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue',parent: {->deleteIssueEvent_parent[]}], 'deleteIssueEvent_subtask')
+
+gint.taskHelper.add([
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue deleted_event based action:before deleting the subtask of the issue",
+         parameters:[
+                 issue: {-> deleteIssueEvent_parent[]},
+         ],
+         failData: ["issue_deleted"]
+        ],
+        [action: "deleteIssue",
+         sleep: sleep,
+         ext: ":subtask of the parent issue check the issue deleted_event based action",
+         parameters:[
+                 issue: {-> deleteIssueEvent_subtask[]},
+         ]
+        ],
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue deleted_event based action:after deleting the subtask of the issue",
+         parameters:[
+                 issue: {-> deleteIssueEvent_parent[]},
+         ],
+         data: ["issue_deleted"]
+        ],
+]
+)
+
+deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${savedIssueDeletedEventId}" : "/rest/jmwe/1/event-actions/${savedIssueDeletedEventId}", "issue deleted EBA")
+
+def issueCommentedEvent = createSharedExtension("POST", eventBasedActionsUrl, issueCommentedEventPayload, "issue commented event based action")
+
+def savedIssueCommentedEventId = {->issueCommentedEvent[0] }
+
+def commentIssueEvent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'commentIssueEvent')
+
+gint.taskHelper.add([
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue commented_event based action:before commenting the issue",
+         parameters:[
+                 issue: {-> commentIssueEvent[]},
+         ],
+         failData: ["issue_commented"]
+        ],
+        [action: "addComment",
+         sleep: sleep,
+         ext: ":To check the issue commented_event based action",
+         parameters:[
+                 issue: {-> commentIssueEvent[]},
+                 comment: "adding comment to check issue commented EBA"
+         ]
+        ],
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue updated_event based action:after commenting the issue",
+         parameters:[
+                 issue: {-> commentIssueEvent[]},
+         ],
+         data: ["issue_commented"]
+        ],
+]
+)
+
+deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${savedIssueCommentedEventId}" : "/rest/jmwe/1/event-actions/${savedIssueCommentedEventId}", "issue comment EBA")
+
+
+def commentUpdatedEvent = createSharedExtension("POST", eventBasedActionsUrl, commentUpdatedEventPayload, "comment updated event based action")
+
+def commentUpdatedEventId = {->commentUpdatedEvent[0] }
+
+def updateCommentEventIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'updateCommentEventIssue')
+
+def commentId;
+gint.taskHelper.add([
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the comment updated_event based action:before commenting the issue",
+         parameters:[
+                 issue: {-> updateCommentEventIssue[]},
+         ],
+         failData: ["comment_updated"]
+        ],
+        [action: "addComment",
+         sleep: sleep,
+         ext: ":To check the comment updated_event based action",
+         parameters:[
+                 issue: {-> updateCommentEventIssue[]},
+                 comment: "originalComment"
+         ],
+                finalClosure: {Task task ->
+                    def outPut = task.outData
+                    def matcher = (outPut =~ /\b\d+\b/)
+                    if (matcher.find()) {
+                        commentId = matcher[0].toInteger()
+                        gint.helper.log("comment id", commentId)
+                    } else {
+                        gint.helper.log("comment id not found in", task.outData)
+                    }
+                }
+        ],
+        [action: "updateComment",
+         sleep: sleep,
+         ext: ":To check the comment updated_event based action:after the comment updated",
+         parameters:[
+                 issue: {-> updateCommentEventIssue[]},
+                 comment: "updatedComment",
+                 id: {->commentId}
+         ]
+        ],
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the comment updated_event based action:after update comment",
+         parameters:[
+                 issue: {-> updateCommentEventIssue[]},
+         ],
+         data: ["comment_updated"]
+        ],
+]
+)
+
+deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${commentUpdatedEventId}" : "/rest/jmwe/1/event-actions/${commentUpdatedEventId}", "comment updated EBA")
+
+def commentDeletedEvent = createSharedExtension("POST", eventBasedActionsUrl, commentDeletedEventPayload, "comment deleted event based action")
+
+def commentDeletedEventId = {->commentDeletedEvent[0] }
+
+def deleteCommentEventIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'deleteCommentEventIssue')
+
+def commentIdForDelete;
+gint.taskHelper.add([
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the comment deleted_event based action:before deleting the comment on issue",
+         parameters:[
+                 issue: {-> deleteCommentEventIssue[]},
+         ],
+         failData: ["comment_deleted"]
+        ],
+        [action: "addComment",
+         sleep: sleep,
+         ext: ":To check the comment deleted_event based action",
+         parameters:[
+                 issue: {-> deleteCommentEventIssue[]},
+                 comment: "commentToDelete"
+         ],
+                finalClosure: {Task task ->
+                    def outPut = task.outData
+                    def matcher = (outPut =~ /\b\d+\b/)
+                    if (matcher.find()) {
+                        commentIdForDelete = matcher[0].toInteger()
+                        gint.helper.log("comment id", commentIdForDelete)
+                    } else {
+                        gint.helper.log("comment id not found in", task.outData)
+                    }
+                }
+        ],
+        [action: "removeComment",
+         sleep: sleep,
+         ext: ":To check the comment deleted_event based action:after comment deleted",
+         parameters:[
+                 issue: {-> deleteCommentEventIssue[]},
+                 id: {->commentIdForDelete}
+         ]
+        ],
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the comment deleted_event based action:after deleted comment",
+         parameters:[
+                 issue: {-> deleteCommentEventIssue[]},
+         ],
+         data: ["comment_deleted"]
+        ],
+]
+)
+
+deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${commentDeletedEventId}" : "/rest/jmwe/1/event-actions/${commentDeletedEventId}", "comment deleted EBA")
+
+def issueTransitionEvent = createSharedExtension("POST", eventBasedActionsUrl, issueTransitionedEventPayload, "issue transitioned event based action")
+
+def issueTransitionEventId = {->issueTransitionEvent[0] }
+
+def issueTransitionedEventIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueTransitionedEventIssue')
+
+gint.taskHelper.add([
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue transitioned_event based action:before transition the issue",
+         parameters:[
+                 issue: {-> issueTransitionedEventIssue[]},
+         ],
+         failData: ["issue_transitioned"]
+        ],
+        [action: "transitionIssue",
+         sleep: sleep,
+         ext: ":To check the issue transition_event based action",
+         parameters:[
+                 issue: {-> issueTransitionedEventIssue[]},
+                 transition: "In Progress"
+         ],
+        ],
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue transitioned_event based action:after transition the issue",
+         parameters:[
+                 issue: {-> issueTransitionedEventIssue[]},
+         ],
+         data: ["issue_transitioned"]
+        ],
+]
+)
+
+deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${issueTransitionEventId}" : "/rest/jmwe/1/event-actions/${issueTransitionEventId}", "issue transitioned EBA")
+
+def issueFieldValueUpdatedEvent = createSharedExtension("POST", eventBasedActionsUrl, issueFieldValueChangedEventPayload, "issue field value updated event based action")
+
+def issueFieldValueUpdatedEventId = {->issueFieldValueUpdatedEvent[0] }
+
+def issueFieldValueUpdatedEventIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueFieldValueUpdatedEventIssue')
+
+gint.taskHelper.add([
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue field value updated_event based action:before updating the field value of issue",
+         parameters:[
+                 issue: {-> issueFieldValueUpdatedEventIssue[]},
+         ],
+         failData: ["issue_field_updated"]
+        ],
+        [action: "updateIssue",
+         sleep: sleep,
+         ext: ":To check the issue field value updated_event based action",
+         parameters:[
+                 issue: {-> issueFieldValueUpdatedEventIssue[]},
+                 assignee: "@self"
+         ],
+        ],
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue field value updated_event based action:after updated the assignee field of the issue",
+         parameters:[
+                 issue: {-> issueFieldValueUpdatedEventIssue[]},
+         ],
+         data: ["issue_field_updated"]
+        ],
+]
+)
+
+deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${issueFieldValueUpdatedEventId}" : "/rest/jmwe/1/event-actions/${issueFieldValueUpdatedEventId}", "issue field value updated EBA")
+
+
+
+def attachmentCreatedEvent = createSharedExtension("POST", eventBasedActionsUrl, attachmentCreatedEventPayload, "event_based action for attachment created")
+
+def attachmentCreatedEventId = {->attachmentCreatedEvent[0] }
+
+def attachmentCreatedEventIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'attachmentCreatedEventIssue')
+
+gint.taskHelper.add([
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the attachment created_event based action:before attachment added to the issue",
+         parameters:[
+                 issue: {-> attachmentCreatedEventIssue[]},
+         ],
+         failData: ["attachment_created"]
+        ],
+        [action: "addAttachment",
+         sleep: sleep,
+         ext: ":To check the attachment created_event based action",
+         parameters:[
+                 issue: {-> attachmentCreatedEventIssue[]},
+                 file: "resources/attachment.png"
+         ],
+        ],
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the attachment created_event based action:after attachment added to the issue",
+         parameters:[
+                 issue: {-> attachmentCreatedEventIssue[]},
+         ],
+         data: ["attachment_created"]
+        ],
+]
+)
+
+deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${attachmentCreatedEventId}" : "/rest/jmwe/1/event-actions/${attachmentCreatedEventId}", "attachment_created EBA")
+
+def attachmentDeletedEvent = createSharedExtension("POST", eventBasedActionsUrl, attachmentDeletedEventPayload, "event_based action for attachment Deleted")
+
+def attachmentDeletedEventId = {->attachmentDeletedEvent[0] }
+
+def attachmentDeletedEventIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'attachmentDeletedEventIssue')
+
+gint.taskHelper.add([
+        [action: "addAttachment",
+         sleep: sleep,
+         ext: ":To check the attachment deleted_event based action",
+         parameters:[
+                 issue: {-> attachmentDeletedEventIssue[]},
+                 file: "resources/attachment.png"
+         ],
+        ],
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the attachment Deleted_event based action:before attachment Deleted to the issue",
+         parameters:[
+                 issue: {-> attachmentDeletedEventIssue[]},
+         ],
+         failData: ["attachment_deleted"]
+        ],
+        [action: "removeAttachment",
+         sleep: sleep,
+         ext: ":To check the attachment deleted_event based action",
+         parameters:[
+                 issue: {-> attachmentDeletedEventIssue[]},
+                 name: "attachment.png"
+         ],
+        ],
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the attachment deleted_event based action:after attachment deleted from the issue",
+         parameters:[
+                 issue: {-> attachmentDeletedEventIssue[]},
+         ],
+         data: ["attachment_deleted"]
+        ],
+]
+)
+
+deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${attachmentDeletedEventId}" : "/rest/jmwe/1/event-actions/${attachmentDeletedEventId}", "attachment_deleted EBA")
+
+def issueLinkAddedEvent = createSharedExtension("POST", eventBasedActionsUrl, issueLinkAddedEventPayload, "event_based action for issue link added")
+
+def issueLinkAddedEventId = {->issueLinkAddedEvent[0] }
+
+def issueLinkAddedEventIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinkAddedEventIssue1')
+def issueLinkAddedEventIssue2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinkAddedEventIssue2')
+
+gint.taskHelper.add([
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue link added_event based action:before issue link added to the issue",
+         parameters:[
+                 issue: {-> issueLinkAddedEventIssue1[]},
+         ],
+         failData: ["issue_link_added"]
+        ],
+        [action: "linkIssue",
+         sleep: sleep,
+         ext: ":To check the issue link added_event based action",
+         parameters:[
+                 issue: {-> issueLinkAddedEventIssue1[]},
+                 toIssue: {-> issueLinkAddedEventIssue2[]},
+                 link: "blocks"
+         ],
+        ],
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue link added_event based action:after issue link added to the issue",
+         parameters:[
+                 issue: {-> issueLinkAddedEventIssue1[]},
+         ],
+         data: ["issue_link_added"]
+        ],
+]
+)
+
+deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${issueLinkAddedEventId}" : "/rest/jmwe/1/event-actions/${issueLinkAddedEventId}", "issue link added_EBA")
+
+def issueLinkDeleteEvent = createSharedExtension("POST", eventBasedActionsUrl, issueLinkDeleteEventPayload, "event_based action for issue link delete")
+
+def issueLinkDeleteEventId = {->issueLinkDeleteEvent[0] }
+
+def issueLinkDeleteEventIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinkDeleteEventIssue1')
+def issueLinkDeleteEventIssue2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinkDeleteEventIssue2')
+
+gint.taskHelper.add([
+        [action: "linkIssue",
+         sleep: sleep,
+         ext: ":To check the issue link delete_event based action",
+         parameters:[
+                 issue: {-> issueLinkDeleteEventIssue1[]},
+                 toIssue: {-> issueLinkDeleteEventIssue2[]},
+                 link: "blocks"
+         ],
+        ],
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue link delete_event based action:before issue link delete from the issue",
+         parameters:[
+                 issue: {-> issueLinkDeleteEventIssue1[]},
+         ],
+         failData: ["issue_link_deleted"]
+        ],
+        [action: "deleteLink",
+         sleep: sleep,
+         ext: ":To check the issue link deleted_event based action",
+         parameters:[
+                 issue: {-> issueLinkDeleteEventIssue1[]},
+                 toIssue: {-> issueLinkDeleteEventIssue2[]},
+                 link: "blocks"
+         ],
+        ],
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue link delete_event based action:after issue link delete from the issue",
+         parameters:[
+                 issue: {-> issueLinkDeleteEventIssue1[]},
+         ],
+         data: ["issue_link_deleted"]
+        ],
+]
+)
+
+deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${issueLinkDeleteEventId}" : "/rest/jmwe/1/event-actions/${issueLinkDeleteEventId}", "issue link deleted_EBA")
+
+def issueAssignedEvent = createSharedExtension("POST", eventBasedActionsUrl, issueAssignedEventPayload, "event_based action for issue assigned")
+
+def issueAssignedEventId = {->issueAssignedEvent[0] }
+
+def issueAssignedEventIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueAssignedEventIssue')
+
+gint.taskHelper.add([
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue assigned_event based action:before issue assigned to the user $user",
+         parameters:[
+                 issue: {-> issueAssignedEventIssue[]},
+         ],
+         failData: ["issue_assigned"]
+        ],
+        [action: "assignIssue",
+         sleep: sleep,
+         ext: ":To check the issue assigned_event based action",
+         parameters:[
+                 issue: {-> issueAssignedEventIssue[]},
+                 userId: "@self"
+         ],
+        ],
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue assigned_event based action:after issue assigned to the user $user",
+         parameters:[
+                 issue: {-> issueAssignedEventIssue[]},
+         ],
+         data: ["issue_assigned"]
+        ],
+]
+)
+
+deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${issueAssignedEventId}" : "/rest/jmwe/1/event-actions/${issueAssignedEventId}", "issue assigned_EBA")
+
+def worklogCreatedEvent = createSharedExtension("POST", eventBasedActionsUrl, worklogCreatedEventPayload, "event_based action for worklog created")
+
+def worklogCreatedEventId = {->worklogCreatedEvent[0] }
+
+def worklogCreatedEventIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueAssignedEventIssue')
+
+gint.taskHelper.add([
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue assigned_event based action:before issue assigned to the user $user",
+         parameters:[
+                 issue: {-> worklogCreatedEventIssue[]},
+         ],
+         failData: ["issue_assigned"]
+        ],
+        [action: "assignIssue",
+         sleep: sleep,
+         ext: ":To check the issue assigned_event based action",
+         parameters:[
+                 issue: {-> worklogCreatedEventIssue[]},
+                 userId: "@self"
+         ],
+        ],
+        [action: "getComments",
+         sleep: sleep,
+         ext: ":To check the issue assigned_event based action:after issue assigned to the user $user",
+         parameters:[
+                 issue: {-> worklogCreatedEventIssue[]},
+         ],
+         data: ["issue_assigned"]
+        ],
+]
+)
+
+deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${worklogCreatedEventId}" : "/rest/jmwe/1/event-actions/${worklogCreatedEventId}", "worklog created_EBA")
+
+
+
+

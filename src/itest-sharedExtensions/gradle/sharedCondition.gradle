@@ -1,0 +1,109 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/itest-sharedExtensions/sharedExtensions.gradle'
+
+def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:shared-condition'
+
+def sharedConditionUrl = info?.isCloud? "/rest/jmwe-api/shared-condition/" : "/rest/jmwe/1/shared-conditions"
+
+def userConditionServer = '''
+{
+        "name": "shared condition by automation",
+        "description": "",
+        "draft": false,
+        "draftId": null,
+        "conditions": [
+            {
+                "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition",
+                "configuration": "<condition type=\\"class\\">\\r\\n  <arg name=\\"isProjectLead\\">no</arg>\\r\\n  <arg name=\\"groupsToCheck\\"></arg>\\r\\n  <arg name=\\"fieldEmpty\\">no</arg>\\r\\n  <arg name=\\"isVoter\\">no</arg>\\r\\n  <arg name=\\"isReporter\\">no</arg>\\r\\n  <arg name=\\"reverse\\"></arg>\\r\\n  <arg name=\\"rolesToCheck\\"></arg>\\r\\n  <arg name=\\"conditionMode\\">all-user-condition</arg>\\r\\n  <arg name=\\"isAssignee\\">yes</arg>\\r\\n  <arg name=\\"userFieldsToCheck\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition</arg>\\r\\n  <arg name=\\"userField\\"></arg>\\r\\n  <arg name=\\"usersToCheck\\"></arg>\\r\\n  <arg name=\\"usersConditionScript\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.conditions.GenericUserCondition</arg>\\r\\n  <arg name=\\"fromUserType\\">currentUser</arg>\\r\\n  <arg name=\\"isWatcher\\">no</arg>\\r\\n  <arg name=\\"extensionId\\">2ec6e253-c73d-43fd-b19a-133cdcfc4540</arg>\\r\\n</condition>\\r\\n"
+            }
+        ]
+}
+'''
+
+def userConditionCloud = '''
+{
+  "name": "Assign issue postfunction",
+  "description": "For shared action",
+  "postFunctions": [
+    {
+      "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:assigntorolemember",
+      "configuration": "<function type=\\"class\\">\\n  <arg name=\\"groovyExpression\\"></arg>\\n  <arg name=\\"forceSelectedUser\\">no</arg>\\n  <arg name=\\"jira.projectrole.id\\">10002</arg>\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensionsassigntorolemember</arg>\\n  <arg name=\\"throwExceptions\\">false</arg>\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.AssignToRoleMemberFunction</arg>\\n  <arg name=\\"extensionId\\">14240cab-d226-4855-b3ac-a27b26b921d3</arg>\\n  <arg name=\\"useSelectedUser\\">no</arg>\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\n  <arg name=\\"skipIfAssignee\\">no</arg>\\n</function>\\n",
+      "order": 0
+    }
+  ]
+}
+'''
+
+def userCondition = info?.isCloud ? userConditionCloud : userConditionServer
+if(!isCloud){
+    ext.shared_conditionId = createSharedExtensionSetUp(info?.isCloud ? "POST" : "PUT", sharedConditionUrl, userCondition, "shared condition")
+}
+
+def savedID = {->shared_conditionId[0] }
+
+[
+        "sharedCondition_currentUserShouldBeAssignee"
+].each {
+    def transition = it
+    def server = defaultFieldsServer + "shared-condition-id=${savedID}"
+    if(!isCloud){
+        addTransitionFunction(transition, 'condition', server, functionKey)
+    }
+}
+
+createWorkflowScheme()
+createProject()
+
+
+def currentIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'currentIssue')
+
+def listOfUser = [testUser,user]
+
+[
+        'sharedCondition_currentUserShouldBeAssignee'
+].each {
+    listOfUser.each { users ->
+        def expected;
+        if (users == testUser) {
+            expected = -1
+        } else {
+            expected = 0
+        }
+        if (!isCloud) {
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     ext       : ":when user in field assignee is $users and current user is $user:before transition issue with: $it",
+                     parameters: [
+                             issue: { -> currentIssue[] },
+                             field: "Assignee",
+                             value: users
+                     ],
+                    ],
+                    [action    : 'transitionIssue',
+                     ext       : ":by_ $it:when user in field assignee is $users and current user is $user",
+                     expected  : expected,
+                     parameters: [
+                             issue     : { -> currentIssue[] },
+                             transition: it,
+                     ]
+                    ],
+            ])
+        }
+    }
+}
+
+if(!isCloud){
+    tearDownAfter(projectName, ":For tearDownAfter")
+    deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/shared-actions/${savedID}" : "/rest/jmwe/1/shared-actions/${savedID}","shared condition")
+}

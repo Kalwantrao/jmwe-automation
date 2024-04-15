@@ -2,6 +2,7 @@ apply from: gint.resourceDirectory +'/src/common/commonTasks.gradle'
 
 project.ext.info =  gint.getJiraHelper().getServerInfoWithVerify()
 project.ext.user =  info.user
+project.ext.url = info.url
 project.ext.projectKey = gint.getJiraHelper().getProjectKey()
 project.ext.isServer = info?.isServer
 project.ext.isCloud = info?.isCloud
@@ -12,6 +13,128 @@ project.ext.startStepServer=11
 project.ext.workflowFile="resources/workflowJ8.xml"
 project.ext.tearDownFile="resources/tearDown.txt"
 project.ext.baseWorkflow="Software Simplified Workflow for Project $TestProject"
+project.ext.getCurrentUserName = info?.isCloud? info?.userDisplayName : user
+project.ext.defaultSleepTime = info?.isCloud ? 8000 : 0
+project.ext.sleep = info?.isCloud ? 8000 : 0
+project.ext.returnsReporter = "issue.reporter.accountId == '$currentUserKey'"
+project.ext.returnsLinkedIssues = "issue.getLinkedIssues()"
+
+project.ext.testCloudBuild=null
+project.ext.addonName = null
+
+if(buildType == 'testing'){
+    testCloudBuild = 'mwec'
+    addonName='MiscC'
+}else {
+    testCloudBuild = 'jmwe.jira-misc-workflow-extensions'
+    addonName= 'Jira Misc Workflow Extensions'
+}
+
+
+project.ext.BugIssueTypeCloud = null
+project.ext.TaskIssueTypeCloud = null
+project.ext.SubtaskIssueTypeCloud = null
+project.ext.EpicIssueTypeCloud = null
+project.ext.StoryIssueTypeCloud = null
+project.ext.InitiativeIssueTypeCloud = null
+
+project.ext.ToDoCloud = null
+project.ext.InProgressCloud = null
+project.ext.InReviewCloud = null
+project.ext.DoneCloud = null
+
+
+project.ext.originalStoryPointsFieldIdCloud=null
+project.ext.storyPointEstimateFieldIdCloud=null
+
+project.ext.jiraAdminGroupCloud=null
+project.ext.testGroupCloud=null
+project.ext.testProjectRoleCloud=null
+project.ext.jiraAdminRoleCloud=null
+
+
+if(url == "https://jmwe-regression-tests.atlassian.net"){
+    BugIssueTypeCloud=10005
+    TaskIssueTypeCloud=10002
+    SubtaskIssueTypeCloud=10003
+    EpicIssueTypeCloud=10000
+    StoryIssueTypeCloud=10006
+    InitiativeIssueTypeCloud=10007
+
+    ToDoCloud=10000
+    InProgressCloud=3
+    InReviewCloud=10001
+    DoneCloud=10002
+
+    originalStoryPointsFieldIdCloud='customfield_10037'
+    storyPointEstimateFieldIdCloud='customfield_10016'
+
+    jiraAdminGroupCloud='c129594f-9124-4b96-b58e-3fc3589b6bec'
+    testGroupCloud='13c750c3-6310-46b0-9362-ed2f60d607c8'
+    testProjectRoleCloud=10007
+    jiraAdminRoleCloud=10002
+} else if(url == "https://validationenvironment.atlassian.net"){
+    BugIssueTypeCloud=10100
+    TaskIssueTypeCloud=10002
+    SubtaskIssueTypeCloud=10003
+    EpicIssueTypeCloud=10000
+    StoryIssueTypeCloud=10001
+    InitiativeIssueTypeCloud=10502
+
+    ToDoCloud=10000
+    InProgressCloud=3
+    InReviewCloud=10106
+    DoneCloud=10001
+
+    originalStoryPointsFieldIdCloud='customfield_11963'
+    storyPointEstimateFieldIdCloud='customfield_13016'
+
+    jiraAdminGroupCloud='31248f8c-ad67-49ec-8aee-ec998ab26737'
+    testGroupCloud='13c750c3-6310-46b0-9362-ed2f60d607c8'
+    testProjectRoleCloud=10604
+    jiraAdminRoleCloud=10002
+} else if(url == "https://automationgint.atlassian.net"){
+    BugIssueTypeCloud=10009
+    TaskIssueTypeCloud=10007
+    SubtaskIssueTypeCloud=10008
+    EpicIssueTypeCloud=10000
+    StoryIssueTypeCloud=10006
+    InitiativeIssueTypeCloud=10045
+
+    ToDoCloud=10000
+    InProgressCloud=3
+    InReviewCloud=10012
+    DoneCloud=10002
+
+    originalStoryPointsFieldIdCloud='customfield_10016'
+    storyPointEstimateFieldIdCloud='customfield_10038'
+
+    jiraAdminGroupCloud='79de6b6c-1aa1-467e-919b-7b51a043dc91'
+    testGroupCloud='351e542b-7ddb-4d28-8ea5-e3bcb5676043'
+    testProjectRoleCloud=10007
+    jiraAdminRoleCloud=10068
+}else {
+    BugIssueTypeCloud=BugIssueTypeCloudId
+    TaskIssueTypeCloud=TaskIssueTypeCloudId
+    SubtaskIssueTypeCloud=SubtaskIssueTypeCloudId
+    EpicIssueTypeCloud=EpicIssueTypeCloudId
+    StoryIssueTypeCloud=StoryIssueTypeCloudId
+    InitiativeIssueTypeCloud=InitiativeIssueTypeCloudId
+
+    ToDoCloud=ToDoCloudId
+    InProgressCloud=InProgressCloudId
+    InReviewCloud=InReviewCloudId
+    DoneCloud=DoneCloudId
+
+    originalStoryPointsFieldIdCloud=originalStoryPointsFieldIdCloudId
+    storyPointEstimateFieldIdCloud=storyPointEstimateFieldIdCloudId
+
+    jiraAdminGroupCloud=jiraAdminGroupIdCloud
+    testGroupCloud=testGroupIdCloud
+    testProjectRoleCloud=testProjectRoleIdCloud
+    jiraAdminRoleCloud=jiraAdminRoleIdCloud
+}
+
 project.ext.ToDo = info?.isCloud? ToDoCloud : ToDoServer
 project.ext.InProgress = info?.isCloud? InProgressCloud : InProgressServer
 project.ext.InReview = info?.isCloud? InReviewCloud : InReviewServer
@@ -25,11 +148,20 @@ project.ext.SubtaskIssueType = info?.isCloud? SubtaskIssueTypeCloud : SubtaskIss
 project.ext.storyPointFieldId = info?.isCloud? storyPointEstimateFieldIdCloud : storyPointFieldIdServer
 project.ext.originalStoryPointsFieldId = info?.isCloud? originalStoryPointsFieldIdCloud : originalStoryPointsFieldIdServer
 project.ext.jiraAdminRoleId = info?.isCloud ? jiraAdminRoleIdCloud : jiraAdminRoleIdServer
-project.ext.getCurrentUserName = info?.isCloud? info?.userDisplayName : user
-project.ext.defaultSleepTime = info?.isCloud ? 8000 : 0
-project.ext.sleep = info?.isCloud ? 8000 : 0
-project.ext.returnsReporter = "issue.reporter.accountId == '$currentUserKey'"
-project.ext.returnsLinkedIssues = "issue.getLinkedIssues()"
+
+
+/*
+gint.taskHelper.addSetUp(
+        name: "print app key",
+        inline:{
+            gint.helper.log("jmwe app Key", appKey[2])
+            gint.helper.log("build is", testCloudBuild)
+            gint.helper.log("addon name", originalStoryPointsFieldIdCloud)
+            gint.helper.log("addon name", storyPointEstimateFieldIdCloud)
+        }
+)
+*/
+
 
 project.ext.groovyExpression = [
         getIssuetype: "issue.get('issuetype')?.name == 'Task'",
@@ -47,7 +179,7 @@ project.ext.nunjuckExpression = [
         getIssuetype: "{{ issue.fields.issuetype.name == 'Task' }}",
         checkPriorityHigh: "{{ issue.fields.priority.name == 'High' }}",
         checkPriorityLow: "{{ issue.fields.priority.name == 'Low' }}",
-        returnsReporter : "issue.reporter.accountId == $currentUserKey",
+        returnsReporter : "{{issue.reporter.accountId == '$currentUserKey'}}",
         thisUser : "accountId:$currentUserKey"
 ]
 
@@ -172,7 +304,7 @@ project.ext.runAsUserServer = [
 
 project.ext.runAsUserCloud = [
         currentUser : /"runAsType":"addonUser"/,
-        specificUser: /"runAsType":"thisUser","runAs":"accountId:$currentUserKey"/,
+        specificUser: /"runAsType":"thisUser","runAs":"accountId:$currentUserKey"/, // info?.userKey
         userInFieldAssignee : /"runAsType":"userField","runAsField":"assignee"/,
         userInFieldReporter : /"runAsType":"userField","runAsField":"reporter"/,
         userInFieldCreator : /"runAsType":"userField","runAsField":"creator"/,
@@ -378,7 +510,7 @@ project.ext.noRelatedIssuesStatusValidator = [
         subtask : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"issue.subtasks.every(linkedIssue => !config.statusIds.includes(linkedIssue.status.id))\"}",
         parentIssue : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"!issue.parent || [issue.parent].every(linkedIssue => !config.statusIds.includes(linkedIssue.status.id))\"}",
         issueBelongsToEpic : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"!issue.stories || issue.stories.every(linkedIssue => !config.statusIds.includes(linkedIssue.status.id))\"}",
-        epicOfTheCurrentIssue : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":null,\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"!issue.epic || [issue.epic].every(linkedIssue => config.statusIds.includes(linkedIssue.status.id))\"}",
+        epicOfTheCurrentIssue : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":null,\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"!issue.epic || [issue.epic].every(linkedIssue => !config.statusIds.includes(linkedIssue.status.id))\"}",
         linkByAnyLink : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"*\",\"selectedLinkTypeDirection\":\"*\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"issue.links.every(issueLink => !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
         linkByBlock : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"issue.links.every(issueLink => issueLink.type.id != 10000 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
         linkByisBlockedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"issue.links.every(issueLink => issueLink.type.id != 10000 || issueLink.direction != 'inward' && issueLink.type.inward != issueLink.type.outward || !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",

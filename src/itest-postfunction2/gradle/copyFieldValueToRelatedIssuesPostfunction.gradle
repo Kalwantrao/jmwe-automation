@@ -1,0 +1,543 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/itest-postfunction2/postfunction.gradle'
+
+def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__CopyFieldValueToLinkedIssuesFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CopyFieldValueToLinkedIssues-function'
+
+relatedIssue.remove("currentIssue")
+
+def sourceField = [
+        labels : [ "field=labels" ],
+        components : [ "field=components" ]
+]
+
+def destField = [
+        sameAsSource : [ "destField=" ],
+        labels : [ "destField=labels" ],
+        components : [ "destField=components" ]
+]
+
+def options = [
+        noOption : ["copyOnlyIfNotSet=no","ignoreEmptyValue=no","createMissingValues=no","appendValues=no"],
+        copyOnlyIfNotSet : "copyOnlyIfNotSet=yes",
+        ignoreEmptyValue : "ignoreEmptyValue=yes",
+        createMissingValues : "createMissingValues=yes",
+        appendValues : "appendValues=yes"
+]
+def defaultFieldsCloud = [
+        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
+]
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server = defaultFieldsServer + "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.noOption + conditionalExecution.false
+    addTransitionFunction('valueOfFieldLabelsWillBeCopiedToTheIssuesRelatedIssues'+i, 'postfunction', info?.isCloud? cloud : server, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":true,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server = defaultFieldsServer + "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.copyOnlyIfNotSet + conditionalExecution.false
+    addTransitionFunction('valueOfFieldLabelsWillBeCopiedToTheIssuesRelatedIssues_copyOnlyIfNotSet'+i, 'postfunction', info?.isCloud? cloud : server, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":true,\"runAsType\":\"addonUser\"}"
+    def server = defaultFieldsServer + "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.ignoreEmptyValue + conditionalExecution.false
+    addTransitionFunction('valueOfFieldLabelsWillBeCopiedToTheIssuesRelatedIssues_ignoreEmptyValue'+i, 'postfunction', info?.isCloud? cloud : server, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":true,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server = defaultFieldsServer + "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.appendValues + conditionalExecution.false
+    addTransitionFunction('valueOfFieldLabelsWillBeCopiedToTheIssuesRelatedIssues_appendValues'+i, 'postfunction', info?.isCloud? cloud : server, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"components\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":true,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server = defaultFieldsServer + "selectedLinkType=$value" +  sourceField.labels + destField.components +  options.createMissingValues + conditionalExecution.false
+    addTransitionFunction('valueOfFieldLabelsWillBeCopiedToTheIssuesRelatedIssues_createMissingValues'+i, 'postfunction', info?.isCloud? cloud : server, functionKey)
+}
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server = defaultFieldsServer + "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.noOption + conditionalExecution.true
+    addTransitionFunction('valueOfFieldLabelsWillBeCopiedToTheIssuesRelatedIssues_onlyIfConditionTrue'+i, 'postfunction', info?.isCloud? cloud : server, functionKey)
+}
+
+createWorkflowScheme()
+createProject()
+
+(1..2).each {
+    gint.taskHelper.addSetUp([
+            [action: 'addVersion', ext: ': create versions : ' + it,
+             parameters: [
+                     project: projectName,
+                     version: it
+             ]
+            ],
+            [action: 'addComponent', ext: ': create Component : ' + it,
+             parameters: [
+                     project: projectName,
+                     component: 'component' + it
+             ],
+            ]
+    ])
+}
+
+def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
+def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
+def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[]} ], 'BelongsToEpic')
+def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Initiative')
+def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
+def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
+def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
+def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
+def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
+def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
+def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
+updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
+
+def linkIssuesMap = [
+        blocks : {->blocks[]},
+        "$clonesLinkType" : {->clones[]},
+        duplicates : {->duplicates[]},
+        'relates to': {->relatesTo[]}
+]
+
+linkIssuesMap.eachWithIndex { key, value, i ->
+    linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
+}
+
+def relatedIssuesMapServer = [
+        {->parent[]} : {->subtask[]},
+        {->subtask[]} : {->parent[]},
+        {->epic[]} : {->issueBelongsToEpic[]},
+        {->issueBelongsToEpic[]} : {->epic[]},
+        {-> initiative[]} : {->epic_initiative[]},
+        {->epic_initiative[]} : {-> initiative[]},
+        {->blocks[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->blocks[]},
+        {->blocks[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->clones[]},
+        {->clones[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->duplicates[]},
+        {->duplicates[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->relatesTo[]},
+        {->relatesTo[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->jqlIssue[]}
+]
+
+def relatedIssuesMapCloud = [
+        {->parent[]} : {->subtask[]},
+        {->subtask[]} : {->parent[]},
+        {->epic[]} : {->issueBelongsToEpic[]},
+        {->issueBelongsToEpic[]} : {->epic[]},
+        {-> initiative[]} : {->epic_initiative[]},
+        {->epic_initiative[]} : {-> initiative[]},
+        {->blocks[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->blocks[]},
+        {->blocks[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->clones[]},
+        {->clones[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->duplicates[]},
+        {->duplicates[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->relatesTo[]},
+]
+
+def relatedIssuesMap = info ?.isCloud ? relatedIssuesMapCloud : relatedIssuesMapServer
+
+def testLabel1 = "label1"
+def testLabel2 = "label2"
+
+// COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_01- Verify the copy fields value To related issue postfunction for all the source field, destination field and source issue
+[
+        'valueOfFieldLabelsWillBeCopiedToTheIssuesRelatedIssues'
+].collect {
+    relatedIssuesMap.eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action: 'setFieldValue',
+                 ext: ":set value of Labels to _ $testLabel1 of current issue before transition issue with: " + it + i,
+                 sleep: sleep,
+                 parameters: [
+                         issue: key,
+                         field: "Labels",
+                         value: testLabel1
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ":COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_01_TC_ $i _ transition issue with $it $i _ the value of field labels $testLabel1 _will be copied to the issues linked issue:",
+                 sleep: sleep,
+                 parameters: [
+                         issue     : key,
+                         transition: it+i,
+                 ],
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : ":COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_01_TC_ $i _Check the value of field labels _$testLabel1 is copied to linked issue after  transition the issue with:"+ it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : $testLabel1/],
+                ],
+                [action: 'setFieldValue',
+                 sleep: sleep,
+                 ext: ":Of labels of linked issue to empty after transition the issue with transition:" + it+ i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+        ])
+    }
+}
+
+// COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_02- Verify the copy fields value To related issue postfunction for all the source field, destination field and source issue_with copyOnlyIfNotSet_Option_when field is value is set
+[
+        'valueOfFieldLabelsWillBeCopiedToTheIssuesRelatedIssues_copyOnlyIfNotSet'
+].collect {
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action: 'setFieldValue',
+                 sleep: sleep,
+                 ext: ":Labels Of current issue to_ $testLabel1 _before transition the issue with :" + it + i,
+                 parameters: [
+                         issue: key,
+                         field: "Labels",
+                         value: testLabel1
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 sleep: sleep,
+                 ext: ":Labels Of target issue to_ $testLabel2 _before transition the issue with :" + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels",
+                         value: testLabel2
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext: ":COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_02_TC_ $i _ when the field is not empty before transition the issue with transition:" + it + i,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : key,
+                         transition: it+i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : ":COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_02_TC_ $i _when the field is not empty before transition the issue with transition:" + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 failData  : [/Labels  . . . . . . . . . . . : $testLabel1/],
+                 data      : [/Labels  . . . . . . . . . . . : $testLabel2/],
+                ],
+                [action: 'setFieldValue',
+                 sleep: sleep,
+                 ext: ":Of labels of related issue to empty to check when the field value is empty before_ transition the issue with:" + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext: ":COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_02_TC_ $i _ when the field is empty before transition the issue with transition:" + it + i,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : key,
+                         transition: it+i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : ":COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_02_TC_ $i _when the field is empty before transition the issue with transition:" + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 data  : [/Labels  . . . . . . . . . . . : $testLabel1/],
+                 failData: [/Labels  . . . . . . . . . . . : $testLabel2/],
+                ],
+        ])
+    }
+}
+
+// COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_04- Verify the copy fields value To related issue postfunction for all the source field, destination field and source issue_with ignoreEmptyValue_Option_when field value is empty
+[
+        'valueOfFieldLabelsWillBeCopiedToTheIssuesRelatedIssues_ignoreEmptyValue'
+].each {
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action: 'setFieldValue',
+                 sleep: sleep,
+                 ext: ":Of labels of current issue to_ empty before transition the issue with transition:" +it+ i,
+                 parameters: [
+                         issue: key,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 sleep: sleep,
+                 ext: ": Of labels to of related issue to_ $testLabel1 _before transition the issue with:" + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels",
+                         value: testLabel1
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ":COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_04_TC_ $i _ Check when the value of field labels of current issue is empty before transition the issue with transition:"+ it + i,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : key,
+                         transition: it+i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : ":COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_04_TC_ $i _to check when the value of field labels of current issue is empty before transition the issue with transition:" + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : $testLabel1/],
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ":COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_04_TC_ $i _ Check when the value of field labels of current issue is empty before transition the issue with transition:"+ 'valueOfFieldLabelsWillBeCopiedToTheIssuesRelatedIssues' + i,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : key,
+                         transition: 'valueOfFieldLabelsWillBeCopiedToTheIssuesRelatedIssues' + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : ":COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_04_TC_ $i _to check when the value of field labels of current issue is empty before transition the issue with transition:" + 'valueOfFieldLabelsWillBeCopiedToTheIssuesRelatedIssues' + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 failData      : [/Labels  . . . . . . . . . . . : $testLabel1/],
+                ],
+                [action: 'setFieldValue',
+                 sleep: sleep,
+                 ext: ":Of labels of related issue to empty after checking the ignore empty value: " + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+        ])
+    }
+}
+
+// COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_06- Verify the copy fields value To related issue postfunction for all the source field, destination field and source issue_with createMissingValues_Option_when postfunction should create missing field value
+[
+        'valueOfFieldLabelsWillBeCopiedToTheIssuesRelatedIssues_createMissingValues'
+].each {
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+        def getComponentValue = info?.isCloud ? "Components  . . . . . . . . . : $it$i" : "Component/s . . . . . . . . . : $it$i"
+        gint.taskHelper.add([
+                [action    : 'setFieldValue',
+                 sleep: sleep,
+                 ext: ": Of labels of current issue to_ $it$i _before transition the issue with transition:" + it + i,
+                 parameters: [
+                         issue: key,
+                         field: "Labels",
+                         value: it + i
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext: ":COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_06_TC_$i _when value of labels of current issue is $it$i _before transition the issue with transition:" + it + i,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : key,
+                         transition: it+i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext: ":COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_06_TC_$i _check value of labels_ $it$i _should be copied from  current issue to field components of related issue_after transition the issue with transition:" + it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Components"
+                 ],
+                 data      : [getComponentValue],
+                ],
+                [action: 'setFieldValue',
+                 sleep: sleep,
+                 ext: ":Of labels of current issue to empty after checking the create missing value option:" + it+ i,
+                 parameters: [
+                         issue: key,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+        ])
+    }
+}
+
+
+// COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_07 Verify the copy fields value To related issue postfunction for all the source field, destination field and source issue_with appendValues_Option_when postfunction should append the field value,
+[
+        'valueOfFieldLabelsWillBeCopiedToTheIssuesRelatedIssues_appendValues'
+].each {
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action    : 'setFieldValue',
+                 sleep: sleep,
+                 ext: ":Of labels of related issue before transition the issue with transition : "+ it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+                [action    : 'setFieldValue',
+                 sleep: sleep,
+                 ext: ":Of labels of linked issue to_$testLabel2 _ before transition the issue with transition : "+ it + i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels",
+                         value: testLabel2
+                 ]
+                ],
+                [action    : 'setFieldValue',
+                 sleep: sleep,
+                 ext: ":Of labels of current issue to_$testLabel1 _ before transition the issue with transition : "+ it + i,
+                 parameters: [
+                         issue: key,
+                         field: "Labels",
+                         value: testLabel1
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext: ": COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_07_TC_ $i _ when the current issue has value of field labels _$testLabel1 and related issue $testLabel2 _before transition the issue with:" + it +i,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : key,
+                         transition: it+i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext: ": COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_07_TC_ $i _check the value of field labels of related issue should be set to_ $testLabel1 $testLabel2 _after transition the current issue with transition: $it$i" ,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 data      : ["Labels  . . . . . . . . . . . : $testLabel1 $testLabel2"],
+                ],
+        ])
+    }
+}
+
+// COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_08- Verify the copy fields value To related issue postfunction for all the source field, destination field and source issue
+
+[
+        'valueOfFieldLabelsWillBeCopiedToTheIssuesRelatedIssues_onlyIfConditionTrue'
+].collect {
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+        gint.taskHelper.add([
+                [action: 'setFieldValue',
+                 sleep: sleep,
+                 ext: ": set priority to Low of parent to check conditional execution_option of COPY_FIELD_VALUE_To_PARENT_ISSUE_PF  : "+it +i,
+                 parameters: [
+                         issue: key,
+                         field: "Priority",
+                         value: "Low"
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 sleep: sleep,
+                 ext: ': labels to current issue empty to check before transition issue : ' + it+ i,
+                 parameters: [
+                         issue: key,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 sleep: sleep,
+                 ext: ': labels to target issue empty to check before transition issue : ' + it+ i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels",
+                         value: " "
+                 ]
+                ],
+                [action: 'setFieldValue',
+                 sleep: sleep,
+                 ext: ': labels to current issues to check before transition issue : ' + it+ i,
+                 parameters: [
+                         issue: key,
+                         field: "Labels",
+                         value: testLabel1
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ":COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_08_TC_ $i Verify the copy fields value To related issue postfunction for all the source field, destination field and source issue:  "+ i,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : key,
+                         transition: it+i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : ":COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_08_TC_ $i Verify the copy fields value To related issue postfunction for all the source field, destination field and source issue:  "+ i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 failData      : [/Labels  . . . . . . . . . . . : $testLabel1/],
+                ],
+                [action: 'setFieldValue',
+                 sleep: sleep,
+                 ext: ": set priority to High of parent to check conditional execution true_option of COPY_FIELD_VALUE_To_PARENT_ISSUE_PF  : "+it +i,
+                 parameters: [
+                         issue: key,
+                         field: "Priority",
+                         value: "High"
+                 ]
+                ],
+                [action    : 'transitionIssue',
+                 ext       : ":COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_09_TC_ $i Verify the copy field value To related issue postfunction for all the source field, destination field and source issue:  "+ i,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : key,
+                         transition: it+i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : ":COPY_FIELD_VALUE_To_RELATED_ISSUE_Postfunction_TS_09_TC_ $i Verify the copy field value To related issue postfunction for all the source field, destination field and source issue:  "+ i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : $testLabel1/],
+                ],
+        ])
+    }
+}
+
+

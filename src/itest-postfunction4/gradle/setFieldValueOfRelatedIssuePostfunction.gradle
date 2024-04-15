@@ -1,0 +1,536 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/itest-postfunction4/postfunction.gradle'
+
+def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__SetFieldValueOfLinkedIssuesFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:SetFieldValueOfLinkedIssues-function'
+def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
+
+def removeIssueTypesList = info?.isCloud ? ["currentIssue","returnsFromJqlSearch","returnsByNunjucksExpression"] : ["currentIssue"]
+
+removeIssueTypesList.each {
+    relatedIssue.remove(it)
+}
+
+def selectField = [
+        labels : [ "field=labels" ],
+        components : [ "field=components" ]
+]
+def templateValue = "template"
+def expressionValue = "expression"
+
+def valueType = [
+        template : ["valueType=template", "value=$templateValue"],
+        expression : ["valueType=expression", "value=$groovyExpression.getDescription"],
+        copyOnlyIfNotSet: ["valueType=template", "value=copyOnlyIfNotSet"],
+        ignoreEmptyValue: ["valueType=template", "value="],
+        appendValues: ["valueType=template", "value=appendValues"],
+        conditionalExecution : ["valueType=template", "value=conditionalExecution"],
+        createMissingValueComponent : ["valueType=template", "value=createMissingValueComponent"],
+        runAsSpecificUser : ["valueType=template", "value=runAsSpecificUser"],
+        runAsUserInFieldAssignee : ["valueType=template", "value=runAsUserInFieldAssignee"],
+        runAsUserInFieldReporter : ["valueType=template", "value=runAsUserInFieldReporter"],
+        runAsUserInFieldCreator : ["valueType=template", "value=runAsUserInFieldCreator"],
+        runAsUserReturnFromScript : ["valueType=template", "value=runAsUserReturnFromScript"],
+]
+
+def options = [
+        noOption:  ["ignoreEmptyValue=no", "createMissingValues=no", "appendValues=no", "copyOnlyIfNotSet=no"],
+        ignoreEmptyValue : ["ignoreEmptyValue=yes"],
+        createMissingValues : ["createMissingValues=yes"],
+        appendValues: ["appendValues=yes"],
+        copyOnlyIfNotSet: ["copyOnlyIfNotSet=yes"],
+]
+
+def defaultFieldsCloud = [
+        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
+]
+
+relatedIssue.eachWithIndex { key, value, i ->
+    def server = defaultFieldsServer + selectField.labels + valueType.template +  conditionalExecution.false +  options.noOption + "selectedLinkType=$value" + runAsUser.currentUser
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"template\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    addTransitionFunction('template' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+relatedIssue.take(1).eachWithIndex { key, value, i ->
+    def server = defaultFieldsServer + selectField.labels + valueType.expression +  conditionalExecution.false +  options.noOption + "selectedLinkType=$value" + runAsUser.currentUser
+    if(!isCloud) {
+        addTransitionFunction('expression' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    }
+}
+
+relatedIssue.take(1).eachWithIndex { key, value, i ->
+    def server = defaultFieldsServer + selectField.labels + conditionalExecution.false + options.copyOnlyIfNotSet + valueType.copyOnlyIfNotSet + "selectedLinkType=$value" + runAsUser.currentUser
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"copyOnlyIfNotSet\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":true,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    addTransitionFunction('copyOnlyIfNotSet' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+relatedIssue.take(1).eachWithIndex { key, value, i ->
+    def server = defaultFieldsServer + selectField.components +  conditionalExecution.false + options.createMissingValues+ valueType.createMissingValueComponent + "selectedLinkType=$value" + runAsUser.currentUser
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"components\",\"selectedLinkType\":\"$value\",\"value\":\"createMissingValueComponent\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":true,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    addTransitionFunction('createMissingValueComponent' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+relatedIssue.take(1).eachWithIndex { key, value, i ->
+    def server = defaultFieldsServer + selectField.labels + options.ignoreEmptyValue +  conditionalExecution.false + valueType.ignoreEmptyValue + "selectedLinkType=$value" + runAsUser.currentUser
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":true,\"runAsType\":\"addonUser\"}"
+    addTransitionFunction('ignoreEmptyValue' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+relatedIssue.take(1).eachWithIndex { key, value, i ->
+    def server = defaultFieldsServer + selectField.labels + options.appendValues + conditionalExecution.false + valueType.appendValues + "selectedLinkType=$value" + runAsUser.currentUser
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"appendValues\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":true,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    addTransitionFunction('appendValues' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+relatedIssue.take(1).eachWithIndex { key, value, i ->
+    def server = defaultFieldsServer + selectField.labels + conditionalExecution.true + options.noOption +  valueType.conditionalExecution + "selectedLinkType=$value" + runAsUser.currentUser
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"conditionalExecution\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    addTransitionFunction('conditionalExecution' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+}
+
+relatedIssue.take(1).eachWithIndex { key, value, i ->
+    def server = defaultFieldsServer + selectField.labels + runAsUser.specificUser +  conditionalExecution.false + options.noOption +  valueType.runAsSpecificUser + "selectedLinkType=$value"
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"runAsSpecificUser\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"thisUser\",\"runAs\":\"$testUserIdCloud\"}"
+    addTransitionFunction('runAsSpecificUser' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud) {
+        moveTransitionFunction('runAsSpecificUser' + i, 4)
+    }
+}
+relatedIssue.take(1).eachWithIndex { key, value, i ->
+    def server = defaultFieldsServer + selectField.labels + runAsUser.userInFieldAssignee +  conditionalExecution.false + options.noOption + valueType.runAsUserInFieldAssignee + "selectedLinkType=$value"
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"runAsUserInFieldAssignee\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"userField\",\"runAsField\":\"assignee\"}"
+    addTransitionFunction('runAsUserInFieldAssignee' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud) {
+        moveTransitionFunction('runAsUserInFieldAssignee' + i, 4)
+    }
+}
+relatedIssue.take(1).eachWithIndex { key, value, i ->
+    def server = defaultFieldsServer + selectField.labels + runAsUser.userInFieldReporter +  conditionalExecution.false + options.noOption + valueType.runAsUserInFieldReporter + "selectedLinkType=$value"
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"runAsUserInFieldReporter\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"userField\",\"runAsField\":\"reporter\"}"
+    addTransitionFunction('runAsUserInFieldReporter' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud) {
+        moveTransitionFunction('runAsUserInFieldReporter' + i, 4)
+    }
+}
+relatedIssue.take(1).eachWithIndex { key, value, i ->
+    def server = defaultFieldsServer + selectField.labels + runAsUser.userInFieldCreator +  conditionalExecution.false + options.noOption + valueType.runAsUserInFieldCreator + "selectedLinkType=$value"
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"runAsUserInFieldCreator\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"userField\",\"runAsField\":\"creator\"}"
+    addTransitionFunction('runAsUserInFieldCreator' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud) {
+        moveTransitionFunction('runAsUserInFieldCreator' + i, 4)
+    }
+}
+relatedIssue.take(1).eachWithIndex { key, value, i ->
+    def server = defaultFieldsServer + selectField.labels + runAsUser.userFromScript +  conditionalExecution.false + options.noOption + valueType.runAsUserReturnFromScript + "selectedLinkType=$value"
+    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"runAsUserReturnFromScript\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"userFromScript\",\"runAsScript\":\"$nunjuckExpression.returnsReporter\"}"
+    addTransitionFunction('runAsUserReturnFromScript' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    if(!isCloud) {
+        moveTransitionFunction('runAsUserReturnFromScript' + i, 4)
+    }
+}
+
+createWorkflowScheme()
+createProject()
+
+(1..2).each {
+    gint.taskHelper.addSetUp([
+            [action: 'addVersion', ext: ': create versions : ' + it,
+             parameters: [
+                     project: projectName,
+                     version: it
+             ]
+            ],
+            [action: 'addComponent', ext: ': create Component : ' + it,
+             parameters: [
+                     project: projectName,
+                     component: 'component' + it
+             ],
+            ]
+    ])
+}
+
+def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
+def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
+def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
+def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[]} ], 'BelongsToEpic')
+def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Initiative')
+def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
+def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
+def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
+def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
+def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
+def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
+def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
+updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
+
+def linkIssuesMap = [
+        blocks : {->blocks[]},
+        "$clonesLinkType" : {->clones[]},
+        duplicates : {->duplicates[]},
+        'relates to': {->relatesTo[]}
+]
+
+linkIssuesMap.eachWithIndex { key, value, i ->
+    linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
+}
+
+def relatedIssuesMapServer = [
+        {->parent[]} : {->subtask[]},
+        {->subtask[]} : {->parent[]},
+        {->epic[]} : {->issueBelongsToEpic[]},
+        {->issueBelongsToEpic[]} : {->epic[]},
+        {-> initiative[]} : {->epic_initiative[]},
+        {->epic_initiative[]} : {-> initiative[]},
+        {->blocks[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->blocks[]},
+        {->blocks[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->clones[]},
+        {->clones[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->duplicates[]},
+        {->duplicates[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->relatesTo[]},
+        {->relatesTo[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->jqlIssue[]}
+]
+
+def relatedIssuesMapCloud = [
+        {->parent[]} : {->subtask[]},
+        {->subtask[]} : {->parent[]},
+        {->epic[]} : {->issueBelongsToEpic[]},
+        {->issueBelongsToEpic[]} : {->epic[]},
+        {-> initiative[]} : {->epic_initiative[]},
+        {->epic_initiative[]} : {-> initiative[]},
+        {->blocks[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->blocks[]},
+        {->blocks[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->clones[]},
+        {->clones[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->duplicates[]},
+        {->duplicates[]} : {->issueLinks[]},
+        {->issueLinks[]} : {->relatesTo[]},
+]
+
+def relatedIssuesMap = info?.isCloud ? relatedIssuesMapCloud : relatedIssuesMapServer
+def getCurrentUserName = info?.isCloud? info?.userDisplayName : user
+
+def testLabel = "label1"
+
+relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue, index ->
+    gint.taskHelper.add(
+            action: 'updateIssue', ext: ': add description to copy it in specific field : ' + index,
+            sleep: sleep,
+            parameters: [
+                    issue: targetIssue,
+                    description: expressionValue
+            ]
+    )
+}
+
+relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
+    gint.taskHelper.add(
+            action: 'setFieldValue',
+            sleep: sleep,
+            ext: ': set labels to issue to check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF_copyOnlyIfNotSet option  : ' + index,
+            parameters: [
+                    issue: targetIssue,
+                    field: "Labels",
+                    value: testLabel
+            ]
+    )
+}
+
+['copyOnlyIfNotSet'].collect {
+    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep: sleep,
+                 ext: ': check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF_copyOnlyIfNotSet when field is not empty :' + i,
+                 parameters: [
+                         issue     : currentIssue,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : ": check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF_copyOnlyIfNotSet when field is not empty:"  + i,
+                 parameters: [
+                         issue: targetIssue,
+                         field: "Labels"
+                 ],
+                 failData      : [/Labels  . . . . . . . . . . . : $it/],
+                 data      : [/Labels  . . . . . . . . . . . : $testLabel/],
+                ],
+        ])
+    }
+}
+relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue, index ->
+    gint.taskHelper.add(
+            action: 'setFieldValue',
+            sleep: sleep,
+            ext: ': removing the labels from issue to check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF_copyOnlyIfNotSet option : ' + index,
+            parameters: [
+                    issue: targetIssue,
+                    field: "Labels",
+                    value: " "
+            ]
+    )
+}
+['copyOnlyIfNotSet'].collect {
+    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF_copyOnlyIfNotSet when field is empty :' + i,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : currentIssue,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : ": check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF_copyOnlyIfNotSet when field is empty :" + i,
+                 parameters: [
+                         issue: targetIssue,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : $it/],
+                 failData      : [/Labels  . . . . . . . . . . . : $testLabel/],
+                ],
+        ])
+    }
+}
+
+relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue, index ->
+    gint.taskHelper.add(
+            action: 'setFieldValue',
+            sleep: sleep,
+            ext: ': remove the labels from issue to check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF: ' + index,
+            parameters: [
+                    issue: targetIssue,
+                    field: "Labels",
+                    value: " "
+            ]
+    )
+}
+
+['template'].collect {
+    relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep: sleep,
+                 ext: ": check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF value set by : " + it + i,
+                 sleepAfter: 3000,
+                 parameters: [
+                         issue     : currentIssue,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : ": check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF value set by : " + it + i,
+                 parameters: [
+                         issue: targetIssue,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : $it/],
+                ],
+        ])
+    }
+}
+relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue, index ->
+    gint.taskHelper.add(
+            action: 'setFieldValue',
+            sleep: sleep,
+            ext: ': set the labels from issue to check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF_ignoreEmptyValue: ' + index,
+            parameters: [
+                    issue: targetIssue,
+                    field: "Labels",
+                    value: testLabel
+            ]
+    )
+}
+
+['ignoreEmptyValue'].collect {
+    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ': check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF_Ignore empty values'  + i,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : currentIssue,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : "check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF_Ignore empty values" + i,
+                 parameters: [
+                         issue: targetIssue,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : $testLabel/],
+                ],
+        ])
+    }
+}
+['appendValues'].collect {
+    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue', ext: ':check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF_Add source value to destination field: '  + i,
+                 sleep: sleep,
+                 parameters: [
+                         issue     : currentIssue,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : "check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF_Add source value to destination field: " + i,
+                 parameters: [
+                         issue: targetIssue,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : $it $testLabel/],
+                ],
+        ])
+    }
+}
+
+
+['createMissingValueComponent'].collect {
+    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep: sleep,
+                 ext: ':check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF_createMissingValueComponent: '+ i,
+                 parameters: [
+                         issue     : currentIssue,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : "check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF_createMissingValueComponent:" + i,
+                 parameters: [
+                         issue: targetIssue,
+                         field: "Components"
+                 ],
+                 data      : [
+                         info?.isCloud ? "Components  . . . . . . . . . : $it" : "Component/s . . . . . . . . . : $it"
+                 ],
+                ],
+        ])
+    }
+}
+
+relatedIssuesMap.take(1).eachWithIndex{ key, targetIssue,  i ->
+    gint.taskHelper.add(
+            action: 'assignIssue',
+            sleep: sleep,
+            ext: ": to check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF :$testUser " + i,
+            parameters: [
+                    issue: key,
+                    userId: user
+            ]
+    )
+}
+
+[
+        'runAsUserInFieldReporter',
+        'runAsUserInFieldCreator',
+        'runAsUserInFieldAssignee',
+        'runAsSpecificUser',
+        //'runAsUserReturnFromScript',
+].each {
+    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep: sleep,
+                 ext: ':check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF :' + it + i,
+                 parameters: [
+                         issue     : currentIssue,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getIssueHistoryList',
+                 sleep: sleep,
+                 ext       : ": check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF :" + it + i,
+                 parameters: [
+                         issue: targetIssue,
+                         outputType: "text",
+                         select: ["Field:labels","Author:$getCurrentUserName"],
+                         columns: "Author,Field,'To String'"
+                 ],
+                 data      : ["$getCurrentUserName", "labels", "$it"],
+                ],
+        ])
+    }
+}
+
+
+['conditionalExecution'].each {
+    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep: sleep,
+                 ext: ':check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF : ' + it +' : when false' + i,
+                 parameters: [
+                         issue     : currentIssue,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : ": check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF : $it when false" +  i,
+                 parameters: [
+                         issue: targetIssue,
+                         field: "Labels"
+                 ],
+                 failData      : [/Labels  . . . . . . . . . . . : conditionalExecution/],
+                ],
+        ])
+    }
+}
+relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue,  i ->
+    gint.taskHelper.add(
+            action: 'updateIssue',
+            sleep: sleep,
+            ext: ": set priority High to check conditional execution true check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF :" + i,
+            parameters: [
+                    issue: currentIssue,
+                    priority: 'High'
+            ]
+    )
+}
+['conditionalExecution'].each {
+    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep: sleep,
+                 ext: ': check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF :' + it +' : when true' + i,
+                 parameters: [
+                         issue     : currentIssue,
+                         transition: it + i,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep: sleep,
+                 ext       : ":check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF : $it when true" +  i,
+                 parameters: [
+                         issue: targetIssue,
+                         field: "Labels"
+                 ],
+                 data      : [/Labels  . . . . . . . . . . . : conditionalExecution/],
+                ],
+        ])
+    }
+}

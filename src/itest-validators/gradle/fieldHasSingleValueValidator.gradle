@@ -20,6 +20,7 @@ def fieldsList = [
 		Components:'components',
 		AffectsVersions:'versions',
 		FixVersions:'fixVersions',
+		Description: 'description'
 ]
 
 def excludingSubtasks = [
@@ -79,7 +80,8 @@ def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->d
 		//'Labels_should_have_single_value',
 		'Components_should_have_single_value',
 		'AffectsVersions_should_have_single_value',
-		'FixVersions_should_have_single_value'
+		'FixVersions_should_have_single_value',
+		'Description_should_have_single_value'
 ].each {
 	[1,2].eachWithIndex { numberOfValuesForField, int i ->
 	def addFields;
@@ -263,5 +265,21 @@ def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->d
 2 check custom multi value field - pos and neg = // ToDo "Need to add custom fields"
  */
 
-
+/*
+REVIEWED BY Chirag: 08.03.2024 -
+1. Configure decsription :
+2. Custom fields: Multi valued type only : add and delete
+3. When fields has empty value not add any value on transition screen
+4. When field has empty value and add 1 value on transition screen.
+5. When field has empty value and add 2 values on transiio screen.
+6. When field has 1 value before transition and add 1 value on transition screen.
+6. When field has 2 value before transition and transition issue.
+7. Condition validation with custom field- issue.get("customfield_10700")?.name == "jmwe_qa"
+		- Positive when fields value return true
+		- Negative when fields value return false
+		- Delete custom field and trigger the transition
+8. Configure field has single value val on the same transition-
+		ext1 - Configure affects version
+		ext2 - Configure fix version
+ */
 
