@@ -169,8 +169,8 @@ def multipleIssueCreation = { createMultiple, script->
 ].each {
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('subtask') + selectProject('current') + selectParentIssue('currentIssue') + setSummary('default') + conditionalExecution.false + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$SubtaskIssueTypeCloud\",\"selectedLinkType\":\"\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
+    def server = selectIssueType('subtask') + selectProject('current') + selectParentIssue('currentIssue') + setSummary('default') + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$SubtaskIssueTypeCloud\",\"selectedLinkType\":\"\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -179,8 +179,8 @@ def multipleIssueCreation = { createMultiple, script->
 ].each {
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('task') + selectProject('current') + selectParentIssue('none') + setSummary('default') + conditionalExecution.false + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$TaskIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
+    def server =  selectIssueType('task') + selectProject('current') + selectParentIssue('none') + setSummary('default') + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$TaskIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -189,8 +189,8 @@ def multipleIssueCreation = { createMultiple, script->
 ].each {
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('story') + selectProject('current') + selectParentIssue('none') + setSummary('default') + conditionalExecution.false + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$StoryIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
+    def server =  selectIssueType('story') + selectProject('current') + selectParentIssue('none') + setSummary('default') + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$StoryIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -199,8 +199,8 @@ def multipleIssueCreation = { createMultiple, script->
 ].each {
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('default') + conditionalExecution.false + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
+    def server =  selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('default') + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -209,8 +209,8 @@ def multipleIssueCreation = { createMultiple, script->
 ].each {
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('initiative') + selectProject('current') + selectParentIssue('none') + setSummary('default') + conditionalExecution.false + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$InitiativeIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
+    def server =  selectIssueType('initiative') + selectProject('current') + selectParentIssue('none') + setSummary('default') + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$InitiativeIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -219,8 +219,8 @@ def multipleIssueCreation = { createMultiple, script->
 ].each {
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('default') + selectLinkType('Blocks') + conditionalExecution.false + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"$relatedIssue.linkByBlock\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
+    def server =  selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('default') + selectLinkType('Blocks') + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"$relatedIssue.linkByBlock\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -229,8 +229,8 @@ def multipleIssueCreation = { createMultiple, script->
 ].each {
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('default') + selectLinkType('Cloners') + conditionalExecution.false + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"$relatedIssue.linkByClones\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
+    def server =  selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('default') + selectLinkType('Cloners') + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"$relatedIssue.linkByClones\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -239,8 +239,8 @@ def multipleIssueCreation = { createMultiple, script->
 ].each {
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('default') + selectLinkType('Duplicate') + conditionalExecution.false + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"$relatedIssue.linkByDuplicates\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
+    def server =  selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('default') + selectLinkType('Duplicate') + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"$relatedIssue.linkByDuplicates\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -249,8 +249,8 @@ def multipleIssueCreation = { createMultiple, script->
 ].each {
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('default') + selectLinkType('Relates') + conditionalExecution.false + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"$relatedIssue.linkByRelatesTo\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
+    def server =  selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('default') + selectLinkType('Relates') + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"$relatedIssue.linkByRelatesTo\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -259,8 +259,8 @@ def multipleIssueCreation = { createMultiple, script->
 ].each {
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('subtask') + selectProject('current') + selectParentIssue('currentIssue') + setSummary('default') + conditionalExecution.true + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.true,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$SubtaskIssueTypeCloud\",\"selectedLinkType\":\"\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
+    def server =  selectIssueType('subtask') + selectProject('current') + selectParentIssue('currentIssue') + setSummary('default') + conditionalExecution.true + runAsUser.currentUser
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.true,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$SubtaskIssueTypeCloud\",\"selectedLinkType\":\"\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -269,8 +269,8 @@ def multipleIssueCreation = { createMultiple, script->
 ].each {
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('template') + selectLinkType('notLinked') + conditionalExecution.false + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
+    def server =  selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('template') + selectLinkType('notLinked') + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -279,8 +279,8 @@ def multipleIssueCreation = { createMultiple, script->
 ].each {
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('template') + selectLinkType('notLinked') + addComment('template',it) + commentVisibility('all') + conditionalExecution.false + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"commentAs\":\"\",\"commentAsType\":\"currentUser\",\"navigateToNewIssue\":false}"
+    def server =  selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('template') + selectLinkType('notLinked') + addComment('template',it) + commentVisibility('all') + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"commentAs\":\"\",\"commentAsType\":\"currentUser\",\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -289,8 +289,8 @@ def multipleIssueCreation = { createMultiple, script->
 ].each {
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('template') + selectLinkType('notLinked') + addComment('template',it) + commentVisibility('adminGroupUsers') + conditionalExecution.false + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"_modified\":\"2024-03-04T08:27:46.678Z\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"$jiraAdminGroupCloud\",\"commentAs\":\"\",\"commentAsType\":\"currentUser\",\"navigateToNewIssue\":false}"
+    def server =  selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('template') + selectLinkType('notLinked') + addComment('template',it) + commentVisibility('adminGroupUsers') + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"_modified\":\"2024-03-04T08:27:46.678Z\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"$jiraAdminGroupCloud\",\"commentAs\":\"\",\"commentAsType\":\"currentUser\",\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -299,8 +299,8 @@ def multipleIssueCreation = { createMultiple, script->
 ].each {
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('template') + selectLinkType('notLinked') + addComment('template',it) + commentVisibility('adminRoleUsers') + conditionalExecution.false + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$jiraAdminRoleCloud,\"commentAs\":\"\",\"commentAsType\":\"currentUser\",\"navigateToNewIssue\":false}"
+    def server =  selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('template') + selectLinkType('notLinked') + addComment('template',it) + commentVisibility('adminRoleUsers') + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$jiraAdminRoleCloud,\"commentAs\":\"\",\"commentAsType\":\"currentUser\",\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -309,8 +309,8 @@ def multipleIssueCreation = { createMultiple, script->
 ].each {
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('template') + selectLinkType('notLinked') + addComment('template',it) + commentVisibility('testGroupUsers') + conditionalExecution.false + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"_modified\":\"2024-03-04T08:27:46.678Z\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"$testGroupCloud\",\"commentAs\":\"\",\"commentAsType\":\"currentUser\",\"navigateToNewIssue\":false}"
+    def server =  selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('template') + selectLinkType('notLinked') + addComment('template',it) + commentVisibility('testGroupUsers') + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"_modified\":\"2024-03-04T08:27:46.678Z\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"$testGroupCloud\",\"commentAs\":\"\",\"commentAsType\":\"currentUser\",\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -319,8 +319,8 @@ def multipleIssueCreation = { createMultiple, script->
 ].each {
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('template') + selectLinkType('notLinked') + addComment('template',it) + commentVisibility('testRoleUsers') + conditionalExecution.false + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$testProjectRoleCloud,\"commentAs\":\"\",\"commentAsType\":\"currentUser\",\"navigateToNewIssue\":false}"
+    def server =  selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('template') + selectLinkType('notLinked') + addComment('template',it) + commentVisibility('testRoleUsers') + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$testProjectRoleCloud,\"commentAs\":\"\",\"commentAsType\":\"currentUser\",\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -329,8 +329,8 @@ runAsUser.eachWithIndex { userType, configFields, idx ->
     def transition = 'createIssueOfTypeBugSetCustomSummaryAndRunAs_' + userType
     def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server = defaultFieldsServer + selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('template') + selectLinkType('notLinked') + conditionalExecution.false + configFields
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$customSummary\"}},\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false,$configFields}"
+    def server =  selectIssueType('bug') + selectProject('current') + selectParentIssue('none') + setSummary('template') + selectLinkType('notLinked') + conditionalExecution.false + configFields
+    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueTypeCloud\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$customSummary\"}},\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false,$configFields}"
     addTransitionFunction( transition, 'postfunction', info?.isCloud? cloud : server, functionKey)
     if(!isCloud){
         moveTransitionFunction(transition, 4)
@@ -832,4 +832,3 @@ def defaultIssue5 = createIssue([type: 'Task', summary: testSummary5], 'defaultI
             ]
     ])
 }
-
