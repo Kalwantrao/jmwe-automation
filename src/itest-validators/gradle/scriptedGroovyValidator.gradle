@@ -10,16 +10,9 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-// apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
 def errorMessage = "Check the scripted groovy returns true"
-def defaultFieldsServer = [
-        "scriptDescription=",
-        "errorMessage=$errorMessage",
-        "field=",
-        "correlationId=",
-]
 
 def chooseType = [
         noCode: ["type=noCode"]
@@ -53,15 +46,15 @@ def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugi
 [
         'verify_issue_must_assigned_to_specific_user'
 ].each {
-    def server = defaultFieldsServer + "groovyExpression=issue.getAsString(\"assignee\") == \"$getCurrentUserName\""
-    def cloud = defaultFieldsCloud.validator + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"conditionalValidation\":false,\"script\":\"!!issue.assignee && issue.assignee.accountId == '$currentUserKey'\",\"expression\":\"!!issue.assignee && issue.assignee.accountId == '$currentUserKey'\",\"scriptDescription\":\"\",\"errorMessage\":\"$errorMessage\"}"
+    def server = "errorMessage=$errorMessage" + "field=" + "scriptDescription=" + "groovyExpression=issue.getAsString(\"assignee\") == \"$getCurrentUserName\""
+    def cloud = "{\"conditionalValidation\":false,\"script\":\"!!issue.assignee && issue.assignee.accountId == '$currentUserKey'\",\"expression\":\"!!issue.assignee && issue.assignee.accountId == '$currentUserKey'\",\"scriptDescription\":\"\",\"errorMessage\":\"$errorMessage\"}"
     addTransitionFunction(it, 'validator', info?.isCloud ? cloud : server, functionKey )
 }
 
 [
         'check_no_code'
 ].each {
-    def server = defaultFieldsServer + chooseType.noCode + valueToCompareType.field + field.reporter + valueToCompare.assignee + operator.equals +  noCodeFields
+    def server = "errorMessage=$errorMessage" + "field=" + "scriptDescription=" + chooseType.noCode + valueToCompareType.field + field.reporter + valueToCompare.assignee + operator.equals +  noCodeFields
     if(!isCloud) {
         addTransitionFunction( it, 'validator', server, functionKey )
     }

@@ -12,10 +12,6 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction.gradle'
 
-def defaultFieldsCloud = [
-        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
-]
-
 def conditionToUnlinkIssues = [
         lowPriority : ["groovyExpression=$groovyExpression.checkPriorityLow"]
 ]
@@ -23,8 +19,8 @@ def conditionToUnlinkIssues = [
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__UnlinkIssuesFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:unlink-issues-function'
 
 ['unlinkIssuesWhichReturnsConditionTrue'].each {
-    def server = defaultFieldsServer + conditionToUnlinkIssues.lowPriority + runAsUser.currentUser
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityLow\",\"runAsType\":\"addonUser\"}"
+    def server =  conditionToUnlinkIssues.lowPriority + runAsUser.currentUser
+    def cloud = "{\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityLow\",\"runAsType\":\"addonUser\"}"
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 

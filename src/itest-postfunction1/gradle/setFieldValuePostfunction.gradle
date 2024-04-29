@@ -45,89 +45,85 @@ def options = [
         copyOnlyIfNotSet: ["copyOnlyIfNotSet=yes"],
 ]
 
-def defaultFieldsCloud = [
-        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
-]
-
 relatedIssue.eachWithIndex { key, value, i ->
-    def server = defaultFieldsServer + selectField.labels + valueType.template +  conditionalExecution.false +  options.noOption + "selectedLinkType=$value" + runAsUser.currentUser
+    def server =  selectField.labels + valueType.template +  conditionalExecution.false +  options.noOption + "selectedLinkType=$value" + runAsUser.currentUser
     if(!isCloud) {
         addTransitionFunction('template' + i, 'postfunction', server, functionKey)
     }
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + selectField.labels + valueType.expression +  conditionalExecution.false +  options.noOption + "selectedLinkType=$value" + runAsUser.currentUser
+    def fields =  selectField.labels + valueType.expression +  conditionalExecution.false +  options.noOption + "selectedLinkType=$value" + runAsUser.currentUser
     if(!isCloud) {
         addTransitionFunction('expression' + i, 'postfunction', fields, functionKey)
     }
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + selectField.labels + conditionalExecution.false + options.copyOnlyIfNotSet + valueType.copyOnlyIfNotSet + "selectedLinkType=$value" + runAsUser.currentUser
+    def fields =  selectField.labels + conditionalExecution.false + options.copyOnlyIfNotSet + valueType.copyOnlyIfNotSet + "selectedLinkType=$value" + runAsUser.currentUser
     if(!isCloud) {
         addTransitionFunction('copyOnlyIfNotSet' + i, 'postfunction', fields, functionKey)
     }
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + selectField.components +  conditionalExecution.false + options.createMissingValues+ valueType.createMissingValueComponent + "selectedLinkType=$value" + runAsUser.currentUser
+    def fields =  selectField.components +  conditionalExecution.false + options.createMissingValues+ valueType.createMissingValueComponent + "selectedLinkType=$value" + runAsUser.currentUser
     if(!isCloud) {
         addTransitionFunction('createMissingValueComponent' + i, 'postfunction', fields, functionKey)
     }
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + selectField.labels + options.ignoreEmptyValue +  conditionalExecution.false + valueType.ignoreEmptyValue + "selectedLinkType=$value" + runAsUser.currentUser
+    def fields =  selectField.labels + options.ignoreEmptyValue +  conditionalExecution.false + valueType.ignoreEmptyValue + "selectedLinkType=$value" + runAsUser.currentUser
     if(!isCloud) {
         addTransitionFunction('ignoreEmptyValue' + i, 'postfunction', fields, functionKey)
     }
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + selectField.labels + options.appendValues + conditionalExecution.false + valueType.appendValues + "selectedLinkType=$value" + runAsUser.currentUser
+    def fields =  selectField.labels + options.appendValues + conditionalExecution.false + valueType.appendValues + "selectedLinkType=$value" + runAsUser.currentUser
     if(!isCloud) {
         addTransitionFunction('appendValues' + i, 'postfunction', fields, functionKey)
     }
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + selectField.labels + conditionalExecution.true + options.noOption +  valueType.conditionalExecution + "selectedLinkType=$value" + runAsUser.currentUser
+    def fields =  selectField.labels + conditionalExecution.true + options.noOption +  valueType.conditionalExecution + "selectedLinkType=$value" + runAsUser.currentUser
     if(!isCloud) {
         addTransitionFunction('conditionalExecution' + i, 'postfunction', fields, functionKey)
     }
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + selectField.labels + runAsUser.specificUser +  conditionalExecution.false + options.noOption +  valueType.runAsSpecificUser + "selectedLinkType=$value"
+    def fields =  selectField.labels + runAsUser.specificUser +  conditionalExecution.false + options.noOption +  valueType.runAsSpecificUser + "selectedLinkType=$value"
     if(!isCloud) {
         addTransitionFunction('runAsSpecificUser' + i, 'postfunction', fields, functionKey)
         moveTransitionFunction('runAsSpecificUser' + i, 4)
     }
 }
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + selectField.labels + runAsUser.userInFieldAssignee +  conditionalExecution.false + options.noOption + valueType.runAsUserInFieldAssignee + "selectedLinkType=$value"
+    def fields =  selectField.labels + runAsUser.userInFieldAssignee +  conditionalExecution.false + options.noOption + valueType.runAsUserInFieldAssignee + "selectedLinkType=$value"
     if(!isCloud) {
         addTransitionFunction('runAsUserInFieldAssignee' + i, 'postfunction', fields, functionKey)
         moveTransitionFunction('runAsUserInFieldAssignee' + i, 4)
     }
 }
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + selectField.labels + runAsUser.userInFieldReporter +  conditionalExecution.false + options.noOption + valueType.runAsUserInFieldReporter + "selectedLinkType=$value"
+    def fields =  selectField.labels + runAsUser.userInFieldReporter +  conditionalExecution.false + options.noOption + valueType.runAsUserInFieldReporter + "selectedLinkType=$value"
     if(!isCloud) {
         addTransitionFunction('runAsUserInFieldReporter' + i, 'postfunction', fields, functionKey)
         moveTransitionFunction('runAsUserInFieldReporter' + i, 4)
     }
 }
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + selectField.labels + runAsUser.userInFieldCreator +  conditionalExecution.false + options.noOption + valueType.runAsUserInFieldCreator + "selectedLinkType=$value"
+    def fields =  selectField.labels + runAsUser.userInFieldCreator +  conditionalExecution.false + options.noOption + valueType.runAsUserInFieldCreator + "selectedLinkType=$value"
     if(!isCloud) {
         addTransitionFunction('runAsUserInFieldCreator' + i, 'postfunction', fields, functionKey)
         moveTransitionFunction('runAsUserInFieldCreator' + i, 4)
     }
 }
 relatedIssue.eachWithIndex { key, value, i ->
-    def fields = defaultFieldsServer + selectField.labels + runAsUser.userFromScript +  conditionalExecution.false + options.noOption + valueType.runAsUserReturnFromScript + "selectedLinkType=$value"
+    def fields =  selectField.labels + runAsUser.userFromScript +  conditionalExecution.false + options.noOption + valueType.runAsUserReturnFromScript + "selectedLinkType=$value"
     if(!isCloud) {
         addTransitionFunction('runAsUserReturnFromScript' + i, 'postfunction', fields, functionKey)
         moveTransitionFunction('runAsUserReturnFromScript' + i, 4)

@@ -10,7 +10,6 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-// apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
 def issueType = [
@@ -46,65 +45,60 @@ atLeastOneRelatedIssuesStatus.remove("currentIssue")
 noRelatedIssuesStatus.remove("currentIssue")
 atLeastOneNotRelatedIssuesStatus.remove("currentIssue")
 
-//def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__LinkedIssueStatusValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-validator'
 def functionKey = info?.isCloud? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__LinkedIssueStatusValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linkedissuesstatus-validator'
 def errorMessage = "Check linked issues status"
 
-def defaultFieldsCloud = ["validator.id=7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f"]
-
-def defaultFieldsServer = [ "errorMessage=$errorMessage", "correlationId=" ]
-
 allRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     def transition = "verify_status_in_progress_of_all_issues_which_are_" + linkedIssue
-    def cloud = defaultFieldsCloud + "validator.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=$fieldValues"
-    def server = defaultFieldsServer + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.all + statuses.inProgress
+    def cloud = fieldValues
+    def server = "errorMessage=$errorMessage" + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.all + statuses.inProgress
     addTransitionFunction(transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 atLeastOneRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     def transition = 'verify_status_in_progress_of_at_least_one_issues_which_is_' + linkedIssue
-    def cloud = defaultFieldsCloud + "validator.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=$fieldValues"
-    def server = defaultFieldsServer + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.one + statuses.inProgress
+    def cloud = fieldValues
+    def server = "errorMessage=$errorMessage" + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.one + statuses.inProgress
     addTransitionFunction( transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 noRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     def transition = 'verify_status_in_progress_none_of_the_issues_which_are_' + linkedIssue
-    def cloud = defaultFieldsCloud + "validator.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=$fieldValues"
-    def server = defaultFieldsServer + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.none + statuses.inProgress
+    def cloud =  fieldValues
+    def server = "errorMessage=$errorMessage" + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.none + statuses.inProgress
     addTransitionFunction(transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 atLeastOneNotRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     def transition = 'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_' + linkedIssue
-    def cloud = defaultFieldsCloud + "validator.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f=$fieldValues"
-    def server = defaultFieldsServer + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.oneNot + statuses.inProgress
+    def cloud =  fieldValues
+    def server = "errorMessage=$errorMessage" + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.oneNot + statuses.inProgress
     addTransitionFunction(transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 ['verify_the_issue_type_dropdwn_Task'].each {
-    def server = defaultFieldsServer + issueType.task + "selectedLinkType=$relatedIssue.parentIssue" + linkedIssuesStatusMode.all + statuses.inProgress
-    def cloud = defaultFieldsCloud + "validator.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f={\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"$TaskIssueTypeCloud\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"!issue.parent || [issue.parent].every(linkedIssue => linkedIssue.issueType.id != $TaskIssueTypeCloud || config.statusIds.includes(linkedIssue.status.id))\"}"
+    def server = "errorMessage=$errorMessage" + issueType.task + "selectedLinkType=$relatedIssue.parentIssue" + linkedIssuesStatusMode.all + statuses.inProgress
+    def cloud = "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"$TaskIssueTypeCloud\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"!issue.parent || [issue.parent].every(linkedIssue => linkedIssue.issueType.id != $TaskIssueTypeCloud || config.statusIds.includes(linkedIssue.status.id))\"}"
     addTransitionFunction(it, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 ['verify_the_issue_type_dropdwn_Story'].each {
-    def server = defaultFieldsServer + issueType.story + "selectedLinkType=$relatedIssue.parentIssue" + linkedIssuesStatusMode.all + statuses.inProgress
-    def cloud = defaultFieldsCloud + "validator.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f={\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"$StoryIssueTypeCloud\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"!issue.parent || [issue.parent].every(linkedIssue => linkedIssue.issueType.id != $StoryIssueTypeCloud || config.statusIds.includes(linkedIssue.status.id))\"}"
+    def server = "errorMessage=$errorMessage" + issueType.story + "selectedLinkType=$relatedIssue.parentIssue" + linkedIssuesStatusMode.all + statuses.inProgress
+    def cloud = "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"$StoryIssueTypeCloud\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"!issue.parent || [issue.parent].every(linkedIssue => linkedIssue.issueType.id != $StoryIssueTypeCloud || config.statusIds.includes(linkedIssue.status.id))\"}"
     addTransitionFunction(it, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 [
         'select_multiple_statuses'
 ].each {
-    def server = defaultFieldsServer + issueType.any + "selectedLinkType=$relatedIssue.subtask" + linkedIssuesStatusMode.all + statuses.allExceptToDo
-    def cloud = defaultFieldsCloud + "validator.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f={\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgressCloud,$InReviewCloud,$DoneCloud],\"expression\":\"issue.subtasks.every(linkedIssue => config.statusIds.includes(linkedIssue.status.id))\"}"
+    def server = "errorMessage=$errorMessage" + issueType.any + "selectedLinkType=$relatedIssue.subtask" + linkedIssuesStatusMode.all + statuses.allExceptToDo
+    def cloud =  "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgressCloud,$InReviewCloud,$DoneCloud],\"expression\":\"issue.subtasks.every(linkedIssue => config.statusIds.includes(linkedIssue.status.id))\"}"
     addTransitionFunction( it, 'validator', info?.isCloud? cloud : server, functionKey )
 }
 
 ['verify_the_condition_groovy_expression'].each {
-    def server = defaultFieldsServer + issueType.any + "selectedLinkType=$relatedIssue.subtask" + conditionalValidation.yes + linkedIssuesStatusMode.all + statuses.inProgress
-    def cloud = defaultFieldsCloud + "validator.config-7e7f0c41-7aa4-4ff9-896c-ff1fe247a67f={\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.priority && issue.priority.name == 'High'\",\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"!(!!issue.priority && issue.priority.name == 'High') || (issue.subtasks.every(linkedIssue => config.statusIds.includes(linkedIssue.status.id)))\"}"
+    def server = "errorMessage=$errorMessage" + issueType.any + "selectedLinkType=$relatedIssue.subtask" + conditionalValidation.yes + linkedIssuesStatusMode.all + statuses.inProgress
+    def cloud =  "{\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.priority && issue.priority.name == 'High'\",\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"!(!!issue.priority && issue.priority.name == 'High') || (issue.subtasks.every(linkedIssue => config.statusIds.includes(linkedIssue.status.id)))\"}"
     addTransitionFunction(it, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 

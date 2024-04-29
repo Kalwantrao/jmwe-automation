@@ -36,7 +36,7 @@ def commentVisibility = [
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = addCommentByTemplate + i
     def server =  "valueType=template" + "value=$transition" + "selectedLinkType=$value"
-    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",$runAsUser.currentUser}"
+    def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",$runAsUser.currentUser}"
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
@@ -50,35 +50,35 @@ relatedIssue.take(1).eachWithIndex { key, value, i ->
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = addCommentIfConditionTrue + i
-    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.true,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"currentUser\"}"
+    def cloud =  "{$conditionalExecution.true,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"currentUser\"}"
     def server =  "valueType=template" + "value=$transition" + commentVisibility.notSelected+  "selectedLinkType=$value" + conditionalExecution.true + runAsUser.currentUser
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = addCommentVisibleToAdminProjectRole + i
-    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToProjectRoleId\":$jiraAdminRoleCloud,\"runAsType\":\"currentUser\"}"
+    def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToProjectRoleId\":$jiraAdminRoleCloud,\"runAsType\":\"currentUser\"}"
     def server =  "valueType=template" + "value=$transition" + commentVisibility.jiraAdminRoles +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = addCommentVisibleToAdminGroup + i
-    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"$jiraAdminGroupCloud\",\"runAsType\":\"currentUser\"}"
+    def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"$jiraAdminGroupCloud\",\"runAsType\":\"currentUser\"}"
     def server =  "valueType=template" + "value=$transition" + commentVisibility.jiraAdminGroups +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = addCommentVisibleToTestGroup + i
-    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"$testGroupCloud\",\"runAsType\":\"currentUser\"}"
+    def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"$testGroupCloud\",\"runAsType\":\"currentUser\"}"
     def server =  "valueType=template" + "value=$transition" + commentVisibility.testGroupUsers +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = addCommentVisibleToTestProjectRole + i
-    def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToProjectRoleId\":$testProjectRoleCloud,\"runAsType\":\"currentUser\"}"
+    def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToProjectRoleId\":$testProjectRoleCloud,\"runAsType\":\"currentUser\"}"
     def server =  "valueType=template" + "value=$transition" + commentVisibility.testProjectRoleUsers +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
@@ -87,7 +87,7 @@ runAsUser.remove("currentUser")
 runAsUser.eachWithIndex { usersType, fieldValues, idx ->
     relatedIssue.take(1).eachWithIndex { key, value, i ->
         def transition = addCommentRunAsUser + usersType + i
-        def cloud =  "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",$fieldValues}"
+        def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",$fieldValues}"
         def server =  "valueType=template" + "value=$transition" + commentVisibility.notSelected + "selectedLinkType=$value" + conditionalExecution.false + fieldValues
         addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
         if (!isCloud) {

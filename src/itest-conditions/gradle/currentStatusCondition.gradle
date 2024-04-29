@@ -10,28 +10,22 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
 
-//def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CurrentStatusCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:currentstatus-condition'
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__CurrentStatusCondition" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:currentstatus-condition'
 
-def defaultFieldsCloud= [
-		"condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9",
-]
-
 def currentStatusServer = [
-		SELECT_CURRENT_STATUS_TODO : [ defaultFieldsServer + "issue_statuses=$ToDo", "not="],
-		SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "not="],
-		SELECT_CURRENT_STATUS_TODO_AND_REVERSE : [ defaultFieldsServer +  "issue_statuses=$ToDo", "not=yes" ],
-		SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE_REVERSE : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "not=yes"],
+		SELECT_CURRENT_STATUS_TODO : [ "issue_statuses=$ToDo", "not="],
+		SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE : [ "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "not="],
+		SELECT_CURRENT_STATUS_TODO_AND_REVERSE : [  "issue_statuses=$ToDo", "not=yes" ],
+		SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE_REVERSE : [ "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "not=yes"],
 ]
 
 def currentStatusCloud = [
-		SELECT_CURRENT_STATUS_TODO :  [ defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[$ToDo],\"options\":{\"not\":false},\"expression\":\"config.statusIds.includes(issue.status.id)\"}" ],
-		SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE :  [ defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[$ToDo,$InProgress,$InReview,$Done],\"options\":{\"not\":false},\"expression\":\"config.statusIds.includes(issue.status.id)\"}" ],
-		SELECT_CURRENT_STATUS_TODO_AND_REVERSE : [	defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[$ToDo],\"options\":{\"not\":true},\"expression\":\"!config.statusIds.includes(issue.status.id)\"}" ],
-		SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE_REVERSE : [	defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"statusIds\":[$ToDo,$InProgress,$InReview,$Done],\"options\":{\"not\":true},\"expression\":\"!config.statusIds.includes(issue.status.id)\"}" ]
+		SELECT_CURRENT_STATUS_TODO :  "{\"statusIds\":[$ToDo],\"options\":{\"not\":false},\"expression\":\"config.statusIds.includes(issue.status.id)\"}" ,
+		SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE :    "{\"statusIds\":[$ToDo,$InProgress,$InReview,$Done],\"options\":{\"not\":false},\"expression\":\"config.statusIds.includes(issue.status.id)\"}" ,
+		SELECT_CURRENT_STATUS_TODO_AND_REVERSE :  "{\"statusIds\":[$ToDo],\"options\":{\"not\":true},\"expression\":\"!config.statusIds.includes(issue.status.id)\"}" ,
+		SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE_REVERSE : 	"{\"statusIds\":[$ToDo,$InProgress,$InReview,$Done],\"options\":{\"not\":true},\"expression\":\"!config.statusIds.includes(issue.status.id)\"}"
 ]
 
 def currentStatusCondition = info?.isCloud ? currentStatusCloud : currentStatusServer

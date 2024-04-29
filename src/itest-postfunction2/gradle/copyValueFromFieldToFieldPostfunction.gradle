@@ -72,38 +72,38 @@ def optionsCloud = [
 def options = info?.isCloud ? optionsCloud : optionsServer
 
 ['field_labels_will_take_the_value_from_assignee '].each {
-    def server = defaultFieldsServer + sourceField.assignee + destField.labels + useOldValue.yes + returnParentChildForCascadingCustomFields.no + options.noOption + conditionalExecution.false
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,$sourceField.assignee,$destField.labels,\"catenateCascading\":false,$options.noOption,$runAsUser.currentUser}"
+    def server =  sourceField.assignee + destField.labels + useOldValue.yes + returnParentChildForCascadingCustomFields.no + options.noOption + conditionalExecution.false
+    def cloud =  "{$conditionalExecution.false,$sourceField.assignee,$destField.labels,\"catenateCascading\":false,$options.noOption,$runAsUser.currentUser}"
     addTransitionFunction(it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
 ['field_labels_will_take_the_value_from_assignee_copyOnlyIfNotSet'].each {
-    def server = defaultFieldsServer + sourceField.assignee + destField.labels +  options.copyOnlyIfNotSet + useOldValue.yes + returnParentChildForCascadingCustomFields.no + conditionalExecution.false
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,$sourceField.assignee,$destField.labels,\"catenateCascading\":false,$options.copyOnlyIfNotSet,$runAsUser.currentUser}"
+    def server =  sourceField.assignee + destField.labels +  options.copyOnlyIfNotSet + useOldValue.yes + returnParentChildForCascadingCustomFields.no + conditionalExecution.false
+    def cloud =  "{$conditionalExecution.false,$sourceField.assignee,$destField.labels,\"catenateCascading\":false,$options.copyOnlyIfNotSet,$runAsUser.currentUser}"
     addTransitionFunction(it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
 ['field_labels_will_take_the_value_from_assignee_ignoreEmptyValue'].each {
-    def server = defaultFieldsServer +  sourceField.assignee + destField.labels +  options.ignoreEmptyValue + useOldValue.yes + returnParentChildForCascadingCustomFields.no + conditionalExecution.false
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,$sourceField.assignee,$destField.labels,\"catenateCascading\":false,$options.ignoreEmptyValue,$runAsUser.currentUser}"
+    def server =   sourceField.assignee + destField.labels +  options.ignoreEmptyValue + useOldValue.yes + returnParentChildForCascadingCustomFields.no + conditionalExecution.false
+    def cloud =  "{$conditionalExecution.false,$sourceField.assignee,$destField.labels,\"catenateCascading\":false,$options.ignoreEmptyValue,$runAsUser.currentUser}"
     addTransitionFunction(it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
 ['field_labels_will_take_the_value_from_assignee_appendValues'].each {
-    def server = defaultFieldsServer +  sourceField.assignee + destField.labels +  options.appendValues + useOldValue.yes + returnParentChildForCascadingCustomFields.no + conditionalExecution.false
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,$sourceField.assignee,$destField.labels,\"catenateCascading\":false,$options.appendValues,$runAsUser.currentUser}"
+    def server =   sourceField.assignee + destField.labels +  options.appendValues + useOldValue.yes + returnParentChildForCascadingCustomFields.no + conditionalExecution.false
+    def cloud =  "{$conditionalExecution.false,$sourceField.assignee,$destField.labels,\"catenateCascading\":false,$options.appendValues,$runAsUser.currentUser}"
     addTransitionFunction(it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
 ['field_component_will_take_the_value_from_label_createMissingValues'].each {
-    def server = defaultFieldsServer +  sourceField.labels + destField.components +  options.createMissingValues + useOldValue.yes + returnParentChildForCascadingCustomFields.no + conditionalExecution.false
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,$sourceField.labels,$destField.components,\"catenateCascading\":false,$options.createMissingValues,$runAsUser.currentUser}"
+    def server =   sourceField.labels + destField.components +  options.createMissingValues + useOldValue.yes + returnParentChildForCascadingCustomFields.no + conditionalExecution.false
+    def cloud =  "{$conditionalExecution.false,$sourceField.labels,$destField.components,\"catenateCascading\":false,$options.createMissingValues,$runAsUser.currentUser}"
     addTransitionFunction(it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
 ['field_labels_will_take_the_value_from_assignee_onlyIfConditionTrue'].each {
-    def server = defaultFieldsServer +  sourceField.assignee + destField.labels +  options.noOption + useOldValue.yes + returnParentChildForCascadingCustomFields.no + conditionalExecution.true
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.true,$runAsUser.currentUser,$sourceField.assignee,$destField.labels,\"catenateCascading\":false,$options.noOption}"
+    def server =   sourceField.assignee + destField.labels +  options.noOption + useOldValue.yes + returnParentChildForCascadingCustomFields.no + conditionalExecution.true
+    def cloud =  "{$conditionalExecution.true,$runAsUser.currentUser,$sourceField.assignee,$destField.labels,\"catenateCascading\":false,$options.noOption}"
     addTransitionFunction(it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
@@ -111,8 +111,8 @@ runAsUser.remove("currentUser","userFromScript")
 
 runAsUser.eachWithIndex{ userToCheck, configFields, index ->
     def transition = "run_as_" + userToCheck
-    def server = defaultFieldsServer +  sourceField.labels + destField.components +  options.createMissingValues + useOldValue.yes + returnParentChildForCascadingCustomFields.no + conditionalExecution.false + configFields
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,$configFields,$sourceField.labels,$destField.components,\"catenateCascading\":false,$options.createMissingValues}"
+    def server =   sourceField.labels + destField.components +  options.createMissingValues + useOldValue.yes + returnParentChildForCascadingCustomFields.no + conditionalExecution.false + configFields
+    def cloud =  "{$conditionalExecution.false,$configFields,$sourceField.labels,$destField.components,\"catenateCascading\":false,$options.createMissingValues}"
     if(!isServer) {
         addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     }
@@ -124,7 +124,7 @@ createProject()
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue', assignee: user], 'defaultIssue')
 
 def testLabel = "label"
-run_as_specificUser
+
 runAsUser.eachWithIndex { userToCheck, configFields, index ->
     def transition = "run_as_" + userToCheck
     if(!isServer) {

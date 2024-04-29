@@ -35,43 +35,39 @@ def options = [
         appendValues : "appendValues=yes"
 ]
 
-def defaultFieldsCloud = [
-        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
-]
-
 relatedIssue.eachWithIndex { key, value, i ->
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
-    def server = defaultFieldsServer + "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.noOption + conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server =  "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.noOption + conditionalExecution.false
     addTransitionFunction('valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues'+i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":true,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
-    def server = defaultFieldsServer + "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.copyOnlyIfNotSet + conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":true,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server =  "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.copyOnlyIfNotSet + conditionalExecution.false
     addTransitionFunction('valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues_copyOnlyIfNotSet'+i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":true,\"runAsType\":\"addonUser\"}"
-    def server = defaultFieldsServer + "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.ignoreEmptyValue + conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":true,\"runAsType\":\"addonUser\"}"
+    def server =  "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.ignoreEmptyValue + conditionalExecution.false
     addTransitionFunction('valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues_ignoreEmptyValue'+i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":true,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
-    def server = defaultFieldsServer + "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.appendValues + conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":true,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server =  "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.appendValues + conditionalExecution.false
     addTransitionFunction('valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues_appendValues'+i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"components\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":true,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
-    def server = defaultFieldsServer + "selectedLinkType=$value" +  sourceField.labels + destField.components +  options.createMissingValues + conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"components\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":true,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server =  "selectedLinkType=$value" +  sourceField.labels + destField.components +  options.createMissingValues + conditionalExecution.false
     addTransitionFunction('valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues_createMissingValues'+i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
-    def server = defaultFieldsServer + "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.noOption + conditionalExecution.true
+    def cloud =  "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server =  "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.noOption + conditionalExecution.true
     addTransitionFunction('valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues_onlyIfConditionTrue'+i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 

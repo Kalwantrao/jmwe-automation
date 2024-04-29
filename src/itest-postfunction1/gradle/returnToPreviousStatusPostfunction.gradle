@@ -22,7 +22,7 @@ def useTransition = [
 [
         'returnToPrevStatus'
 ].each {
-    def fields = defaultFieldsServer + conditionalExecution.false + useTransition.no + runAsUser.currentUser
+    def fields =  conditionalExecution.false + useTransition.no + runAsUser.currentUser
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', fields, functionKey)
         moveTransitionFunction(it, 4)
@@ -32,7 +32,7 @@ def useTransition = [
 [
         'returnToPrevStatus_ifConditionTrue'
 ].each {
-    def fields = defaultFieldsServer + conditionalExecution.true + useTransition.no + runAsUser.currentUser
+    def fields =  conditionalExecution.true + useTransition.no + runAsUser.currentUser
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', fields, functionKey)
         moveTransitionFunction(it, 4)

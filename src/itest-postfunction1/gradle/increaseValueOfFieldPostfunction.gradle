@@ -19,33 +19,29 @@ def field = [
 
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__IncreaseFieldValueFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:IncreaseFieldValue-function'
 
-def defaultFieldsCloud = [
-        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249"
-]
-
 ['increaseValueOfStoryPoint'].each {
-    def server = defaultFieldsServer + field.storyPoint + conditionalExecution.false
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"sendNotifications\":true,\"fieldId\":\"$storyPointFieldId\"}"
+    def server = field.storyPoint + conditionalExecution.false
+    def cloud = "{\"conditionalExecution\":false,\"sendNotifications\":true,\"fieldId\":\"$storyPointFieldId\"}"
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
 }
 
 [
         'increaseValueOfOriginalStoryPoint'
 ].each {
-    def server = defaultFieldsServer +  field.originalStoryPoint + conditionalExecution.false
+    def server =  field.originalStoryPoint + conditionalExecution.false
     if(!isCloud){
         addTransitionFunction(it , 'postfunction', server, functionKey )
     }
 }
 
 ['increaseValueOfStoryPointIfConditionTrue'].each {
-    def server = defaultFieldsServer + field.storyPoint + conditionalExecution.true
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"sendNotifications\":true,\"fieldId\":\"$storyPointFieldId\"}"
+    def server = field.storyPoint + conditionalExecution.true
+    def cloud = "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"sendNotifications\":true,\"fieldId\":\"$storyPointFieldId\"}"
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
 }
 
 ['increaseValueOfOriginalStoryPointIfConditionTrue'].each {
-    def server = defaultFieldsServer +  field.originalStoryPoint + conditionalExecution.true
+    def server = field.originalStoryPoint + conditionalExecution.true
     if(!isCloud){
         addTransitionFunction(it , 'postfunction', server, functionKey )
     }
@@ -57,7 +53,6 @@ createProject()
 
 def defaultIssue = createIssue([type: 'Story', summary: 'JMWE_Issue'], 'defaultIssue')
 
-// checking the current status To Do and previous status In Progress
 ['increaseValueOfStoryPoint',].each {
     gint.taskHelper.add([
             [action    : 'transitionIssue',

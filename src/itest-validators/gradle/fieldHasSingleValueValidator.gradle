@@ -10,7 +10,6 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
 def functionKey =  info?.isCloud ? 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldhassinglevalue-validator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldhassinglevalue-validator'
@@ -30,21 +29,21 @@ def excludingSubtasks = [
 
 fieldsList.eachWithIndex { field, value, i ->
 	def transition = field + '_should_have_single_value'
-	def fields = defaultFieldsServer + conditionalValidation.no + "field=$value"
+	def fields = conditionalValidation.no + "field=$value"
 	if(!isCloud) {
 		addTransitionFunction(transition, 'validator', fields, functionKey)
 	}
 }
 
 ['Components_should_have_single_value_excluding_subtask_values'].each {
-	def server = defaultFieldsServer + excludingSubtasks.yes +  conditionalValidation.no + "field=$fieldsList.Components"
+	def server = excludingSubtasks.yes +  conditionalValidation.no + "field=$fieldsList.Components"
 	if(!isCloud) {
 		addTransitionFunction(it, 'validator', server, functionKey)
 	}
 }
 
 ['Components_should_have_single_value_only_if_condition_true'].each {
-	def server = defaultFieldsServer + "field=$fieldsList.Components" + conditionalValidation.yes
+	def server = "field=$fieldsList.Components" + conditionalValidation.yes
 	if(!isCloud) {
 		addTransitionFunction(it, 'validator', server, functionKey)
 	}

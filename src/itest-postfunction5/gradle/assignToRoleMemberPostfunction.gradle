@@ -27,88 +27,84 @@ def action = [
         ifChangedOnTransitionScreen : ["assigneeMode=forceSelectedUser"],
 ]
 
-def defaultFieldsCloud= [
-        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249"
-]
-
 ['1. assignToAdminRole'].each {
-    def server = defaultFieldsServer + projectRole.admin + conditionalExecution.false
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"sendNotifications\":true,\"role\":$jiraAdminRoleId,\"runAsType\":\"addonUser\"}"
+    def server =  projectRole.admin + conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"sendNotifications\":true,\"role\":$jiraAdminRoleId,\"runAsType\":\"addonUser\"}"
     addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 ['2. assignToTestRole'].each {
-    def server = defaultFieldsServer + projectRole.testRole + conditionalExecution.false
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"sendNotifications\":true,\"role\":$testProjectRoleIdCloud,\"runAsType\":\"addonUser\"}"
+    def server =  projectRole.testRole + conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"sendNotifications\":true,\"role\":$testProjectRoleIdCloud,\"runAsType\":\"addonUser\"}"
     addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 ['3. issueUnassigned'].each {
-    def server = defaultFieldsServer + projectRole.emptyRole + conditionalExecution.false
+    def server =  projectRole.emptyRole + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 ['4. ifAutomaticAction'].each {
-    def server = defaultFieldsServer + projectRole.admin + action.ifAutomatic + conditionalExecution.false
+    def server =  projectRole.admin + action.ifAutomatic + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 ['5. ifAutomaticActionNegative'].each {
-    def server = defaultFieldsServer + projectRole.admin + action.ifAutomatic + conditionalExecution.false
+    def server =  projectRole.admin + action.ifAutomatic + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 ['6. ifMemberRequiredRole'].each {
-    def server = defaultFieldsServer + projectRole.admin + action.ifMemberRequiredRole + conditionalExecution.false
+    def server =  projectRole.admin + action.ifMemberRequiredRole + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 ['7. ifMemberNotRequiredRole'].each {
-    def server = defaultFieldsServer + projectRole.admin + action.ifMemberRequiredRole + conditionalExecution.false
+    def server =  projectRole.admin + action.ifMemberRequiredRole + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 ['8. ifMemberRequiredRoleAutomatic'].each {
-    def server = defaultFieldsServer + projectRole.admin + action.ifMemberRequiredRole + conditionalExecution.false
+    def server =  projectRole.admin + action.ifMemberRequiredRole + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 ['9. ifMemberRequiredRoleUnassigned'].each {
-    def server = defaultFieldsServer + projectRole.admin + action.ifMemberRequiredRole + conditionalExecution.false
+    def server =  projectRole.admin + action.ifMemberRequiredRole + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 ['10. ifChangedOnTransitionScreenRoleMember'].each {
-    def server = defaultFieldsServer + projectRole.admin + action.ifChangedOnTransitionScreen + conditionalExecution.false
+    def server =  projectRole.admin + action.ifChangedOnTransitionScreen + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 ['11. ifChangedOnTransitionScreenNotRoleMember'].each {
-    def server = defaultFieldsServer + projectRole.admin + action.ifChangedOnTransitionScreen + conditionalExecution.false
+    def server =  projectRole.admin + action.ifChangedOnTransitionScreen + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 ['12. ifChangedOnTransitionScreenAutomatic'].each {
-    def server = defaultFieldsServer + projectRole.admin + action.ifChangedOnTransitionScreen + conditionalExecution.false
+    def server =  projectRole.admin + action.ifChangedOnTransitionScreen + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 ['13. ifChangedOnTransitionScreenUnassigned'].each {
-    def server = defaultFieldsServer + projectRole.admin + action.ifChangedOnTransitionScreen + conditionalExecution.false
+    def server =  projectRole.admin + action.ifChangedOnTransitionScreen + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 ['14. assignToAdminRoleOnlyIfConditionTrue'].each {
-    def server = defaultFieldsServer + projectRole.admin + conditionalExecution.true
+    def server =  projectRole.admin + conditionalExecution.true
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }

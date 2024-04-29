@@ -61,7 +61,7 @@ def multipleUser = [
 selectUser.eachWithIndex { userType, userValues, userIndex ->
     relatedIssue.take(1).eachWithIndex { targetIssue, value, issueIndex ->
         def transition = "assign_current_issue_to_$userType"
-        def fields = defaultFieldsServer + userValues + "selectedLinkType=$value" + throwException.no + assignmentBehavior.force + skipIfAssigned.no + conditionalExecution.false
+        def fields =  userValues + "selectedLinkType=$value" + throwException.no + assignmentBehavior.force + skipIfAssigned.no + conditionalExecution.false
         if(!isCloud) {
             addTransitionFunction(transition, 'postfunction', fields, functionKey)
         }
@@ -70,7 +70,7 @@ selectUser.eachWithIndex { userType, userValues, userIndex ->
 
 relatedIssue.eachWithIndex { targetIssue, value, issueIndex ->
     def transition = "assign_issue_to_currentUser" + issueIndex
-    def fields = defaultFieldsServer + selectUser.currentUser + "selectedLinkType=$value" + throwException.no + assignmentBehavior.force + skipIfAssigned.no + conditionalExecution.false
+    def fields =  selectUser.currentUser + "selectedLinkType=$value" + throwException.no + assignmentBehavior.force + skipIfAssigned.no + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(transition, 'postfunction', fields, functionKey)
     }
@@ -80,7 +80,7 @@ relatedIssue.eachWithIndex { targetIssue, value, issueIndex ->
         'assign_currentIssue_issue_to_currentUser_if_condition_true'
 ].each {
     relatedIssue.take(1)eachWithIndex { targetIssue, value, issueIndex ->
-        def fields = defaultFieldsServer + selectUser.currentUser + "selectedLinkType=$value" + throwException.no + assignmentBehavior.force + skipIfAssigned.no + conditionalExecution.true
+        def fields =  selectUser.currentUser + "selectedLinkType=$value" + throwException.no + assignmentBehavior.force + skipIfAssigned.no + conditionalExecution.true
         if(!isCloud) {
             addTransitionFunction(it + issueIndex, 'postfunction', fields, functionKey)
         }

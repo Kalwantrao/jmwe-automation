@@ -14,10 +14,6 @@ apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
 
 def functionKey = info?.isCloud? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__LinkedIssuesCondition" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:linked-issues-condition'
 
-def defaultFieldsCloud= [
-		"condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9",
-]
-
 def issueConstraints = [
 		atLeastOne : [  "minLinkedIssues=1","maxLinkedIssues=" ],
 		minTwo : [ "minLinkedIssues=2", "maxLinkedIssues=" ],
@@ -58,56 +54,56 @@ fieldsToRemove.each { key ->
 
 requireRelatedIssue.eachWithIndex { key, value, i ->
 	def transition = 'verify_require_certain_related_issues_' + key
-	def cloud = defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9=$value"
-	def server = defaultFieldsServer + "selectedLinkType=$value" + linkedIssuesMode.requireLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	def cloud = value
+	def server =  "selectedLinkType=$value" + linkedIssuesMode.requireLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
 	addTransitionFunction(transition, 'condition', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['Verify_Issue_constraints_min_two_linkByRelatesTo'].each {
-	def server = defaultFieldsServer + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireLinks + issueConstraints.minTwo + verifyAllLinkedIssues.yes
+	def server = "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireLinks + issueConstraints.minTwo + verifyAllLinkedIssues.yes
 	if(!isCloud){
 		addTransitionFunction(it , 'condition', server, functionKey)
 	}
 }
 
 ['Verify_Issue_constraints_max_two_linkByRelatesTo'].each {
-	def server = defaultFieldsServer + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireLinks + issueConstraints.maxTwo + verifyAllLinkedIssues.yes
+	def server = "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireLinks + issueConstraints.maxTwo + verifyAllLinkedIssues.yes
 	if(!isCloud){
 		addTransitionFunction(it , 'condition', server, functionKey)
 	}
 }
 
 ['Verify_Issue_constraints_min_three_max_six_linkByRelatesTo'].each {
-	def server = defaultFieldsServer + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireLinks + issueConstraints.atLeastThreeAndAtMostSix + verifyAllLinkedIssues.yes
+	def server =  "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireLinks + issueConstraints.atLeastThreeAndAtMostSix + verifyAllLinkedIssues.yes
 	if(!isCloud){
 		addTransitionFunction(it , 'condition', server, functionKey)
 	}
 }
 
 ['Verify_Issue_constraints_min_two_max_two_linkByRelatesTo'].each {
-	def server = defaultFieldsServer + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireLinks + issueConstraints.minTwoMaxTwo + verifyAllLinkedIssues.yes
+	def server = "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireLinks + issueConstraints.minTwoMaxTwo + verifyAllLinkedIssues.yes
 	if(!isCloud){
 		addTransitionFunction(it , 'condition', server, functionKey)
 	}
 }
 
 ['verify_condition_on_related_issues_checkAssignee'].each {
-	def cloud = defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"issue.assignee.accountId == '$currentUserKey'\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (issue.assignee.accountId == '$currentUserKey')))\"}"
-	def server = defaultFieldsServer + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireSpecificLinkedIssues + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	def cloud = "{\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"anyOrEvery\":\"any\",\"condition\":\"issue.assignee.accountId == '$currentUserKey'\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (issue.assignee.accountId == '$currentUserKey')))\"}"
+	def server = "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireSpecificLinkedIssues + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
 	addTransitionFunction(it , 'condition', info?.isCloud ? cloud : server, functionKey)
 }
 
 checkRelatedIssue.eachWithIndex { key, value, i ->
 	def transition = 'verify_check_related_issues_' + key
-	def cloud = defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9=$value"
-	def server = defaultFieldsServer + "selectedLinkType=$value" + linkedIssuesMode.checkLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	def cloud =  value
+	def server =  "selectedLinkType=$value" + linkedIssuesMode.checkLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
 	addTransitionFunction( transition, 'condition', info?.isCloud ? cloud : server, functionKey)
 }
 
 forbidRelatedIssue.eachWithIndex { key, value, i ->
 	def transition = 'forbid_certain_related_issues_' + key
-	def cloud = defaultFieldsCloud + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9=$value"
-	def server = defaultFieldsServer + "selectedLinkType=$value" + linkedIssuesMode.forbidLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	def cloud = value
+	def server =  "selectedLinkType=$value" + linkedIssuesMode.forbidLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
 	addTransitionFunction( transition, 'condition', info?.isCloud ? cloud : server, functionKey)
 }
 

@@ -12,6 +12,8 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-sharedExtensions/sharedExtensions.gradle'
 
+addWorkflow()
+
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:shared-condition'
 
 def sharedConditionUrl = info?.isCloud? "/rest/jmwe-api/shared-condition/" : "/rest/jmwe/1/shared-conditions"
@@ -56,7 +58,7 @@ def savedID = {->shared_conditionId[0] }
         "sharedCondition_currentUserShouldBeAssignee"
 ].each {
     def transition = it
-    def server = defaultFieldsServer + "shared-condition-id=${savedID}"
+    def server = "shared-condition-id=${savedID}"
     if(!isCloud){
         addTransitionFunction(transition, 'condition', server, functionKey)
     }

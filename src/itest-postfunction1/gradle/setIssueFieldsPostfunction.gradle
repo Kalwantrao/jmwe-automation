@@ -10,7 +10,7 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-apply from: gint.resourceDirectory +'/src/itest-postfunction5/postfunction.gradle'
+apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction.gradle'
 
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__SetFieldValueFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:set-issue-fields-function'
 def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
@@ -32,66 +32,67 @@ def fieldsOptions = [
         runAsUserReturnFromScript : ["fields=[{\"fieldId\":\"labels\",\"value\":\"runAsUserReturnFromScript\",\"options\":[],\"isTemplate\":true}]"],
 ]
 
-def defaultFieldsCloud = [
-        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
-]
 
 relatedIssue.eachWithIndex { key, value, i ->
-    def server = defaultFieldsServer + conditionalExecution.false +  fieldsOptions.noOption + "selectedLinkType=$value" + runAsUser.currentUser
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"default_value\"}],\"runAsType\":\"addonUser\"}"
+    def server =  conditionalExecution.false +  fieldsOptions.noOption + "selectedLinkType=$value" + runAsUser.currentUser
+    def cloud =  "{\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"default_value\"}],\"runAsType\":\"addonUser\"}"
     addTransitionFunction('setFieldLabelsToTargetIssue' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server = defaultFieldsServer + conditionalExecution.false+ fieldsOptions.ifEmpty + "selectedLinkType=$value" + runAsUser.currentUser
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"sendNotifications\":true,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{\"copyOnlyIfNotSet\":true},\"value\":\"ifEmpty\"}],\"runAsType\":\"addonUser\"}"
+    def server =  conditionalExecution.false+ fieldsOptions.ifEmpty + "selectedLinkType=$value" + runAsUser.currentUser
+    def cloud =  "{\"sendNotifications\":true,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{\"copyOnlyIfNotSet\":true},\"value\":\"ifEmpty\"}],\"runAsType\":\"addonUser\"}"
     addTransitionFunction('ifEmpty' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server = defaultFieldsServer + conditionalExecution.false + fieldsOptions.createMissingValues + "selectedLinkType=$value" + runAsUser.currentUser
+    def server =  conditionalExecution.false + fieldsOptions.createMissingValues + "selectedLinkType=$value" + runAsUser.currentUser
     if(!isCloud) {
         addTransitionFunction('createMissingValueComponent' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     }
 }
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server = defaultFieldsServer + conditionalExecution.false + fieldsOptions.ignoreEmptyValue + "selectedLinkType=$value" + runAsUser.currentUser
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{\"ignoreEmptyValue\":true},\"value\":\"\"}],\"runAsType\":\"addonUser\"}"
+    def server =  conditionalExecution.false + fieldsOptions.ignoreEmptyValue + "selectedLinkType=$value" + runAsUser.currentUser
+    def cloud =  "{\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{\"ignoreEmptyValue\":true},\"value\":\"\"}],\"runAsType\":\"addonUser\"}"
     addTransitionFunction('ignoreEmptyValue' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server = defaultFieldsServer + conditionalExecution.false + fieldsOptions.appendValues + "selectedLinkType=$value" + runAsUser.currentUser
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{\"appendValues\":true},\"value\":\"appendValues\"}],\"runAsType\":\"addonUser\"}"
+    def server =  conditionalExecution.false + fieldsOptions.appendValues + "selectedLinkType=$value" + runAsUser.currentUser
+    def cloud =  "{\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{\"appendValues\":true},\"value\":\"appendValues\"}],\"runAsType\":\"addonUser\"}"
     addTransitionFunction('appendValues' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server = defaultFieldsServer + conditionalExecution.false + fieldsOptions.removeValues + "selectedLinkType=$value" + runAsUser.currentUser
+    def server =  conditionalExecution.false + fieldsOptions.removeValues + "selectedLinkType=$value" + runAsUser.currentUser
     if(!isCloud) {
         addTransitionFunction('removeValues' + i, 'postfunction', server, functionKey)
     }
 }
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server = defaultFieldsServer + conditionalExecution.true +  fieldsOptions.conditionalExecution + "selectedLinkType=$value" + runAsUser.currentUser
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"sendNotifications\":true,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"conditionalExecution\"}],\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"runAsType\":\"addonUser\"}"
+    def server =  conditionalExecution.true +  fieldsOptions.conditionalExecution + "selectedLinkType=$value" + runAsUser.currentUser
+    def cloud =  "{\"sendNotifications\":true,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"conditionalExecution\"}],\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"runAsType\":\"addonUser\"}"
     addTransitionFunction('conditionalExecution' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server = defaultFieldsServer + runAsUser.currentUser +  conditionalExecution.false +  fieldsOptions.runAsCurrentUser + "selectedLinkType=$value"
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"runAsCurrentUser\"}],\"runAsType\":\"addonUser\"}"
-    addTransitionFunction('runAsCurrentUser' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    if(!isCloud) {
-        moveTransitionFunction('runAsCurrentUser' + i, 3)
+runAsUser.eachWithIndex { userType, runAsUserFields, idx ->
+    relatedIssue.take(1).eachWithIndex { key, value, i ->
+        def transition = userType + i
+        def server =  runAsUserFields +  conditionalExecution.false + "selectedLinkType=$value" + ["fields=[{\"fieldId\":\"labels\",\"value\":\"$transition\",\"options\":[],\"isTemplate\":true}]"]
+        def cloud =  "{\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"$transition\"}],$runAsUserFields}"
+        addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+        if(!isCloud) {
+            moveTransitionFunction(transition, 3)
+        }
     }
 }
 
+/*
 relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server = defaultFieldsServer + runAsUser.specificUser +  conditionalExecution.false +  fieldsOptions.runAsSpecificUser + "selectedLinkType=$value"
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"sendNotifications\":true,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"runAsSpecificUser\"}],\"runAsType\":\"thisUser\",\"runAs\":\"$testUserIdCloud\"}"
+    def server =  runAsUser.specificUser +  conditionalExecution.false +  fieldsOptions.runAsSpecificUser + "selectedLinkType=$value"
+    def cloud =  "{\"sendNotifications\":true,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"runAsSpecificUser\"}],\"runAsType\":\"thisUser\",\"runAs\":\"$testUserIdCloud\"}"
     addTransitionFunction('runAsSpecificUser' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction('runAsSpecificUser' + i, 4)
@@ -99,37 +100,39 @@ relatedIssue.take(1).eachWithIndex { key, value, i ->
 }
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server = defaultFieldsServer + runAsUser.userInFieldAssignee +  conditionalExecution.false +  fieldsOptions.runAsUserInFieldAssignee + "selectedLinkType=$value"
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"runAsUserInFieldAssignee\"}],\"runAsType\":\"userField\",\"runAsField\":\"assignee\"}"
+    def server =  runAsUser.userInFieldAssignee +  conditionalExecution.false +  fieldsOptions.runAsUserInFieldAssignee + "selectedLinkType=$value"
+    def cloud =  "{\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"runAsUserInFieldAssignee\"}],\"runAsType\":\"userField\",\"runAsField\":\"assignee\"}"
     addTransitionFunction('runAsUserInFieldAssignee' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction('runAsUserInFieldAssignee' + i, 4)
     }
 }
 relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server = defaultFieldsServer + runAsUser.userInFieldReporter +  conditionalExecution.false +  fieldsOptions.runAsUserInFieldReporter + "selectedLinkType=$value"
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"runAsUserInFieldReporter\"}],\"runAsType\":\"userField\",\"runAsField\":\"reporter\"}"
+    def server =  runAsUser.userInFieldReporter +  conditionalExecution.false +  fieldsOptions.runAsUserInFieldReporter + "selectedLinkType=$value"
+    def cloud =  "{\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"runAsUserInFieldReporter\"}],\"runAsType\":\"userField\",\"runAsField\":\"reporter\"}"
     addTransitionFunction('runAsUserInFieldReporter' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction('runAsUserInFieldReporter' + i, 4)
     }
 }
 relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server = defaultFieldsServer + runAsUser.userInFieldCreator +  conditionalExecution.false +  fieldsOptions.runAsUserInFieldCreator + "selectedLinkType=$value"
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"runAsUserInFieldCreator\"}],\"runAsType\":\"userField\",\"runAsField\":\"creator\"}"
+    def server =  runAsUser.userInFieldCreator +  conditionalExecution.false +  fieldsOptions.runAsUserInFieldCreator + "selectedLinkType=$value"
+    def cloud =  "{\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"runAsUserInFieldCreator\"}],\"runAsType\":\"userField\",\"runAsField\":\"creator\"}"
     addTransitionFunction('runAsUserInFieldCreator' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction('runAsUserInFieldCreator' + i, 4)
     }
 }
 relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server = defaultFieldsServer + runAsUser.userFromScript +  conditionalExecution.false +  fieldsOptions.runAsUserReturnFromScript + "selectedLinkType=$value"
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"runAsUserReturnFromScript\"}],\"runAsType\":\"userFromScript\",\"runAsScript\":\"$nunjuckExpression.returnsReporter\",\"_modified\":\"2024-01-09T07:00:36.918Z\"}"
+    def server =  runAsUser.userFromScript +  conditionalExecution.false +  fieldsOptions.runAsUserReturnFromScript + "selectedLinkType=$value"
+    def cloud =  "{\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"runAsUserReturnFromScript\"}],$runAsUser.userFromScript}"
     addTransitionFunction('runAsUserReturnFromScript' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction('runAsUserReturnFromScript' + i, 4)
     }
 }
+
+ */
 
 createWorkflowScheme()
 createProject()
@@ -461,37 +464,31 @@ relatedIssuesMap.take(1).eachWithIndex{ key, value,  i ->
     )
 }
 
-[
-        'runAsCurrentUser',
-        'runAsUserInFieldReporter',
-        'runAsUserInFieldCreator',
-        'runAsUserReturnFromScript',
-        'runAsSpecificUser',
-        'runAsUserInFieldAssignee',
-].each {
+runAsUser.eachWithIndex { userType, runAsUserFields, idx ->
     relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+        def transition = userType + i
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
                  sleep: sleep,
-                 ext: ':' + it + i,
+                 ext: ':' + transition,
                  parameters: [
                          issue     : key,
-                         transition: it + i,
+                         transition: transition,
                  ]
                 ],
         ])
-        if(it == 'runAsCurrentUser'){
+        if(userType == 'currentUser'){
             gint.taskHelper.add([
                     [action    : 'getIssueHistoryList',
                      sleep: sleep,
-                     ext       : ": " + it + i,
+                     ext       : ": " + transition,
                      parameters: [
                              issue: value,
                              outputType: "text",
                              select: "Field:labels",
                              columns: "Author,Field,'To String'"
                      ],
-                     data      : ["$addonName", "labels", "$it"],
+                     data      : ["$addonName", "labels", "$transition"],
                     ],
             ])
         }
@@ -499,14 +496,14 @@ relatedIssuesMap.take(1).eachWithIndex{ key, value,  i ->
             gint.taskHelper.add([
                     [action    : 'getIssueHistoryList',
                      sleep: sleep,
-                     ext       : ": " + it + i,
+                     ext       : ": " + transition,
                      parameters: [
                              issue: value,
                              outputType: "text",
                              select: "Field:labels",
                              columns: "Author,Field,'To String'"
                      ],
-                     data      : ["$getCurrentUserName", "labels", "$it"],
+                     data      : ["$getCurrentUserName", "labels", "$transition"],
                     ],
             ])
         }

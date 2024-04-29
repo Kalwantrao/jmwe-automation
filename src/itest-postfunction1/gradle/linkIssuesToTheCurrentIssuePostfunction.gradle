@@ -74,23 +74,23 @@ def useGroovyFilter = info ?.isCloud ? useGroovyFilterCloud : useGroovyFilterSer
 
 selectedLinkType.eachWithIndex { key,  value, i ->
         def transition = 'linkIssuesToCurrentIssueByType'
-        def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"jql\":\"$jqlExpressionToLinkIssue\",$value,\"maxIssues\":\"1\",\"runAsType\":\"addonUser\",\"useFilter\":false,\"filterExpression\":\"\"}"
-        def server = defaultFieldsServer + value + issuesToLink.returnByJql + maxIssues.one +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.false
+        def cloud =  "{\"conditionalExecution\":false,\"jql\":\"$jqlExpressionToLinkIssue\",$value,\"maxIssues\":\"1\",\"runAsType\":\"addonUser\",\"useFilter\":false,\"filterExpression\":\"\"}"
+        def server =  value + issuesToLink.returnByJql + maxIssues.one +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.false
         addTransitionFunction(transition + key, 'postfunction', info?.isCloud ? cloud : server, functionKey )
 }
 
 selectedLinkType.take(1).eachWithIndex { key,  value, i ->
     def transition = 'linkIssuesToCurrentIssueIfConditionTrueByType'
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"jql\":\"$jqlExpressionToLinkIssue\",$value,\"maxIssues\":\"1\",\"runAsType\":\"addonUser\",\"useFilter\":false,\"filterExpression\":\"\"}"
-    def server = defaultFieldsServer + value + issuesToLink.returnByJql + maxIssues.one +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.true
+    def cloud =  "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"jql\":\"$jqlExpressionToLinkIssue\",$value,\"maxIssues\":\"1\",\"runAsType\":\"addonUser\",\"useFilter\":false,\"filterExpression\":\"\"}"
+    def server =  value + issuesToLink.returnByJql + maxIssues.one +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.true
     addTransitionFunction(transition + key, 'postfunction', info?.isCloud ? cloud : server, functionKey )
 }
 
 [
         'numberOfIssuesToBeLinked'
 ].each {
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"jql\":\"$jqlExpressionToLinkIssue\",\"selectedLinkType\":\"$relatedIssue.linkByBlock\",\"maxIssues\":\"$numberOfIssues\",\"runAsType\":\"addonUser\",\"useFilter\":false,\"filterExpression\":\"\"}"
-    def server = defaultFieldsServer + selectedLinkType.Blocks + issuesToLink.returnByJql + "maxIssues=$numberOfIssues" +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"jql\":\"$jqlExpressionToLinkIssue\",\"selectedLinkType\":\"$relatedIssue.linkByBlock\",\"maxIssues\":\"$numberOfIssues\",\"runAsType\":\"addonUser\",\"useFilter\":false,\"filterExpression\":\"\"}"
+    def server =  selectedLinkType.Blocks + issuesToLink.returnByJql + "maxIssues=$numberOfIssues" +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.false
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
 }
 

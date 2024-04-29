@@ -10,14 +10,9 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
 def errorMessage = "fields required"
-
-def defaultFieldsCloud = [
-		"validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a",
-]
 
 def fieldsList = [
 		labels : 'labels',
@@ -26,29 +21,28 @@ def fieldsList = [
 		components : 'components'
 ]
 
-//def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__FieldRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldrequired-validator'
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__FieldRequiredValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldrequired-validator'
 
 fieldsList.eachWithIndex { field, value, i ->
 	def transition = field + '_field_is_required'
-	def server = defaultFieldsServer + conditionalValidation.no + "field=$value" + "errorMessage=$errorMessage"
-	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"conditionalValidation\":false,\"fields\":\"$value\",\"errorMessage\":\"$errorMessage\",\"expression\":\"!!issue.${value} && issue.${value}.length > 0\"}"
+	def server = conditionalValidation.no + "field=$value" + "errorMessage=$errorMessage"
+	def cloud = "{\"conditionalValidation\":false,\"fields\":\"$value\",\"errorMessage\":\"$errorMessage\",\"expression\":\"!!issue.${value} && issue.${value}.length > 0\"}"
 	def fields = info?.isCloud ? cloud : server
 	addTransitionFunction( transition, 'validator', fields, functionKey )
 }
 
 fieldsList.eachWithIndex { field, value, i ->
 	def transition = field + '_field_is_required_only_if_condition_true'
-	def server = defaultFieldsServer + conditionalValidation.yes + "field=$value" + "errorMessage=$errorMessage"
-	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"conditionalValidation\":true,\"conditionalValidationExpression\":\"$jiraExpression.checkPriorityHigh\",\"fields\":\"$value\",\"errorMessage\":\"$errorMessage\",\"expression\":\"!($jiraExpression.checkPriorityHigh) || !!issue.${value} && issue.${value}.length > 0\"}"
-	//def abcde = defaultFieldsCloud + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.priority && issue.priority.name == 'High'\",\"_modified\":\"2024-01-29T06:40:25.133Z\",\"fields\":\"labels\",\"errorMessage\":\"fields required\",\"expression\":\"!(!!issue.priority && issue.priority.name == 'High') || !!issue.labels && issue.labels.length > 0\"}"
+	def server = conditionalValidation.yes + "field=$value" + "errorMessage=$errorMessage"
+	def cloud = "{\"conditionalValidation\":true,\"conditionalValidationExpression\":\"$jiraExpression.checkPriorityHigh\",\"fields\":\"$value\",\"errorMessage\":\"$errorMessage\",\"expression\":\"!($jiraExpression.checkPriorityHigh) || !!issue.${value} && issue.${value}.length > 0\"}"
+	//def abcde = "{\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.priority && issue.priority.name == 'High'\",\"_modified\":\"2024-01-29T06:40:25.133Z\",\"fields\":\"labels\",\"errorMessage\":\"fields required\",\"expression\":\"!(!!issue.priority && issue.priority.name == 'High') || !!issue.labels && issue.labels.length > 0\"}"
 	def fields = info?.isCloud ? cloud : server
 	addTransitionFunction( transition , 'validator', fields, functionKey )
 }
 
 ['labels_assignee_component_multiple_fields_required'].each{
-	def server = defaultFieldsServer + conditionalValidation.no + "field=labels,assignee,components" + "errorMessage=$errorMessage"
-	def cloud = defaultFieldsCloud + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"conditionalValidation\":false,\"fields\":\"labels,assignee,components\",\"errorMessage\":\"$errorMessage\",\"expression\":\"!!issue.labels && issue.labels.length > 0 && issue.assignee != null && (typeof(issue.assignee) != 'List' || issue.assignee.length > 0) && !!issue.components && issue.components.length > 0\"}"
+	def server = conditionalValidation.no + "field=labels,assignee,components" + "errorMessage=$errorMessage"
+	def cloud = "{\"conditionalValidation\":false,\"fields\":\"labels,assignee,components\",\"errorMessage\":\"$errorMessage\",\"expression\":\"!!issue.labels && issue.labels.length > 0 && issue.assignee != null && (typeof(issue.assignee) != 'List' || issue.assignee.length > 0) && !!issue.components && issue.components.length > 0\"}"
 	def fields = info?.isCloud ? cloud : server
 	addTransitionFunction( it, 'validator', fields, functionKey )
 }

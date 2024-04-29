@@ -1,0 +1,352 @@
+apply from: gint.resourceDirectory +'/src/itest-sharedExtensions/sharedExtensions.gradle'
+
+ext.runAsAddonUserPayloadServer = '''
+{
+        "name": "comment issue by scheduled action run as addon user",
+        "description": null,
+        "postFunctions": [
+            {
+                "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">scheduled_action run as addon user</arg>\\r\\n  <arg name=\\"extensionId\\">12f8323e-40d6-471a-8be8-1179d2873454</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0
+            }
+        ],
+        "enabled": true,
+        "jql": "project = SHAREDEXT",
+        "maxIssues": 10,
+        "runAsUser": "userByKey:JIRAUSER10000",
+        "schedule": "0,10 * * * *",
+        "timezone": "UTC",
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null,
+        "scheduleDesc": "at 0 and 10 minutes"
+    }
+'''
+
+ext.runAsAddonUserPayloadCloud =
+        '''
+{
+  "name": "comment issue by scheduled action run as addon user",
+  "description": "",
+  "schedule": "0 5 * * 4",
+  "timezone": "UTC+05:30",
+  "scheduleDesc": "TODO",
+  "maxIssues": "10",
+  "jql": "project = SHAREDEXT",
+  "runAs": { "runAsType": "addonUser" },
+  "enabled": true,
+  "stopAtErrors": false,
+  "postFunctions": [
+    {
+      "postFunction": "CommentIssueFunction",
+      "postFunctionId": "9f3fb36d-94da-4638-bd98-9d396161d3ac",
+      "configuration": {
+        "runAsType": "currentUser",
+        "restrictToGroup": "",
+        "restrictToInternal": false,
+        "conditionalExecution": false,
+        "comment": "scheduled_action run as addon user"
+      }
+    }
+  ],
+  "ruleBuilder": true
+}
+'''
+
+ext.runAsAddonUserPayload = info?.isCloud? runAsAddonUserPayloadCloud : runAsAddonUserPayloadServer
+
+ext.runAsSelectedUserPayloadServer = '''
+{
+        "name": "comment issue by scheduled action run as selected user",
+        "description": null,
+        "postFunctions": [
+            {
+                "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">scheduled_action run as selected user</arg>\\r\\n  <arg name=\\"extensionId\\">12f8323e-40d6-471a-8be8-1179d2873454</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0
+            }
+        ],
+        "enabled": true,
+        "jql": "project = SHAREDEXT",
+        "maxIssues": 10,
+        "runAsUser": "userByKey:JIRAUSER10000",
+        "schedule": "0,10 * * * *",
+        "timezone": "UTC",
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null,
+        "scheduleDesc": "at 0 and 10 minutes"
+    }
+'''
+
+ext.runAsSelectedUserPayloadCloud =
+        '''
+{
+  "name": "comment issue by scheduled action run as selected user",
+  "description": "",
+  "schedule": "0 5 * * 4",
+  "timezone": "UTC+05:30",
+  "scheduleDesc": "TODO",
+  "maxIssues": "10",
+  "jql": "project = SHAREDEXT",
+  "runAs": { "runAsType": "thisUser","runAs": "63b454d34bc858b303ce6603" },
+  "enabled": true,
+  "stopAtErrors": false,
+  "postFunctions": [
+    {
+      "postFunction": "CommentIssueFunction",
+      "postFunctionId": "9f3fb36d-94da-4638-bd98-9d396161d3ac",
+      "configuration": {
+        "runAsType": "currentUser",
+        "restrictToGroup": "",
+        "restrictToInternal": false,
+        "conditionalExecution": false,
+        "comment": "scheduled_action run as selected user"
+      }
+    }
+  ],
+  "ruleBuilder": true
+}
+'''
+
+ext.runAsSelectedUserPayload = info?.isCloud? runAsSelectedUserPayloadCloud : runAsSelectedUserPayloadServer
+
+ext.runAsUserinFieldAssigneePayloadServer = '''
+{
+        "name": "comment issue by scheduled action run as user in field assignee",
+        "description": null,
+        "postFunctions": [
+            {
+                "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">scheduled_action run as user in field assignee</arg>\\r\\n  <arg name=\\"extensionId\\">12f8323e-40d6-471a-8be8-1179d2873454</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0
+            }
+        ],
+        "enabled": true,
+        "jql": "project = SHAREDEXT",
+        "maxIssues": 10,
+        "runAsUser": "userByKey:JIRAUSER10000",
+        "schedule": "0,10 * * * *",
+        "timezone": "UTC",
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null,
+        "scheduleDesc": "at 0 and 10 minutes"
+    }
+'''
+
+ext.runAsUserinFieldAssigneePayloadCloud =
+        '''
+{
+  "name": "comment issue by scheduled action run as user in field assignee",
+  "description": "",
+  "schedule": "0 5 * * 4",
+  "timezone": "UTC+05:30",
+  "scheduleDesc": "TODO",
+  "maxIssues": "10",
+  "jql": "project = SHAREDEXT",
+  "runAs": { "runAsType":"userField","runAsField":"assignee" },
+  "enabled": true,
+  "stopAtErrors": false,
+  "postFunctions": [
+    {
+      "postFunction": "CommentIssueFunction",
+      "postFunctionId": "9f3fb36d-94da-4638-bd98-9d396161d3ac",
+      "configuration": {
+        "runAsType": "currentUser",
+        "restrictToGroup": "",
+        "restrictToInternal": false,
+        "conditionalExecution": false,
+        "comment": "scheduled_action run as user in field assignee"
+      }
+    }
+  ],
+  "ruleBuilder": true
+}
+'''
+
+ext.runAsUserInFieldAssigneePayload = info?.isCloud? runAsUserinFieldAssigneePayloadCloud : runAsUserinFieldAssigneePayloadServer
+
+ext.runAsUserinFieldReporterPayloadServer = '''
+{
+        "name": "comment issue by scheduled action run as user in field reporter",
+        "description": null,
+        "postFunctions": [
+            {
+                "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">scheduled_action run as user in field reporter</arg>\\r\\n  <arg name=\\"extensionId\\">12f8323e-40d6-471a-8be8-1179d2873454</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0
+            }
+        ],
+        "enabled": true,
+        "jql": "project = SHAREDEXT",
+        "maxIssues": 10,
+        "runAsUser": "userByKey:JIRAUSER10000",
+        "schedule": "0,10 * * * *",
+        "timezone": "UTC",
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null,
+        "scheduleDesc": "at 0 and 10 minutes"
+    }
+'''
+
+ext.runAsUserinFieldReporterPayloadCloud =
+        '''
+{
+  "name": "comment issue by scheduled action run as user in field reporter",
+  "description": "",
+  "schedule": "0 5 * * 4",
+  "timezone": "UTC+05:30",
+  "scheduleDesc": "TODO",
+  "maxIssues": "10",
+  "jql": "project = SHAREDEXT",
+  "runAs": { "runAsType":"userField","runAsField":"reporter" },
+  "enabled": true,
+  "stopAtErrors": false,
+  "postFunctions": [
+    {
+      "postFunction": "CommentIssueFunction",
+      "postFunctionId": "9f3fb36d-94da-4638-bd98-9d396161d3ac",
+      "configuration": {
+        "runAsType": "currentUser",
+        "restrictToGroup": "",
+        "restrictToInternal": false,
+        "conditionalExecution": false,
+        "comment": "scheduled_action run as user in field reporter"
+      }
+    }
+  ],
+  "ruleBuilder": true
+}
+'''
+
+ext.runAsUserInFieldReporterPayload = info?.isCloud? runAsUserinFieldReporterPayloadCloud : runAsUserinFieldReporterPayloadServer
+
+ext.runAsUserinFieldCreatorPayloadServer = '''
+{
+        "name": "comment issue by scheduled action run as user in field creator",
+        "description": null,
+        "postFunctions": [
+            {
+                "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">scheduled_action run as user in field creator</arg>\\r\\n  <arg name=\\"extensionId\\">12f8323e-40d6-471a-8be8-1179d2873454</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0
+            }
+        ],
+        "enabled": true,
+        "jql": "project = SHAREDEXT",
+        "maxIssues": 10,
+        "runAsUser": "userByKey:JIRAUSER10000",
+        "schedule": "0,10 * * * *",
+        "timezone": "UTC",
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null,
+        "scheduleDesc": "at 0 and 10 minutes"
+    }
+'''
+
+ext.runAsUserinFieldCreatorPayloadCloud =
+        '''
+{
+  "name": "comment issue by scheduled action run as user in field creator",
+  "description": "",
+  "schedule": "0 5 * * 4",
+  "timezone": "UTC+05:30",
+  "scheduleDesc": "TODO",
+  "maxIssues": "10",
+  "jql": "project = SHAREDEXT",
+  "runAs": { "runAsType":"userField","runAsField":"creator" },
+  "enabled": true,
+  "stopAtErrors": false,
+  "postFunctions": [
+    {
+      "postFunction": "CommentIssueFunction",
+      "postFunctionId": "9f3fb36d-94da-4638-bd98-9d396161d3ac",
+      "configuration": {
+        "runAsType": "currentUser",
+        "restrictToGroup": "",
+        "restrictToInternal": false,
+        "conditionalExecution": false,
+        "comment": "scheduled_action run as user in field creator"
+      }
+    }
+  ],
+  "ruleBuilder": true
+}
+'''
+
+ext.runAsUserinFieldCreatorPayload = info?.isCloud? runAsUserinFieldCreatorPayloadCloud : runAsUserinFieldCreatorPayloadServer
+
+ext.runAsUserReturnFromScriptPayloadServer = '''
+{
+        "name": "comment issue by scheduled action run as user return from script",
+        "description": null,
+        "postFunctions": [
+            {
+                "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">scheduled_action run as user return from script</arg>\\r\\n  <arg name=\\"extensionId\\">12f8323e-40d6-471a-8be8-1179d2873454</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0
+            }
+        ],
+        "enabled": true,
+        "jql": "project = SHAREDEXT",
+        "maxIssues": 10,
+        "runAsUser": "userByKey:JIRAUSER10000",
+        "schedule": "0,10 * * * *",
+        "timezone": "UTC",
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null,
+        "scheduleDesc": "at 0 and 10 minutes"
+    }
+'''
+
+ext.runAsUserReturnFromScriptPayloadCloud =
+        '''
+{
+  "name": "comment issue by scheduled action run as user return from script",
+  "description": "",
+  "schedule": "0 5 * * 4",
+  "timezone": "UTC+05:30",
+  "scheduleDesc": "TODO",
+  "maxIssues": "10",
+  "jql": "project = SHAREDEXT",
+  "runAs": { "runAsType":"userFromScript","runAsScript":"accountId:63b454d34bc858b303ce6603" },
+  "enabled": true,
+  "stopAtErrors": false,
+  "postFunctions": [
+    {
+      "postFunction": "CommentIssueFunction",
+      "postFunctionId": "9f3fb36d-94da-4638-bd98-9d396161d3ac",
+      "configuration": {
+        "runAsType": "currentUser",
+        "restrictToGroup": "",
+        "restrictToInternal": false,
+        "conditionalExecution": false,
+        "comment": "scheduled_action run as user return from script"
+      }
+    }
+  ],
+  "ruleBuilder": true
+}
+'''
+
+ext.runAsUserReturnFromScriptPayload = info?.isCloud? runAsUserReturnFromScriptPayloadCloud : runAsUserReturnFromScriptPayloadServer
+
+
+

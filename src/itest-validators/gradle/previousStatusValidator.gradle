@@ -10,20 +10,15 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:previousstatus-validator'
 
 def errorMessage = "transition does not perform on issue screen"
-def defaultFields = [
-		"correlationId=",
-		"errorMessage=$errorMessage"
-]
 
 statusList.eachWithIndex { status, value, i ->
 	def transition = "verify_previous_status_of_the_issue_must_be_" + status
-	def fields = defaultFields + "status=$value" + conditionalValidation.no
+	def fields = "errorMessage=$errorMessage" + "status=$value" + conditionalValidation.no
 	if(!isCloud) {
 		addTransitionFunction(transition, 'validator', fields, functionKey)
 	}
@@ -31,7 +26,7 @@ statusList.eachWithIndex { status, value, i ->
 
 statusList.eachWithIndex { status, value, i ->
 	def transition = "verify_previous_status_mostRecentOnly_of_the_issue_must_be_" + status
-	def fields = defaultFields + "status=$value" +"mostRecentOnly=yes" + conditionalValidation.no
+	def fields = "status=$value" +"mostRecentOnly=yes" + conditionalValidation.no
 	if(!isCloud) {
 		addTransitionFunction(transition, 'validator', fields, functionKey)
 	}
@@ -39,7 +34,7 @@ statusList.eachWithIndex { status, value, i ->
 
 statusList.eachWithIndex { status, value, i ->
 	def transition = "verify_previous_status_of_the_issue_if_condition_true_must_be_" + status
-	def fields = defaultFields + "status=$value" + conditionalValidation.yes
+	def fields = "status=$value" + conditionalValidation.yes
 	if(!isCloud) {
 		addTransitionFunction(transition, 'validator', fields, functionKey)
 	}

@@ -39,15 +39,15 @@ def fields = info?.isCloud ? fieldsCloud : fieldsServer
 
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'clearFieldLabel'
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.labels,$runAsUser.currentUser}"
-    def server = defaultFieldsServer + fields.labels + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "{$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.labels,$runAsUser.currentUser}"
+    def server =  fields.labels + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = 'runAsSpecificUser'
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.components,$runAsUser.specificUser}"
-    def server = defaultFieldsServer + fields.components + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.specificUser
+    def cloud =  "{$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.components,$runAsUser.specificUser}"
+    def server =  fields.components + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.specificUser
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(transition + i, 4)
@@ -56,8 +56,8 @@ relatedIssue.take(1).eachWithIndex { key, value, i ->
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldAssignee'
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.fixVersions,$runAsUser.userInFieldAssignee}"
-    def server = defaultFieldsServer +fields.fixVersions + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldAssignee
+    def cloud =  "{$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.fixVersions,$runAsUser.userInFieldAssignee}"
+    def server = fields.fixVersions + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldAssignee
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(transition + i, 4)
@@ -66,8 +66,8 @@ relatedIssue.take(1).eachWithIndex { key, value, i ->
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldReporter'
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.assignee,$runAsUser.userInFieldReporter}"
-    def server = defaultFieldsServer +fields.assignee + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldReporter
+    def cloud =  "{$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.assignee,$runAsUser.userInFieldReporter}"
+    def server = fields.assignee + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldReporter
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(transition + i, 4)
@@ -76,8 +76,8 @@ relatedIssue.take(1).eachWithIndex { key, value, i ->
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldCreator'
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.affectsVersions,$runAsUser.userInFieldCreator}"
-    def server = defaultFieldsServer +fields.affectsVersions + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldCreator
+    def cloud =  "{$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.affectsVersions,$runAsUser.userInFieldCreator}"
+    def server = fields.affectsVersions + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldCreator
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(transition + i, 4)
@@ -86,8 +86,8 @@ relatedIssue.take(1).eachWithIndex { key, value, i ->
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = 'clearFieldsIfConditionalExecutionTrue'
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.true,\"selectedLinkType\":\"$value\",$fields.labels,$runAsUser.currentUser}"
-    def server = defaultFieldsServer + fields.labels + "selectedLinkType=$value" + conditionalExecution.true + runAsUser.currentUser
+    def cloud =  "{$conditionalExecution.true,\"selectedLinkType\":\"$value\",$fields.labels,$runAsUser.currentUser}"
+    def server =  fields.labels + "selectedLinkType=$value" + conditionalExecution.true + runAsUser.currentUser
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 

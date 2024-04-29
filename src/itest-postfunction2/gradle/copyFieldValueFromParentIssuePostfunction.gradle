@@ -14,12 +14,6 @@ apply from: gint.resourceDirectory +'/src/itest-postfunction2/postfunction.gradl
 
 def functionKey = info?.isCloud? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__CopyFieldValueFromParentFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CopyFieldValueFromParent-function'
 
-def defaultFieldsServer = [
-        "restrictToInternal=no",
-        "sendNotification=no",
-        "throwExceptions=",
-        "correlationId="
-]
 def sourceField = [
        'labels' ,
        'components' ,
@@ -43,43 +37,39 @@ def options = [
         appendValues : "appendValues=yes"
 ]
 
-def defaultFieldsCloud = [
-        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
-]
-
 sourceField.each { fieldsName ->
     def transition = 'valueOfFieldLabelsWillBeCopiedFromTheIssuesParent' + fieldsName
-    def server = defaultFieldsServer + "field=$fieldsName" + destField.sameAsSource +  options.noOption + conditionalExecution.false
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"$fieldsName\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server =  "field=$fieldsName" + destField.sameAsSource +  options.noOption + conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"$fieldsName\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
     addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['valueOfFieldLabelsWillBeCopiedFromTheIssuesParent_copyOnlyIfNotSet'].each {
-    def server = defaultFieldsServer + "field=labels" + destField.sameAsSource +  options.copyOnlyIfNotSet + conditionalExecution.false
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":true,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server =  "field=labels" + destField.sameAsSource +  options.copyOnlyIfNotSet + conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":true,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 ['valueOfFieldLabelsWillBeCopiedFromTheIssuesParent_ignoreEmptyValue'].each {
-    def server = defaultFieldsServer + "field=labels" + destField.sameAsSource+  options.ignoreEmptyValue + conditionalExecution.false
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":true,\"runAsType\":\"addonUser\"}"
+    def server =  "field=labels" + destField.sameAsSource+  options.ignoreEmptyValue + conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":true,\"runAsType\":\"addonUser\"}"
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['valueOfFieldLabelsWillBeCopiedFromTheIssuesParent_createMissingValues'].each {
-    def server = defaultFieldsServer + "field=labels" + destField.components +  options.createMissingValues + conditionalExecution.false
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"components\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":true,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server =  "field=labels" + destField.components +  options.createMissingValues + conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"components\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":true,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['valueOfFieldLabelsWillBeCopiedFromTheIssuesParent_appendValues'].each {
-    def server = defaultFieldsServer + "field=labels" + destField.sameAsSource +  options.appendValues + conditionalExecution.false
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":true,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server =  "field=labels" + destField.sameAsSource +  options.appendValues + conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":true,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['valueOfFieldLabelsWillBeCopiedFromTheIssuesParent_ifConditionTrue'].each {
-    def server = defaultFieldsServer + "field=labels" + destField.sameAsSource +  options.noOption + conditionalExecution.true
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server =  "field=labels" + destField.sameAsSource +  options.noOption + conditionalExecution.true
+    def cloud =  "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
@@ -211,10 +201,7 @@ def createMissingValue = "createMissingValueOfComponent"
                      issue: { ->subtask[] },
                      field: "Labels"
              ],
-             finalClosure:{Task task ->
-                 def output = "$task.outData"
-                 assert output.contains(testLabel2)
-             }
+                    data: [ "Labels  . . . . . . . . . . . : $testLabel2" ],
             ],
             [action    : 'transitionIssue',
              ext: ": check COPY_FIELD_VALUE_FROM_PARENT_ISSUE_PF_copyOnlyIfNotSet when field is not empty :" + it,

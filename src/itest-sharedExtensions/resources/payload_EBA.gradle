@@ -3,21 +3,36 @@ apply from: gint.resourceDirectory +'/src/itest-sharedExtensions/sharedExtension
 ext.issueCreatedEventPayloadServer = '''
 {
         "name": "event_based action for issue created",
-        "description": "",
+        "description": " ",
         "postFunctions": [
             {
+                "id": "ab5b5c95-36ff-4c80-8f30-42f83788b863",
                 "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
-                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">comment from automation</arg>\\r\\n  <arg name=\\"extensionId\\">c43f7fbd-ff46-445b-b055-8907e8aa440d</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n"
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">issue_created</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "actionId": "2a5fbefd-354f-4f20-a68c-f22535800e9f",
+                "isEditable": true
             }
         ],
-        "event":
-         {
-            "eventId": -1,
+        "event": {
+            "eventId": 1,
             "fields": [],
             "fromStatuses": [],
             "toStatuses": []
-         }
-}
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null,
+        "actionLink": "${info?.url}/secure/JMWEEventBasedActionEditor!Default.jspa?actionId=2a5fbefd-354f-4f20-a68c-f22535800e9f"
+    }
 '''
 
 ext.issueCreatedEventPayloadCloud =
@@ -60,21 +75,36 @@ ext.issueCreatedEventPayload = info?.isCloud ? issueCreatedEventPayloadCloud : i
 ext.issueUpdatedEventPayloadServer = '''
 {
         "name": "event_based action for issue updated",
-        "description": "",
+        "description": " ",
         "postFunctions": [
             {
+                "id": "ab5b5c95-36ff-4c80-8f30-42f83788b863",
                 "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
-                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">comment from automation</arg>\\r\\n  <arg name=\\"extensionId\\">c43f7fbd-ff46-445b-b055-8907e8aa440d</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n"
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">issue_updated</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "actionId": "2a5fbefd-354f-4f20-a68c-f22535800e9f",
+                "isEditable": true
             }
         ],
-        "event":
-         {
-            "eventId": -1,
+        "event": {
+            "eventId": 2,
             "fields": [],
             "fromStatuses": [],
             "toStatuses": []
-         }
-}
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null,
+        "actionLink": "${info?.url}/secure/JMWEEventBasedActionEditor!Default.jspa?actionId=2a5fbefd-354f-4f20-a68c-f22535800e9f"
+    }
 '''
 
 ext.issueUpdatedEventPayloadCloud =
@@ -117,21 +147,36 @@ ext.issueUpdatedEventPayload = info?.isCloud ? issueUpdatedEventPayloadCloud : i
 ext.issueDeletedEventPayloadServer = '''
 {
         "name": "event_based action for issue deleted",
-        "description": "",
+        "description": " ",
         "postFunctions": [
             {
+                "id": "ab5b5c95-36ff-4c80-8f30-42f83788b863",
                 "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
-                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">comment from automation</arg>\\r\\n  <arg name=\\"extensionId\\">c43f7fbd-ff46-445b-b055-8907e8aa440d</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n"
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">inward:10100</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">issue_deleted</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "actionId": "2a5fbefd-354f-4f20-a68c-f22535800e9f",
+                "isEditable": true
             }
         ],
-        "event":
-         {
-            "eventId": -1,
+        "event": {
+            "eventId": 8,
             "fields": [],
             "fromStatuses": [],
             "toStatuses": []
-         }
-}
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null,
+        "actionLink": "${info?.url}/secure/JMWEEventBasedActionEditor!Default.jspa?actionId=2a5fbefd-354f-4f20-a68c-f22535800e9f"
+    }
 '''
 
 ext.issueDeletedEventPayloadCloud =
@@ -175,22 +220,37 @@ ext.issueDeletedEventPayload = info?.isCloud ? issueDeletedEventPayloadCloud : i
 
 ext.issueCommentedEventPayloadServer = '''
 {
-        "name": "event_based action for issue updated",
-        "description": "",
+        "name": "event_based action for issue commented",
+        "description": " ",
         "postFunctions": [
             {
+                "id": "ab5b5c95-36ff-4c80-8f30-42f83788b863",
                 "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
-                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">comment from automation</arg>\\r\\n  <arg name=\\"extensionId\\">c43f7fbd-ff46-445b-b055-8907e8aa440d</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n"
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">issue_commented</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "actionId": "2a5fbefd-354f-4f20-a68c-f22535800e9f",
+                "isEditable": true
             }
         ],
-        "event":
-         {
-            "eventId": -1,
+        "event": {
+            "eventId": 6,
             "fields": [],
             "fromStatuses": [],
             "toStatuses": []
-         }
-}
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null,
+        "actionLink": "${info?.url}/secure/JMWEEventBasedActionEditor!Default.jspa?actionId=2a5fbefd-354f-4f20-a68c-f22535800e9f"
+    }
 '''
 
 ext.issueCommentedEventPayloadCloud =
@@ -233,21 +293,36 @@ ext.issueCommentedEventPayload = info?.isCloud? issueCommentedEventPayloadCloud 
 ext.commentUpdatedEventPayloadServer = '''
 {
         "name": "event_based action for comment updated",
-        "description": "",
+        "description": " ",
         "postFunctions": [
             {
+                "id": "ab5b5c95-36ff-4c80-8f30-42f83788b863",
                 "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
-                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">comment from automation</arg>\\r\\n  <arg name=\\"extensionId\\">c43f7fbd-ff46-445b-b055-8907e8aa440d</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n"
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">comment_updated</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "actionId": "2a5fbefd-354f-4f20-a68c-f22535800e9f",
+                "isEditable": true
             }
         ],
-        "event":
-         {
-            "eventId": -1,
+        "event": {
+            "eventId": 14,
             "fields": [],
             "fromStatuses": [],
             "toStatuses": []
-         }
-}
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null,
+        "actionLink": "${info?.url}/secure/JMWEEventBasedActionEditor!Default.jspa?actionId=2a5fbefd-354f-4f20-a68c-f22535800e9f"
+    }
 '''
 
 ext.commentUpdatedEventPayloadCloud =
@@ -290,27 +365,42 @@ ext.commentUpdatedEventPayload = info?.isCloud? commentUpdatedEventPayloadCloud 
 ext.commentDeletedEventPayloadServer = '''
 {
         "name": "event_based action for comment deleted",
-        "description": "",
+        "description": " ",
         "postFunctions": [
             {
+                "id": "ab5b5c95-36ff-4c80-8f30-42f83788b863",
                 "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
-                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">comment from automation</arg>\\r\\n  <arg name=\\"extensionId\\">c43f7fbd-ff46-445b-b055-8907e8aa440d</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n"
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">comment_deleted</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "actionId": "2a5fbefd-354f-4f20-a68c-f22535800e9f",
+                "isEditable": true
             }
         ],
-        "event":
-         {
-            "eventId": -1,
+        "event": {
+            "eventId": 17,
             "fields": [],
             "fromStatuses": [],
             "toStatuses": []
-         }
-}
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null,
+        "actionLink": "${info?.url}/secure/JMWEEventBasedActionEditor!Default.jspa?actionId=2a5fbefd-354f-4f20-a68c-f22535800e9f"
+    }
 '''
 
 ext.commentDeletedEventPayloadCloud =
         '''
 {
-  "name": "event_based action for comment updated",
+  "name": "event_based action for comment deleted",
   "description": "",
   "ignoreAddonUserChanges": false,
   "ignoreJMWEChanges": false,
@@ -347,21 +437,36 @@ ext.commentDeletedEventPayload = info?.isCloud? commentDeletedEventPayloadCloud 
 ext.issueTransitionedEventPayloadServer = '''
 {
         "name": "event_based action for issue transitioned",
-        "description": "",
+        "description": " ",
         "postFunctions": [
             {
+                "id": "ab5b5c95-36ff-4c80-8f30-42f83788b863",
                 "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
-                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">comment from automation</arg>\\r\\n  <arg name=\\"extensionId\\">c43f7fbd-ff46-445b-b055-8907e8aa440d</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n"
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">issue_transitioned</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "actionId": "2a5fbefd-354f-4f20-a68c-f22535800e9f",
+                "isEditable": true
             }
         ],
-        "event":
-         {
+        "event": {
             "eventId": -1,
             "fields": [],
             "fromStatuses": [],
             "toStatuses": []
-         }
-}
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null,
+        "actionLink": "${info?.url}/secure/JMWEEventBasedActionEditor!Default.jspa?actionId=2a5fbefd-354f-4f20-a68c-f22535800e9f"
+    }
 '''
 
 ext.issueTransitionedEventPayloadCloud =
@@ -404,21 +509,35 @@ ext.issueTransitionedEventPayload = info?.isCloud? issueTransitionedEventPayload
 ext.issueFieldValueChangedEventPayloadServer = '''
 {
         "name": "event_based action for issue field value changed",
-        "description": "",
+        "description": null,
         "postFunctions": [
             {
                 "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
-                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">comment from automation</arg>\\r\\n  <arg name=\\"extensionId\\">c43f7fbd-ff46-445b-b055-8907e8aa440d</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n"
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">issue_field_updated</arg>\\r\\n  <arg name=\\"extensionId\\">34b2a878-c196-4f46-a8d2-d3137432491c</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "isEditable": true
             }
         ],
-        "event":
-         {
-            "eventId": -1,
-            "fields": [],
+        "event": {
+            "eventId": -2,
+            "fields": [
+                "assignee"
+            ],
             "fromStatuses": [],
             "toStatuses": []
-         }
-}
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null
+        }
 '''
 
 ext.issueFieldValueChangedEventPayloadCloud =
@@ -577,21 +696,33 @@ ext.attachmentDeletedEventPayload = info?.isCloud? attachmentDeletedEventPayload
 ext.issueLinkAddedEventPayloadServer = '''
 {
         "name": "event_based action for link issue added",
-        "description": "",
+        "description": " ",
         "postFunctions": [
             {
                 "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
-                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">comment from automation</arg>\\r\\n  <arg name=\\"extensionId\\">c43f7fbd-ff46-445b-b055-8907e8aa440d</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n"
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">inward:10100</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"value\\">issue_link_added</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "isEditable": true
             }
         ],
-        "event":
-         {
-            "eventId": -1,
+        "event": {
+            "eventId": -5,
             "fields": [],
             "fromStatuses": [],
             "toStatuses": []
-         }
-}
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null
+    }
 '''
 
 ext.issueLinkAddedEventPayloadCloud =
@@ -634,21 +765,33 @@ ext.issueLinkAddedEventPayload = info?.isCloud? issueLinkAddedEventPayloadCloud 
 ext.issueLinkDeleteEventPayloadServer = '''
 {
         "name": "event_based action for link issue deleted",
-        "description": "",
+        "description": " ",
         "postFunctions": [
             {
                 "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
-                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">comment from automation</arg>\\r\\n  <arg name=\\"extensionId\\">c43f7fbd-ff46-445b-b055-8907e8aa440d</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n"
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">inward:10100</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"value\\">issue_link_deleted</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "isEditable": true
             }
         ],
-        "event":
-         {
-            "eventId": -1,
+        "event": {
+            "eventId": -6,
             "fields": [],
             "fromStatuses": [],
             "toStatuses": []
-         }
-}
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null
+    }
 '''
 
 ext.issueLinkDeleteEventPayloadCloud =
@@ -691,28 +834,40 @@ ext.issueLinkDeleteEventPayload = info?.isCloud? issueLinkDeleteEventPayloadClou
 
 ext.issueAssignedEventPayloadServer = '''
 {
-        "name": "event_based action for link issue_assigned",
-        "description": "",
+        "name": "event_based action for issue_assigned",
+        "description": " ",
         "postFunctions": [
             {
                 "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
-                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">comment from automation</arg>\\r\\n  <arg name=\\"extensionId\\">c43f7fbd-ff46-445b-b055-8907e8aa440d</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n"
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">inward:10100</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"value\\">issue_assigned</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "isEditable": true
             }
         ],
-        "event":
-         {
-            "eventId": -1,
+        "event": {
+            "eventId": 3,
             "fields": [],
             "fromStatuses": [],
             "toStatuses": []
-         }
-}
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null
+    }
 '''
 
 ext.issueAssignedEventPayloadCloud =
         '''
 {
-  "name": "event_based action for link issue_assigned",
+  "name": "event_based action for issue_assigned",
   "description": "",
   "ignoreAddonUserChanges": false,
   "ignoreJMWEChanges": false,
@@ -748,22 +903,34 @@ ext.issueAssignedEventPayload = info?.isCloud? issueAssignedEventPayloadCloud : 
 
 ext.worklogCreatedEventPayloadServer = '''
 {
-        "name": "event_based action for worklog_created",
-        "description": "",
+        "name": "event_based action for worklog created",
+        "description": " ",
         "postFunctions": [
             {
                 "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
-                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">currentIssue:*</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"value\\">comment from automation</arg>\\r\\n  <arg name=\\"extensionId\\">c43f7fbd-ff46-445b-b055-8907e8aa440d</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n"
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">inward:10100</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"value\\">worklog_created</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "isEditable": true
             }
         ],
-        "event":
-         {
-            "eventId": -1,
+        "event": {
+            "eventId": 10,
             "fields": [],
             "fromStatuses": [],
             "toStatuses": []
-         }
-}
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null
+    }
 '''
 
 ext.worklogCreatedEventPayloadCloud =
@@ -802,6 +969,563 @@ ext.worklogCreatedEventPayloadCloud =
 '''
 
 ext.worklogCreatedEventPayload = info?.isCloud? worklogCreatedEventPayloadCloud : worklogCreatedEventPayloadServer
+
+ext.worklogDeletedEventPayloadServer = '''
+{
+        "name": "event_based action for worklog deleted",
+        "description": " ",
+        "postFunctions": [
+            {
+                "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">inward:10100</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"value\\">worklog_created</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "isEditable": true
+            }
+        ],
+        "event": {
+            "eventId": 10,
+            "fields": [],
+            "fromStatuses": [],
+            "toStatuses": []
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null
+    }
+'''
+
+ext.worklogDeletedEventPayloadCloud =
+        '''
+{
+  "name": "event_based action for worklog deleted",
+  "description": "",
+  "ignoreAddonUserChanges": false,
+  "ignoreJMWEChanges": false,
+  "events": [
+    {
+      "type": "worklog_deleted",
+      "fromProjectKeys": null,
+      "fromStatusIds": null,
+      "toStatusIds": null,
+      "fields":  null
+    }
+  ],
+  "projects": null,
+  "issueTypes": null,
+  "stopAtErrors": false,
+  "postFunctions": [
+    {
+      "postFunction": "CommentIssueFunction",
+      "postFunctionId": "8024d6e7-093c-4e27-b9b1-0b71b2de618a",
+      "configuration": { "conditionalExecution": false,
+                "comment": "worklog_deleted",
+                "restrictToInternal": false,
+                "restrictToGroup": "",
+                "runAsType": "currentUser"
+                }
+      }
+  ],
+  "ruleBuilder": true
+}
+'''
+
+ext.worklogDeletedEventPayload = info?.isCloud? worklogDeletedEventPayloadCloud : worklogDeletedEventPayloadServer
+
+ext.worklogUpdatedEventPayloadServer = '''
+{
+        "name": "event_based action for worklog updated",
+        "description": " ",
+        "postFunctions": [
+            {
+                "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">inward:10100</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"value\\">worklog_created</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "isEditable": true
+            }
+        ],
+        "event": {
+            "eventId": 10,
+            "fields": [],
+            "fromStatuses": [],
+            "toStatuses": []
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null
+    }
+'''
+
+ext.worklogUpdatedEventPayloadCloud =
+        '''
+{
+  "name": "event_based action for worklog_updated",
+  "description": "",
+  "ignoreAddonUserChanges": false,
+  "ignoreJMWEChanges": false,
+  "events": [
+    {
+      "type": "worklog_updated",
+      "fromProjectKeys": null,
+      "fromStatusIds": null,
+      "toStatusIds": null,
+      "fields":  null
+    }
+  ],
+  "projects": null,
+  "issueTypes": null,
+  "stopAtErrors": false,
+  "postFunctions": [
+    {
+      "postFunction": "CommentIssueFunction",
+      "postFunctionId": "8024d6e7-093c-4e27-b9b1-0b71b2de618a",
+      "configuration": { "conditionalExecution": false,
+                "comment": "worklog_updated",
+                "restrictToInternal": false,
+                "restrictToGroup": "",
+                "runAsType": "currentUser"
+                }
+      }
+  ],
+  "ruleBuilder": true
+}
+'''
+
+ext.worklogUpdatedEventPayload = info?.isCloud? worklogUpdatedEventPayloadCloud : worklogUpdatedEventPayloadServer
+
+ext.workStartedOnIssueEventPayloadServer = '''
+{
+        "name": "event_based action for issue_work_started",
+        "description": " ",
+        "postFunctions": [
+            {
+                "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">inward:10100</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"value\\">issue_work_started</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "isEditable": true
+            }
+        ],
+        "event": {
+            "eventId": 11,
+            "fields": [],
+            "fromStatuses": [],
+            "toStatuses": []
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null
+    }
+'''
+
+ext.workStartedOnIssueEventPayloadCloud =
+        '''
+{
+  "name": "event_based action for issue_work_started",
+  "description": "",
+  "ignoreAddonUserChanges": false,
+  "ignoreJMWEChanges": false,
+  "events": [
+    {
+      "type": "issue_work_started",
+      "fromProjectKeys": null,
+      "fromStatusIds": null,
+      "toStatusIds": null,
+      "fields":  null
+    }
+  ],
+  "projects": null,
+  "issueTypes": null,
+  "stopAtErrors": false,
+  "postFunctions": [
+    {
+      "postFunction": "CommentIssueFunction",
+      "postFunctionId": "8024d6e7-093c-4e27-b9b1-0b71b2de618a",
+      "configuration": { "conditionalExecution": false,
+                "comment": "issue_work_started",
+                "restrictToInternal": false,
+                "restrictToGroup": "",
+                "runAsType": "currentUser"
+                }
+      }
+  ],
+  "ruleBuilder": true
+}
+'''
+
+ext.workStartedOnIssueEventPayload = info?.isCloud? workStartedOnIssueEventPayloadCloud : workStartedOnIssueEventPayloadServer
+
+ext.workStoppedOnIssueEventPayloadServer = '''
+{
+        "name": "event_based action for issue_work_stopped",
+        "description": " ",
+        "postFunctions": [
+            {
+                "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">inward:10100</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"value\\">issue_work_stopped</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "isEditable": true
+            }
+        ],
+        "event": {
+            "eventId": 12,
+            "fields": [],
+            "fromStatuses": [],
+            "toStatuses": []
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null
+    }
+'''
+
+ext.workStoppedOnIssueEventPayloadCloud =
+        '''
+{
+  "name": "event_based action for issue_work_stopped",
+  "description": "",
+  "ignoreAddonUserChanges": false,
+  "ignoreJMWEChanges": false,
+  "events": [
+    {
+      "type": "issue_work_stopped",
+      "fromProjectKeys": null,
+      "fromStatusIds": null,
+      "toStatusIds": null,
+      "fields":  null
+    }
+  ],
+  "projects": null,
+  "issueTypes": null,
+  "stopAtErrors": false,
+  "postFunctions": [
+    {
+      "postFunction": "CommentIssueFunction",
+      "postFunctionId": "8024d6e7-093c-4e27-b9b1-0b71b2de618a",
+      "configuration": { "conditionalExecution": false,
+                "comment": "issue_work_stopped",
+                "restrictToInternal": false,
+                "restrictToGroup": "",
+                "runAsType": "currentUser"
+                }
+      }
+  ],
+  "ruleBuilder": true
+}
+'''
+
+ext.workStoppedOnIssueEventPayload = info?.isCloud? workStoppedOnIssueEventPayloadCloud : workStoppedOnIssueEventPayloadServer
+
+ext.issueResolvedEventPayloadServer = '''
+{
+        "name": "event_based action for issue_resolved",
+        "description": " ",
+        "postFunctions": [
+            {
+                "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">inward:10100</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"value\\">issue_resolved</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "isEditable": true
+            }
+        ],
+        "event": {
+            "eventId": 4,
+            "fields": [],
+            "fromStatuses": [],
+            "toStatuses": []
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null
+    }
+'''
+
+ext.issueResolvedEventPayloadCloud =
+        '''
+{
+  "name": "event_based action for issue_resolved",
+  "description": "",
+  "ignoreAddonUserChanges": false,
+  "ignoreJMWEChanges": false,
+  "events": [
+    {
+      "type": "issue_resolved",
+      "fromProjectKeys": null,
+      "fromStatusIds": null,
+      "toStatusIds": null,
+      "fields":  null
+    }
+  ],
+  "projects": null,
+  "issueTypes": null,
+  "stopAtErrors": false,
+  "postFunctions": [
+    {
+      "postFunction": "CommentIssueFunction",
+      "postFunctionId": "8024d6e7-093c-4e27-b9b1-0b71b2de618a",
+      "configuration": { "conditionalExecution": false,
+                "comment": "issue_resolved",
+                "restrictToInternal": false,
+                "restrictToGroup": "",
+                "runAsType": "currentUser"
+                }
+      }
+  ],
+  "ruleBuilder": true
+}
+'''
+
+ext.issueResolvedEventPayload = info?.isCloud? issueResolvedEventPayloadCloud : issueResolvedEventPayloadServer
+
+ext.issueClosedEventPayloadServer = '''
+{
+        "name": "event_based action for issue_closed",
+        "description": " ",
+        "postFunctions": [
+            {
+                "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">inward:10100</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"value\\">issue_closed</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "isEditable": true
+            }
+        ],
+        "event": {
+            "eventId": 5,
+            "fields": [],
+            "fromStatuses": [],
+            "toStatuses": []
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null
+    }
+'''
+
+ext.issueClosedEventPayloadCloud =
+        '''
+{
+  "name": "event_based action for issue_closed",
+  "description": "",
+  "ignoreAddonUserChanges": false,
+  "ignoreJMWEChanges": false,
+  "events": [
+    {
+      "type": "issue_closed",
+      "fromProjectKeys": null,
+      "fromStatusIds": null,
+      "toStatusIds": null,
+      "fields":  null
+    }
+  ],
+  "projects": null,
+  "issueTypes": null,
+  "stopAtErrors": false,
+  "postFunctions": [
+    {
+      "postFunction": "CommentIssueFunction",
+      "postFunctionId": "8024d6e7-093c-4e27-b9b1-0b71b2de618a",
+      "configuration": { "conditionalExecution": false,
+                "comment": "issue_closed",
+                "restrictToInternal": false,
+                "restrictToGroup": "",
+                "runAsType": "currentUser"
+                }
+      }
+  ],
+  "ruleBuilder": true
+}
+'''
+
+ext.issueClosedEventPayload = info?.isCloud? issueClosedEventPayloadCloud : issueClosedEventPayloadServer
+
+ext.issueReopenedEventPayloadServer = '''
+{
+        "name": "event_based action for issue_reopened",
+        "description": " ",
+        "postFunctions": [
+            {
+                "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">inward:10100</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"value\\">issue_reopened</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "isEditable": true
+            }
+        ],
+        "event": {
+            "eventId": 7,
+            "fields": [],
+            "fromStatuses": [],
+            "toStatuses": []
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null
+    }
+'''
+
+ext.issueReopenedEventPayloadCloud =
+        '''
+{
+  "name": "event_based action for issue_reopened",
+  "description": "",
+  "ignoreAddonUserChanges": false,
+  "ignoreJMWEChanges": false,
+  "events": [
+    {
+      "type": "issue_reopened",
+      "fromProjectKeys": null,
+      "fromStatusIds": null,
+      "toStatusIds": null,
+      "fields":  null
+    }
+  ],
+  "projects": null,
+  "issueTypes": null,
+  "stopAtErrors": false,
+  "postFunctions": [
+    {
+      "postFunction": "CommentIssueFunction",
+      "postFunctionId": "8024d6e7-093c-4e27-b9b1-0b71b2de618a",
+      "configuration": { "conditionalExecution": false,
+                "comment": "issue_reopened",
+                "restrictToInternal": false,
+                "restrictToGroup": "",
+                "runAsType": "currentUser"
+                }
+      }
+  ],
+  "ruleBuilder": true
+}
+'''
+
+ext.issueReopenedEventPayload = info?.isCloud? issueReopenedEventPayloadCloud : issueReopenedEventPayloadServer
+
+ext.issueMovedEventPayloadServer = '''
+{
+        "name": "event_based action for issue_moved",
+        "description": " ",
+        "postFunctions": [
+            {
+                "pluginModuleKey": "com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function",
+                "configuration": "<function type=\\"class\\">\\r\\n  <arg name=\\"groovyExpression\\"></arg>\\r\\n  <arg name=\\"selectedLinkType\\">inward:10100</arg>\\r\\n  <arg name=\\"sendNotification\\"></arg>\\r\\n  <arg name=\\"restrictToProjectRole\\"></arg>\\r\\n  <arg name=\\"runAsUser\\"></arg>\\r\\n  <arg name=\\"restrictToGroup\\"></arg>\\r\\n  <arg name=\\"restrictToInternal\\"></arg>\\r\\n  <arg name=\\"full.module.key\\">com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function</arg>\\r\\n  <arg name=\\"valueType\\">template</arg>\\r\\n  <arg name=\\"throwExceptions\\"></arg>\\r\\n  <arg name=\\"class.name\\">com.innovalog.jmwe.plugins.functions.CommentIssueFunction</arg>\\r\\n  <arg name=\\"extensionId\\">09f10890-94ac-4504-9011-e690ff5ec8d6</arg>\\r\\n  <arg name=\\"value\\">issue_moved</arg>\\r\\n  <arg name=\\"useGroovyCondition\\">false</arg>\\r\\n</function>\\r\\n",
+                "order": 0,
+                "isEditable": true
+            }
+        ],
+        "event": {
+            "eventId": 7,
+            "fields": [],
+            "fromStatuses": [],
+            "toStatuses": []
+        },
+        "ignoreJMWEChanges": false,
+        "projects": [],
+        "issueTypes": [],
+        "jql": null,
+        "groovyExpression": null,
+        "enable": true,
+        "stopAtErrors": false,
+        "toggledBy": null,
+        "toggledAt": null,
+        "draft": false,
+        "draftId": null
+    }
+'''
+
+ext.issueMovedEventPayloadCloud =
+        '''
+{
+  "name": "event_based action for issue_moved",
+  "description": "",
+  "ignoreAddonUserChanges": false,
+  "ignoreJMWEChanges": false,
+  "events": [
+    {
+      "type": "issue_moved",
+      "fromProjectKeys": [
+                {
+                    "key": "SHAREDEXT",
+                    "name": "SHAREDEXT"
+                },
+      ]
+      "fromStatusIds": null,
+      "toStatusIds": null,
+      "fields":  null
+    }
+  ],
+  "projects": null,
+  "issueTypes": null,
+  "stopAtErrors": false,
+  "postFunctions": [
+    {
+      "postFunction": "CommentIssueFunction",
+      "postFunctionId": "8024d6e7-093c-4e27-b9b1-0b71b2de618a",
+      "configuration": { "conditionalExecution": false,
+                "comment": "issue_moved",
+                "restrictToInternal": false,
+                "restrictToGroup": "",
+                "runAsType": "currentUser"
+                }
+      }
+  ],
+  "ruleBuilder": true
+}
+'''
+
+ext.issueMovedEventPayload = info?.isCloud? issueMovedEventPayloadCloud : issueMovedEventPayloadServer
 
 
 

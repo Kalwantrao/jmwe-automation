@@ -6,8 +6,8 @@ project.ext.jqlSearchExpression="project = $projectName and issuetype = Task and
 
 relatedIssue.put('returnsFromJqlSearch', "jql:$jqlSearchExpression")
 
-//tearDown(projectName)
-//addWorkflow()
+tearDown(projectName)
+
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
@@ -165,6 +165,56 @@ ext.createSharedExtensionSetUp = { requestType, uriForAction, requestBody, ext -
     return ActionID
 }
 
+ext.performActionsOnSharedExtension = { ext, uriForAction, requestBody ->
+    gint.taskHelper.add(
+            name: "Perform action: $ext:by POST request",
+            sleepAfter: 100000,
+            inline: {
+                def URI = new URL(jiraUrl+ uriForAction)
+                def connection = URI.openConnection() as HttpURLConnection
+                connection.requestMethod = "POST"
+                connection.setRequestProperty("Content-Type", "application/json")
+                String auth = "${testUserNameServer}:${testUserPasswordServer}"
+                String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes())
+                JsonSlurper slurper = new JsonSlurper()
+                def jwt = createJWT(slurper)
+                if(!isCloud){
+                    connection.setRequestProperty("Authorization", "Basic " + encodedAuth)
+                } else{
+                    connection.setRequestProperty("Authorization", "JWT " + jwt)
+                    gint.helper.log("jwt-token", jwt)
+                }
+                connection.doOutput = true
+                def outputStream = connection.outputStream
+                outputStream.write(requestBody.getBytes("UTF-8"))
+                outputStream.flush()
+
+                try {
+                    def responseCode = connection.responseCode
+                    def inputStream
+                    if (responseCode >= 200 && responseCode < 400) {
+                        inputStream = connection.inputStream
+                    } else {
+                        inputStream = connection.errorStream
+                    }
+                    def response = new StringBuilder()
+                    def reader = new BufferedReader(new InputStreamReader(inputStream))
+                    def line
+                    while ((line = reader.readLine()) != null) {
+                        response.append(line)
+                    }
+                    gint.helper.log("Response",response.toString())
+
+                   // def jsonResponse = new groovy.json.JsonSlurper().parseText(response.toString())
+                } catch (Exception e) {
+                    gint.helper.log("Error", "$ext: ${e.message}")
+                } finally {
+                    connection.disconnect()
+                }
+            }
+    )
+}
+
 ext.deleteSharedExtension = { requestType, uriForAction, ext  ->
     gint.taskHelper.add(
             name: "$requestType shared extension_by $requestType Request: $ext",
@@ -200,6 +250,8 @@ ext.deleteSharedExtension = { requestType, uriForAction, ext  ->
             }
     )
 }
+
+
 
 
 

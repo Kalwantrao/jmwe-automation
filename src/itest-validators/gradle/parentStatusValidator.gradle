@@ -10,7 +10,6 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
 def errorMessage = "Check issues parents status"
@@ -19,7 +18,7 @@ def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:parentstatus
 
 statusList.eachWithIndex { status, value, i ->
 	def transition = "verify_status_of_the_parent_issue_should_be_" + status
-	def fields = defaultFieldsServer + conditionalValidation.no + "issue_statuses=$value" + "errorMessage="
+	def fields = conditionalValidation.no + "issue_statuses=$value" + "errorMessage="
 	if(!isCloud) {
 		addTransitionFunction(transition, 'validator', fields, functionKey)
 	}
@@ -27,14 +26,14 @@ statusList.eachWithIndex { status, value, i ->
 
 statusList.eachWithIndex { status, value, i ->
 	def transition = "verify_status_of_the_parent_issue_error_message_by_user_" + status
-	def fields = defaultFieldsServer + conditionalValidation.no + "issue_statuses=$value" + "errorMessage=$errorMessage"
+	def fields = conditionalValidation.no + "issue_statuses=$value" + "errorMessage=$errorMessage"
 	if(!isCloud) {
 		addTransitionFunction(transition, 'validator', fields, functionKey)
 	}
 }
 
 ['verify_parent_issue_must_in_one_of_the_selected_status'].each {
-	def fields = defaultFieldsServer +"conditionalValidation=no" + "issue_statuses=$statusList.inProgress@@$statusList.done@@" + "errorMessage=$errorMessage"
+	def fields = "conditionalValidation=no" + "issue_statuses=$statusList.inProgress@@$statusList.done@@" + "errorMessage=$errorMessage"
 	if(!isCloud) {
 		addTransitionFunction(it, 'validator', fields, functionKey)
 	}
@@ -42,7 +41,7 @@ statusList.eachWithIndex { status, value, i ->
 
 statusList.eachWithIndex { status, value, i ->
 	def transition = 'verify_status_of_the_parent_issue_only_if_condition_true_' + status
-	def fields = defaultFieldsServer + conditionalValidation.yes + "issue_statuses=$value" + "errorMessage=$errorMessage"
+	def fields = conditionalValidation.yes + "issue_statuses=$value" + "errorMessage=$errorMessage"
 	if(!isCloud) {
 		addTransitionFunction(transition, 'validator', fields, functionKey)
 	}

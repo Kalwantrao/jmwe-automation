@@ -12,6 +12,18 @@ ext.addWorkflow = {
     }
 }
 
+ext.addWorkflowClassic = { classic ->
+    if(skipSetup != "true"){
+        gint.taskHelper.addSetUp([
+                [
+                        action       : 'copyWorkflow' ,
+                        parameters   : [workflow: classic, name: workflow]
+                ],
+        ]
+        )
+    }
+}
+
 ext.addCustomField = { name, fieldType ->
     def type;
     if(fieldType == 'number' || fieldType == 'numberField' || fieldType == 'numberfield'){
@@ -44,6 +56,7 @@ ext.createGroup = { groupName ->
         ])
     }
 }
+
 ext.addUserToGroup = { groupName, userId ->
     if(!isCloud) {
         gint.taskHelper.addSetUp([
@@ -57,6 +70,7 @@ ext.addUserToGroup = { groupName, userId ->
         ])
     }
 }
+
 ext.addFieldToScreen = { screen, fieldName ->
     gint.taskHelper.addSetUp(
             action: "addScreenFields", ext: ":to screen $screen: field name:$fieldName",
@@ -68,11 +82,24 @@ ext.addFieldToScreen = { screen, fieldName ->
 }
 
 ext.addTransitionFunction = { transitions, type, field, functionKey -> // key, type, condition, functionKey, description
+    def defaultFieldsServer = [
+            "restrictToInternal=no",
+            "sendNotification=no",
+            "throwExceptions=",
+            "correlationId=",
+    ]
+    def defaultFieldsCloud;
+    if(type == 'condition'){
+        defaultFieldsCloud = ["condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9"] + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9=$field"
+    } else if(type == 'validator'){
+        defaultFieldsCloud = ["validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a"] + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a=$field"
+    } else {
+        defaultFieldsCloud = ["postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249"] + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249=$field"
+    }
     if(skipSetup != "true"){
         gint.taskHelper.addSetUp([
                 [action    : 'addTransition', ext: ':' + transitions,
                  retry: true,
-                 retrySleep: 5000,
                  parameters: [
                          workflow: workflow,
                          name    : transitions,
@@ -82,19 +109,17 @@ ext.addTransitionFunction = { transitions, type, field, functionKey -> // key, t
                 ],
                 [action    : 'addTransitionFunction', ext: ':' + transitions,
                  retry: true,
-                 retrySleep: 5000,
                  parameters: [
                          workflow   : workflow,
                          transition : transitions,
                          functionKey: functionKey,
                          type       : type,
                          step       : info?.isCloud ? startStepCloud : startStepServer,
-                         field      : field
+                         field      : info?.isCloud ? defaultFieldsCloud : defaultFieldsServer + field
                  ],
                 ],
                 /*[action: 'getTransitionFunctionList', ext: ':' + transitions,
                   retry: true,
-                   sleep: 2000,
                   parameters: [
                           workflow: workflow,
                           transition : transitions,
@@ -230,66 +255,6 @@ ext.linkIssue = { parameters, ext ->
     )
 }
 
-ext.addComponent = { numberOfComponents ->
-    (1..numberOfComponents).each{
-        gint.taskHelper.add(
-                [action: 'addComponent',ext: numberOfComponents,
-                 parameters: [
-                         project: projectName,
-                         component: 'component' + numberOfComponents
-                 ]
-                ]
-        )
-    }
-}
-ext.createVersions = { numberOfVersions ->
-    (1..numberOfVersions).each{ versionNumber ->
-        gint.taskHelper.addSetUp(
-                action: 'addVersion',
-                ext: versionNumber,
-                project: projectName,
-                parameters:[
-                        version: versionNumber,
-                ],
-        )
-    }
-}
-ext.addUser = {
-    gint.taskHelper.add(
-            [action: 'addUser',
-             parameters: info?.isCloud? [userId: cloudUser, userEmail: cloudUser + '@gmail.com'] : [userId:serverUser, userEmail:serverUser + '@gmail.com', userPassword:serverUser]
-            ]
-    )
-}
-ext.addGroup = {
-    gint.taskHelper.add(
-            [action: 'addGroup',
-             parameters: [
-                     group: groupName
-             ]
-            ]
-    )
-}
-ext.addProjectRole = {
-    gint.taskHelper.add(
-            [action: 'addProjectRole',
-             parameters: [
-                     name: projectRole
-             ],
-            ]
-    )
-}
-ext.addProjectRoleActors = {
-    gint.taskHelper.add(
-            [action: 'addProjectRoleActors',
-             parameters: [
-                     project: projectName,
-                     role: projectRole,
-                     userId: info?.isCloud ? cloudUser : serverUser
-             ],
-            ]
-    )
-}
 
 ext.statusId = []
 ext.getStatusId = { statusName ->
@@ -301,9 +266,9 @@ ext.getStatusId = { statusName ->
             ],
             finalClosure:{ Task task ->
                 statusId.add("$task.outData")
-            }]
+            }
+            ]
     )
     return statusId
 }
-
 

@@ -1,4 +1,4 @@
-buildscript {
+``buildscript {
     repositories {
         maven {
             url "https://plugins.gradle.org/m2/"
@@ -29,7 +29,7 @@ def listOfTransitions = [
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = "delete_issue_by_postfunction_" + key
     listOfTransitions.defaultConfiguration.add(transition)
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"runAsType\":\"addonUser\"}"
+    def cloud = "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"runAsType\":\"addonUser\"}"
     if(isCloud) {
         addTransitionFunction(transition, 'postfunction', cloud, functionKey)
     }
@@ -38,7 +38,7 @@ relatedIssue.eachWithIndex { key, value, i ->
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = "if_condition_true_" + key
     listOfTransitions.conditionalExecution.add(transition)
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.true,\"targetIssue\":\"$value\",\"runAsType\":\"addonUser\"}"
+    def cloud = "{$conditionalExecution.true,\"targetIssue\":\"$value\",\"runAsType\":\"addonUser\"}"
     if(isCloud) {
         addTransitionFunction(transition, 'postfunction', cloud, functionKey)
     }
@@ -50,7 +50,7 @@ runAsUser.eachWithIndex{ user, fields, idx ->
     relatedIssue.eachWithIndex{ key, value, i->
         def transition = "delete_issue_by_postfunction_run_as_" + user + "_" + key
         listOfTransitions.runAsUser.add(transition)
-        def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.false,\"targetIssue\":\"$value\",$fields}"
+        def cloud = "{$conditionalExecution.false,\"targetIssue\":\"$value\",$fields}"
         if(!isServer) {
             addTransitionFunction(transition, 'postfunction', cloud, functionKey)
         }

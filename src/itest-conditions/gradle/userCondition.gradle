@@ -10,10 +10,8 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-// apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
 
-//def functionKey = info?.isCloud? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__UserCondition' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition'
 def functionKey = info?.isCloud? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__UserCondition" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition'
 
 def whichUser = [
@@ -101,56 +99,56 @@ def userInFieldCreatorUserConditionCriteria = info?.isCloud ? userInFieldCreator
 
 currentUserConditionCriteria.eachWithIndex { criteria, userFields, i ->
 	def transition = "verify_current_user_should_be_" + criteria
-	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.currentUser,$userMode.allUsers,$userFields}"
-	def server = defaultFieldsServer + userFields +  whichUser.currentUser + reverse.no + userMode.allUsers + fieldEmpty.no
+	def cloud = "{\"problems\":[],$whichUser.currentUser,$userMode.allUsers,$userFields}"
+	def server = userFields +  whichUser.currentUser + reverse.no + userMode.allUsers + fieldEmpty.no
 	addTransitionFunction(transition, 'condition', info?.isCloud ? cloud : server, functionKey )
 }
 
 userInFieldAssigneeUserConditionCriteria.eachWithIndex { criteria, userFields, i ->
 	def transition = "verify_user_in_field_assignee_should_be_" + criteria
-	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.userInFieldAssignee,$userMode.allUsers,$userFields}"
-	def server = defaultFieldsServer + userFields + whichUser.userInFieldAssignee + reverse.no + userMode.allUsers + fieldEmpty.no
+	def cloud =  "{\"problems\":[],$whichUser.userInFieldAssignee,$userMode.allUsers,$userFields}"
+	def server = userFields + whichUser.userInFieldAssignee + reverse.no + userMode.allUsers + fieldEmpty.no
 	addTransitionFunction(transition, 'condition', info?.isCloud ? cloud : server,  functionKey )
 }
 
 userInFieldReporterUserConditionCriteria.eachWithIndex { criteria, userFields, i ->
 	def transition = "verify_user_in_field_reporter_should_be_" + criteria
-	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.userInFieldReporter,$userMode.allUsers,$userFields}"
-	def server = defaultFieldsServer + whichUser.userInFieldReporter + userFields + reverse.no + userMode.allUsers + fieldEmpty.no
+	def cloud =  "{\"problems\":[],$whichUser.userInFieldReporter,$userMode.allUsers,$userFields}"
+	def server = whichUser.userInFieldReporter + userFields + reverse.no + userMode.allUsers + fieldEmpty.no
 	addTransitionFunction(transition, 'condition', info?.isCloud ? cloud : server, functionKey )
 }
 
 userInFieldCreatorUserConditionCriteria.eachWithIndex { criteria, userFields, i ->
 	def transition = "verify_user_in_field_creator_should_be_" + criteria
-	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.userInFieldCreator,$userMode.allUsers,$userFields}"
-	def server = defaultFieldsServer + whichUser.userInFieldCreator + userFields + reverse.no + userMode.allUsers + fieldEmpty.no
+	def cloud = "{\"problems\":[],$whichUser.userInFieldCreator,$userMode.allUsers,$userFields}"
+	def server = whichUser.userInFieldCreator + userFields + reverse.no + userMode.allUsers + fieldEmpty.no
 	addTransitionFunction(transition, 'condition', info?.isCloud ? cloud : server, functionKey )
 }
 
 ['verify_current_user_should_be_in_assignee_reporter'].each {
-	def server =  defaultFieldsServer + whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + reverse.no + userMode.allUsers + fieldEmpty.no
-	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.currentUser,$userMode.allUsers,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)&&(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
+	def server =  whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + reverse.no + userMode.allUsers + fieldEmpty.no
+	def cloud = "{\"problems\":[],$whichUser.currentUser,$userMode.allUsers,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)&&(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
 	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['verify_current_user_should_be_in_at_least_one_field_assignee_reporter'].each {
-	def server =  defaultFieldsServer + whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + reverse.no + userMode.atLeastOne + fieldEmpty.no
-	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.currentUser,$userMode.atLeastOne,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)||(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
+	def server = whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + reverse.no + userMode.atLeastOne + fieldEmpty.no
+	def cloud = "{\"problems\":[],$whichUser.currentUser,$userMode.atLeastOne,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)||(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
 	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)}
 
 ['verify_user_in_field_creator_should_be_in_at_least_one_field_reporter_assignee'].each {
-	def server =  defaultFieldsServer + whichUser.userInFieldCreator + userCriteria.inFieldAssignee + userCriteria.reporter + reverse.no + userMode.atLeastOne + fieldEmpty.no
-	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.userInFieldCreator,\"fieldEmpty\":false,$userMode.atLeastOne,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},\"expression\":\"let selectedUser = !!issue && !!issue.creator && issue.creator; ((!!issue && !!issue.creator && (false || (!!issue.reporter && issue.creator.accountId == issue.reporter.accountId)||(!!issue.assignee && issue.creator.accountId == issue.assignee.accountId))))\"}"
+	def server =  whichUser.userInFieldCreator + userCriteria.inFieldAssignee + userCriteria.reporter + reverse.no + userMode.atLeastOne + fieldEmpty.no
+	def cloud = "{\"problems\":[],$whichUser.userInFieldCreator,\"fieldEmpty\":false,$userMode.atLeastOne,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},\"expression\":\"let selectedUser = !!issue && !!issue.creator && issue.creator; ((!!issue && !!issue.creator && (false || (!!issue.reporter && issue.creator.accountId == issue.reporter.accountId)||(!!issue.assignee && issue.creator.accountId == issue.assignee.accountId))))\"}"
 	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)}
 
 ['currentUser_should_not_be_in_fields_assignee_reporter_reverse'].each {
-	def server =  defaultFieldsServer + whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + reverse.yes + userMode.atLeastOne + fieldEmpty.no
-	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.currentUser,$userMode.allUsers,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true,\"reverse\":true},\"expression\":\"let selectedUser = user; !((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)&&(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
+	def server =  whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + reverse.yes + userMode.atLeastOne + fieldEmpty.no
+	def cloud = "{\"problems\":[],$whichUser.currentUser,$userMode.allUsers,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true,\"reverse\":true},\"expression\":\"let selectedUser = user; !((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)&&(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
 	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)}
 
 ['user_in_field_assignee_should_be_in_field_reporter_or_field_empty'].each {
-	def server =  defaultFieldsServer + whichUser.userInFieldAssignee + userCriteria.reporter + reverse.no + userMode.atLeastOne + fieldEmpty.yes
-	def cloud = defaultFieldsCloud.condition + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9={\"problems\":[],$whichUser.userInFieldAssignee,$userMode.atLeastOne,$fieldEmpty.yes,\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = !!issue && issue.assignee; ((!!issue && (!issue.assignee || (!!issue.reporter && issue.assignee.accountId == issue.reporter.accountId))))\"}"
+	def server =  whichUser.userInFieldAssignee + userCriteria.reporter + reverse.no + userMode.atLeastOne + fieldEmpty.yes
+	def cloud = "{\"problems\":[],$whichUser.userInFieldAssignee,$userMode.atLeastOne,$fieldEmpty.yes,\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = !!issue && issue.assignee; ((!!issue && (!issue.assignee || (!!issue.reporter && issue.assignee.accountId == issue.reporter.accountId))))\"}"
 	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)
 }
 
@@ -196,18 +194,6 @@ def listOfUsers = [testUser,user]
 						 value: userToCheck,
 				 ],
 				],
-				/*[action      : 'getFieldValue',
-				 sleep       : info?.isCloud ? 5000 : 0,
-				 ext         : ":Validate that the $userToCheck should be in $fieldToCheck _ before transition issue:$it ",
-				 parameters  : [
-						 issue: { -> defaultIssue[] },
-						 field: fieldToCheck
-				 ],
-				 finalClosure: { Task task ->
-					 def getUserInField = "$task.outData"
-					 assert getUserInField.contains(userToCheck)
-				 }
-				],*/
 				[action    : 'transitionIssue',
 				 sleep     : info?.isCloud ? 5000 : 0,
 				 ext       : ":USER_CONDITION_TS_26_TC_01_Case_01_ $it _when current user is $currentUser and _ $fieldToCheck is $userToCheck: ",

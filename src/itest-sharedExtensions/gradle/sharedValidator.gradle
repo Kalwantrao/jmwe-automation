@@ -20,6 +20,7 @@ apply from: gint.resourceDirectory +'/src/itest-sharedExtensions/sharedExtension
 
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:shared-validator'
 
+addWorkflow()
 
 def sharedValidatorUrl = info?.isCloud? "/rest/jmwe-api/shared-validator/" : "/rest/jmwe/1/shared-validators"
 
@@ -63,7 +64,7 @@ def savedID = {->shared_validatorId[0] }
         "sharedValidator_currentUserShouldBeAssignee"
 ].each {
     def transition = it
-    def server = defaultFieldsServer + "shared-validator-id=${savedID}"
+    def server = "shared-validator-id=${savedID}"
     if(!isCloud) {
         addTransitionFunction(transition, 'validator', server, functionKey)
     }

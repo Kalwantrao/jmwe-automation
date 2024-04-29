@@ -34,13 +34,11 @@ def createNewCustomField = {
             inline: {
                 gint.helper.log("opening custom field screen", "to add custom field")
                 sleep(5000)
-                def customFieldButton = driver.findElement(xpath:"//a[@data-testid='hero-btn-primary-olt-primary']", type: "xpath")
-                if(customFieldButton != null){
-                    gint.helper.log("element present", customFieldButton)
-                    driver.findSubElement(xpath:"//a[@data-testid='hero-btn-primary-olt-primary']", type: "xpath")
-                }else{
-                    gint.helper.log("not present", customFieldButton)
-                }
+                driver.getSelect("hosted-resources-iframe")
+                //driver.switchTo().frame()
+                driver.findAndClickElement(xpath: "//span[contains(text(),'My custom fields')]", type: "xpath")
+                sleep(5000)
+                driver.findAndClickElement(xpath: "//span[contains(text(),'Last Field Change Time')]", type: "xpath")
                 sleep(5000)
             }
     )
@@ -49,14 +47,6 @@ def createNewCustomField = {
 navigateToCustomFieldLandingPage()
 
 createNewCustomField()
-
-
-
-
-
-
-
-
 
 
 

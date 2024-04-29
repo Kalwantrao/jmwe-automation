@@ -32,96 +32,92 @@ def action = [
         ifChangedOnTransitionScreen : ["assigneeMode=forceSelectedUser"],
 ]
 
-def defaultFieldsCloud= [
-        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249"
-]
-
 ['1. assignToLastAdminRole'].each {
-    def server = defaultFieldsServer + projectRole.admin + conditionalExecution.false
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"includeReporter\":false,\"includeCurrentAssignee\":false,\"skipInactiveUsers\":false,\"sendNotifications\":false,\"role\":$jiraAdminRoleId,\"runAsType\":\"addonUser\"}"
+    def server =  projectRole.admin + conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"includeReporter\":false,\"includeCurrentAssignee\":false,\"skipInactiveUsers\":false,\"sendNotifications\":false,\"role\":$jiraAdminRoleId,\"runAsType\":\"addonUser\"}"
     addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['2. assignToLastTestRole'].each {
-    def server = defaultFieldsServer + projectRole.testRole + conditionalExecution.true
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"includeReporter\":false,\"includeCurrentAssignee\":false,\"skipInactiveUsers\":false,\"sendNotifications\":false,\"role\":$testProjectRoleIdCloud,\"runAsType\":\"addonUser\"}"
+    def server =  projectRole.testRole + conditionalExecution.true
+    def cloud =  "{\"conditionalExecution\":false,\"includeReporter\":false,\"includeCurrentAssignee\":false,\"skipInactiveUsers\":false,\"sendNotifications\":false,\"role\":$testProjectRoleIdCloud,\"runAsType\":\"addonUser\"}"
     addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['3. assignToLastRoleIncludeReporter'].each {
-    def server = defaultFieldsServer + projectRole.admin + option.includeReporter + conditionalExecution.false
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"includeReporter\":true,\"includeCurrentAssignee\":false,\"skipInactiveUsers\":false,\"sendNotifications\":false,\"role\":$jiraAdminRoleId,\"runAsType\":\"addonUser\"}"
+    def server =  projectRole.admin + option.includeReporter + conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"includeReporter\":true,\"includeCurrentAssignee\":false,\"skipInactiveUsers\":false,\"sendNotifications\":false,\"role\":$jiraAdminRoleId,\"runAsType\":\"addonUser\"}"
     addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['4. assignToLastRoleIncludeReporterIfAutomatic'].each {
-    def server = defaultFieldsServer + projectRole.admin + option.includeReporter + action.ifAutomatic + conditionalExecution.false
+    def server =  projectRole.admin + option.includeReporter + action.ifAutomatic + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 
 ['5. assignToLastRoleIncludeReporterIfNotAutomatic'].each {
-    def server = defaultFieldsServer + projectRole.admin + option.includeReporter + action.ifAutomatic + conditionalExecution.false
+    def server =  projectRole.admin + option.includeReporter + action.ifAutomatic + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 ['6. assignToLastRoleIncludeReporterIfChangeOnTransitionScreen'].each {
-    def server = defaultFieldsServer + projectRole.admin + option.includeReporter + action.ifChangedOnTransitionScreen + conditionalExecution.false
+    def server =  projectRole.admin + option.includeReporter + action.ifChangedOnTransitionScreen + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 
 ['7. assignToLastRoleIncludeReporterIfNotChangeOnTransitionScreen'].each {
-    def server = defaultFieldsServer + projectRole.admin + option.includeReporter + action.ifChangedOnTransitionScreen + conditionalExecution.false
+    def server =  projectRole.admin + option.includeReporter + action.ifChangedOnTransitionScreen + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 
 ['8. assignToLastRoleIncludeCurrentAssignee'].each {
-    def server = defaultFieldsServer + projectRole.admin + option.includeCurrentAssignee+ conditionalExecution.false
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"includeReporter\":false,\"includeCurrentAssignee\":true,\"skipInactiveUsers\":false,\"sendNotifications\":true,\"role\":$jiraAdminRoleId,\"runAsType\":\"addonUser\"}"
+    def server =  projectRole.admin + option.includeCurrentAssignee+ conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"includeReporter\":false,\"includeCurrentAssignee\":true,\"skipInactiveUsers\":false,\"sendNotifications\":true,\"role\":$jiraAdminRoleId,\"runAsType\":\"addonUser\"}"
     addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['9. assignToLastRoleIncludeCurrentAssigneeNegative'].each {
-    def server = defaultFieldsServer + projectRole.admin + option.includeCurrentAssignee+ conditionalExecution.false
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"includeReporter\":false,\"includeCurrentAssignee\":true,\"skipInactiveUsers\":false,\"sendNotifications\":true,\"role\":$jiraAdminRoleId,\"runAsType\":\"addonUser\"}"
+    def server =  projectRole.admin + option.includeCurrentAssignee+ conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"includeReporter\":false,\"includeCurrentAssignee\":true,\"skipInactiveUsers\":false,\"sendNotifications\":true,\"role\":$jiraAdminRoleId,\"runAsType\":\"addonUser\"}"
     addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['10. assignToLastRoleIncludeCurrentAssigneeIfAutomatic'].each {
-    def server = defaultFieldsServer + projectRole.admin + option.includeCurrentAssignee + action.ifAutomatic + conditionalExecution.false
+    def server =  projectRole.admin + option.includeCurrentAssignee + action.ifAutomatic + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 
 ['11. assignToLastRoleIncludeCurrentAssigneeIfAutomaticNegative'].each {
-    def server = defaultFieldsServer + projectRole.admin + option.includeCurrentAssignee + action.ifAutomatic + conditionalExecution.false
+    def server =  projectRole.admin + option.includeCurrentAssignee + action.ifAutomatic + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 
 ['12. assignToLastRoleIncludeCurrentAssigneeIfChangeOnTransitionScreen'].each {
-    def server = defaultFieldsServer + projectRole.admin + option.includeCurrentAssignee + action.ifChangedOnTransitionScreen + conditionalExecution.false
+    def server =  projectRole.admin + option.includeCurrentAssignee + action.ifChangedOnTransitionScreen + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 ['13. assignToLastRoleIncludeCurrentAssigneeIfChangeOnTransitionScreenNegative'].each {
-    def server = defaultFieldsServer + projectRole.admin + option.includeCurrentAssignee + action.ifChangedOnTransitionScreen + conditionalExecution.false
+    def server =  projectRole.admin + option.includeCurrentAssignee + action.ifChangedOnTransitionScreen + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', server, functionKey)
     }
 }
 ['14. assignToLastRoleSkipInactiveUsers'].each {
-    def server = defaultFieldsServer + projectRole.admin + option.skipInactiveUsers+ conditionalExecution.false
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"includeReporter\":false,\"includeCurrentAssignee\":false,\"skipInactiveUsers\":true,\"sendNotifications\":true,\"role\":$jiraAdminRoleId,\"runAsType\":\"addonUser\"}"
+    def server =  projectRole.admin + option.skipInactiveUsers+ conditionalExecution.false
+    def cloud =  "{\"conditionalExecution\":false,\"includeReporter\":false,\"includeCurrentAssignee\":false,\"skipInactiveUsers\":true,\"sendNotifications\":true,\"role\":$jiraAdminRoleId,\"runAsType\":\"addonUser\"}"
     addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 

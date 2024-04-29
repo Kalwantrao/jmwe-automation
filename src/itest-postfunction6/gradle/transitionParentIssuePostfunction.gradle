@@ -63,16 +63,12 @@ def conditionalExecution = [
         true : [ "useGroovyCondition=yes", "groovyExpression=$groovyExpression.checkPriorityHigh" ]
 ]
 
-def defaultFieldsCloud = [
-        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
-]
-
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__TransitionParentIssueFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionParentIssue-function'
 
 statusList.eachWithIndex { key, value, i ->
     def transition = 'transitionParentIssuePF_checkStatus'
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"${value}@@${workflow}\",\"runAsType\":\"currentUser\"}"
-    def server = defaultFieldsServer + transitions.specifyName + "transitions=$value" + conditionalExecution.false + "selectedLinkType=$relatedIssue.currentIssue" + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
+    def cloud =  "{\"conditionalExecution\":false,\"transition\":\"${value}@@${workflow}\",\"runAsType\":\"currentUser\"}"
+    def server =  transitions.specifyName + "transitions=$value" + conditionalExecution.false + "selectedLinkType=$relatedIssue.currentIssue" + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
     addTransitionFunction(transition+ i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(transition + i, 4)
@@ -80,8 +76,8 @@ statusList.eachWithIndex { key, value, i ->
 }
 
 statusList.eachWithIndex { key, value, i ->
-    def server = defaultFieldsServer + transitions.specifyName + "transitions=$value" + conditionalExecution.true + "selectedLinkType=$relatedIssue.currentIssue" + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"transition\":\"${value}@@${workflow}\",\"runAsType\":\"currentUser\"}"
+    def server =  transitions.specifyName + "transitions=$value" + conditionalExecution.true + "selectedLinkType=$relatedIssue.currentIssue" + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
+    def cloud =  "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"transition\":\"${value}@@${workflow}\",\"runAsType\":\"currentUser\"}"
     def transition = 'transitionParentIssueIfConditionTrue'
     addTransitionFunction(transition+ i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
@@ -92,8 +88,8 @@ statusList.eachWithIndex { key, value, i ->
 [
         'triggerCalculatedTransition_transitionParentIssue'
 ].each {
-    def server = defaultFieldsServer + transitions.calculated +  conditionalExecution.false + "selectedLinkType=$relatedIssue.currentIssue" + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"21\",\"runAsType\":\"currentUser\"}"
+    def server =  transitions.calculated +  conditionalExecution.false + "selectedLinkType=$relatedIssue.currentIssue" + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
+    def cloud =  "{\"conditionalExecution\":false,\"transition\":\"21\",\"runAsType\":\"currentUser\"}"
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(it, 4)
@@ -103,8 +99,8 @@ statusList.eachWithIndex { key, value, i ->
 [
         'addLabelsAfterTransition_template_transitionParentIssue'
 ].each {
-    def server = defaultFieldsServer + conditionalExecution.false + transitions.byName + options.allUnselected + addFields.setByTemplate + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\",\"fields\":{\"labels\":{\"value\":\"$labelsByTemplate\"}}}"
+    def server =  conditionalExecution.false + transitions.byName + options.allUnselected + addFields.setByTemplate + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
+    def cloud =  "{\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\",\"fields\":{\"labels\":{\"value\":\"$labelsByTemplate\"}}}"
     addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(it, 4)
@@ -114,8 +110,8 @@ statusList.eachWithIndex { key, value, i ->
 [
         'commentAddedBytemplate'
 ].each {
-    def server = defaultFieldsServer + conditionalExecution.false + transitions.byName + options.allUnselected + addFields.noField + addComment.template + commentVisibility.notSelected + runAsUser.currentUser
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\",\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":\"\"}"
+    def server =  conditionalExecution.false + transitions.byName + options.allUnselected + addFields.noField + addComment.template + commentVisibility.notSelected + runAsUser.currentUser
+    def cloud =  "{\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\",\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":\"\"}"
     addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(it, 4)
@@ -123,8 +119,8 @@ statusList.eachWithIndex { key, value, i ->
 }
 
 ['commentVisibleToJiraAdminRoles'].each {
-    def server = defaultFieldsServer + conditionalExecution.false + transitions.byName + options.allUnselected + addFields.noField + addComment.commentVisibleToJiraAdminRoles + commentVisibility.jiraAdminRoles + runAsUser.currentUser
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\",\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$jiraAdminRoleId}"
+    def server =  conditionalExecution.false + transitions.byName + options.allUnselected + addFields.noField + addComment.commentVisibleToJiraAdminRoles + commentVisibility.jiraAdminRoles + runAsUser.currentUser
+    def cloud =  "{\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\",\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$jiraAdminRoleId}"
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(it, 4)
@@ -132,8 +128,8 @@ statusList.eachWithIndex { key, value, i ->
 }
 
 ['runAsSpecificUser'].each {
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"thisUser\",\"runAs\":\"accountId:$currentUserKey\"}"
-    def server = defaultFieldsServer + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.specificUser
+    def cloud =  "{\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"thisUser\",\"runAs\":\"accountId:$currentUserKey\"}"
+    def server =  transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.specificUser
     addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(it, 4)
@@ -141,8 +137,8 @@ statusList.eachWithIndex { key, value, i ->
 }
 
 ['runAsUserInFieldAssignee'].each {
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userField\",\"runAsField\":\"assignee\"}"
-    def server = defaultFieldsServer + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.userInFieldAssignee
+    def cloud =  "{\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userField\",\"runAsField\":\"assignee\"}"
+    def server =  transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.userInFieldAssignee
     addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(it, 4)
@@ -150,8 +146,8 @@ statusList.eachWithIndex { key, value, i ->
 }
 
 ['runAsUserInFieldReporter'].each {
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userField\",\"runAsField\":\"reporter\"}"
-    def server = defaultFieldsServer  + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.userInFieldReporter
+    def cloud =  "{\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userField\",\"runAsField\":\"reporter\"}"
+    def server =  transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.userInFieldReporter
     addTransitionFunction(  it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(it, 4)
@@ -159,8 +155,8 @@ statusList.eachWithIndex { key, value, i ->
 }
 
 ['runAsUserInFieldCreator'].each{
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userField\",\"runAsField\":\"creator\"}"
-    def server = defaultFieldsServer + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.userInFieldCreator
+    def cloud =  "{\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userField\",\"runAsField\":\"creator\"}"
+    def server =  transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.userInFieldCreator
     addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(it, 4)
@@ -168,8 +164,8 @@ statusList.eachWithIndex { key, value, i ->
 }
 
 runAsUser.eachWithIndex { userType, fields, idx ->
-    def cloud = defaultFieldsCloud + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userFromScript\",$fields}"
-    def server = defaultFieldsServer + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + fields
+    def cloud =  "{\"conditionalExecution\":false,\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userFromScript\",$fields}"
+    def server =  transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + fields
     addTransitionFunction( userType, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(userType, 4)

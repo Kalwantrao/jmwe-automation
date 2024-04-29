@@ -20,34 +20,29 @@ createGroup("customgroup")
 addUserToGroup("customgroup", testUser)
 
 def defaultFieldsServer = [
-        verify_the_error_message: ["errorMessage=$customErrorMessage","groups=","showAsterisk=no","correlationId="],
-        verify_the_system_error_message: ["errorMessage=","groups=","showAsterisk=no","correlationId="],
-        verify_the_condition_groovy_expression : ["conditionalValidation=yes","conditionalValidationScript=$groovyExpression.getIssuetype","errorMessage=","groups=","showAsterisk=no","correlationId="],
-        comment_required_if_not_from_selectedGroup : ["errorMessage=","groups=jira-administrators","showAsterisk=no","correlationId="],
-        comment_required_if_user_is_not_belongs_to_testGroup : ["errorMessage=","groups=$testGroup","showAsterisk=no","correlationId="],
-        comment_required_if_user_is_not_belongs_to_customGroup : ["errorMessage=","groups=customgroup","showAsterisk=no","correlationId="]
+        verify_the_error_message: ["errorMessage=$customErrorMessage","groups=","showAsterisk=no"],
+        verify_the_system_error_message: ["errorMessage=","groups=","showAsterisk=no"],
+        verify_the_condition_groovy_expression : ["conditionalValidation=yes","conditionalValidationScript=$groovyExpression.getIssuetype","errorMessage=","groups=","showAsterisk=no"],
+        comment_required_if_not_from_selectedGroup : ["errorMessage=","groups=jira-administrators","showAsterisk=no"],
+        comment_required_if_user_is_not_belongs_to_testGroup : ["errorMessage=","groups=$testGroup","showAsterisk=no"],
+        comment_required_if_user_is_not_belongs_to_customGroup : ["errorMessage=","groups=customgroup","showAsterisk=no"]
 ]
 
 def defaultFieldsCloud = [
         verify_the_error_message : [
-                "validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a",
-                "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"problems\":[],\"errorMessage\":\"$customErrorMessage\",\"expression\": \"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}"
+                "{\"problems\":[],\"errorMessage\":\"$customErrorMessage\",\"expression\": \"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}"
         ],
         verify_the_system_error_message : [
-                "validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a",
-                "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"problems\":[],\"expression\":\"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}"
+                "{\"problems\":[],\"expression\":\"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}"
         ],
         verify_the_condition_groovy_expression : [
-                "validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a",
-                "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"problems\":[],\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.issueType && issue.issueType.name == 'Task'\",\"expression\":\"!(!!issue.issueType && issue.issueType.name == 'Task') || !!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}"
+                "{\"problems\":[],\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.issueType && issue.issueType.name == 'Task'\",\"expression\":\"!(!!issue.issueType && issue.issueType.name == 'Task') || !!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}"
         ]
 ]
 
-//def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__CommentRequiredValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentrequired-validator'
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__CommentRequiredValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentrequired-validator'
 def fields = info?.isCloud ? defaultFieldsCloud : defaultFieldsServer
 
-// Configuration for validator
 fields.eachWithIndex { key, value, i ->
     addTransitionFunction(key, 'validator', value, functionKey)
 }

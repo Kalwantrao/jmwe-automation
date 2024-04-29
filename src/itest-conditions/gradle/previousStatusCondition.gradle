@@ -10,38 +10,37 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-//apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
 
 ['hideTransitionCondition'].each {transitions ->
     def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:non-interactive-condition'
 if(!isCloud){
-        addTransitionFunction(transitions, 'condition', defaultFieldsServer, functionKey)
+        addTransitionFunction(transitions, 'condition', " ", functionKey)
     }
 }
 
 def previousStatusServer = [
-        select_previousStatus_toDo : [ defaultFieldsServer + "issue_statuses=$ToDo" ] ,
-        select_toDo_with_most_recent_status_only : [ defaultFieldsServer + "issue_statuses=$ToDo" + "mostRecentOnly=yes" ],
-        select_toDo_with_include_current_status : [ defaultFieldsServer + "issue_statuses=$ToDo" + "includeCurrent=yes" ],
-        select_toDo_with_reverse : [ defaultFieldsServer + "issue_statuses=$ToDo" + "not=yes" ],
-        select_previousStatus_inProgress : [ defaultFieldsServer + "issue_statuses=$InProgress" ],
-        select_inProgress_with_most_recent_status_only : [ defaultFieldsServer + "issue_statuses=$InProgress" + "mostRecentOnly=yes" ],
-        select_inProgress_with_include_current_status : [ defaultFieldsServer + "issue_statuses=$InProgress" + "includeCurrent=yes" ],
-        select_inProgress_with_reverse : [ defaultFieldsServer + "issue_statuses=$InProgress" + "not=yes" ],
-        select_previousStatus_inReview : [ defaultFieldsServer + "issue_statuses=$InReview"],
-        select_inReview_with_most_recent_status_only : [ defaultFieldsServer + "issue_statuses=$InReview", "mostRecentOnly=yes" ],
-        select_inReview_with_include_current_status : [ defaultFieldsServer + "issue_statuses=$InReview","includeCurrent=yes" ],
-        select_inReview_with_reverse : [ defaultFieldsServer + "issue_statuses=$InReview", "not=yes" ],
-        select_previousStatus_done : [ defaultFieldsServer + "issue_statuses=$Done" ],
-        select_done_with_most_recent_status_only : [ defaultFieldsServer + "issue_statuses=$Done", "mostRecentOnly=yes" ],
-        select_done_with_include_current_status : [ defaultFieldsServer + "issue_statuses=$Done","includeCurrent=yes" ],
-        select_done_with_reverse : [ defaultFieldsServer + "issue_statuses=$Done", "not=yes" ],
-        select_previousStatus_toDo_inProgress_inReview_Done : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done" ],
-       // select_previousStatus_toDo_inProgress_inReview_Done_with_all_options : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "mostRecentOnly=yes","includeCurrent=yes","not=yes" ],
-        select_all_previousStatus_with_most_recent_status_only : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "mostRecentOnly=yes" ],
-        select_all_previousStatus_with_all_options : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "mostRecentOnly=yes", "includeCurrent=yes","not=yes"  ],
-        select_all_previousStatus_with_most_recent_status_only_include_currentStatus : [ defaultFieldsServer + "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "mostRecentOnly=yes","includeCurrent=yes", ],
+        select_previousStatus_toDo : [ "issue_statuses=$ToDo" ] ,
+        select_toDo_with_most_recent_status_only : [ "issue_statuses=$ToDo" + "mostRecentOnly=yes" ],
+        select_toDo_with_include_current_status : [ "issue_statuses=$ToDo" + "includeCurrent=yes" ],
+        select_toDo_with_reverse : [ "issue_statuses=$ToDo" + "not=yes" ],
+        select_previousStatus_inProgress : [ "issue_statuses=$InProgress" ],
+        select_inProgress_with_most_recent_status_only : [ "issue_statuses=$InProgress" + "mostRecentOnly=yes" ],
+        select_inProgress_with_include_current_status : [ "issue_statuses=$InProgress" + "includeCurrent=yes" ],
+        select_inProgress_with_reverse : [ "issue_statuses=$InProgress" + "not=yes" ],
+        select_previousStatus_inReview : [ "issue_statuses=$InReview"],
+        select_inReview_with_most_recent_status_only : [ "issue_statuses=$InReview", "mostRecentOnly=yes" ],
+        select_inReview_with_include_current_status : [ "issue_statuses=$InReview","includeCurrent=yes" ],
+        select_inReview_with_reverse : [ "issue_statuses=$InReview", "not=yes" ],
+        select_previousStatus_done : [ "issue_statuses=$Done" ],
+        select_done_with_most_recent_status_only : [ "issue_statuses=$Done", "mostRecentOnly=yes" ],
+        select_done_with_include_current_status : [ "issue_statuses=$Done","includeCurrent=yes" ],
+        select_done_with_reverse : [ "issue_statuses=$Done", "not=yes" ],
+        select_previousStatus_toDo_inProgress_inReview_Done : [ "issue_statuses=$ToDo,$InProgress,$InReview,$Done" ],
+       // select_previousStatus_toDo_inProgress_inReview_Done_with_all_options : [ "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "mostRecentOnly=yes","includeCurrent=yes","not=yes" ],
+        select_all_previousStatus_with_most_recent_status_only : [ "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "mostRecentOnly=yes" ],
+        select_all_previousStatus_with_all_options : [ "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "mostRecentOnly=yes", "includeCurrent=yes","not=yes"  ],
+        select_all_previousStatus_with_most_recent_status_only_include_currentStatus : [ "issue_statuses=$ToDo,$InProgress,$InReview,$Done", "mostRecentOnly=yes","includeCurrent=yes", ],
 ]
 
 previousStatusServer.eachWithIndex { transitions, fields, i->

@@ -29,42 +29,42 @@ def fieldOptions = [
 
 relatedIssue.eachWithIndex { targetIssue, fields, i ->
     def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_' + i
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"runAsType\":\"addonUser\"}"
-    def server = defaultFieldsServer + fieldOptions.assigneeToLabels + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "{\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"runAsType\":\"addonUser\"}"
+    def server =  fieldOptions.assigneeToLabels + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
     addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.eachWithIndex { targetIssue, fields, i ->
     def transition = 'verify_current_issue_from_source_and_all_target_issue_options_to_destination_issue_' + i
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"problems\":[],\"sourceIssues\":\"currentIssue:*\",\"destinationIssues\":\"$fields\",\"copyFieldsConfig\":[{\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"runAsType\":\"addonUser\"}"
-    def server = defaultFieldsServer + fieldOptions.assigneeToLabels+ "selectedLinkTypeSource=$currentIssue" + "selectedLinkTypeDestination=$fields" + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "{\"problems\":[],\"sourceIssues\":\"currentIssue:*\",\"destinationIssues\":\"$fields\",\"copyFieldsConfig\":[{\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"runAsType\":\"addonUser\"}"
+    def server =  fieldOptions.assigneeToLabels+ "selectedLinkTypeSource=$currentIssue" + "selectedLinkTypeDestination=$fields" + conditionalExecution.false + runAsUser.currentUser
     addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.take(1).eachWithIndex { targetIssue, fields, i ->
     def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_copyOnlyIfNotSet_' + i
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"options\":{\"copyOnlyIfNotSet\":true,\"ignoreEmptyValue\":false,\"appendValues\":false,\"useOldValue\":false},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"runAsType\":\"addonUser\"}"
-    def server = defaultFieldsServer + fieldOptions.copyOnlyIfNotSet + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "{\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"options\":{\"copyOnlyIfNotSet\":true,\"ignoreEmptyValue\":false,\"appendValues\":false,\"useOldValue\":false},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"runAsType\":\"addonUser\"}"
+    def server =  fieldOptions.copyOnlyIfNotSet + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
     addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.take(1).eachWithIndex { targetIssue, fields, i ->
     def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_ignoreEmptyValue_' + i
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"options\":{\"copyOnlyIfNotSet\":false,\"ignoreEmptyValue\":true,\"appendValues\":false,\"useOldValue\":false},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"runAsType\":\"addonUser\"}"
-    def server = defaultFieldsServer + fieldOptions.ignoreEmptyValue + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "{\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"options\":{\"copyOnlyIfNotSet\":false,\"ignoreEmptyValue\":true,\"appendValues\":false,\"useOldValue\":false},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"runAsType\":\"addonUser\"}"
+    def server =  fieldOptions.ignoreEmptyValue + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
     addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.take(1).eachWithIndex { targetIssue, fields, i ->
     def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_appendValues_' + i
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"options\":{\"copyOnlyIfNotSet\":false,\"ignoreEmptyValue\":false,\"appendValues\":true,\"useOldValue\":false},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"runAsType\":\"addonUser\"}"
-    def server = defaultFieldsServer + fieldOptions.appendValues + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "{\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"options\":{\"copyOnlyIfNotSet\":false,\"ignoreEmptyValue\":false,\"appendValues\":true,\"useOldValue\":false},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"runAsType\":\"addonUser\"}"
+    def server =  fieldOptions.appendValues + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
     addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.take(1).eachWithIndex { targetIssue, fields, i ->
     def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_removeValues_' + i
-    def server = defaultFieldsServer + fieldOptions.removeValues + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
+    def server =  fieldOptions.removeValues + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
     if(!isCloud) {
         addTransitionFunction(transition, 'postfunction', server, functionKey)
     }
@@ -72,15 +72,15 @@ relatedIssue.take(1).eachWithIndex { targetIssue, fields, i ->
 
 relatedIssue.take(1).eachWithIndex { targetIssue, fields, i ->
     def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_useOldValue_' + i
-    def server = defaultFieldsServer + fieldOptions.useOldValue + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"options\":{\"copyOnlyIfNotSet\":false,\"ignoreEmptyValue\":false,\"appendValues\":false,\"useOldValue\":true},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"runAsType\":\"addonUser\"}"
+    def server =  fieldOptions.useOldValue + "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "{\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"options\":{\"copyOnlyIfNotSet\":false,\"ignoreEmptyValue\":false,\"appendValues\":false,\"useOldValue\":true},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"runAsType\":\"addonUser\"}"
     addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.take(1).eachWithIndex { targetIssue, fields, i ->
     def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_onlyIfConditionTrue' + i
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"runAsType\":\"addonUser\"}"
-    def server = defaultFieldsServer + fieldOptions.assigneeToLabels+ "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.true + runAsUser.currentUser
+    def cloud =  "{\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"runAsType\":\"addonUser\"}"
+    def server =  fieldOptions.assigneeToLabels+ "selectedLinkTypeSource=$fields" + "selectedLinkTypeDestination=$currentIssue" + conditionalExecution.true + runAsUser.currentUser
     addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
@@ -88,8 +88,8 @@ runAsUser.remove("currentUser")
 runAsUser.eachWithIndex { user, fieldsValue, index ->
     relatedIssue.take(1).eachWithIndex { targetIssue, fields, i ->
         def transition = 'verify_current_issue_from_source_and_all_target_issue_options_to_destination_issue_run_as_' + user + i
-        def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"copyFieldsConfig\":[{\"options\":{\"createMissingValues\":true},\"sourceField\":\"labels\",\"destinationField\":\"components\"}],\"sourceIssues\":\"currentIssue:*\",\"destinationIssues\":\"$fields\",\"problems\":[],$fieldsValue}"
-        def server = defaultFieldsServer + fieldOptions.labelsToComponent + "selectedLinkTypeSource=$currentIssue" + "selectedLinkTypeDestination=$fields" + fieldsValue + conditionalExecution.false
+        def cloud =  "{\"copyFieldsConfig\":[{\"options\":{\"createMissingValues\":true},\"sourceField\":\"labels\",\"destinationField\":\"components\"}],\"sourceIssues\":\"currentIssue:*\",\"destinationIssues\":\"$fields\",\"problems\":[],$fieldsValue}"
+        def server =  fieldOptions.labelsToComponent + "selectedLinkTypeSource=$currentIssue" + "selectedLinkTypeDestination=$fields" + fieldsValue + conditionalExecution.false
         addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
         if(!isCloud) {
             moveTransitionFunction(transition, 4)
@@ -619,9 +619,9 @@ def relatedIssuesMap = [
                          issue: value,
                          outputType: "text",
                          columns: "Author,Field,'To String'",
-                         select: ["Author:$getCurrentUserName1","Field:component","To String:$it$i"],
+                         select: ["Author:$getCurrentUserName1","Field:Component","To String:$it$i"],
                  ],
-                 data      : ["$getCurrentUserName1", "component", "$it$i"],
+                 data      : ["$getCurrentUserName1", "Component", "$it$i"],
                 ],
         ])
     }
@@ -676,9 +676,9 @@ def relatedIssuesMap = [
                          issue: value,
                          outputType: "text",
                          columns: "Author,Field,'To String'",
-                         select: ["Author:$getCurrentUserName1","Field:component","To String:$it$i"],
+                         select: ["Author:$getCurrentUserName1","Field:Component","To String:$it$i"],
                  ],
-                 data      : ["$getCurrentUserName1", "component", "$it$i"],
+                 data      : ["$getCurrentUserName1", "Component", "$it$i"],
                 ],
         ])
     }

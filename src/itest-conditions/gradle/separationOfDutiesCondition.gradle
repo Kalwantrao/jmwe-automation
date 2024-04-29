@@ -10,15 +10,14 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
-// apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
 
 def functionKey =  'com.innovalog.jmwe.jira-misc-workflow-extensions:separationofduties-condition'
 
 def separationOfDutiesConditionOptions = [
-        FROM_ANY_TO_TODO_STATUS : [ defaultFieldsServer + "fromStatus=" + "toStatus=To Do" ],
-        FROM_INPROGRESS_TO_DONE_STATUS : [ defaultFieldsServer + "fromStatus=In Progress" + "toStatus=Done"  ],
-        FROM_DONE_TO_INPROGRESS_STATUS : [ defaultFieldsServer + "fromStatus=Done" + "toStatus=In Progress" ],
+        FROM_ANY_TO_TODO_STATUS : [  "fromStatus=" + "toStatus=To Do" ],
+        FROM_INPROGRESS_TO_DONE_STATUS : [  "fromStatus=In Progress" + "toStatus=Done"  ],
+        FROM_DONE_TO_INPROGRESS_STATUS : [  "fromStatus=Done" + "toStatus=In Progress" ],
 ]
 
 separationOfDutiesConditionOptions.eachWithIndex { transitions, fields, i ->

@@ -14,11 +14,6 @@ apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction.gradl
 
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:setsecurityfromrole'
 
-def defaultFields = [
-        "correlationId=",
-        "throwExceptions=false",
-]
-
 def projectRole = [
         admin : [ "selectedProjectRoleId=$jiraAdminRoleId" ],
         testRole : ["selectedProjectRoleId=$testProjectRoleId"]
@@ -29,21 +24,21 @@ def securityLevel = [
 ]
 
 ['setLevel1IfAdminRole'].each {
-    def fields = defaultFieldsServer + projectRole.admin + securityLevel.level1 + conditionalExecution.false
+    def fields =  projectRole.admin + securityLevel.level1 + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', fields, functionKey)
     }
 }
 
 ['setLevel2IfTestRole'].each {
-    def fields = defaultFieldsServer + projectRole.testRole + securityLevel.level2 + conditionalExecution.false
+    def fields =  projectRole.testRole + securityLevel.level2 + conditionalExecution.false
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', fields, functionKey)
     }
 }
 
 ['setLevel1IfAdminRoleWhenConditionTrue'].each {
-    def fields = defaultFieldsServer + projectRole.admin + securityLevel.level1 + conditionalExecution.true
+    def fields =  projectRole.admin + securityLevel.level1 + conditionalExecution.true
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', fields, functionKey)
     }

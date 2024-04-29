@@ -27,14 +27,14 @@ def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugi
 String scriptForSummary = "{{ '/rest/api/2/issue/:issue' | callJira(verb=('PUT'), params={'issue':issue.key}, body={'fields': {'summary': 'test_summary'} }) }}"
 
 ['setSummaryByScript'].each {
-    def server = defaultFieldsServer + script.setSummary
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"script\":\"$scriptForSummary\",\"scriptDescription\":\"\"}"
+    def server =  script.setSummary
+    def cloud =  "{\"script\":\"$scriptForSummary\",\"scriptDescription\":\"\"}"
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['runAsCurrentUser'].each {
-    def server = defaultFieldsServer + script.currentUser + runAsUser.currentUser
-    def cloud = defaultFieldsCloud.postfunction + ""
+    def server =  script.currentUser + runAsUser.currentUser
+    def cloud =  ""
     if(!isCloud) {
         addTransitionFunction(it , 'postfunction', info?.isCloud ? cloud : server, functionKey )
         moveTransitionFunction(it, 4)
@@ -42,16 +42,16 @@ String scriptForSummary = "{{ '/rest/api/2/issue/:issue' | callJira(verb=('PUT')
 }
 
 ['runAsUserInFieldReporter'].each {
-    def server = defaultFieldsServer + script.userInFieldReporter + runAsUser.userInFieldReporter
-    def cloud = defaultFieldsCloud.postfunction + ""
+    def server =  script.userInFieldReporter + runAsUser.userInFieldReporter
+    def cloud =  ""
     if(!isCloud) {
         addTransitionFunction(it , 'postfunction', info?.isCloud ? cloud : server, functionKey )
         moveTransitionFunction(it, 4)
     }
 }
 ['runAsUserInFieldCreator'].each {
-    def server = defaultFieldsServer + script.userInFieldCreator + runAsUser.userInFieldCreator
-    def cloud = defaultFieldsCloud.postfunction + ""
+    def server =  script.userInFieldCreator + runAsUser.userInFieldCreator
+    def cloud =  ""
     if(!isCloud) {
         addTransitionFunction(it , 'postfunction', info?.isCloud ? cloud : server, functionKey )
         moveTransitionFunction(it, 4)
@@ -59,8 +59,8 @@ String scriptForSummary = "{{ '/rest/api/2/issue/:issue' | callJira(verb=('PUT')
 }
 
 ['runAsUserFromScript'].each {
-    def server = defaultFieldsServer + script.userFromScript + runAsUser.userFromScript
-    def cloud = defaultFieldsCloud.postfunction + ""
+    def server =  script.userFromScript + runAsUser.userFromScript
+    def cloud =  ""
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
         moveTransitionFunction(it, 4)
@@ -68,16 +68,16 @@ String scriptForSummary = "{{ '/rest/api/2/issue/:issue' | callJira(verb=('PUT')
 }
 
 ['runAsUserInFieldAssignee'].each {
-    def server = defaultFieldsServer + script.userInFieldAssignee + runAsUser.userInFieldAssignee
-    def cloud = defaultFieldsCloud.postfunction + ""
+    def server =  script.userInFieldAssignee + runAsUser.userInFieldAssignee
+    def cloud =  ""
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
         moveTransitionFunction(it, 4)
     }
 }
 ['runAsSpecificUser'].each {
-    def server = defaultFieldsServer + script.specificUser + runAsUser.specificUser
-    def cloud = defaultFieldsCloud.postfunction + ""
+    def server =  script.specificUser + runAsUser.specificUser
+    def cloud =  ""
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
         moveTransitionFunction(it, 4)
