@@ -12,6 +12,16 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
 
+def STATUS_ID_TODO = getStatusId("To Do")
+def STATUS_ID_INPROGRESS = getStatusId("In Progress")
+def STATUS_ID_INREVIEW = getStatusId("In Review")
+def STATUS_ID_DONE = getStatusId("Done")
+
+def ToDo = {->STATUS_ID_TODO.getAt(0).trim()}
+def InProgress = {->STATUS_ID_INPROGRESS.getAt(0).trim()}
+def InReview = {->STATUS_ID_INREVIEW.getAt(0).trim()}
+def Done = {->STATUS_ID_DONE.getAt(0).trim()}
+
 ['hideTransitionCondition'].each {transitions ->
     def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:non-interactive-condition'
 if(!isCloud){
@@ -21,13 +31,13 @@ if(!isCloud){
 
 def previousStatusServer = [
         select_previousStatus_toDo : [ "issue_statuses=$ToDo" ] ,
-        select_toDo_with_most_recent_status_only : [ "issue_statuses=$ToDo" + "mostRecentOnly=yes" ],
-        select_toDo_with_include_current_status : [ "issue_statuses=$ToDo" + "includeCurrent=yes" ],
-        select_toDo_with_reverse : [ "issue_statuses=$ToDo" + "not=yes" ],
+        select_toDo_with_most_recent_status_only : [ "issue_statuses=$ToDo" , "mostRecentOnly=yes" ],
+        select_toDo_with_include_current_status : [ "issue_statuses=$ToDo" , "includeCurrent=yes" ],
+        select_toDo_with_reverse : [ "issue_statuses=$ToDo" , "not=yes" ],
         select_previousStatus_inProgress : [ "issue_statuses=$InProgress" ],
-        select_inProgress_with_most_recent_status_only : [ "issue_statuses=$InProgress" + "mostRecentOnly=yes" ],
-        select_inProgress_with_include_current_status : [ "issue_statuses=$InProgress" + "includeCurrent=yes" ],
-        select_inProgress_with_reverse : [ "issue_statuses=$InProgress" + "not=yes" ],
+        select_inProgress_with_most_recent_status_only : [ "issue_statuses=$InProgress" , "mostRecentOnly=yes" ],
+        select_inProgress_with_include_current_status : [ "issue_statuses=$InProgress" , "includeCurrent=yes" ],
+        select_inProgress_with_reverse : [ "issue_statuses=$InProgress" , "not=yes" ],
         select_previousStatus_inReview : [ "issue_statuses=$InReview"],
         select_inReview_with_most_recent_status_only : [ "issue_statuses=$InReview", "mostRecentOnly=yes" ],
         select_inReview_with_include_current_status : [ "issue_statuses=$InReview","includeCurrent=yes" ],
@@ -85,7 +95,7 @@ def transitionByUserTask =  { transition, userId, issue, expected ->
 }
 
 // HIDE_TRANSITION_CONDITION_Verify transition tab eg $it after apply_Hide Transition Condition_ on ToDo status and current status of Issue is also ToDo_from different user
-transitionByUserTask('hideTransitionCondition', testUserForServer, {->defaultIssue[]}, -1)
+transitionByUserTask('hideTransitionCondition', testUser, {->defaultIssue[]}, -1)
 
 // PREVIOUS_STATUS_CONDITION_TC_16_Verify the Previous Status without selecting any Options_when issues previous status is not in selected status
 [
@@ -107,8 +117,8 @@ transitionByUserTask('hideTransitionCondition', testUserForServer, {->defaultIss
 }
 
 // PREVIOUS_STATUS_CONDITION-Verify transition by user other than admin
-transitionByUserTask('select_previousStatus_toDo', testUserForServer, {->defaultIssue[]}, -1)
-transitionByUserTask('select_toDo_with_most_recent_status_only', testUserForServer, {->defaultIssue[]}, -1)
+transitionByUserTask('select_previousStatus_toDo', testUser, {->defaultIssue[]}, -1)
+transitionByUserTask('select_toDo_with_most_recent_status_only', testUser, {->defaultIssue[]}, -1)
 
 // PREVIOUS_STATUS_CONDITION_TC_19_Verify for the option: Most recent status only_when issues most recent status is not in selected status
 [
@@ -129,8 +139,8 @@ transitionByUserTask('select_toDo_with_most_recent_status_only', testUserForServ
 }
 
 // PREVIOUS_STATUS_CONDITION-Verify transition by user other than admin
-transitionByUserTask('select_previousStatus_inProgress', testUserForServer, {->defaultIssue[]}, -1)
-transitionByUserTask('select_inProgress_with_most_recent_status_only', testUserForServer, {->defaultIssue[]}, -1)
+transitionByUserTask('select_previousStatus_inProgress', testUser, {->defaultIssue[]}, -1)
+transitionByUserTask('select_inProgress_with_most_recent_status_only', testUser, {->defaultIssue[]}, -1)
 
 // PREVIOUS_STATUS_CONDITION_TC_21_Verify for the Include current status option_when issues previous and current status is not in selected status
 [
@@ -151,7 +161,7 @@ transitionByUserTask('select_inProgress_with_most_recent_status_only', testUserF
 }
 
 // PREVIOUS_STATUS_CONDITION-Verify transition by user other than admin
-transitionByUserTask('select_inProgress_with_include_current_status', testUserForServer, {->defaultIssue[]}, -1)
+transitionByUserTask('select_inProgress_with_include_current_status', testUser, {->defaultIssue[]}, -1)
 
 // PREVIOUS_STATUS_CONDITION_TC_23-Verify for the Reverse condition option_when issues previous status is not in selected status
 [
@@ -172,7 +182,7 @@ transitionByUserTask('select_inProgress_with_include_current_status', testUserFo
 }
 
 // PREVIOUS_STATUS_CONDITION-Verify transition by user other than admin
-transitionByUserTask('select_inProgress_with_reverse', testUserForServer, {->defaultIssue[]}, 0)
+transitionByUserTask('select_inProgress_with_reverse', testUser, {->defaultIssue[]}, 0)
 
 // transition issue to set the previous status to In Progress
 [

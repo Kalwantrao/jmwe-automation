@@ -14,12 +14,10 @@ apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
 
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__ScriptedCondition" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-condition'
 
-def cloudFields = [
-        "{\"expression\":\"!! issue.assignee\"}"
-]
+def cloudFields = "{\"expression\":\"!! issue.assignee\"}"
 
 ['issueMustBeAssignedToSpecificUser'].each {
-	def fields = info?.isCloud ? cloudFields : "scriptDescription=" + /groovyExpression=issue.getAsString('assignee') == "$testUser"/
+	def fields = info?.isCloud ? cloudFields : ["scriptDescription=", /groovyExpression=issue.getAsString('assignee') == "$testUser"/]
 	addTransitionFunction(it, 'condition', fields, functionKey )
 }
 

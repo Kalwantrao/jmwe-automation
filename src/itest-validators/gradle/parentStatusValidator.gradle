@@ -16,9 +16,15 @@ def errorMessage = "Check issues parents status"
 
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:parentstatus-validator'
 
+def statusList = [
+		IN_PROGRESS : 'In Progress',
+		IN_REVIEW : 'In Review',
+		DONE : 'Done'
+]
+
 statusList.eachWithIndex { status, value, i ->
 	def transition = "verify_status_of_the_parent_issue_should_be_" + status
-	def fields = conditionalValidation.no + "issue_statuses=$value" + "errorMessage="
+	def fields = [conditionalValidation.no,"issue_statuses=$value","errorMessage="]
 	if(!isCloud) {
 		addTransitionFunction(transition, 'validator', fields, functionKey)
 	}
@@ -26,14 +32,14 @@ statusList.eachWithIndex { status, value, i ->
 
 statusList.eachWithIndex { status, value, i ->
 	def transition = "verify_status_of_the_parent_issue_error_message_by_user_" + status
-	def fields = conditionalValidation.no + "issue_statuses=$value" + "errorMessage=$errorMessage"
+	def fields = [conditionalValidation.no,"issue_statuses=$value","errorMessage=$errorMessage"]
 	if(!isCloud) {
 		addTransitionFunction(transition, 'validator', fields, functionKey)
 	}
 }
 
 ['verify_parent_issue_must_in_one_of_the_selected_status'].each {
-	def fields = "conditionalValidation=no" + "issue_statuses=$statusList.inProgress@@$statusList.done@@" + "errorMessage=$errorMessage"
+	def fields = ["conditionalValidation=no","issue_statuses=$statusList.IN_PROGRESS@@$statusList.DONE@@","errorMessage=$errorMessage"]
 	if(!isCloud) {
 		addTransitionFunction(it, 'validator', fields, functionKey)
 	}
@@ -41,7 +47,7 @@ statusList.eachWithIndex { status, value, i ->
 
 statusList.eachWithIndex { status, value, i ->
 	def transition = 'verify_status_of_the_parent_issue_only_if_condition_true_' + status
-	def fields = conditionalValidation.yes + "issue_statuses=$value" + "errorMessage=$errorMessage"
+	def fields = [conditionalValidation.yes,"issue_statuses=$value","errorMessage=$errorMessage"]
 	if(!isCloud) {
 		addTransitionFunction(transition, 'validator', fields, functionKey)
 	}
@@ -230,7 +236,7 @@ if(!isCloud) {
 }
 
 // PARENT_STATUS_VALIDATOR_TS_32_TC_01-Verify for Parent Status Validator from linked issue
-['verify_status_of_the_parent_issue_should_be_inProgress'].each {
+['verify_status_of_the_parent_issue_should_be_IN_PROGRESS'].each {
 	if(!isCloud) {
 		gint.taskHelper.add([
 				[action    : 'transitionIssue',
@@ -261,6 +267,7 @@ if(!isCloud) {
 		])
 	}
 }
+
 
 /*
 1. check single status and multiple status - pos and neg

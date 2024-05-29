@@ -13,7 +13,6 @@ apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-postfunction4/postfunction.gradle'
 
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__SetFieldValueOfLinkedIssuesFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:SetFieldValueOfLinkedIssues-function'
-def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
 
 def removeIssueTypesList = info?.isCloud ? ["currentIssue","returnsFromJqlSearch","returnsByNunjucksExpression"] : ["currentIssue"]
 
@@ -51,87 +50,83 @@ def options = [
         copyOnlyIfNotSet: ["copyOnlyIfNotSet=yes"],
 ]
 
-def defaultFieldsCloud = [
-        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
-]
-
 relatedIssue.eachWithIndex { key, value, i ->
-    def server =  selectField.labels + valueType.template +  conditionalExecution.false +  options.noOption + "selectedLinkType=$value" + runAsUser.currentUser
+    def server =  [selectField.labels , valueType.template ,  conditionalExecution.false ,  options.noOption , "selectedLinkType=$value" , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"template\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
     addTransitionFunction('template' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server =  selectField.labels + valueType.expression +  conditionalExecution.false +  options.noOption + "selectedLinkType=$value" + runAsUser.currentUser
+relatedIssue.eachWithIndex { key, value, i ->
+    def server =  [selectField.labels , valueType.expression ,  conditionalExecution.false ,  options.noOption , "selectedLinkType=$value" , runAsUser.currentUser]
     if(!isCloud) {
         addTransitionFunction('expression' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     }
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server =  selectField.labels + conditionalExecution.false + options.copyOnlyIfNotSet + valueType.copyOnlyIfNotSet + "selectedLinkType=$value" + runAsUser.currentUser
+relatedIssue.eachWithIndex { key, value, i ->
+    def server =  [selectField.labels , conditionalExecution.false , options.copyOnlyIfNotSet , valueType.copyOnlyIfNotSet , "selectedLinkType=$value" , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"copyOnlyIfNotSet\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":true,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
     addTransitionFunction('copyOnlyIfNotSet' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server =  selectField.components +  conditionalExecution.false + options.createMissingValues+ valueType.createMissingValueComponent + "selectedLinkType=$value" + runAsUser.currentUser
+relatedIssue.eachWithIndex { key, value, i ->
+    def server =  [selectField.components ,  conditionalExecution.false , options.createMissingValues, valueType.createMissingValueComponent , "selectedLinkType=$value" , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"components\",\"selectedLinkType\":\"$value\",\"value\":\"createMissingValueComponent\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":true,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
     addTransitionFunction('createMissingValueComponent' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server =  selectField.labels + options.ignoreEmptyValue +  conditionalExecution.false + valueType.ignoreEmptyValue + "selectedLinkType=$value" + runAsUser.currentUser
+relatedIssue.eachWithIndex { key, value, i ->
+    def server =  [selectField.labels , options.ignoreEmptyValue ,  conditionalExecution.false , valueType.ignoreEmptyValue , "selectedLinkType=$value" , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":true,\"runAsType\":\"addonUser\"}"
     addTransitionFunction('ignoreEmptyValue' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server =  selectField.labels + options.appendValues + conditionalExecution.false + valueType.appendValues + "selectedLinkType=$value" + runAsUser.currentUser
+relatedIssue.eachWithIndex { key, value, i ->
+    def server =  [selectField.labels , options.appendValues , conditionalExecution.false , valueType.appendValues , "selectedLinkType=$value" , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"appendValues\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":true,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
     addTransitionFunction('appendValues' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server =  selectField.labels + conditionalExecution.true + options.noOption +  valueType.conditionalExecution + "selectedLinkType=$value" + runAsUser.currentUser
+relatedIssue.eachWithIndex { key, value, i ->
+    def server =  [selectField.labels , conditionalExecution.true , options.noOption ,  valueType.conditionalExecution , "selectedLinkType=$value" , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"conditionalExecution\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
     addTransitionFunction('conditionalExecution' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server =  selectField.labels + runAsUser.specificUser +  conditionalExecution.false + options.noOption +  valueType.runAsSpecificUser + "selectedLinkType=$value"
+relatedIssue.eachWithIndex { key, value, i ->
+    def server =  [selectField.labels , runAsUser.specificUser ,  conditionalExecution.false , options.noOption ,  valueType.runAsSpecificUser , "selectedLinkType=$value"]
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"runAsSpecificUser\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"thisUser\",\"runAs\":\"$currentUserKey\"}"
     addTransitionFunction('runAsSpecificUser' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction('runAsSpecificUser' + i, 4)
     }
 }
-relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server =  selectField.labels + runAsUser.userInFieldAssignee +  conditionalExecution.false + options.noOption + valueType.runAsUserInFieldAssignee + "selectedLinkType=$value"
+relatedIssue.eachWithIndex { key, value, i ->
+    def server =  [selectField.labels , runAsUser.userInFieldAssignee ,  conditionalExecution.false , options.noOption , valueType.runAsUserInFieldAssignee , "selectedLinkType=$value"]
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"runAsUserInFieldAssignee\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"userField\",\"runAsField\":\"assignee\"}"
     addTransitionFunction('runAsUserInFieldAssignee' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction('runAsUserInFieldAssignee' + i, 4)
     }
 }
-relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server =  selectField.labels + runAsUser.userInFieldReporter +  conditionalExecution.false + options.noOption + valueType.runAsUserInFieldReporter + "selectedLinkType=$value"
+relatedIssue.eachWithIndex { key, value, i ->
+    def server =  [selectField.labels , runAsUser.userInFieldReporter ,  conditionalExecution.false , options.noOption , valueType.runAsUserInFieldReporter , "selectedLinkType=$value"]
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"runAsUserInFieldReporter\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"userField\",\"runAsField\":\"reporter\"}"
     addTransitionFunction('runAsUserInFieldReporter' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction('runAsUserInFieldReporter' + i, 4)
     }
 }
-relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server =  selectField.labels + runAsUser.userInFieldCreator +  conditionalExecution.false + options.noOption + valueType.runAsUserInFieldCreator + "selectedLinkType=$value"
+relatedIssue.eachWithIndex { key, value, i ->
+    def server =  [selectField.labels , runAsUser.userInFieldCreator ,  conditionalExecution.false , options.noOption , valueType.runAsUserInFieldCreator , "selectedLinkType=$value"]
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"runAsUserInFieldCreator\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"userField\",\"runAsField\":\"creator\"}"
     addTransitionFunction('runAsUserInFieldCreator' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction('runAsUserInFieldCreator' + i, 4)
     }
 }
-relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def server =  selectField.labels + runAsUser.userFromScript +  conditionalExecution.false + options.noOption + valueType.runAsUserReturnFromScript + "selectedLinkType=$value"
+relatedIssue.eachWithIndex { key, value, i ->
+    def server =  [selectField.labels , runAsUser.userFromScript ,  conditionalExecution.false , options.noOption , valueType.runAsUserReturnFromScript , "selectedLinkType=$value"]
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"selectedLinkType\":\"$value\",\"value\":\"runAsUserReturnFromScript\",\"valueIsJSON\":false,\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"userFromScript\",\"runAsScript\":\"$nunjuckExpression.returnsReporter\"}"
     addTransitionFunction('runAsUserReturnFromScript' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
@@ -226,7 +221,7 @@ def getCurrentUserName = info?.isCloud? info?.userDisplayName : user
 
 def testLabel = "label1"
 
-relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue, index ->
+relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
     gint.taskHelper.add(
             action: 'updateIssue', ext: ': add description to copy it in specific field : ' + index,
             sleep: sleep,
@@ -251,7 +246,7 @@ relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
 }
 
 ['copyOnlyIfNotSet'].collect {
-    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
+    relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
                  sleep: sleep,
@@ -274,7 +269,7 @@ relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
         ])
     }
 }
-relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue, index ->
+relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
     gint.taskHelper.add(
             action: 'setFieldValue',
             sleep: sleep,
@@ -287,7 +282,7 @@ relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue, index ->
     )
 }
 ['copyOnlyIfNotSet'].collect {
-    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
+    relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
         gint.taskHelper.add([
                 [action    : 'transitionIssue', ext: ': check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF_copyOnlyIfNotSet when field is empty :' + i,
                  sleep: sleep,
@@ -310,7 +305,7 @@ relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue, index ->
     }
 }
 
-relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue, index ->
+relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
     gint.taskHelper.add(
             action: 'setFieldValue',
             sleep: sleep,
@@ -347,7 +342,7 @@ relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue, index ->
         ])
     }
 }
-relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue, index ->
+relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue, index ->
     gint.taskHelper.add(
             action: 'setFieldValue',
             sleep: sleep,
@@ -361,7 +356,7 @@ relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue, index ->
 }
 
 ['ignoreEmptyValue'].collect {
-    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
+    relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
         gint.taskHelper.add([
                 [action    : 'transitionIssue', ext: ': check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF_Ignore empty values'  + i,
                  sleep: sleep,
@@ -383,7 +378,7 @@ relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue, index ->
     }
 }
 ['appendValues'].collect {
-    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
+    relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
         gint.taskHelper.add([
                 [action    : 'transitionIssue', ext: ':check SET_FIELD_VALUE_OF_RELATED_ISSUE_PF_Add source value to destination field: '  + i,
                  sleep: sleep,
@@ -407,7 +402,7 @@ relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue, index ->
 
 
 ['createMissingValueComponent'].collect {
-    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
+    relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
                  sleep: sleep,
@@ -432,7 +427,7 @@ relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue, index ->
     }
 }
 
-relatedIssuesMap.take(1).eachWithIndex{ key, targetIssue,  i ->
+relatedIssuesMap.eachWithIndex{ key, targetIssue,  i ->
     gint.taskHelper.add(
             action: 'assignIssue',
             sleep: sleep,
@@ -451,7 +446,7 @@ relatedIssuesMap.take(1).eachWithIndex{ key, targetIssue,  i ->
         'runAsSpecificUser',
         //'runAsUserReturnFromScript',
 ].each {
-    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
+    relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
                  sleep: sleep,
@@ -478,7 +473,7 @@ relatedIssuesMap.take(1).eachWithIndex{ key, targetIssue,  i ->
 
 
 ['conditionalExecution'].each {
-    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
+    relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
                  sleep: sleep,
@@ -500,7 +495,7 @@ relatedIssuesMap.take(1).eachWithIndex{ key, targetIssue,  i ->
         ])
     }
 }
-relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue,  i ->
+relatedIssuesMap.eachWithIndex{ currentIssue, targetIssue,  i ->
     gint.taskHelper.add(
             action: 'updateIssue',
             sleep: sleep,
@@ -512,7 +507,7 @@ relatedIssuesMap.take(1).eachWithIndex{ currentIssue, targetIssue,  i ->
     )
 }
 ['conditionalExecution'].each {
-    relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, i ->
+    relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, i ->
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
                  sleep: sleep,

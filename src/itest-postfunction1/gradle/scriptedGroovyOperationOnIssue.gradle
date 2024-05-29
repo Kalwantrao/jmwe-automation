@@ -12,85 +12,52 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction.gradle'
 
-def script = [
-        setSummary : [ "groovyExpression=issue.setFieldValue('Summary','test_summary')","scriptDescription=" ],
-        currentUser : [ "groovyExpression=issue.setFieldValue('Summary','runAsCurrentUser')","scriptDescription=" ],
-        specificUser : [ "groovyExpression=issue.setFieldValue('Summary','runAsSpecificUser')","scriptDescription=" ],
-        userInFieldAssignee : [ "groovyExpression=issue.setFieldValue('Summary','runAsUserInFieldAssignee')","scriptDescription=" ],
-        userInFieldReporter : [ "groovyExpression=issue.setFieldValue('Summary','runAsUserInFieldReporter')","scriptDescription=" ],
-        userInFieldCreator : [ "groovyExpression=issue.setFieldValue('Summary','runAsUserInFieldCreator')","scriptDescription=" ],
-        userFromScript : [ "groovyExpression=issue.setFieldValue('Summary','runAsUserFromScript')","scriptDescription=" ],
-]
-
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__ScriptedPostFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-function'
 
 String scriptForSummary = "{{ '/rest/api/2/issue/:issue' | callJira(verb=('PUT'), params={'issue':issue.key}, body={'fields': {'summary': 'test_summary'} }) }}"
+String scriptForSummaryCreateTransition = "{{ '/rest/api/2/issue/:issue' | callJira(verb=('PUT'), params={'issue':issue.key}, body={'fields': {'summary': 'issue_created_by_create_transition'} }) }}"
 
 ['setSummaryByScript'].each {
-    def server =  script.setSummary
+    def server =  ["groovyExpression=issue.setFieldValue('Summary','test_summary')","scriptDescription="]
     def cloud =  "{\"script\":\"$scriptForSummary\",\"scriptDescription\":\"\"}"
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-['runAsCurrentUser'].each {
-    def server =  script.currentUser + runAsUser.currentUser
-    def cloud =  ""
-    if(!isCloud) {
-        addTransitionFunction(it , 'postfunction', info?.isCloud ? cloud : server, functionKey )
-        moveTransitionFunction(it, 4)
+['setSummaryByScript'].each {
+    def cloud =  "{\"script\":\"$scriptForSummaryCreateTransition\",\"scriptDescription\":\"\"}"
+    if(isCloud){
+        addTransitionFunctionOnCreateTransition(it + "by create transition", 'postfunction', cloud , functionKey)
     }
 }
 
-['runAsUserInFieldReporter'].each {
-    def server =  script.userInFieldReporter + runAsUser.userInFieldReporter
-    def cloud =  ""
+runAsUser.eachWithIndex { userType, fields, idx ->
+    def transition = userType
+    def server =  [/groovyExpression=issue.setFieldValue('Summary',"$userType")/,"scriptDescription=" ,fields]
     if(!isCloud) {
-        addTransitionFunction(it , 'postfunction', info?.isCloud ? cloud : server, functionKey )
-        moveTransitionFunction(it, 4)
-    }
-}
-['runAsUserInFieldCreator'].each {
-    def server =  script.userInFieldCreator + runAsUser.userInFieldCreator
-    def cloud =  ""
-    if(!isCloud) {
-        addTransitionFunction(it , 'postfunction', info?.isCloud ? cloud : server, functionKey )
-        moveTransitionFunction(it, 4)
+        addTransitionFunction(transition , 'postfunction', server, functionKey )
+        moveTransitionFunction(transition, 4)
     }
 }
 
-['runAsUserFromScript'].each {
-    def server =  script.userFromScript + runAsUser.userFromScript
-    def cloud =  ""
-    if(!isCloud) {
-        addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
-        moveTransitionFunction(it, 4)
-    }
-}
-
-['runAsUserInFieldAssignee'].each {
-    def server =  script.userInFieldAssignee + runAsUser.userInFieldAssignee
-    def cloud =  ""
-    if(!isCloud) {
-        addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
-        moveTransitionFunction(it, 4)
-    }
-}
-['runAsSpecificUser'].each {
-    def server =  script.specificUser + runAsUser.specificUser
-    def cloud =  ""
-    if(!isCloud) {
-        addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
-        moveTransitionFunction(it, 4)
-    }
-}
 
 createWorkflowScheme()
 createProject()
 
-
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
-// checking the current status To Do and previous status In Progress
+if(isCloud){
+    gint.taskHelper.add(
+            action: "getFieldValue", ext: ":to check the issue summary set by postfunction on create transition",
+            sleep: sleep,
+            parameters: [
+                    field: "Summary",
+                    issue: {->defaultIssue[]}
+            ],
+            failData: ["Summary . . . . . . . . . . . : JMWE_Issue"],
+            data: ["Summary . . . . . . . . . . . : issue_created_by_create_transition"]
+    )
+}
+
 [
         'setSummaryByScript'
 ].each {
@@ -114,36 +81,44 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
         ])
 }
 
-[
-        'runAsCurrentUser',
-        'runAsUserInFieldReporter',
-        'runAsUserInFieldCreator',
-        'runAsUserFromScript',
-        'runAsSpecificUser',
-].each {
+if(!isCloud) {
+    gint.taskHelper.add(
+            action: 'assignIssue',
+            sleep: sleep,
+            parameters: [
+                    issue   : { -> defaultIssue[] },
+                    assignee: user
+            ]
+    )
+}
+
+runAsUser.eachWithIndex { userType, fields, idx ->
+    def transition = userType
     if(!isCloud) {
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: " : " + it,
+                [action    : 'transitionIssue',
+                 ext: " : " + transition,
                  sleep     : sleep,
                  parameters: [
-                         transition: it,
+                         transition: transition,
                          issue     : { -> defaultIssue[] },
                  ],
                 ],
-                [action    : 'getIssueHistoryList', ext: ": Chack :" + it,
+                [action    : 'getIssueHistoryList',
+                 ext: ": Chack :" + transition,
                  sleep     : sleep,
                  parameters: [
                          issue     : { -> defaultIssue[] },
                          outputType: "Text",
-                         select    : ["Field:summary","To String:$it"],
+                         select    : ["Field:summary","To String:$transition"],
                          columns   : "Author,'To String'",
                  ],
-                 data      : ["$getCurrentUserName", "$it"],
+                 data      : ["$getCurrentUserName", "$transition"],
                 ]
         ])
     }
 }
-
+/*
 if(!isCloud) {
     gint.taskHelper.add(
             action: 'assignIssue',
@@ -180,3 +155,5 @@ if(!isCloud) {
         ])
     }
 }
+
+ */

@@ -114,7 +114,7 @@ ext.addTransitionFunction = { transitions, type, field, functionKey -> // key, t
                          transition : transitions,
                          functionKey: functionKey,
                          type       : type,
-                         step       : info?.isCloud ? startStepCloud : startStepServer,
+                         step       : "To Do",
                          field      : info?.isCloud ? defaultFieldsCloud : defaultFieldsServer + field
                  ],
                 ],
@@ -129,6 +129,92 @@ ext.addTransitionFunction = { transitions, type, field, functionKey -> // key, t
                           columns: "description",
                      ],
                   ]*/
+        ])
+    }
+}
+
+ext.addTransitionFunctionForPreviousStatusPf = { transitions, type, field, functionKey -> // key, type, condition, functionKey, description
+    def defaultFieldsServer = [
+            "restrictToInternal=no",
+            "sendNotification=no",
+            "throwExceptions=",
+            "correlationId=",
+    ]
+    def defaultFieldsCloud;
+    if(type == 'condition'){
+        defaultFieldsCloud = ["condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9"] + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9=$field"
+    } else if(type == 'validator'){
+        defaultFieldsCloud = ["validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a"] + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a=$field"
+    } else {
+        defaultFieldsCloud = ["postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249"] + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249=$field"
+    }
+    if(skipSetup != "true"){
+        gint.taskHelper.addSetUp([
+                [action    : 'addTransition', ext: ':' + transitions,
+                 retry: true,
+                 parameters: [
+                         workflow: workflow,
+                         name    : transitions,
+                         step    : "In Progress",
+                         transition: 11,
+                         screen  : screen
+                 ]
+                ],
+                [action    : 'addTransitionFunction', ext: ':' + transitions,
+                 retry: true,
+                 parameters: [
+                         workflow   : workflow,
+                         transition : transitions,
+                         functionKey: functionKey,
+                         type       : type,
+                         step       : "In Progress",
+                         field      : info?.isCloud ? defaultFieldsCloud : defaultFieldsServer + field
+                 ],
+                ],
+                /*[action: 'getTransitionFunctionList', ext: ':' + transitions,
+                  retry: true,
+                  parameters: [
+                          workflow: workflow,
+                          transition : transitions,
+                          type       : type,
+                          step       : info?.isCloud ? startStepCloud : startStepServer,
+                          outputType: "text",
+                          columns: "description",
+                     ],
+                  ]*/
+        ])
+    }
+}
+
+
+ext.addTransitionFunctionOnCreateTransition = { transitions, type, field, functionKey -> // key, type, condition, functionKey, description
+    def defaultFieldsServer = [
+            "restrictToInternal=no",
+            "sendNotification=no",
+            "throwExceptions=",
+            "correlationId=",
+    ]
+    def defaultFieldsCloud;
+    if(type == 'condition'){
+        defaultFieldsCloud = ["condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9"] + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9=$field"
+    } else if(type == 'validator'){
+        defaultFieldsCloud = ["validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a"] + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a=$field"
+    } else {
+        defaultFieldsCloud = ["postFunction.id=d6b5792a-ea99-4b11-958d-58ba53ef8ecc"] + "postFunction.config-d6b5792a-ea99-4b11-958d-58ba53ef8ecc=$field"
+    }
+    if(skipSetup != "true"){
+        gint.taskHelper.addSetUp([
+                [action    : 'addTransitionFunction', ext: ':' + transitions,
+                 retry: true,
+                 parameters: [
+                         workflow   : workflow,
+                         step       : "@create",
+                         transition : "@create",
+                         functionKey: functionKey,
+                         type       : type,
+                         field      : info?.isCloud ? defaultFieldsCloud : defaultFieldsServer + field
+                 ],
+                ],
         ])
     }
 }
@@ -200,6 +286,7 @@ ext.associateWorkflow = { workflowName ->
         )
     }
 }
+
 ext.createProject = {
     def additionalParams = info?.isCloud? [] : [issueSecurityScheme: issueSecurityScheme]
     gint.taskHelper.addSetUp(

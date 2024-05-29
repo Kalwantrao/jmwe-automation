@@ -12,6 +12,30 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
+def STATUS_ID_TODO = getStatusId("To Do")
+def STATUS_ID_INPROGRESS = getStatusId("In Progress")
+def STATUS_ID_INREVIEW = getStatusId("In Review")
+def STATUS_ID_DONE = getStatusId("Done")
+
+def ToDo = {->STATUS_ID_TODO.getAt(0).trim()}
+def InProgress = {->STATUS_ID_INPROGRESS.getAt(0).trim()}
+def InReview = {->STATUS_ID_INREVIEW.getAt(0).trim()}
+def Done = {->STATUS_ID_DONE.getAt(0).trim()}
+
+def BUG_ISSUE_TYPE_ID = getIssueTypeId("Bug")
+def STORY_ISSUE_TYPE_ID = getIssueTypeId("Story")
+def TASK_ISSUE_TYPE_ID = getIssueTypeId("Task")
+def EPIC_ISSUE_TYPE_ID = getIssueTypeId("Epic")
+def INITIATIVE_ISSUE_TYPE_ID = getIssueTypeId("Initiative")
+def SUBTASK_ISSUE_TYPE_ID = getIssueTypeId("Sub-task")
+
+def BugIssueType = {->BUG_ISSUE_TYPE_ID.getAt(0).trim()}
+def StoryIssueType = {->STORY_ISSUE_TYPE_ID.getAt(0).trim()}
+def TaskIssueType = {->TASK_ISSUE_TYPE_ID.getAt(0).trim()}
+def EpicIssueType = {->EPIC_ISSUE_TYPE_ID.getAt(0).trim()}
+def InitiativeIssueType = {->INITIATIVE_ISSUE_TYPE_ID.getAt(0).trim()}
+def SubtaskIssueType = {->SUBTASK_ISSUE_TYPE_ID.getAt(0).trim()}
+
 def issueType = [
         any : [ "selectedIssueType=" ],
         story : [ "selectedIssueType=$StoryIssueType" ],
@@ -34,11 +58,67 @@ def statuses = [
         allExceptToDo : ["issue_statuses=$InProgress,$InReview,$Done"]
 ]
 
+project.ext.allRelatedIssuesStatusValidator = [
+        subtask : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.subtasks.every(linkedIssue => config.statusIds.includes(linkedIssue.status.id))\"}",
+        parentIssue : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgress],\"expression\":\"!issue.parent || [issue.parent].every(linkedIssue => config.statusIds.includes(linkedIssue.status.id))\"}",
+        issueBelongsToEpic : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgress],\"expression\":\"!issue.stories || issue.stories.every(linkedIssue => config.statusIds.includes(linkedIssue.status.id))\"}",
+        epicOfTheCurrentIssue : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":null,\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgress],\"expression\":\"!issue.epic || [issue.epic].every(linkedIssue => config.statusIds.includes(linkedIssue.status.id))\"}",
+        linkByAnyLink : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"*\",\"selectedLinkTypeDirection\":\"*\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.every(issueLink => config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByBlock : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.every(issueLink => issueLink.type.id != 10000 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByisBlockedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.every(issueLink => issueLink.type.id != 10000 || issueLink.direction != 'inward' && issueLink.type.inward != issueLink.type.outward || config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByClones : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.every(issueLink => issueLink.type.id != 10001 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByIsClonedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.every(issueLink => issueLink.type.id != 10001 || issueLink.direction != 'inward' && issueLink.type.inward != issueLink.type.outward || config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByDuplicates : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.every(issueLink => issueLink.type.id != 10002 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByIsDuplicatedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.every(issueLink => issueLink.type.id != 10002 || issueLink.direction != 'inward' && issueLink.type.inward != issueLink.type.outward || config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByRelatesTo : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.every(issueLink => issueLink.type.id != 10003 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+]
 
-def allRelatedIssuesStatus = info?.isCloud ? allRelatedIssuesStatusValidator : relatedIssueServer
-def atLeastOneRelatedIssuesStatus = info?.isCloud ? atLeastOneRelatedIssuesStatusValidator : relatedIssueServer
-def noRelatedIssuesStatus = info?.isCloud ? noRelatedIssuesStatusValidator : relatedIssueServer
-def atLeastOneNotRelatedIssuesStatus = info?.isCloud ? atLeastOneNotRelatedIssuesStatusValidator : relatedIssueServer
+project.ext.atLeastOneRelatedIssuesStatusValidator = [
+        subtask : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.subtasks.some(linkedIssue => config.statusIds.includes(linkedIssue.status.id))\"}",
+        issueBelongsToEpic : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"!issue.stories || issue.stories.some(linkedIssue => config.statusIds.includes(linkedIssue.status.id))\"}",
+        linkByAnyLink : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"*\",\"selectedLinkTypeDirection\":\"*\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.some(issueLink => config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByBlock : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.some(issueLink => issueLink.type.id != 10000 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByisBlockedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.some(issueLink => issueLink.type.id != 10000 || issueLink.direction != 'inward' && issueLink.type.inward != issueLink.type.outward || config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByClones : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.some(issueLink => issueLink.type.id != 10001 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByIsClonedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.some(issueLink => issueLink.type.id != 10001 || issueLink.direction != 'inward' && issueLink.type.inward != issueLink.type.outward || config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByDuplicates : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.some(issueLink => issueLink.type.id != 10002 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByIsDuplicatedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.some(issueLink => issueLink.type.id != 10002 || issueLink.direction != 'inward' && issueLink.type.inward != issueLink.type.outward || config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByRelatesTo : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.some(issueLink => issueLink.type.id != 10003 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+]
+
+project.ext.noRelatedIssuesStatusValidator = [
+        subtask : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.subtasks.every(linkedIssue => !config.statusIds.includes(linkedIssue.status.id))\"}",
+        parentIssue : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"!issue.parent || [issue.parent].every(linkedIssue => !config.statusIds.includes(linkedIssue.status.id))\"}",
+        issueBelongsToEpic : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"!issue.stories || issue.stories.every(linkedIssue => !config.statusIds.includes(linkedIssue.status.id))\"}",
+        epicOfTheCurrentIssue : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":null,\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"!issue.epic || [issue.epic].every(linkedIssue => !config.statusIds.includes(linkedIssue.status.id))\"}",
+        linkByAnyLink : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"*\",\"selectedLinkTypeDirection\":\"*\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.every(issueLink => !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByBlock : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.every(issueLink => issueLink.type.id != 10000 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByisBlockedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.every(issueLink => issueLink.type.id != 10000 || issueLink.direction != 'inward' && issueLink.type.inward != issueLink.type.outward || !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByClones : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.every(issueLink => issueLink.type.id != 10001 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByIsClonedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.every(issueLink => issueLink.type.id != 10001 || issueLink.direction != 'inward' && issueLink.type.inward != issueLink.type.outward || !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByDuplicates : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.every(issueLink => issueLink.type.id != 10002 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByIsDuplicatedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.every(issueLink => issueLink.type.id != 10002 || issueLink.direction != 'inward' && issueLink.type.inward != issueLink.type.outward || !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByRelatesTo : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"noneInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.every(issueLink => issueLink.type.id != 10003 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+]
+
+project.ext.atLeastOneNotRelatedIssuesStatusValidator = [
+        subtask : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneNotInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.subtasks.some(linkedIssue => !config.statusIds.includes(linkedIssue.status.id))\"}",
+        issueBelongsToEpic : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneNotInStatus\",\"statusIds\":[$InProgress],\"expression\":\"!issue.stories || issue.stories.some(linkedIssue => !config.statusIds.includes(linkedIssue.status.id))\"}",
+        linkByAnyLink : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"*\",\"selectedLinkTypeDirection\":\"*\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneNotInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.some(issueLink => !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByBlock : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneNotInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.some(issueLink => issueLink.type.id != 10000 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByisBlockedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneNotInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.some(issueLink => issueLink.type.id != 10000 || issueLink.direction != 'inward' && issueLink.type.inward != issueLink.type.outward || !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByClones : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneNotInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.some(issueLink => issueLink.type.id != 10001 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByIsClonedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneNotInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.some(issueLink => issueLink.type.id != 10001 || issueLink.direction != 'inward' && issueLink.type.inward != issueLink.type.outward || !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByDuplicates : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneNotInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.some(issueLink => issueLink.type.id != 10002 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByIsDuplicatedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneNotInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.some(issueLink => issueLink.type.id != 10002 || issueLink.direction != 'inward' && issueLink.type.inward != issueLink.type.outward || !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+        linkByRelatesTo : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check linked issues status\",\"validatorMode\":\"oneNotInStatus\",\"statusIds\":[$InProgress],\"expression\":\"issue.links.some(issueLink => issueLink.type.id != 10003 || issueLink.direction != 'outward' && issueLink.type.inward != issueLink.type.outward || !config.statusIds.includes(issueLink.linkedIssue.status.id))\"}",
+]
+
+
+def allRelatedIssuesStatus = info?.isCloud ? allRelatedIssuesStatusValidator : relatedIssue
+def atLeastOneRelatedIssuesStatus = info?.isCloud ? atLeastOneRelatedIssuesStatusValidator : relatedIssue
+def noRelatedIssuesStatus = info?.isCloud ? noRelatedIssuesStatusValidator : relatedIssue
+def atLeastOneNotRelatedIssuesStatus = info?.isCloud ? atLeastOneNotRelatedIssuesStatusValidator : relatedIssue
 
 allRelatedIssuesStatus.remove("currentIssue")
 atLeastOneRelatedIssuesStatus.remove("currentIssue")
@@ -51,54 +131,54 @@ def errorMessage = "Check linked issues status"
 allRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     def transition = "verify_status_in_progress_of_all_issues_which_are_" + linkedIssue
     def cloud = fieldValues
-    def server = "errorMessage=$errorMessage" + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.all + statuses.inProgress
+    def server = ["errorMessage=$errorMessage" , issueType.any , "selectedLinkType=$fieldValues" , linkedIssuesStatusMode.all , statuses.inProgress]
     addTransitionFunction(transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 atLeastOneRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     def transition = 'verify_status_in_progress_of_at_least_one_issues_which_is_' + linkedIssue
     def cloud = fieldValues
-    def server = "errorMessage=$errorMessage" + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.one + statuses.inProgress
+    def server = ["errorMessage=$errorMessage" , issueType.any , "selectedLinkType=$fieldValues" , linkedIssuesStatusMode.one , statuses.inProgress]
     addTransitionFunction( transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 noRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     def transition = 'verify_status_in_progress_none_of_the_issues_which_are_' + linkedIssue
     def cloud =  fieldValues
-    def server = "errorMessage=$errorMessage" + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.none + statuses.inProgress
+    def server = ["errorMessage=$errorMessage" , issueType.any , "selectedLinkType=$fieldValues" , linkedIssuesStatusMode.none , statuses.inProgress]
     addTransitionFunction(transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 atLeastOneNotRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     def transition = 'verify_status_in_progress_at_least_one_not_in_status_issues_which_is_' + linkedIssue
     def cloud =  fieldValues
-    def server = "errorMessage=$errorMessage" + issueType.any + "selectedLinkType=$fieldValues" + linkedIssuesStatusMode.oneNot + statuses.inProgress
+    def server = ["errorMessage=$errorMessage" , issueType.any , "selectedLinkType=$fieldValues" , linkedIssuesStatusMode.oneNot , statuses.inProgress]
     addTransitionFunction(transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 ['verify_the_issue_type_dropdwn_Task'].each {
-    def server = "errorMessage=$errorMessage" + issueType.task + "selectedLinkType=$relatedIssue.parentIssue" + linkedIssuesStatusMode.all + statuses.inProgress
-    def cloud = "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"$TaskIssueTypeCloud\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"!issue.parent || [issue.parent].every(linkedIssue => linkedIssue.issueType.id != $TaskIssueTypeCloud || config.statusIds.includes(linkedIssue.status.id))\"}"
+    def server = ["errorMessage=$errorMessage" , issueType.task , "selectedLinkType=$relatedIssue.parentIssue" , linkedIssuesStatusMode.all , statuses.inProgress]
+    def cloud = "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"$TaskIssueType\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgress],\"expression\":\"!issue.parent || [issue.parent].every(linkedIssue => linkedIssue.issueType.id != $TaskIssueType || config.statusIds.includes(linkedIssue.status.id))\"}"
     addTransitionFunction(it, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 ['verify_the_issue_type_dropdwn_Story'].each {
-    def server = "errorMessage=$errorMessage" + issueType.story + "selectedLinkType=$relatedIssue.parentIssue" + linkedIssuesStatusMode.all + statuses.inProgress
-    def cloud = "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"$StoryIssueTypeCloud\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"!issue.parent || [issue.parent].every(linkedIssue => linkedIssue.issueType.id != $StoryIssueTypeCloud || config.statusIds.includes(linkedIssue.status.id))\"}"
+    def server = ["errorMessage=$errorMessage" , issueType.story , "selectedLinkType=$relatedIssue.parentIssue" , linkedIssuesStatusMode.all , statuses.inProgress]
+    def cloud = "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"$StoryIssueType\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgress],\"expression\":\"!issue.parent || [issue.parent].every(linkedIssue => linkedIssue.issueType.id != $StoryIssueType || config.statusIds.includes(linkedIssue.status.id))\"}"
     addTransitionFunction(it, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 [
         'select_multiple_statuses'
 ].each {
-    def server = "errorMessage=$errorMessage" + issueType.any + "selectedLinkType=$relatedIssue.subtask" + linkedIssuesStatusMode.all + statuses.allExceptToDo
-    def cloud =  "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgressCloud,$InReviewCloud,$DoneCloud],\"expression\":\"issue.subtasks.every(linkedIssue => config.statusIds.includes(linkedIssue.status.id))\"}"
+    def server = ["errorMessage=$errorMessage" , issueType.any , "selectedLinkType=$relatedIssue.subtask" , linkedIssuesStatusMode.all , statuses.allExceptToDo]
+    def cloud =  "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgress,$InReview,$Done],\"expression\":\"issue.subtasks.every(linkedIssue => config.statusIds.includes(linkedIssue.status.id))\"}"
     addTransitionFunction( it, 'validator', info?.isCloud? cloud : server, functionKey )
 }
 
 ['verify_the_condition_groovy_expression'].each {
-    def server = "errorMessage=$errorMessage" + issueType.any + "selectedLinkType=$relatedIssue.subtask" + conditionalValidation.yes + linkedIssuesStatusMode.all + statuses.inProgress
-    def cloud =  "{\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.priority && issue.priority.name == 'High'\",\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgressCloud],\"expression\":\"!(!!issue.priority && issue.priority.name == 'High') || (issue.subtasks.every(linkedIssue => config.statusIds.includes(linkedIssue.status.id)))\"}"
+    def server = ["errorMessage=$errorMessage" , issueType.any , "selectedLinkType=$relatedIssue.subtask" , conditionalValidation.yes , linkedIssuesStatusMode.all , statuses.inProgress]
+    def cloud =  "{\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.priority && issue.priority.name == 'High'\",\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"validatorMode\":\"allInStatus\",\"statusIds\":[$InProgress],\"expression\":\"!(!!issue.priority && issue.priority.name == 'High') || (issue.subtasks.every(linkedIssue => config.statusIds.includes(linkedIssue.status.id)))\"}"
     addTransitionFunction(it, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 

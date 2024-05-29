@@ -21,7 +21,7 @@ if(!isCloud){
 
 fields.eachWithIndex { fieldName, fieldValue, i ->
     def transition = fieldName + '_should_be_modified'
-    def server = conditionalValidation.no + "field=$fieldValue"
+    def server = [conditionalValidation.no, "field=$fieldValue"]
     if(!isCloud){
         addTransitionFunction( transition, 'validator', server, functionKey )
     }
@@ -29,7 +29,7 @@ fields.eachWithIndex { fieldName, fieldValue, i ->
 
 fields.eachWithIndex { fieldName, fieldValue, i ->
     def transition  = fieldName + '_should_be_modified_if_condition_true'
-    def server = "field=$fieldValue" + conditionalValidation.yes
+    def server = ["field=$fieldValue", conditionalValidation.yes]
     if(!isCloud){
         addTransitionFunction( transition, 'validator', server, functionKey )
     }
@@ -39,7 +39,7 @@ fields.eachWithIndex { fieldName, fieldValue, i ->
         'customField_age_should_be_modified'
 ].each {
     def transition  = it
-    def server = "field=Age" + conditionalValidation.no
+    def server = ["field=Age", conditionalValidation.no]
     if(!isCloud){
         addTransitionFunction( transition, 'validator', server, functionKey )
     }

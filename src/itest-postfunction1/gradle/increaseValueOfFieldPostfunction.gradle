@@ -12,6 +12,13 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction.gradle'
 
+def CUST_FIELD_STORY_POINT_ID = getCustomFieldId("Story Point")
+def CUST_FIELD_STORY_POINT_ESTIMATE_ID = getCustomFieldId(info?.isCloud ? "Story point estimate" : "Original story points")
+
+def storyPointFieldId = {->CUST_FIELD_STORY_POINT_ID.getAt(0).trim()}
+def originalStoryPointsFieldId = {->CUST_FIELD_STORY_POINT_ESTIMATE_ID.getAt(0).trim()}
+
+
 def field = [
         storyPoint : [ "field=$storyPointFieldId" ],
         originalStoryPoint : ["field=$originalStoryPointsFieldId"]
@@ -20,31 +27,37 @@ def field = [
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__IncreaseFieldValueFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:IncreaseFieldValue-function'
 
 ['increaseValueOfStoryPoint'].each {
-    def server = field.storyPoint + conditionalExecution.false
+    def server = [field.storyPoint , conditionalExecution.false]
     def cloud = "{\"conditionalExecution\":false,\"sendNotifications\":true,\"fieldId\":\"$storyPointFieldId\"}"
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
+}
+
+['increaseValueOfStoryPointOnCreateTransition'].each {
+    def server = [field.storyPoint , conditionalExecution.false]
+    def cloud = "{\"conditionalExecution\":false,\"sendNotifications\":true,\"fieldId\":\"$storyPointFieldId\"}"
+    if(isCloud){
+        addTransitionFunctionOnCreateTransition(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
+    }
 }
 
 [
         'increaseValueOfOriginalStoryPoint'
 ].each {
-    def server =  field.originalStoryPoint + conditionalExecution.false
-    if(!isCloud){
-        addTransitionFunction(it , 'postfunction', server, functionKey )
-    }
+    def server =  [field.originalStoryPoint , conditionalExecution.false]
+    def cloud = "{\"conditionalExecution\":false,\"sendNotifications\":true,\"fieldId\":\"$originalStoryPointsFieldId\"}"
+    addTransitionFunction(it , 'postfunction', info?.isCloud ? cloud : server, functionKey )
 }
 
 ['increaseValueOfStoryPointIfConditionTrue'].each {
-    def server = field.storyPoint + conditionalExecution.true
+    def server = [field.storyPoint , conditionalExecution.true]
     def cloud = "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"sendNotifications\":true,\"fieldId\":\"$storyPointFieldId\"}"
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
 }
 
 ['increaseValueOfOriginalStoryPointIfConditionTrue'].each {
-    def server = field.originalStoryPoint + conditionalExecution.true
-    if(!isCloud){
-        addTransitionFunction(it , 'postfunction', server, functionKey )
-    }
+    def server =[ field.originalStoryPoint , conditionalExecution.true]
+    def cloud = "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"sendNotifications\":true,\"fieldId\":\"$originalStoryPointsFieldId\"}"
+    addTransitionFunction(it , 'postfunction', info?.isCloud ? cloud : server, functionKey )
 }
 
 createWorkflowScheme()
@@ -53,11 +66,34 @@ createProject()
 
 def defaultIssue = createIssue([type: 'Story', summary: 'JMWE_Issue'], 'defaultIssue')
 
+if(isCloud){
+    gint.taskHelper.add([
+            [action: 'getFieldValue',
+             ext: ": Chack value set by create transition:",
+             sleep: sleep,
+             parameters: [
+                     issue: {-> defaultIssue[]},
+                     field : "Story Points",
+             ],
+             data:[ info?.isCloud ? "Story Points  . . . . . . . . : 1.0" : "Story Points  . . . . . . . . : 1.0" ],
+            ],
+            [action: 'setFieldValue',
+             ext: ": Clear value set by create transition:",
+             sleep: sleep,
+             parameters: [
+                     issue: {-> defaultIssue[]},
+                     field : "Story Points",
+                     value: " "
+             ],
+            ],
+    ])
+}
+
 ['increaseValueOfStoryPoint',].each {
     gint.taskHelper.add([
             [action    : 'transitionIssue',
              ext: " : " + it,
-             sleep: info?.isCloud ? 5000 : 0,
+             sleep: sleep,
              parameters: [
                      transition: it,
                      issue     : { -> defaultIssue[] },
@@ -65,41 +101,41 @@ def defaultIssue = createIssue([type: 'Story', summary: 'JMWE_Issue'], 'defaultI
             ],
             [action: 'getFieldValue',
              ext: ": Chack :" + it,
-             sleep: info?.isCloud ? 5000 : 0,
+             sleep: sleep,
              parameters: [
                      issue: {-> defaultIssue[]},
-                     field : info?.isCloud ? "Story point estimate" : "Story Points",
+                     field : "Story Points",
              ],
-             data:[ info?.isCloud ? "Story point estimate  . . . . : 1.0" : "Story Points  . . . . . . . . : 1.0" ],
+             data:[ info?.isCloud ? "Story Points  . . . . . . . . : 1.0" : "Story Points  . . . . . . . . : 1.0" ],
             ]
 
     ])
 }
 
 ['increaseValueOfOriginalStoryPoint',].each {
-    if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'transitionIssue', ext: " : " + it,
+                        sleep: sleep,
                  parameters: [
                          transition: it,
                          issue     : { -> defaultIssue[] },
                  ],
                 ],
                 [action    : 'getFieldValue', ext: ": : " + it,
+                        sleep: sleep,
                  parameters: [
                          issue: { -> defaultIssue[] },
-                         field: "Original story points",
+                         field: info?.isCloud ? "Story point estimate" : "Original story points",
                  ],
-                 data      : ["Original story points . . . . : 1.0"],
+                 data      : [info?.isCloud ? "Story point estimate  . . . . : 1.0" : "Original story points . . . . : 1.0"],
                 ]
         ])
-    }
 }
 ['increaseValueOfStoryPointIfConditionTrue'].each {
     gint.taskHelper.add([
             [action    : 'transitionIssue',
              ext: " :  " + it,
-             sleep: info?.isCloud ? 5000 : 0,
+             sleep: sleep,
              parameters: [
                      transition: it,
                      issue     : { -> defaultIssue[] },
@@ -107,22 +143,21 @@ def defaultIssue = createIssue([type: 'Story', summary: 'JMWE_Issue'], 'defaultI
             ],
             [action: 'getFieldValue',
              ext: ": " + it,
-             sleep: info?.isCloud ? 5000 : 0,
+             sleep: sleep,
              parameters: [
                      issue: {-> defaultIssue[]},
-                     field : info?.isCloud ? "Story point estimate" : "Story Points",
+                     field : "Story Points",
              ],
-                    data:[info?.isCloud ? "Story point estimate  . . . . : 1.0" : "Story Points  . . . . . . . . : 1.0" ],
-                    failData : [info?.isCloud ? "Story point estimate  . . . . : 2.0" : "Story Points  . . . . . . . . : 2.0" ],
+                    data:["Story Points  . . . . . . . . : 1.0" ],
+                    failData : ["Story Points  . . . . . . . . : 2.0" ],
             ]
     ])
 }
 ['increaseValueOfOriginalStoryPointIfConditionTrue'].each {
-    if(!isCloud){
     gint.taskHelper.add([
             [action    : 'transitionIssue',
              ext: " :  " + it,
-             sleep: info?.isCloud ? 5000 : 0,
+             sleep: sleep,
              parameters: [
                      transition: it,
                      issue     : { -> defaultIssue[] },
@@ -130,19 +165,19 @@ def defaultIssue = createIssue([type: 'Story', summary: 'JMWE_Issue'], 'defaultI
             ],
             [action: 'getFieldValue',
              ext: ":  " + it,
-             sleep: info?.isCloud ? 5000 : 0,
+             sleep: sleep,
              parameters: [
                      issue: {-> defaultIssue[]},
-                     field : "Original story points",
+                     field : info?.isCloud ? "Story point estimate" : "Original story points",
              ],
-             data:[ "Original story points . . . . : 1.0" ],
-             failData : ["Original story points . . . . : 2.0"]
+             data:[ info?.isCloud ? "Story point estimate  . . . . : 1.0" : "Original story points . . . . : 1.0" ],
+             failData : [info?.isCloud ? "Story point estimate  . . . . : 2.0" : "Original story points . . . . : 2.0"]
             ]
     ])
-        }
 }
 gint.taskHelper.add(
         action : 'updateIssue', ext: ': To check conditional execution true',
+        sleep:sleep,
         parameters : [
                 issue: {->defaultIssue[]},
                 priority : 'High'
@@ -152,7 +187,7 @@ gint.taskHelper.add(
     gint.taskHelper.add([
             [action    : 'transitionIssue',
              ext: " :when condition true  " + it,
-             sleep: info?.isCloud ? 5000 : 0,
+             sleep: sleep,
              parameters: [
                      transition: it,
                      issue     : { -> defaultIssue[] },
@@ -160,24 +195,23 @@ gint.taskHelper.add(
             ],
             [action: 'getFieldValue',
              ext: ":when condition true " + it,
-             sleep: info?.isCloud ? 5000 : 0,
+             sleep: sleep,
              parameters: [
                      issue: {-> defaultIssue[]},
-                     field : info?.isCloud ? "Story point estimate" : "Story Points",
+                     field :  "Story Points",
              ],
-             failData:[ info?.isCloud ? "Story point estimate  . . . . : 1.0" : "Story Points  . . . . . . . . : 1.0" ],
-             data : [ info?.isCloud ? "Story point estimate  . . . . : 2.0" : "Story Points  . . . . . . . . : 2.0" ],
+             failData:[ "Story Points  . . . . . . . . : 1.0" ],
+             data : [ "Story Points  . . . . . . . . : 2.0" ],
             ]
     ])
 }
 [
         'increaseValueOfOriginalStoryPointIfConditionTrue'
 ].each {
-    if(!isCloud){
     gint.taskHelper.add([
             [action    : 'transitionIssue',
              ext: " : when condition true " + it,
-             sleep: info?.isCloud ? 5000 : 0,
+             sleep: sleep,
              parameters: [
                      transition: it,
                      issue     : { -> defaultIssue[] },
@@ -185,16 +219,15 @@ gint.taskHelper.add(
             ],
             [action: 'getFieldValue',
              ext: ": when condition true " + it,
-             sleep: info?.isCloud ? 5000 : 0,
+             sleep: sleep,
              parameters: [
                      issue: {-> defaultIssue[]},
-                     field : "Original story points",
+                     field : info?.isCloud ? "Story point estimate" : "Original story points",
              ],
-             data:[ "Original story points . . . . : 2.0" ],
-             failData : ["Original story points . . . . : 1.0"]
+             data:[ info?.isCloud ? "Story point estimate  . . . . : 2.0" : "Original story points . . . . : 2.0" ],
+             failData : [info?.isCloud ? "Story point estimate  . . . . : 1.0" : "Original story points . . . . : 1.0"]
             ]
     ])
-        }
 }
 
 

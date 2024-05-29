@@ -14,7 +14,6 @@ apply from: gint.resourceDirectory +'/src/itest-postfunction6/postfunction.gradl
 
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__TransitionIssueFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:TransitionIssue-function'
 
-def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
 def groovyScript = '''def trigger = !issue.subtasks.collect { it.status.name }.any { it != 'Done'}'''
 def nunjucksScript = '''{{ targetIssue | subtasks("status") | selectattr('fields.status.name', 'ne', 'Done') | list == [] }}'''
 
@@ -67,7 +66,7 @@ def commentVisibility = [
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'transition_issue_to_in_progress'
     def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\"}"
-    def server =   "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser + conditionalExecution.false
+    def server =   ["selectedLinkType=$value" , transitions.byName , options.allUnselected , addFields.noField , addComment.not , commentVisibility.notSelected , runAsUser.currentUser , conditionalExecution.false]
     addTransitionFunction(transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud){
         moveTransitionFunction(transition + i, 4)
@@ -76,7 +75,7 @@ relatedIssue.eachWithIndex { key, value, i ->
 
 statusList.eachWithIndex { key, value, i ->
     def transition = 'transition_current_issue_to_' + key
-    def server =  transitions.specifyName + "transitions=$value" + conditionalExecution.false + "selectedLinkType=$relatedIssue.currentIssue" + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
+    def server =  [transitions.specifyName, "transitions=$value" , conditionalExecution.false , "selectedLinkType=$relatedIssue.currentIssue" , options.allUnselected , addFields.noField , addComment.not , commentVisibility.notSelected , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"transition\":\"${value}@@${workflow}\",\"runAsType\":\"currentUser\"}"
     addTransitionFunction(transition ,'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud){
@@ -84,9 +83,9 @@ statusList.eachWithIndex { key, value, i ->
     }
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'check_trigger_calculated_transition'
-    def server =  conditionalExecution.false +  "selectedLinkType=$value" + transitions.calculated + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
+    def server =  [conditionalExecution.false ,  "selectedLinkType=$value" , transitions.calculated , options.allUnselected , addFields.noField , addComment.not , commentVisibility.notSelected , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"21\",\"runAsType\":\"currentUser\"}"
     addTransitionFunction(transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud){
@@ -94,9 +93,9 @@ relatedIssue.take(1).eachWithIndex { key, value, i ->
     }
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'transition_issue_to_in_progress_only_if_condition_true'
-    def server =  conditionalExecution.true +  "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
+    def server =  [conditionalExecution.true ,  "selectedLinkType=$value" , transitions.byName , options.allUnselected , addFields.noField , addComment.not , commentVisibility.notSelected , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\"}"
     addTransitionFunction(transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud){
@@ -104,9 +103,9 @@ relatedIssue.take(1).eachWithIndex { key, value, i ->
     }
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'transition_issue_to_in_progress_and_add_labels_set_by_template'
-    def server =  conditionalExecution.false +  "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.setByTemplate + addComment.not + commentVisibility.notSelected + runAsUser.currentUser
+    def server =  [conditionalExecution.false ,  "selectedLinkType=$value" , transitions.byName , options.allUnselected , addFields.setByTemplate , addComment.not , commentVisibility.notSelected , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\",\"fields\":{\"labels\":{\"value\":\"$labelsByTemplate\"}}}"
     addTransitionFunction(transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud){
@@ -114,9 +113,9 @@ relatedIssue.take(1).eachWithIndex { key, value, i ->
     }
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'commentAddedBytemplate'
-    def server =  conditionalExecution.false +  "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.commentAddedBytemplate + commentVisibility.notSelected + runAsUser.currentUser
+    def server =  [conditionalExecution.false ,  "selectedLinkType=$value" , transitions.byName , options.allUnselected , addFields.noField , addComment.commentAddedBytemplate , commentVisibility.notSelected , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\"}"
     addTransitionFunction(transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud){
@@ -124,9 +123,9 @@ relatedIssue.take(1).eachWithIndex { key, value, i ->
     }
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'commentVisibleToJiraAdminRoles'
-    def server =  conditionalExecution.false +  "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.commentVisibleToJiraAdminRoles + commentVisibility.jiraAdminRoles + runAsUser.currentUser
+    def server =  [conditionalExecution.false ,  "selectedLinkType=$value" , transitions.byName , options.allUnselected , addFields.noField , addComment.commentVisibleToJiraAdminRoles , commentVisibility.jiraAdminRoles , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"currentUser\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$jiraAdminRoleId}"
     addTransitionFunction(transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud){
@@ -134,53 +133,12 @@ relatedIssue.take(1).eachWithIndex { key, value, i ->
     }
 }
 
-/*
-relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def transition = 'runAsSpecificUser'
-    def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"thisUser\",\"runAs\":\"accountId:$currentUserKey\"}"
-    def server =    "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.specificUser
-    addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    if(!isCloud){
-        moveTransitionFunction(transition + i, 4)
-    }
-}
-
-relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def transition = 'runAsUserInFieldAssignee'
-    def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userField\",\"runAsField\":\"assignee\"}"
-    def server =    "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.userInFieldAssignee
-    addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    if(!isCloud){
-        moveTransitionFunction(transition + i, 4)
-    }
-}
-
-relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def transition = 'runAsUserInFieldReporter'
-    def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userField\",\"runAsField\":\"reporter\"}"
-    def server =    "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.userInFieldReporter
-    addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    if(!isCloud){
-        moveTransitionFunction(transition + i, 4)
-    }
-}
-
-relatedIssue.take(1).eachWithIndex { key, value, i ->
-    def transition = 'runAsUserInFieldCreator'
-    def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",\"runAsType\":\"userField\",\"runAsField\":\"creator\"}"
-    def server =   "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + runAsUser.userInFieldCreator
-    addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
-    if(!isCloud){
-        moveTransitionFunction(transition + i, 4)
-    }
-}
-*/
 runAsUser.remove("currentUser")
 runAsUser.eachWithIndex { userType, fields, idx ->
-    relatedIssue.take(1).eachWithIndex { key, value, i ->
+    relatedIssue.eachWithIndex { key, value, i ->
         def transition = 'runAs_' + userType + i
         def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"transition\":\"In Progress@@${workflow}\",$fields}"
-        def server =  "selectedLinkType=$value" + transitions.byName + options.allUnselected + addFields.noField + addComment.not + commentVisibility.notSelected + conditionalExecution.false + fields
+        def server =  ["selectedLinkType=$value" , transitions.byName , options.allUnselected , addFields.noField , addComment.not , commentVisibility.notSelected , conditionalExecution.false , fields]
         addTransitionFunction( transition , 'postfunction', info?.isCloud ? cloud : server, functionKey)
         if(!isCloud){
             moveTransitionFunction(transition , 4)
@@ -277,7 +235,7 @@ def relatedIssuesMap = [
 [
         'transition_issue_to_in_progress_only_if_condition_true'
 ].collect {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         ["Low","High"].each {priority ->
             def transition = it + i
             gint.taskHelper.add([
@@ -341,7 +299,7 @@ def relatedIssuesMap = [
 [
         'check_trigger_calculated_transition'
 ].collect {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         def transition  = it + i
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
@@ -413,7 +371,7 @@ def relatedIssuesMap = [
 [
         //'transition_issue_to_in_progress_and_add_labels_set_by_template',
 ].collect {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         def transition = it + i
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
@@ -459,7 +417,7 @@ def relatedIssuesMap = [
         //'commentAddedBytemplate',
         //'commentVisibleToJiraAdminRoles',
 ].collect {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action    : 'transitionIssue', ext: ':' + it + i,
                  sleep: sleep,
@@ -502,7 +460,7 @@ def relatedIssuesMap = [
 [
         'runAs_userInFieldAssignee'
 ].each {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
             gint.taskHelper.add([
                     [action: 'assignIssue',
                      sleep: sleep,
@@ -555,7 +513,7 @@ def relatedIssuesMap = [
 
 runAsUser.remove("userInFieldAssignee")
 runAsUser.eachWithIndex { userType, fields, idx ->
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         def transition = 'runAs_' + userType + i
         gint.taskHelper.add([
                 [action    : 'transitionIssue',

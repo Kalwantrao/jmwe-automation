@@ -44,43 +44,43 @@ def defaultFieldsCloud = [
 sourceField.each { fieldsName ->
     def transition = 'valueOfFieldLabelsWillBeCopiedToTheIssuesParent' + fieldsName
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"$fieldsName\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
-    def server =  "field=$fieldsName" + destField.sameAsSource +  options.noOption + conditionalExecution.false
+    def server =  ["field=$fieldsName" , destField.sameAsSource ,  options.noOption , conditionalExecution.false]
     addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['valueOfFieldLabelsWillBeCopiedToTheIssuesParent'].each {
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
-    def server =  "field=labels" + destField.sameAsSource +  options.noOption + conditionalExecution.false
+    def server = [ "field=labels" , destField.sameAsSource ,  options.noOption , conditionalExecution.false]
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['valueOfFieldLabelsWillBeCopiedToTheIssuesParent_copyOnlyIfNotSet'].each {
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":true,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
-    def server =  "field=labels" + destField.sameAsSource +  options.copyOnlyIfNotSet + conditionalExecution.false
+    def server =  ["field=labels" , destField.sameAsSource ,  options.copyOnlyIfNotSet , conditionalExecution.false]
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['valueOfFieldLabelsWillBeCopiedToTheIssuesParent_ignoreEmptyValue'].each {
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":true,\"runAsType\":\"addonUser\"}"
-    def server =  "field=labels" + destField.sameAsSource+  options.ignoreEmptyValue + conditionalExecution.false
+    def server =  ["field=labels" , destField.sameAsSource,  options.ignoreEmptyValue , conditionalExecution.false]
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['valueOfFieldLabelsWillBeCopiedToTheIssuesParent_createMissingValues'].each {
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"components\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":true,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
-    def server =  "field=labels" + destField.components +  options.createMissingValues + conditionalExecution.false
+    def server =  ["field=labels" , destField.components ,  options.createMissingValues , conditionalExecution.false]
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['valueOfFieldLabelsWillBeCopiedToTheIssuesParent_appendValues'].each {
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":true,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
-    def server =  "field=labels" + destField.sameAsSource +  options.appendValues + conditionalExecution.false
+    def server =  ["field=labels" , destField.sameAsSource ,  options.appendValues , conditionalExecution.false]
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['valueOfFieldLabelsWillBeCopiedToTheIssuesParent_ifConditionTrue'].each {
     def cloud =  "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
-    def server =  "field=labels" + destField.sameAsSource +  options.noOption + conditionalExecution.true
+    def server =  ["field=labels" , destField.sameAsSource ,  options.noOption , conditionalExecution.true]
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
@@ -125,23 +125,23 @@ def createMissingValue = "createMissingValueOfComponent"
             data = "Labels  . . . . . . . . . . . : $testLabel1"
         }
         else if(field == "components") {
-            fieldToCheck = "Components"
+            fieldToCheck = info?.isCloud? "Components" : "Component/s"
             fieldValue = 'component1'
-            data = "Components  . . . . . . . . . : component1"
+            data = info?.isCloud? "Components  . . . . . . . . . : component1" : "Component/s . . . . . . . . . : component1"
         }
         else if(field == "versions") {
-            fieldToCheck = "Affects versions"
+            fieldToCheck = info?.isCloud? "Affects versions" : "AffectsVersions"
             fieldValue = 1
-            data = "Affects versions  . . . . . . : 1"
+            data = info?.isCloud? "Affects versions  . . . . . . : 1" : "Affects Version/s . . . . . . : 1"
         }else if(field == "assignee") {
             fieldToCheck = "Assignee"
             fieldValue = user
             data = "Assignee  . . . . . . . . . . : $getCurrentUserName"
         }
         else if(field == "fixVersions") {
-            fieldToCheck = "Fix versions"
+            fieldToCheck = info?.isCloud?  "Fix versions" : "FixVersions"
             fieldValue = 1
-            data = "Fix versions  . . . . . . . . : 1"
+            data = info?.isCloud? "Fix versions  . . . . . . . . : 1" : "Fix Version/s . . . . . . . . : 1"
         }
         else if(field == "priority") {
             fieldToCheck = "Priority"
@@ -151,7 +151,7 @@ def createMissingValue = "createMissingValueOfComponent"
         gint.taskHelper.add([
                 [action    : 'setFieldValue',
                  sleep: sleep,
-                 ext       : ":set $fieldToCheck _$fieldValue to subtask of parent to check:$transition",
+                 ext       : ":set _$fieldValue to subtask of parent to check:$transition",
                  parameters: [
                          issue: { -> subtask[] },
                          field: fieldToCheck,
@@ -160,7 +160,7 @@ def createMissingValue = "createMissingValueOfComponent"
                 ],
                 [action      : 'getFieldValue',
                  sleep       : sleep,
-                 ext         : ":Validate that the subtask issue has $fieldToCheck value_ $fieldValue :" + transition,
+                 ext         : ":Validate that the subtask issue has value_ $fieldValue :" + transition,
                  parameters  : [
                          issue: { -> subtask[] },
                          field: fieldToCheck
@@ -168,7 +168,7 @@ def createMissingValue = "createMissingValueOfComponent"
                 ],
                 [action      : 'getFieldValue',
                  sleep       : sleep,
-                 ext         : ":Validate that the before transition parent not has $fieldToCheck value_$fieldValue :" + transition,
+                 ext         : ":Validate that the before transition parent not has value_$fieldValue :" + transition,
                  parameters  : [
                          issue: { -> parent[] },
                          field: fieldToCheck
@@ -185,7 +185,7 @@ def createMissingValue = "createMissingValueOfComponent"
                 ],
                 [action      : 'getFieldValue',
                  sleep       : sleep,
-                 ext         : ":TC_03: The values of field $fieldValue _ $fieldToCheck will be copied to the issues parent_replacing existing values: " + transition,
+                 ext         : ":TC_03: The values of field $fieldValue _ will be copied to the issues parent_replacing existing values: " + transition,
                  parameters  : [
                          issue: { -> parent[] },
                          field: fieldToCheck

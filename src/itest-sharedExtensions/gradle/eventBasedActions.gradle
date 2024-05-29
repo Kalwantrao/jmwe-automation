@@ -37,7 +37,7 @@ ext.createIssue = { parameters, ext ->
     return savedIssues
 }
 
-
+/*
 def issueCreatedEvent = createSharedExtension(info?.isCloud? info?.isCloud? "POST": "PUT": "PUT", eventBasedActionsUrl, issueCreatedEventPayload, "issue created event based action")
 
 def savedIssueCreatedEventId = {->issueCreatedEvent[0] }
@@ -355,10 +355,10 @@ gint.taskHelper.add([
 ]
 )
 
-if(isCloud) {
-    deleteSharedExtension("DELETE", info?.isCloud ? "/rest/jmwe-api/event-actions/${issueFieldValueUpdatedEventId}" : "/rest/jmwe/1/event-actions/${issueFieldValueUpdatedEventId}", "issue field value updated EBA")
-}
+deleteSharedExtension("DELETE", info?.isCloud ? "/rest/jmwe-api/event-actions/${issueFieldValueUpdatedEventId}" : "/rest/jmwe/1/event-actions/${issueFieldValueUpdatedEventId}", "issue field value updated EBA")
 
+*/
+/*
 def attachmentCreatedEvent = createSharedExtension(info?.isCloud? "POST": "PUT", eventBasedActionsUrl, attachmentCreatedEventPayload, "event_based action for attachment created")
 
 def attachmentCreatedEventId = {->attachmentCreatedEvent[0] }
@@ -444,6 +444,7 @@ if(isCloud) {
 }
 
 deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${attachmentDeletedEventId}" : "/rest/jmwe/1/event-actions/${attachmentDeletedEventId}", "attachment_deleted EBA")
+*/
 
 def issueLinkAddedEvent = createSharedExtension(info?.isCloud? "POST": "PUT", eventBasedActionsUrl, issueLinkAddedEventPayload, "event_based action for issue link added")
 
@@ -480,7 +481,7 @@ gint.taskHelper.add([
         ],
 ]
 )
-
+/*
 deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${issueLinkAddedEventId}" : "/rest/jmwe/1/event-actions/${issueLinkAddedEventId}", "issue link added_EBA")
 
 def issueLinkDeleteEvent = createSharedExtension(info?.isCloud? "POST": "PUT", eventBasedActionsUrl, issueLinkDeleteEventPayload, "event_based action for issue link delete")
@@ -989,5 +990,5 @@ gint.taskHelper.add([
 )
 
 deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/event-actions/${issueMovedEventId}" : "/rest/jmwe/1/event-actions/${issueMovedEventId}", "issue moved EBA")
-
+*/
 

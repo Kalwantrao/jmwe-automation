@@ -38,14 +38,17 @@ ext.createIssue = { parameters, ext ->
     return savedIssues
 }
 
-
 def scheduledActionsRunAsAddonUser = createSharedExtension(info?.isCloud? "POST": "PUT", scheduledActionsUrl, runAsAddonUserPayload, "scheduled action run as addon user")
 
 def scheduledActionsRunAsAddonUserId = {->scheduledActionsRunAsAddonUser[0] }
 
 def scheduledActionsRunAsAddonUserIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'scheduledActionsRunAsAddonUserIssue')
 
-performActionsOnSharedExtension("run scheduled actions_run as addon user", info?.isCloud? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsAddonUserId}/actions" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsAddonUserId}/actions", /{ "action": "run" }/)
+if(!info?.isCloud){
+    performActionsOnSharedExtensionServer("GET", "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsAddonUserId}/run", "run scheduled actions run as addon user")
+} else {
+    performActionsOnSharedExtensionCloud("run scheduled actions_run as addon user", "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsAddonUserId}/actions", /{ "action": "run" }/)
+}
 
 gint.taskHelper.add(
         [action: "getComments",
@@ -54,7 +57,7 @@ gint.taskHelper.add(
          parameters:[
                  issue: {-> scheduledActionsRunAsAddonUserIssue[]},
          ],
-         data: [ /$addonName added a comment/,
+         data: [ info?.isCloud ? /$addonName added a comment/ : /$user added a comment/,
                  /scheduled_action run as addon user/
          ]
         ]
@@ -62,14 +65,26 @@ gint.taskHelper.add(
 
 deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsAddonUserId}" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsAddonUserId}", "delete scheduled actions run as addon user")
 
+gint.taskHelper.add(
+        action: 'deleteIssue',
+        sleep: sleep,
+        ext: ': scheduledActionsRunAsAddonUserIssue' ,
+        parameters: [
+                issue: {-> scheduledActionsRunAsAddonUserIssue[]}
+        ],
+)
+
 def scheduledActionsRunAsSelectedUser = createSharedExtension(info?.isCloud? "POST": "PUT", scheduledActionsUrl, runAsSelectedUserPayload, "scheduled action run as selected user")
 
 def scheduledActionsRunAsSelectedUserId = {->scheduledActionsRunAsSelectedUser[0] }
 
 def scheduledActionsRunAsSelectedUserIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'scheduledActionsRunAsSelectedUserIssue')
 
-performActionsOnSharedExtension("run scheduled actions_run as selected user", info?.isCloud? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsSelectedUserId}/actions" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsSelectedUserId}/actions", /{ "action": "run" }/)
-
+if(!info?.isCloud){
+    performActionsOnSharedExtensionServer("GET", "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsSelectedUserId}/run", "run scheduled actions run as selected user")
+} else {
+    performActionsOnSharedExtensionCloud("run scheduled actions_run as selected user", info?.isCloud ? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsSelectedUserId}/actions" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsSelectedUserId}/run", /{ "action": "run" }/)
+}
 gint.taskHelper.add(
         [action: "getComments",
          sleep: sleep,
@@ -85,14 +100,26 @@ gint.taskHelper.add(
 
 deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsSelectedUserId}" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsSelectedUserId}", "delete scheduled actions run as selected user")
 
+gint.taskHelper.add(
+        action: 'deleteIssue',
+        sleep: sleep,
+        ext: ': scheduledActionsRunAsSelectedUserIssue' ,
+        parameters: [
+                issue: {-> scheduledActionsRunAsSelectedUserIssue[]}
+        ],
+)
+
 def scheduledActionsRunAsUserInFieldAssignee = createSharedExtension(info?.isCloud? "POST": "PUT", scheduledActionsUrl, runAsUserInFieldAssigneePayload, "scheduled action run as user in field assignee")
 
 def scheduledActionsRunAsUserInFieldAssigneeId = {->scheduledActionsRunAsUserInFieldAssignee[0] }
 
 def scheduledActionsRunAsUserInFieldAssigneeIssue = createIssue([type: 'Task', summary: 'JMWE_Issue', assignee: testUser], 'scheduledActionsRunAsUserInFieldAssigneeIsssue')
 
-performActionsOnSharedExtension("run scheduled actions_run as user in field assignee", info?.isCloud? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsUserInFieldAssigneeId}/actions" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsUserInFieldAssigneeId}/actions", /{ "action": "run" }/)
-
+if(!info?.isCloud){
+    performActionsOnSharedExtensionServer("GET", "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsUserInFieldAssigneeId}/run", "run scheduled actions run as user in field assignee")
+} else {
+    performActionsOnSharedExtensionCloud("run scheduled actions_run as user in field assignee", info?.isCloud ? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsUserInFieldAssigneeId}/actions" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsUserInFieldAssigneeId}/run", /{ "action": "run" }/)
+}
 gint.taskHelper.add(
         [action: "getComments",
          sleep: sleep,
@@ -100,7 +127,7 @@ gint.taskHelper.add(
          parameters:[
                  issue: {-> scheduledActionsRunAsUserInFieldAssigneeIssue[]},
          ],
-         data: [ /$testUser added a comment/,
+         data: [ info?.isCloud? /$testUser added a comment/ : /$getCurrentUserName added a comment/,
                  /scheduled_action run as user in field assignee/
          ]
         ]
@@ -108,13 +135,26 @@ gint.taskHelper.add(
 
 deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsUserInFieldAssigneeId}" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsUserInFieldAssigneeId}", "delete scheduled actions run as user in field assignee")
 
+gint.taskHelper.add(
+        action: 'deleteIssue',
+        sleep: sleep,
+        ext: ': scheduledActionsRunAsUserInFieldAssigneeIssue' ,
+        parameters: [
+                issue: {-> scheduledActionsRunAsUserInFieldAssigneeIssue[]}
+        ],
+)
+
 def scheduledActionsRunAsUserInFieldReporter = createSharedExtension(info?.isCloud? "POST": "PUT", scheduledActionsUrl, runAsUserInFieldReporterPayload, "scheduled action run as user in field reporter")
 
 def scheduledActionsRunAsUserInFieldReporterId = {->scheduledActionsRunAsUserInFieldReporter[0] }
 
 def scheduledActionsRunAsUserInFieldReporterIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'scheduledActionsRunAsUserInFieldReporterIssue')
 
-performActionsOnSharedExtension("run scheduled actions_run as user in field reporter", info?.isCloud? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsUserInFieldReporterId}/actions" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsUserInFieldReporterId}/actions", /{ "action": "run" }/)
+if(!info?.isCloud){
+    performActionsOnSharedExtensionServer("GET", "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsUserInFieldReporterId}/run", "run scheduled actions run as user in field reporter")
+} else {
+    performActionsOnSharedExtensionCloud("run scheduled actions_run as user in field reporter", info?.isCloud ? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsUserInFieldReporterId}/actions" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsUserInFieldReporterId}/run", /{ "action": "run" }/)
+}
 
 gint.taskHelper.add(
         [action: "getComments",
@@ -131,14 +171,26 @@ gint.taskHelper.add(
 
 deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsUserInFieldReporterId}" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsUserInFieldReporterId}", "delete scheduled actions run as user in field reporter")
 
+gint.taskHelper.add(
+        action: 'deleteIssue',
+        sleep: sleep,
+        ext: ': scheduledActionsRunAsUserInFieldReporterIssue' ,
+        parameters: [
+                issue: {-> scheduledActionsRunAsUserInFieldReporterIssue[]}
+        ],
+)
+
 def scheduledActionsRunAsUserInFieldCreator = createSharedExtension(info?.isCloud? "POST": "PUT", scheduledActionsUrl, runAsUserinFieldCreatorPayload, "scheduled action run as user in field creator")
 
 def scheduledActionsRunAsUserInFieldCreatorId = {->scheduledActionsRunAsUserInFieldCreator[0] }
 
 def scheduledActionsRunAsUserInFieldCreatorIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'scheduledActionsRunAsUserInFieldCreatorIssue')
 
-performActionsOnSharedExtension("run scheduled actions_run as user in field creator", info?.isCloud? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsUserInFieldCreatorId}/actions" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsUserInFieldCreatorId}/actions", /{ "action": "run" }/)
-
+if(!info?.isCloud){
+    performActionsOnSharedExtensionServer("GET", "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsUserInFieldCreatorId}/run", "run scheduled actions run as user in field creator")
+} else {
+    performActionsOnSharedExtensionCloud("run scheduled actions_run as user in field creator", info?.isCloud ? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsUserInFieldCreatorId}/actions" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsUserInFieldCreatorId}/run", /{ "action": "run" }/)
+}
 gint.taskHelper.add(
         [action: "getComments",
          sleep: sleep,
@@ -154,13 +206,26 @@ gint.taskHelper.add(
 
 deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsUserInFieldCreatorId}" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsUserInFieldCreatorId}", "delete scheduled actions run as user in field creator")
 
+gint.taskHelper.add(
+        action: 'deleteIssue',
+        sleep: sleep,
+        ext: ': scheduledActionsRunAsUserInFieldCreatorIssue' ,
+        parameters: [
+                issue: {-> scheduledActionsRunAsUserInFieldCreatorIssue[]}
+        ],
+)
+
 def scheduledActionsRunAsUserReturnFromScript = createSharedExtension(info?.isCloud? "POST": "PUT", scheduledActionsUrl, runAsUserReturnFromScriptPayload, "scheduled action run as user return from script")
 
 def scheduledActionsRunAsUserReturnFromScriptId = {->scheduledActionsRunAsUserReturnFromScript[0] }
 
 def scheduledActionsRunAsUserReturnFromScriptIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'scheduledActionsRunAsUserReturnFromScript')
 
-performActionsOnSharedExtension("run scheduled actions_run as user return from script", info?.isCloud? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsUserReturnFromScriptId}/actions" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsUserReturnFromScriptId}/actions", /{ "action": "run" }/)
+if(!info?.isCloud){
+    performActionsOnSharedExtensionServer("GET", "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsUserReturnFromScriptId}/run", "run scheduled actions run as user return from script")
+} else {
+    performActionsOnSharedExtensionCloud("run scheduled actions_run as user return from script", info?.isCloud ? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsUserReturnFromScriptId}/actions" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsUserReturnFromScriptId}/run", /{ "action": "run" }/)
+}
 
 gint.taskHelper.add(
         [action: "getComments",
@@ -176,6 +241,15 @@ gint.taskHelper.add(
 )
 
 deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/scheduled-actions/${scheduledActionsRunAsUserReturnFromScriptId}" : "/rest/jmwe/1/scheduled-actions/${scheduledActionsRunAsUserReturnFromScriptId}", "delete scheduled actions run as user return from script")
+
+gint.taskHelper.add(
+        action: 'deleteIssue',
+        sleep: sleep,
+        ext: ': scheduledActionsRunAsUserReturnFromScriptIssue' ,
+        parameters: [
+                issue: {-> scheduledActionsRunAsUserReturnFromScriptIssue[]}
+        ],
+)
 
 
 

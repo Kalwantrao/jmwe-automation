@@ -12,6 +12,13 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
+
+ext.TEST_GROUP_ID = getGroupId('testgroup', "testgroup.*")
+ext.ADMIN_GROUP_ID = getGroupId('jira-admins', "jira-admins.*")
+
+project.ext.testGroupIdCloud = {->TEST_GROUP_ID.getAt(0).trim()}
+project.ext.jiraAdminGroupIdCloud = {->ADMIN_GROUP_ID.getAt(0).trim()}
+
 def functionKey = info?.isCloud? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__UserValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-validator'
 def errorMessage = "Check user satisfy the given criteria"
 
@@ -99,103 +106,146 @@ def userInFieldCreatorUserValidatorCriteria = info?.isCloud ? userInFieldCreator
 currentUserValidatorCriteria.eachWithIndex { criteria, userFields, i ->
     def transition = "verify_current_user_should_be_" + criteria //verify_current_user_should_be_inTestGroup
     def cloud = "{\"problems\":[],$errorMessageCloud,$userMode.allUsers,$whichUser.currentUser,$userFields}"
-    def server = "errorMessage=$errorMessage" + userFields +  whichUser.currentUser + reverse.no + userMode.allUsers + fieldEmpty.no
+    def server = ["errorMessage=$errorMessage" , userFields ,  whichUser.currentUser , reverse.no , userMode.allUsers , fieldEmpty.no]
     addTransitionFunction(transition, 'validator', info?.isCloud ? cloud : server, functionKey )
 }
 
 userInFieldAssigneeUserValidatorCriteria.eachWithIndex { criteria, userFields, i ->
     def transition = "verify_user_in_field_assignee_should_be_" + criteria
     def cloud =  "{\"problems\":[],$errorMessageCloud,$userMode.allUsers,$whichUser.userInFieldAssignee,$userFields}"
-    def server = "errorMessage=$errorMessage" + userFields + whichUser.userInFieldAssignee + reverse.no + userMode.allUsers + fieldEmpty.no
+    def server = ["errorMessage=$errorMessage" , userFields , whichUser.userInFieldAssignee , reverse.no , userMode.allUsers , fieldEmpty.no]
     addTransitionFunction(transition, 'validator', info?.isCloud ? cloud : server,  functionKey )
 }
 
 userInFieldReporterUserValidatorCriteria.eachWithIndex { criteria, userFields, i ->
     def transition = "verify_user_in_field_reporter_should_be_" + criteria
     def cloud = "{\"problems\":[],$errorMessageCloud,$userMode.allUsers,$whichUser.userInFieldReporter,$userFields}"
-    def server = "errorMessage=$errorMessage" + whichUser.userInFieldReporter + userFields + reverse.no + userMode.allUsers + fieldEmpty.no
+    def server = ["errorMessage=$errorMessage" , whichUser.userInFieldReporter , userFields , reverse.no , userMode.allUsers , fieldEmpty.no]
     addTransitionFunction(transition, 'validator', info?.isCloud ? cloud : server,  functionKey )
 }
 
 userInFieldCreatorUserValidatorCriteria.eachWithIndex { criteria, userFields, i ->
     def transition = "verify_user_in_field_creator_should_be_" + criteria
     def cloud = "{\"problems\":[],$errorMessageCloud,$userMode.allUsers,$whichUser.userInFieldCreator,$userFields}"
-    def server = "errorMessage=$errorMessage" + whichUser.userInFieldCreator + userFields + reverse.no + userMode.allUsers + fieldEmpty.no
+    def server = ["errorMessage=$errorMessage" , whichUser.userInFieldCreator , userFields , reverse.no , userMode.allUsers , fieldEmpty.no]
     addTransitionFunction(transition, 'validator', info?.isCloud ? cloud : server,  functionKey )
 }
 
 ['verify_current_user_should_be_in_assignee_reporter'].each {
-    def server =  "errorMessage=$errorMessage" + whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + reverse.no + userMode.allUsers + fieldEmpty.no
+    def server =  ["errorMessage=$errorMessage" , whichUser.currentUser , userCriteria.assignee , userCriteria.reporter , reverse.no , userMode.allUsers , fieldEmpty.no]
     def cloud = "{\"problems\":[],$errorMessageCloud,$whichUser.currentUser,$userMode.allUsers,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)&&(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
     addTransitionFunction(it, 'validator',info?.isCloud ? cloud : server,  functionKey )
 }
 
 ['verify_user_in_field_assignee_should_be_in_reporter'].each {
     def cloud = "{\"problems\":[],$whichUser.userInFieldAssignee,$userMode.allUsers,\"userCriteria\":{\"isReporter\":true},$errorMessageCloud,\"expression\":\"let selectedUser = !!issue && !!issue.assignee && issue.assignee; ((!!issue && !!issue.assignee && (false || (!!issue.reporter && issue.assignee.accountId == issue.reporter.accountId))))\"}"
-    def server =  "errorMessage=$errorMessage" + whichUser.userInFieldAssignee + userCriteria.reporter + reverse.no + userMode.allUsers + fieldEmpty.no
+    def server =  ["errorMessage=$errorMessage" , whichUser.userInFieldAssignee , userCriteria.reporter , reverse.no , userMode.allUsers , fieldEmpty.no]
     addTransitionFunction(it, 'validator',info?.isCloud ? cloud : server,  functionKey )
 }
 
 ['verify_user_in_field_reporter_should_be_in_assignee'].each {
     def cloud =  "{\"problems\":[],$whichUser.userInFieldReporter,$userMode.allUsers,\"userCriteria\":{\"isAssignee\":true},$errorMessageCloud,\"expression\":\"let selectedUser = !!issue && !!issue.reporter && issue.reporter; ((!!issue && !!issue.reporter && (false || (!!issue.assignee && issue.reporter.accountId == issue.assignee.accountId))))\"}"
-    def server =  "errorMessage=$errorMessage" + whichUser.userInFieldReporter + userCriteria.assignee + reverse.no + userMode.allUsers + fieldEmpty.no
+    def server =  ["errorMessage=$errorMessage" , whichUser.userInFieldReporter , userCriteria.assignee , reverse.no , userMode.allUsers , fieldEmpty.no]
     addTransitionFunction(it, 'validator',info?.isCloud ? cloud : server,  functionKey )
 }
 
 ['verify_user_in_field_creator_should_be_in_reporter_assignee'].each {
     def cloud = "{\"problems\":[],$whichUser.userInFieldCreator,$userMode.allUsers,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},$errorMessageCloud,\"expression\":\"let selectedUser = !!issue && !!issue.creator && issue.creator; ((!!issue && !!issue.creator && (false || (!!issue.reporter && issue.creator.accountId == issue.reporter.accountId)&&(!!issue.assignee && issue.creator.accountId == issue.assignee.accountId))))\"}"
-    def server =  "errorMessage=$errorMessage" + whichUser.userInFieldCreator + userCriteria.reporter + userCriteria.assignee + reverse.no + userMode.allUsers + fieldEmpty.no
+    def server =  ["errorMessage=$errorMessage" , whichUser.userInFieldCreator , userCriteria.reporter , userCriteria.assignee , reverse.no , userMode.allUsers , fieldEmpty.no]
     addTransitionFunction(it, 'validator',info?.isCloud ? cloud : server,  functionKey )
 }
 
 ['verify_current_user_should_be_in_at_least_one_field_assignee_reporter'].each {
     def cloud =  "{\"problems\":[],$whichUser.currentUser,$userMode.atLeastOne,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},$errorMessageCloud,\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)||(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
-    def server =  "errorMessage=$errorMessage" + whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + reverse.no + userMode.atLeastOne + fieldEmpty.no
+    def server =  ["errorMessage=$errorMessage" , whichUser.currentUser , userCriteria.assignee , userCriteria.reporter , reverse.no , userMode.atLeastOne , fieldEmpty.no]
     addTransitionFunction(it, 'validator', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['verify_user_in_field_assignee_should_be_in_at_least_one_field_reporter'].each {
     def cloud =  "{\"problems\":[],$whichUser.userInFieldAssignee,\"fieldEmpty\":false,$userMode.atLeastOne,\"userCriteria\":{\"isReporter\":true},$errorMessageCloud,\"expression\":\"let selectedUser = !!issue && !!issue.assignee && issue.assignee; ((!!issue && !!issue.assignee && (false || (!!issue.reporter && issue.assignee.accountId == issue.reporter.accountId))))\"}"
-    def server =  "errorMessage=$errorMessage" + whichUser.userInFieldAssignee + userCriteria.reporter + reverse.no + userMode.atLeastOne + fieldEmpty.no
+    def server =  ["errorMessage=$errorMessage" , whichUser.userInFieldAssignee , userCriteria.reporter , reverse.no , userMode.atLeastOne , fieldEmpty.no]
     addTransitionFunction(it, 'validator', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['verify_user_in_field_reporter_should_be_in_at_least_one_field_assignee'].each {
     def cloud = "{\"problems\":[],$whichUser.userInFieldReporter,$userMode.atLeastOne,\"userCriteria\":{\"isAssignee\":true},$errorMessageCloud,\"expression\":\"let selectedUser = !!issue && !!issue.reporter && issue.reporter; ((!!issue && !!issue.reporter && (false || (!!issue.assignee && issue.reporter.accountId == issue.assignee.accountId))))\",\"fieldEmpty\":false}"
-    def server =  "errorMessage=$errorMessage" + whichUser.userInFieldReporter + userCriteria.assignee + reverse.no + userMode.atLeastOne + fieldEmpty.no
+    def server =  ["errorMessage=$errorMessage" , whichUser.userInFieldReporter , userCriteria.assignee , reverse.no , userMode.atLeastOne , fieldEmpty.no]
     addTransitionFunction(it, 'validator', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['verify_user_in_field_creator_should_be_in_at_least_one_field_reporter_assignee'].each {
     def cloud = "{$userMode.atLeastOne,\"expression\":\"let selectedUser = !!issue && !!issue.creator && issue.creator; ((!!issue && !!issue.creator && (false || (!!issue.reporter && issue.creator.accountId == issue.reporter.accountId)||(!!issue.assignee && issue.creator.accountId == issue.assignee.accountId))))\",$whichUser.userInFieldCreator,$errorMessageCloud,\"userCriteria\":{\"isAssignee\":true,\"isReporter\":true},\"problems\":[],\"fieldEmpty\":false}"
-    def server =  "errorMessage=$errorMessage" + whichUser.userInFieldCreator + userCriteria.reporter + userCriteria.assignee + reverse.no + userMode.atLeastOne + fieldEmpty.no
+    def server =  ["errorMessage=$errorMessage" , whichUser.userInFieldCreator , userCriteria.reporter , userCriteria.assignee , reverse.no , userMode.atLeastOne , fieldEmpty.no]
     addTransitionFunction(it, 'validator', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['currentUser_should_not_be_in_fields_assignee_reporter_field_reverse'].each {
     def cloud = "{\"problems\":[],$whichUser.currentUser,$userMode.atLeastOne,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true,\"reverse\":true},$errorMessageCloud,\"expression\":\"let selectedUser = user; !((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)&&(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
-    def server =  "errorMessage=$errorMessage" + whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + reverse.yes + userMode.atLeastOne + fieldEmpty.no
+    def server =  ["errorMessage=$errorMessage" , whichUser.currentUser , userCriteria.assignee , userCriteria.reporter , reverse.yes , userMode.atLeastOne , fieldEmpty.no]
     addTransitionFunction(it, 'validator',info?.isCloud ? cloud : server,  functionKey )
 }
 
 ['user_in_field_assignee_should_be_in_field_reporter_or_field_empty'].each {
     def cloud ="{\"problems\":[],$whichUser.userInFieldAssignee,\"fieldEmpty\":true,$userMode.atLeastOne,\"userCriteria\":{\"isReporter\":true},$errorMessageCloud,\"expression\":\"let selectedUser = !!issue && issue.assignee; ((!!issue && (!issue.assignee || (!!issue.reporter && issue.assignee.accountId == issue.reporter.accountId))))\"}"
-    def server =  "errorMessage=$errorMessage" + whichUser.userInFieldAssignee + userCriteria.reporter + reverse.no + userMode.atLeastOne + fieldEmpty.yes
+    def server =  ["errorMessage=$errorMessage" , whichUser.userInFieldAssignee , userCriteria.reporter , reverse.no , userMode.atLeastOne , fieldEmpty.yes]
     addTransitionFunction(it, 'validator', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['current_user_should_be_assignee_if_condition_true'].each {
     def cloud =  "{\"problems\":[],$whichUser.currentUser,$userMode.allUsers,\"userCriteria\":{\"isAssignee\":true},$errorMessageCloud,\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.priority && issue.priority.name == 'High'\",\"expression\":\"let selectedUser = user; (!(!!issue.priority && issue.priority.name == 'High') || (!!user && (false || (!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
-    def server =  "errorMessage=$errorMessage" + whichUser.currentUser + userCriteria.assignee + reverse.no + userMode.allUsers + fieldEmpty.yes + conditionalValidation.yes
+    def server =  ["errorMessage=$errorMessage" , whichUser.currentUser , userCriteria.assignee , reverse.no , userMode.allUsers , fieldEmpty.yes , conditionalValidation.yes]
     addTransitionFunction(it, 'validator', info?.isCloud ? cloud : server, functionKey)
+}
+
+['currentUserShouldBeAssigneeOnCreateTransition'].each {
+    def cloud =  "{\"problems\":[],$whichUser.currentUser,$userMode.allUsers,\"userCriteria\":{\"isAssignee\":true},$errorMessageCloud,\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
+    def server =  ["errorMessage=$errorMessage" , whichUser.currentUser , userCriteria.assignee , reverse.no , userMode.allUsers , fieldEmpty.yes , conditionalValidation.yes]
+    if(isCloud){
+        addTransitionFunctionOnCreateTransition(it, 'validator', info?.isCloud ? cloud : server, functionKey)
+    }
 }
 
 createWorkflowScheme()
 createProject()
 
-def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue',assignee: "@self"], 'defaultIssue')
 def currentUser = info?.isCloud ? info?.userDisplayName : user
 def listOfUsers = [testUser,user]
+
+if(isCloud){
+    gint.taskHelper.add(
+            action: "createIssue",
+            ext: ":to check user validator on create transition error when current user is not assignee",
+            expected: -3,
+            parameters: [
+                    summary: "JMWE_Issue",
+                    type: "Task",
+                    project: projectName
+            ],
+            data: [errorMessage]
+    )
+}
+
+if(isCloud) {
+    gint.taskHelper.add(
+            action: "createIssue",
+            ext: ":to check user validator on create transition error when current user is assignee",
+            parameters: [
+                    summary : "JMWE_Issue",
+                    type    : "Task",
+                    assignee: "@self",
+                    project : projectName
+            ]
+    )
+}
+gint.taskHelper.addSetUp(
+        action: "updateIssue",
+        ext: ":clear the value of field provided when creating issue",
+        parameters: [
+                issue: { ->defaultIssue[] },
+                assignee: " "
+        ]
+)
 
 // USER_VALIDATOR_TS_26_TC_01_Verify the current user should be reporter
 [

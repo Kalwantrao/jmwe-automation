@@ -12,7 +12,7 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction.gradle'
 
-def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:return-to-previous-status-function'
+def functionKey = info?.isCloud? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__PreviousStatusFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:return-to-previous-status-function'
 
 def useTransition = [
         yes : [ "useTransition=yes" ],
@@ -22,56 +22,79 @@ def useTransition = [
 [
         'returnToPrevStatus'
 ].each {
-    def fields =  conditionalExecution.false + useTransition.no + runAsUser.currentUser
+    def server =  [conditionalExecution.false , useTransition.no , runAsUser.currentUser]
+    def cloud =  "{\"runAsType\":\"addonUser\"}"
     if(!isCloud) {
-        addTransitionFunction(it, 'postfunction', fields, functionKey)
+        addTransitionFunction(it, 'postfunction', info?.isCloud? cloud : server, functionKey)
         moveTransitionFunction(it, 4)
+    }
+    else {
+        addTransitionFunctionForPreviousStatusPf(it, 'postfunction', info?.isCloud? cloud : server, functionKey)
     }
 }
 
 [
         'returnToPrevStatus_ifConditionTrue'
 ].each {
-    def fields =  conditionalExecution.true + useTransition.no + runAsUser.currentUser
+    def server =  [conditionalExecution.true , useTransition.no , runAsUser.currentUser]
+    def cloud =  "{$conditionalExecution.true,\"runAsType\":\"addonUser\"}"
     if(!isCloud) {
-        addTransitionFunction(it, 'postfunction', fields, functionKey)
+        addTransitionFunction(it, 'postfunction', info?.isCloud? cloud : server, functionKey)
         moveTransitionFunction(it, 4)
+    }
+    else {
+        addTransitionFunctionForPreviousStatusPf(it, 'postfunction', info?.isCloud? cloud : server, functionKey)
+    }
+}
+
+runAsUser.remove("currentUser")
+runAsUser.eachWithIndex { runAsType, fields, idx ->
+    def transition = "returnToPreviousStatus_runAs_" + runAsType
+    def cloud =  "{$conditionalExecution.false,$fields}"
+    if(isCloud){
+        addTransitionFunctionForPreviousStatusPf(transition, 'postfunction', cloud, functionKey)
     }
 }
 
 createWorkflowScheme()
 createProject()
 
-def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue',assignee: testUser], 'defaultIssue')
+
 def previousStatus = "In Progress"
 
-if(!isCloud) {
-    gint.taskHelper.add([
-            [action    : 'transitionIssue', ext: " :  set previous status of issue to $previousStatus ",
-             parameters: [
-                     transition: previousStatus,
-                     issue     : { -> defaultIssue[] },
-             ],
-            ],
-            [action    : 'transitionIssue', ext: " : set status of issue to To Do again : ",
-             parameters: [
-                     transition: "To Do",
-                     issue     : { -> defaultIssue[] },
-             ],
-            ],
-    ])
-}
+gint.taskHelper.addSetUp([
+        [action    : 'transitionIssue',
+         ext: " :  set previous status of issue to $previousStatus ",
+         sleep: sleep,
+         parameters: [
+                 transition: previousStatus,
+                 issue     : { -> defaultIssue[] },
+         ],
+        ],
+        [action    : 'transitionIssue',
+         ext: " : set status of issue to To Do again : ",
+         sleep: sleep,
+         parameters: [
+                 transition: info?.isCloud? "In Progress" : "To Do",
+                 issue     : { -> defaultIssue[] },
+         ],
+        ],
+])
 
 ['returnToPrevStatus',].each {
-    if(!isCloud) {
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: " :  return to previous status " + it,
+                [action    : 'transitionIssue',
+                 ext: " :  return to previous status " + it,
+                 sleep: sleep,
                  parameters: [
                          transition: it,
                          issue     : { -> defaultIssue[] },
                  ],
                 ],
-                [action    : 'getFieldValue', ext: ": Check issue should :  $it",
+                [action    : 'getFieldValue',
+                 ext: ": Check issue should :  $it",
+                 sleep: sleep,
                  parameters: [
                          issue: { -> defaultIssue[] },
                          field: "Status",
@@ -80,57 +103,88 @@ if(!isCloud) {
                          "Status  . . . . . . . . . . . : $previousStatus",
                  ]
                 ],
-                [action    : 'transitionIssue', ext: " : set issue status to To Do again : " + it,
+        ])
+    if(isCloud){
+        gint.taskHelper.add([
+                [action    : 'getIssueHistoryList',
+                 ext: " : to check run as addon user : " + it,
+                 sleep: sleep,
                  parameters: [
-                         transition: "To Do",
+                         issue     : { -> defaultIssue[] },
+                         outputType: "text",
+                         select: ["Author:$addonName","field:status","To String:$previousStatus","From String:To Do"],
+                         columns: "Author,From String,To String"
+                 ],
+                        data: ["$addonName", "To Do", "$previousStatus" ]
+                ],
+        ])
+    }
+    gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext: " : set issue status to To Do again : " + it,
+                 sleep: sleep,
+                 parameters: [
+                         transition: info?.isCloud? "In Progress" : "To Do",
                          issue     : { -> defaultIssue[] },
                  ],
                 ],
         ])
-    }
 }
 
-
-['returnToPrevStatus_ifConditionTrue',].each {
-    if(!isCloud) {
+[
+        'returnToPrevStatus_ifConditionTrue'
+].each {
+    ["Low","High"].each { priority ->
         gint.taskHelper.add([
-                [action     : 'transitionIssue', ext: " :  when condition false ",
-                 sleepaAfter: 2000,
-                 parameters : [
-                         transition: it,
-                         issue     : { -> defaultIssue[] },
-                 ],
-                ],
-                [action    : 'getFieldValue', ext: ": issue should not return to previous status when condition false",
+                [action    : 'setFieldValue',
+                 sleep     : sleep,
+                 ext       : " : of priority to $priority :before transition issue with:" + it,
                  parameters: [
                          issue: { -> defaultIssue[] },
-                         field: "Status",
-                 ],
-                 failData  : ["Status  . . . . . . . . . . . : $previousStatus"]
-                ],
-                [action    : 'updateIssue', ext: " : add description to add in comment : " + it,
-                 parameters: [
-                         issue   : { -> defaultIssue[] },
-                         priority: 'High'
+                         field: "Priority",
+                         value: priority
                  ]
                 ],
-                [action    : 'transitionIssue', ext: " :  return to previous status " + it,
+                [action    : 'transitionIssue',
+                 ext       : ":with $it _ when priority of issue is $priority:",
+                 sleep     : sleep,
                  parameters: [
                          transition: it,
                          issue     : { -> defaultIssue[] },
                  ],
                 ],
-
-                [action    : 'getFieldValue', ext: ": issue return to previous status when condition true",
+        ])
+        if (priority == "High") {
+            gint.taskHelper.add([
+                    [action    : 'getFieldValue',
+                     sleep     : sleep,
+                     ext       : ":issue should not return to previous status :when priority of issue $priority: $it",
+                     parameters: [
+                             issue: { -> defaultIssue[] },
+                             field: "Status",
+                     ],
+                     data      : ["Status  . . . . . . . . . . . : $previousStatus"]
+                    ],
+            ])
+        } else {
+            gint.taskHelper.add([
+                    [action    : 'getFieldValue',
+                     sleep     : sleep,
+                     ext       : ": issue should not return to previous status priority of issue is :$priority:$it",
+                     parameters: [
+                             issue: { -> defaultIssue[] },
+                             field: "Status",
+                     ],
+                     failData  : ["Status  . . . . . . . . . . . : $previousStatus"]
+                    ],
+            ])
+        }
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep     : sleep,
+                 ext       : " : set issue status to base status again:when priority of issue is $priority :" + it,
                  parameters: [
-                         issue: { -> defaultIssue[] },
-                         field: "Status",
-                 ],
-                 data      : ["Status  . . . . . . . . . . . : $previousStatus"]
-                ],
-                [action    : 'transitionIssue', ext: " : set issue status to To Do again : " + it,
-                 parameters: [
-                         transition: "To Do",
+                         transition: info?.isCloud ? "In Progress" : "To Do",
                          issue     : { -> defaultIssue[] },
                  ],
                 ],
@@ -138,3 +192,69 @@ if(!isCloud) {
     }
 }
 
+runAsUser.eachWithIndex { runAsType, fields, idx ->
+    def transition = "returnToPreviousStatus_runAs_" + runAsType
+    if(isCloud){
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext: " :  return to previous status " + transition,
+                 sleep: sleep,
+                 parameters: [
+                         transition: transition,
+                         issue     : { -> defaultIssue[] },
+                 ],
+                ],
+                [action    : 'getFieldValue',
+                 ext: ": Check issue should :  $transition",
+                 sleep: sleep,
+                 parameters: [
+                         issue: { -> defaultIssue[] },
+                         field: "Status",
+                 ],
+                 data      : [
+                         "Status  . . . . . . . . . . . : $previousStatus",
+                 ]
+                ]
+        ])
+        if(runAsType == 'userInFieldAssignee'){
+            gint.taskHelper.add([
+                    [action    : 'getIssueHistoryList',
+                     ext: " : to check run as addon user : " + transition,
+                     sleep: sleep,
+                     parameters: [
+                             issue     : { -> defaultIssue[] },
+                             outputType: "text",
+                             select: ["Author:$testUser","field:status","To String:$previousStatus","From String:To Do"],
+                             columns: "Author,From String,To String"
+                     ],
+                     data: ["$testUser", "To Do", "$previousStatus"]
+                    ],
+            ])
+        }
+        else {
+            gint.taskHelper.add([
+                    [action    : 'getIssueHistoryList',
+                     ext: " : to check run as $runAsType : " + transition,
+                     sleep: sleep,
+                     parameters: [
+                             issue     : { -> defaultIssue[] },
+                             outputType: "text",
+                             select: ["Author:$getCurrentUserName","field:status","To String:$previousStatus","From String:To Do"],
+                             columns: "Author,From String,To String"
+                     ],
+                     data: ["$getCurrentUserName", "To Do", "$previousStatus" ]
+                    ],
+            ])
+        }
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext: " : set issue status to To Do again : " + transition,
+                 sleep: sleep,
+                 parameters: [
+                         transition: info?.isCloud? "In Progress" : "To Do",
+                         issue     : { -> defaultIssue[] },
+                 ],
+                ],
+        ])
+    }
+}

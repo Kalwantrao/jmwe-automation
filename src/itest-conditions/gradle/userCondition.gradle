@@ -14,11 +14,18 @@ apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
 
 def functionKey = info?.isCloud? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__UserCondition" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition'
 
+ext.TEST_GROUP_ID = getGroupId('testgroup', "testgroup.*")
+ext.ADMIN_GROUP_ID = getGroupId('jira-admins', "jira-admins.*")
+
+project.ext.testGroupIdCloud = {->TEST_GROUP_ID.getAt(0).trim()}
+project.ext.jiraAdminGroupIdCloud = {->ADMIN_GROUP_ID.getAt(0).trim()}
+
+
 def whichUser = [
 		currentUser :         info?.isCloud? /"fromUserType":"currentUser"/ : ["fromUserType=currentUser"],
-		userInFieldAssignee : info?.isCloud? /"fromUserType":"userInField", "userField":"assignee"/ : [ "fromUserType=userInField", "userField=assignee" ],
-		userInFieldReporter : info?.isCloud? /"fromUserType":"userInField", "userField":"reporter"/ : [  "fromUserType=userInField", "userField=reporter"],
-		userInFieldCreator :  info?.isCloud? /"fromUserType":"userInField", "userField":"creator"/ : [  "fromUserType=userInField", "userField=creator"],
+		userInFieldAssignee : info?.isCloud? /"fromUserType":"userInField","userField":"assignee"/ : [ "fromUserType=userInField", "userField=assignee" ],
+		userInFieldReporter : info?.isCloud? /"fromUserType":"userInField","userField":"reporter"/ : [  "fromUserType=userInField", "userField=reporter"],
+		userInFieldCreator :  info?.isCloud? /"fromUserType":"userInField","userField":"creator"/ : [  "fromUserType=userInField", "userField=creator"],
 ]
 
 
@@ -100,54 +107,54 @@ def userInFieldCreatorUserConditionCriteria = info?.isCloud ? userInFieldCreator
 currentUserConditionCriteria.eachWithIndex { criteria, userFields, i ->
 	def transition = "verify_current_user_should_be_" + criteria
 	def cloud = "{\"problems\":[],$whichUser.currentUser,$userMode.allUsers,$userFields}"
-	def server = userFields +  whichUser.currentUser + reverse.no + userMode.allUsers + fieldEmpty.no
+	def server = [userFields, whichUser.currentUser,reverse.no,userMode.allUsers,fieldEmpty.no]
 	addTransitionFunction(transition, 'condition', info?.isCloud ? cloud : server, functionKey )
 }
 
 userInFieldAssigneeUserConditionCriteria.eachWithIndex { criteria, userFields, i ->
 	def transition = "verify_user_in_field_assignee_should_be_" + criteria
 	def cloud =  "{\"problems\":[],$whichUser.userInFieldAssignee,$userMode.allUsers,$userFields}"
-	def server = userFields + whichUser.userInFieldAssignee + reverse.no + userMode.allUsers + fieldEmpty.no
+	def server = [userFields,whichUser.userInFieldAssignee,reverse.no,userMode.allUsers,fieldEmpty.no]
 	addTransitionFunction(transition, 'condition', info?.isCloud ? cloud : server,  functionKey )
 }
 
 userInFieldReporterUserConditionCriteria.eachWithIndex { criteria, userFields, i ->
 	def transition = "verify_user_in_field_reporter_should_be_" + criteria
 	def cloud =  "{\"problems\":[],$whichUser.userInFieldReporter,$userMode.allUsers,$userFields}"
-	def server = whichUser.userInFieldReporter + userFields + reverse.no + userMode.allUsers + fieldEmpty.no
+	def server = [whichUser.userInFieldReporter,userFields,reverse.no,userMode.allUsers,fieldEmpty.no]
 	addTransitionFunction(transition, 'condition', info?.isCloud ? cloud : server, functionKey )
 }
 
 userInFieldCreatorUserConditionCriteria.eachWithIndex { criteria, userFields, i ->
 	def transition = "verify_user_in_field_creator_should_be_" + criteria
 	def cloud = "{\"problems\":[],$whichUser.userInFieldCreator,$userMode.allUsers,$userFields}"
-	def server = whichUser.userInFieldCreator + userFields + reverse.no + userMode.allUsers + fieldEmpty.no
+	def server = [whichUser.userInFieldCreator,userFields,reverse.no,userMode.allUsers,fieldEmpty.no]
 	addTransitionFunction(transition, 'condition', info?.isCloud ? cloud : server, functionKey )
 }
 
 ['verify_current_user_should_be_in_assignee_reporter'].each {
-	def server =  whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + reverse.no + userMode.allUsers + fieldEmpty.no
+	def server =  [whichUser.currentUser,userCriteria.assignee,userCriteria.reporter,reverse.no,userMode.allUsers,fieldEmpty.no]
 	def cloud = "{\"problems\":[],$whichUser.currentUser,$userMode.allUsers,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)&&(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
 	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)
 }
 
 ['verify_current_user_should_be_in_at_least_one_field_assignee_reporter'].each {
-	def server = whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + reverse.no + userMode.atLeastOne + fieldEmpty.no
+	def server = [whichUser.currentUser,userCriteria.assignee,userCriteria.reporter,reverse.no,userMode.atLeastOne,fieldEmpty.no]
 	def cloud = "{\"problems\":[],$whichUser.currentUser,$userMode.atLeastOne,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)||(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
 	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)}
 
 ['verify_user_in_field_creator_should_be_in_at_least_one_field_reporter_assignee'].each {
-	def server =  whichUser.userInFieldCreator + userCriteria.inFieldAssignee + userCriteria.reporter + reverse.no + userMode.atLeastOne + fieldEmpty.no
+	def server =  [whichUser.userInFieldCreator,userCriteria.inFieldAssignee,userCriteria.reporter,reverse.no,userMode.atLeastOne,fieldEmpty.no]
 	def cloud = "{\"problems\":[],$whichUser.userInFieldCreator,\"fieldEmpty\":false,$userMode.atLeastOne,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true},\"expression\":\"let selectedUser = !!issue && !!issue.creator && issue.creator; ((!!issue && !!issue.creator && (false || (!!issue.reporter && issue.creator.accountId == issue.reporter.accountId)||(!!issue.assignee && issue.creator.accountId == issue.assignee.accountId))))\"}"
 	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)}
 
 ['currentUser_should_not_be_in_fields_assignee_reporter_reverse'].each {
-	def server =  whichUser.currentUser + userCriteria.assignee + userCriteria.reporter + reverse.yes + userMode.atLeastOne + fieldEmpty.no
+	def server =  [whichUser.currentUser,userCriteria.assignee,userCriteria.reporter,reverse.yes,userMode.atLeastOne,fieldEmpty.no]
 	def cloud = "{\"problems\":[],$whichUser.currentUser,$userMode.allUsers,\"userCriteria\":{\"isReporter\":true,\"isAssignee\":true,\"reverse\":true},\"expression\":\"let selectedUser = user; !((!!user && (false || (!!issue.reporter && user.accountId == issue.reporter.accountId)&&(!!issue.assignee && user.accountId == issue.assignee.accountId))))\"}"
 	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)}
 
 ['user_in_field_assignee_should_be_in_field_reporter_or_field_empty'].each {
-	def server =  whichUser.userInFieldAssignee + userCriteria.reporter + reverse.no + userMode.atLeastOne + fieldEmpty.yes
+	def server =  [whichUser.userInFieldAssignee,userCriteria.reporter,reverse.no,userMode.atLeastOne,fieldEmpty.yes]
 	def cloud = "{\"problems\":[],$whichUser.userInFieldAssignee,$userMode.atLeastOne,$fieldEmpty.yes,\"userCriteria\":{\"isReporter\":true},\"expression\":\"let selectedUser = !!issue && issue.assignee; ((!!issue && (!issue.assignee || (!!issue.reporter && issue.assignee.accountId == issue.reporter.accountId))))\"}"
 	addTransitionFunction(it, 'condition', info?.isCloud ? cloud : server, functionKey)
 }

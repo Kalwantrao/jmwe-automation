@@ -14,18 +14,21 @@ apply from: gint.resourceDirectory +'/src/itest-postfunction5/postfunction.gradl
 
 def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:AssignIssue-function'
 
-def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
+def COMPONENT_ID = getComponentId("component1")
+def component1Id = {->COMPONENT_ID.getAt(0).trim()}
+
+def jmwe_qaUserId = testUserId
 
 def selectUser = [
         currentUser : [ "assignmentType=currentUser"  ],
         Reporter : [ "assignmentType=reporter" ],
         ProjectLead : [ "assignmentType=projectLead" ],
-        UserReturnFromScript: ["assignmentType=script","script=$groovyExpression.returnsReporter"],
+        //UserReturnFromScript: ["assignmentType=script","script=$groovyExpression.returnsReporter"],
         //UserWhoIsDefaultAssigneeOfProject: [ "assignmentType=projectDefault"],
         UserWhoLastCommented: ["assignmentType=lastCommenter"],
-        UserByUserName : ["assignmentType=specificUser","user=$jmwe_qaUserId"],
-        //UserWhoIsComponentLead : ["assignmentType=componentLead","component=$component1Id"],
-        ReturnFromUserObjectFieldAssignee:["assignmentType=userFromField", "field=assignee"],
+        UserByUserName : ["assignmentType=specificUser","user=$info.userKey"],
+        UserWhoIsComponentLead : ["assignmentType=componentLead","component=$component1Id"],
+        //ReturnFromUserObjectFieldAssignee:["assignmentType=userFromField", "field=assignee"],
         ReturnFromUserObjectFieldReporter:["assignmentType=userFromField", "field=reporter"],
         ReturnFromUserObjectFieldCreator:["assignmentType=userFromField", "field=creator"],
         //LastAdminRoleMember: [ "assignmentType=lastRoleMember", "role=$jiraAdminRoleId", "multipleUserBehavior=alphabetical"],
@@ -61,7 +64,7 @@ def multipleUser = [
 selectUser.eachWithIndex { userType, userValues, userIndex ->
     relatedIssue.take(1).eachWithIndex { targetIssue, value, issueIndex ->
         def transition = "assign_current_issue_to_$userType"
-        def fields =  userValues + "selectedLinkType=$value" + throwException.no + assignmentBehavior.force + skipIfAssigned.no + conditionalExecution.false
+        def fields =  [userValues , "selectedLinkType=$value" , throwException.no , assignmentBehavior.force , skipIfAssigned.no , conditionalExecution.false]
         if(!isCloud) {
             addTransitionFunction(transition, 'postfunction', fields, functionKey)
         }
@@ -70,7 +73,7 @@ selectUser.eachWithIndex { userType, userValues, userIndex ->
 
 relatedIssue.eachWithIndex { targetIssue, value, issueIndex ->
     def transition = "assign_issue_to_currentUser" + issueIndex
-    def fields =  selectUser.currentUser + "selectedLinkType=$value" + throwException.no + assignmentBehavior.force + skipIfAssigned.no + conditionalExecution.false
+    def fields =  [selectUser.currentUser , "selectedLinkType=$value" , throwException.no , assignmentBehavior.force , skipIfAssigned.no , conditionalExecution.false]
     if(!isCloud) {
         addTransitionFunction(transition, 'postfunction', fields, functionKey)
     }
@@ -80,7 +83,7 @@ relatedIssue.eachWithIndex { targetIssue, value, issueIndex ->
         'assign_currentIssue_issue_to_currentUser_if_condition_true'
 ].each {
     relatedIssue.take(1)eachWithIndex { targetIssue, value, issueIndex ->
-        def fields =  selectUser.currentUser + "selectedLinkType=$value" + throwException.no + assignmentBehavior.force + skipIfAssigned.no + conditionalExecution.true
+        def fields =  [selectUser.currentUser , "selectedLinkType=$value" , throwException.no , assignmentBehavior.force , skipIfAssigned.no , conditionalExecution.true]
         if(!isCloud) {
             addTransitionFunction(it + issueIndex, 'postfunction', fields, functionKey)
         }
@@ -90,9 +93,17 @@ relatedIssue.eachWithIndex { targetIssue, value, issueIndex ->
 createWorkflowScheme()
 createProject()
 
-if(!isCloud) {
-    addComponent(1)
+if(!isCloud){
+    gint.taskHelper.add(
+            action:"addComponent",
+            ext: ":  ",
+            parameters:[
+                    project:projectName,
+                    component:"component1"
+            ]
+    )
 }
+
 
 def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
@@ -158,7 +169,7 @@ def relatedIssuesMap = [
     }
 }
 
-[testUser1,testUser2].collect{
+[testUser1,testUser].collect{
     if(!isCloud) {
         gint.taskHelper.add(
                 action: 'removeProjectRoleActors',
@@ -172,7 +183,7 @@ def relatedIssuesMap = [
     }
 }
 
-[testUser1,testUser2].collect{
+[testUser1,testUser].collect{
     if(!isCloud) {
         gint.taskHelper.add(
                 action: 'addProjectRoleActors',

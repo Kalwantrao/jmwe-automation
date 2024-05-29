@@ -10,35 +10,39 @@ buildscript {
 }
 
 apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 def info =  gint.getJiraHelper().getServerInfoWithVerify()
-
-def screenList = new ArrayList<String>()
-
 /*
-def map1 = [currentIssue: "currentIssue:*", subtask: "Subtask:*"]
-def map2 = [issue1: 'value1', issue2: 'value3']
-
-map2.eachWithIndex { key, value, index ->
-    println "key: $key"
-    println "value: $value"
-    // You can also use the key from map1 if needed
-    println "corresponding value in map1: ${map1[key]}"
-}
-
-
-
-*/
 gint.taskHelper.addTearDown(
+        [action    : 'installApp',
+         parameters: [
+                 app: "@default",
+                 version: "11.0.0",
+                 continue: null
+         ],
+        ]
+)
+
+ */
+def additionalProjectParams = info?.isCloud? [] : [issueSecurityScheme: issueSecurityScheme]
+gint.taskHelper.addTearDown([
         [action    : 'createProject',ext: ': FOR WORKFLOW',
          parameters: [
                  project: TestProject,
                  lead: '@Self',
                  template: info?.isCloud? projectTemplateCloud : projectTemplateServer
-         ],
+         ] + additionalProjectParams,
         ],
+        [action    : 'addComponent',ext: ': in project' + TestProject,
+         parameters: [
+                 project: TestProject,
+                 lead: '@Self',
+                 component: 'component1'
+         ] ,
+        ],
+]
 )
-
 gint.taskHelper.addTearDown("addScreen",[
         [action: 'addScreen',
          ext: ": for transition screen :",
@@ -104,7 +108,7 @@ fieldsList.eachWithIndex { it, index->
     )
 }
 
-def usersList = [testUser,testUser1,testUser2,inactiveAdmin,testAdmin]
+def usersList = [testUser,testUser1,inactiveAdmin,testAdmin]
 usersList.eachWithIndex { it, index ->
     def additionalParams = info?.isCloud? [userEmail: it + "@jmweGintTest.com",] : [ userEmail: it + "@gmail.com",userPassword : it]
     gint.taskHelper.addTearDown("addUsers",[
@@ -148,7 +152,7 @@ groupList.each {
     )
 }
 
-[testUser1,testUser2].each {
+[testUser1].each {
     gint.taskHelper.addTearDown("addProjectRoleActors",[
             [action: 'addProjectRoleActors',
              dependsOn: "addProjectRoles",
@@ -188,61 +192,25 @@ gint.taskHelper.addTearDown("createIssueTypeScreenScheme",[
 ]
 )
 
-def issueTypes = ["Task","Epic","Initiative","Story","Sub-task"]
 gint.taskHelper.addTearDown([
+        [action: 'createIssueType',
+         parameters:[
+                 issueType: "Initiative",
+                 type: "standard",
+                 continue: null
+         ],
+        ],
         [action: 'createIssueTypeScheme',
-         //ext: ": creating issue type scheme with name_ $projectName and screen scheme_$projectName :",
+         dependsOn: true,
          parameters:[
                  issueTypeScheme: screen,
-                 issueType: "Task",
+                 issueType: "Bug,Task,Story,Sub-task,Epic,Initiative",
+                 continue: null
          ],
         ]
 ]
 )
 
-issueTypes.each{
-    gint.taskHelper.addTearDown([
-            [action: 'updateIssueTypeScheme',
-             ext: ": $it:",
-             parameters:[
-                     issueTypeScheme: issueTypeScheme,
-                     issueType: it,
-             ],
-            ]
-    ]
-    )
-}
-
-
-// Ignore below tasks they are under trial
-/*
-gint.taskHelper.addTearDown("getScreenList",[
-        [action: 'getScreenList',
-         ext: ": for clean :",
-         parameters:[
-                 columns: "id",
-         ],
-                finalClosure: { Task task->
-                    screenList.add(task.outData)
-                }
-        ]
-]
-)
-
-myIterableList.eachWithIndex { it, index->
-    gint.taskHelper.addTearDown("removeScreen",[
-            [action: 'removeScreen',
-             ext: ": for clean :remove screen _ $index",
-             parameters:[
-                     screen: it,
-             ],
-            ]
-    ]
-    )
-}
-
-
- */
 
 
 /*
@@ -290,3 +258,5 @@ RUN gradle itestServer
 # Specify the command to run your application
 
  */
+
+//com.innovalog.jmwe.jira-misc-workflow-extensions

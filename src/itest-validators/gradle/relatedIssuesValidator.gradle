@@ -28,9 +28,48 @@ def verifyAllLinkedIssues = [
 		no : [ "checkAllLinkedIssues=no" ]
 ]
 
-def requireRelatedIssue = info?.isCloud ? requireRelatedIssuesValidatorCloud : relatedIssueServer
-def checkRelatedIssue = info?.isCloud ? checkRelatedIssuesValidatorCloud : relatedIssueServer
-def forbidRelatedIssue = info?.isCloud ? forbidRelatedIssuesValidatorCloud : relatedIssueServer
+project.ext.requireRelatedIssuesValidatorCloud = [
+		subtask : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.subtasks.some(linkedIssue => (true)))\"}",
+		issueBelongsToEpic : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(!!issue.stories && issue.stories.some(linkedIssue => (true)))\"}",
+		linkByAnyLink : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"*\",\"selectedLinkTypeDirection\":\"*\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => (true)))\"}",
+		linkByBlock : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))\"}",
+		linkByisBlockedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (true)))\"}",
+		linkByClones : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))\"}",
+		linkByIsClonedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (true)))\"}",
+		linkByDuplicates : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))\"}",
+		linkByIsDuplicatedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (true)))\"}",
+		linkByRelatesTo : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (true)))\"}",
+]
+
+project.ext.checkRelatedIssuesValidatorCloud = [
+		subtask : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(issue.subtasks.length == 0 || issue.subtasks.some(linkedIssue => (!!issue.priority && issue.priority.name == 'High')))\"}",
+		issueBelongsToEpic : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.stories || issue.stories.length == 0 || issue.stories.some(linkedIssue => (!!issue.priority && issue.priority.name == 'High')))\"}",
+		linkByAnyLink : "{\"conditionalValidation\":false,\"_modified\":\"2023-11-22T11:32:50.872Z\",\"selectedLinkTypeId\":\"*\",\"selectedLinkTypeDirection\":\"*\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links || issue.links.length == 0 || issue.links.some(issueLink => (!!issue.priority && issue.priority.name == 'High')))\"}",
+		linkByBlock : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}",
+		linkByisBlockedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}",
+		linkByClones : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}",
+		linkByIsClonedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}",
+		linkByDuplicates : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}",
+		linkByIsDuplicatedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}",
+		linkByRelatesTo : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"checkLinks\",\"expression\":\"(!issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)) || issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High')))\"}",
+]
+
+project.ext.forbidRelatedIssuesValidatorCloud = [
+		subtask : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.subtasks.some(linkedIssue => (!!issue.priority && issue.priority.name == 'High'))))\"}",
+		issueBelongsToEpic : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"Epic-Story Link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(!!issue.stories && issue.stories.some(linkedIssue => (!!issue.priority && issue.priority.name == 'High'))))\"}",
+		linkByAnyLink : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"*\",\"selectedLinkTypeDirection\":\"*\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => (!!issue.priority && issue.priority.name == 'High'))))\"}",
+		linkByBlock : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}",
+		linkByisBlockedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10000\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10000 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}",
+		linkByClones : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}",
+		linkByIsClonedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10001\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10001 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}",
+		linkByDuplicates : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}",
+		linkByIsDuplicatedBy : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10002\",\"selectedLinkTypeDirection\":\"inward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10002 && (issueLink.direction == 'inward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}",
+		linkByRelatesTo : "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"Check link issues\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.priority && issue.priority.name == 'High'\",\"validatorMode\":\"forbidLinks\",\"expression\":\"(!(issue.links.some(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward) && (!!issue.priority && issue.priority.name == 'High'))))\"}",
+]
+
+def requireRelatedIssue = info?.isCloud ? requireRelatedIssuesValidatorCloud : relatedIssue
+def checkRelatedIssue = info?.isCloud ? checkRelatedIssuesValidatorCloud : relatedIssue
+def forbidRelatedIssue = info?.isCloud ? forbidRelatedIssuesValidatorCloud : relatedIssue
 
 def fieldsToRemove = ["currentIssue", "parentIssue", "epicOfTheCurrentIssue","parentPortfolio"]
 
@@ -40,7 +79,7 @@ fieldsToRemove.each { key ->
 
 def linkedIssuesMode = [
 		requireLinks : [ "validatorMode=requireLinks"],
-		requireSpecificLinkedIssues : [ "validatorMode=requireLinks", /groovyExpression=issue.get('assignee')?.name == "$testUser"/ ],
+		requireSpecificLinkedIssues : [ "validatorMode=requireLinks", /groovyExpression=issue.get('assignee')?.name == "$user"/ ],
 		checkLinks : [ "validatorMode=checkLinks", "groovyExpression=$groovyExpression.checkPriorityHigh" ],
 		forbidLinks : [	"validatorMode=forbidLinks", "groovyExpression=$groovyExpression.checkPriorityHigh" ]
 ]
@@ -48,33 +87,33 @@ def linkedIssuesMode = [
 requireRelatedIssue.eachWithIndex { key, value, i ->
 	def transition = 'verify_require_certain_related_issues_' + key
 	def cloud =  value
-	def server = "errorMessage=$errorMessage" + "selectedLinkType=$value" + linkedIssuesMode.requireLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	def server = ["errorMessage=$errorMessage" , "selectedLinkType=$value" , linkedIssuesMode.requireLinks , issueConstraints.atLeastOne , verifyAllLinkedIssues.yes]
 	addTransitionFunction(transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 ['Verify_Issue_constraints_min_two_linkByRelatesTo'].each {
-	def server = "errorMessage=$errorMessage" + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireLinks + issueConstraints.minTwo + verifyAllLinkedIssues.yes
+	def server = ["errorMessage=$errorMessage" , "selectedLinkType=$linkByRelatesTo" , linkedIssuesMode.requireLinks , issueConstraints.minTwo , verifyAllLinkedIssues.yes]
 	if(!isCloud) {
 		addTransitionFunction(it, 'validator', server, functionKey)
 	}
 }
 
 ['Verify_Issue_constraints_max_two_linkByRelatesTo'].each {
-	def server = "errorMessage=$errorMessage" + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireLinks + issueConstraints.maxTwo + verifyAllLinkedIssues.yes
+	def server = ["errorMessage=$errorMessage" , "selectedLinkType=$linkByRelatesTo" , linkedIssuesMode.requireLinks , issueConstraints.maxTwo , verifyAllLinkedIssues.yes]
 	if(!isCloud) {
 		addTransitionFunction(it, 'validator', server, functionKey)
 	}
 }
 
 ['Verify_Issue_constraints_min_three_max_six_linkByRelatesTo'].each {
-	def server = "errorMessage=$errorMessage" + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireLinks + issueConstraints.atLeastThreeAndAtMostSix + verifyAllLinkedIssues.yes
+	def server = ["errorMessage=$errorMessage" , "selectedLinkType=$linkByRelatesTo" , linkedIssuesMode.requireLinks , issueConstraints.atLeastThreeAndAtMostSix , verifyAllLinkedIssues.yes]
 	if(!isCloud) {
 		addTransitionFunction(it, 'validator', server, functionKey)
 	}
 }
 
 ['Verify_Issue_constraints_min_two_max_two_linkByRelatesTo'].each {
-	def server = "errorMessage=$errorMessage" + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireLinks + issueConstraints.minTwoMaxTwo + verifyAllLinkedIssues.yes
+	def server = ["errorMessage=$errorMessage" , "selectedLinkType=$linkByRelatesTo" , linkedIssuesMode.requireLinks , issueConstraints.minTwoMaxTwo , verifyAllLinkedIssues.yes]
 	if(!isCloud){
 		addTransitionFunction(it , 'validator', server, functionKey)
 	}
@@ -82,33 +121,65 @@ requireRelatedIssue.eachWithIndex { key, value, i ->
 
 // add this script in config - linkedIssue.get("Fix Version/s")?.any{it.name == "1.0"}
 ['verify_condition_on_related_issues_checkAssignee'].each {
-	def server = "errorMessage=$errorMessage" + "selectedLinkType=$linkByRelatesTo" + linkedIssuesMode.requireSpecificLinkedIssues + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
-	def cloud = "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a={\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"$errorMessage\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.assignee && issue.assignee.accountId == '$currentUserKey'\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.filter(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)).some(issueLink => (!!issue.assignee && issue.assignee.accountId == '$currentUserKey')))\"}"
+	def server = ["errorMessage=$errorMessage" , "selectedLinkType=$linkByRelatesTo" , linkedIssuesMode.requireSpecificLinkedIssues , issueConstraints.atLeastOne , verifyAllLinkedIssues.yes]
+	def cloud = "{\"conditionalValidation\":false,\"selectedLinkTypeId\":\"10003\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"$errorMessage\",\"anyOrEvery\":\"any\",\"condition\":\"!!issue.assignee && issue.assignee.accountId == '$currentUserKey'\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.filter(issueLink => issueLink.type.id == 10003 && (issueLink.direction == 'outward' || issueLink.type.inward == issueLink.type.outward)).some(issueLink => (!!issue.assignee && issue.assignee.accountId == '$currentUserKey')))\"}"
 	addTransitionFunction(it, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 checkRelatedIssue.eachWithIndex { key, value, i ->
 	def transition = 'verify_check_related_issues_' + key
 	def cloud = value
-	def server = "errorMessage=$errorMessage" + "selectedLinkType=$value" + linkedIssuesMode.checkLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	def server = ["errorMessage=$errorMessage" , "selectedLinkType=$value" , linkedIssuesMode.checkLinks , issueConstraints.atLeastOne , verifyAllLinkedIssues.yes]
 	addTransitionFunction( transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 forbidRelatedIssue.eachWithIndex { key, value, i ->
 	def transition = 'forbid_certain_related_issues_' + key
 	def cloud =  value
-	def server = "errorMessage=$errorMessage" + "selectedLinkType=$value" + linkedIssuesMode.forbidLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	def server = ["errorMessage=$errorMessage" , "selectedLinkType=$value" , linkedIssuesMode.forbidLinks , issueConstraints.atLeastOne , verifyAllLinkedIssues.yes]
 	addTransitionFunction( transition, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
 ['verify_validator_scope_conditional_validation'].each {
 	def cloud = "{$conditionalValidation.yes,\"selectedLinkTypeId\":\"jira_subtask_link\",\"selectedLinkTypeDirection\":\"outward\",\"selectedIssueTypeId\":\"\",\"errorMessage\":\"$errorMessage\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"!(!!issue.priority && issue.priority.name == 'High') || (issue.subtasks.some(linkedIssue => (true)))\"}"
-	def server = "errorMessage=$errorMessage" + "selectedLinkType=$subtask" + conditionalValidation.yes + linkedIssuesMode.requireLinks + issueConstraints.atLeastOne + verifyAllLinkedIssues.yes
+	def server = ["errorMessage=$errorMessage" , "selectedLinkType=$subtask" , conditionalValidation.yes , linkedIssuesMode.requireLinks , issueConstraints.atLeastOne , verifyAllLinkedIssues.yes]
 	addTransitionFunction(it , 'validator', info?.isCloud? cloud : server, functionKey)
 }
+/*
+['issueMustBeLinkedIfIssueTypeIsBugOnCreateTransition'].each {
+	def cloud = "{\"conditionalValidation\":false,\"skipValidationOnCreate\":false,\"selectedLinkTypeId\":\"*\",\"selectedLinkTypeDirection\":\"*\",\"selectedIssueTypeId\":10005,\"errorMessage\":\"$errorMessage\",\"anyOrEvery\":\"noCond\",\"condition\":\"true\",\"validatorMode\":\"requireLinks\",\"expression\":\"(issue.links.filter(issueLink => (issueLink[issueLink.direction+\\\"Issue\\\"].issueType.id == 10005)).some(issueLink => (true)))\"}"
+	def server = ["errorMessage=$errorMessage" , "selectedLinkType=$subtask" , conditionalValidation.yes , linkedIssuesMode.requireLinks , issueConstraints.atLeastOne , verifyAllLinkedIssues.yes]
+	addTransitionFunctionOnCreateTransition(it , 'validator', info?.isCloud? cloud : server, functionKey)
+}
+*/
 
 createWorkflowScheme()
 createProject()
+
+/*
+gint.taskHelper.add(
+		action: "createIssue",
+		ext: ":to check linked issues validator on create transition error when issue type is bug",
+		expected: -3,
+		parameters: [
+				summary: "JMWE_Issue",
+				type: "Bug",
+				project: projectName
+		],
+		data: [errorMessage]
+)
+
+gint.taskHelper.add(
+		action: "createIssue",
+		ext: ":to check linked issues validator on create transition when issue type is task",
+		parameters: [
+				summary: "JMWE_Issue",
+				type: "Task",
+				assignee: "@self",
+				project: projectName
+		]
+)
+ */
 
 def relatesToIssue2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesToIssue2')
 def relatesToIssue3 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'relatesToIssue3')
@@ -3610,7 +3681,6 @@ relatesToIssuesList.eachWithIndex { key, value, i ->
 		])
 	}
 }
-
 
 // RELATED_ISSUES_VALIDATOR_TS_42_-Verify Validator scope -Conditional validation
 ['verify_validator_scope_conditional_validation'].collect {

@@ -16,9 +16,15 @@ def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:previousstat
 
 def errorMessage = "transition does not perform on issue screen"
 
+def statusList = [
+		IN_PROGRESS : 'In Progress',
+		IN_REVIEW : 'In Review',
+		DONE : 'Done'
+]
+
 statusList.eachWithIndex { status, value, i ->
 	def transition = "verify_previous_status_of_the_issue_must_be_" + status
-	def fields = "errorMessage=$errorMessage" + "status=$value" + conditionalValidation.no
+	def fields = ["errorMessage=$errorMessage","status=$value",conditionalValidation.no]
 	if(!isCloud) {
 		addTransitionFunction(transition, 'validator', fields, functionKey)
 	}
@@ -26,7 +32,7 @@ statusList.eachWithIndex { status, value, i ->
 
 statusList.eachWithIndex { status, value, i ->
 	def transition = "verify_previous_status_mostRecentOnly_of_the_issue_must_be_" + status
-	def fields = "status=$value" +"mostRecentOnly=yes" + conditionalValidation.no
+	def fields = ["status=$value","mostRecentOnly=yes",conditionalValidation.no,"errorMessage=$errorMessage"]
 	if(!isCloud) {
 		addTransitionFunction(transition, 'validator', fields, functionKey)
 	}
@@ -34,12 +40,11 @@ statusList.eachWithIndex { status, value, i ->
 
 statusList.eachWithIndex { status, value, i ->
 	def transition = "verify_previous_status_of_the_issue_if_condition_true_must_be_" + status
-	def fields = "status=$value" + conditionalValidation.yes
+	def fields = ["status=$value",conditionalValidation.yes, "errorMessage=$errorMessage"]
 	if(!isCloud) {
 		addTransitionFunction(transition, 'validator', fields, functionKey)
 	}
 }
-
 
 createWorkflowScheme()
 createProject()
@@ -48,7 +53,7 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
 def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue1')
 
 // PREVIOUS_STATUS_VALIDATOR_TS_21_TC_01-Verify for the Issue must have been in Status In Progress at some point before its current Status
-['verify_previous_status_of_the_issue_must_be_inProgress'].each {
+['verify_previous_status_of_the_issue_must_be_IN_PROGRESS'].each {
 	if(!isCloud) {
 		gint.taskHelper.add([
 				[action    : 'transitionIssue',
@@ -88,7 +93,7 @@ def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultI
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_21_TC_02-Verify for the Issue must have been in Status in review at some point before its current Status
-['verify_previous_status_of_the_issue_must_be_inReview'].each {
+['verify_previous_status_of_the_issue_must_be_IN_REVIEW'].each {
 	if(!isCloud) {
 		gint.taskHelper.add([
 				[action    : 'transitionIssue',
@@ -128,7 +133,7 @@ def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultI
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_21_TC_03-Verify for the Issue must have been in Status done at some point before its current Status
-['verify_previous_status_of_the_issue_must_be_done'].each {
+['verify_previous_status_of_the_issue_must_be_DONE'].each {
 	if(!isCloud) {
 		gint.taskHelper.add([
 				[action    : 'transitionIssue',
@@ -168,7 +173,7 @@ def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultI
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_23_TC_01-Verify for the Most recent status only option with the default configuration
-['verify_previous_status_mostRecentOnly_of_the_issue_must_be_inProgress'].each {
+['verify_previous_status_mostRecentOnly_of_the_issue_must_be_IN_PROGRESS'].each {
 	if(!isCloud) {
 		gint.taskHelper.add([
 				[action    : 'transitionIssue',
@@ -224,7 +229,7 @@ def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultI
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_23_TC_02-Verify for the Most recent status only option with the default configuration
-['verify_previous_status_mostRecentOnly_of_the_issue_must_be_inReview'].each {
+['verify_previous_status_mostRecentOnly_of_the_issue_must_be_IN_REVIEW'].each {
 	if(!isCloud) {
 		gint.taskHelper.add([
 				[action    : 'transitionIssue',
@@ -280,7 +285,7 @@ def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultI
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_23_TC_03-Verify for the Most recent status only option with the default configuration
-['verify_previous_status_mostRecentOnly_of_the_issue_must_be_done'].each {
+['verify_previous_status_mostRecentOnly_of_the_issue_must_be_DONE'].each {
 	if(!isCloud) {
 		gint.taskHelper.add([
 				[action    : 'transitionIssue',
@@ -336,7 +341,7 @@ def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultI
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_24_TC_01-Verify for the Conditional validation
-['verify_previous_status_of_the_issue_if_condition_true_must_be_inProgress'].each {
+['verify_previous_status_of_the_issue_if_condition_true_must_be_IN_PROGRESS'].each {
 	if(!isCloud) {
 		gint.taskHelper.add([
 				[action    : 'updateIssue',
@@ -376,7 +381,7 @@ def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultI
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_24_TC_02-Verify for the Conditional validation
-['verify_previous_status_of_the_issue_if_condition_true_must_be_inReview'].each {
+['verify_previous_status_of_the_issue_if_condition_true_must_be_IN_REVIEW'].each {
 	if(!isCloud) {
 		gint.taskHelper.add([
 				[action    : 'updateIssue',
@@ -416,7 +421,7 @@ def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultI
 }
 
 // PREVIOUS_STATUS_VALIDATOR_TS_24_TC_03-Verify for the Conditional validation
-['verify_previous_status_of_the_issue_if_condition_true_must_be_done'].each {
+['verify_previous_status_of_the_issue_if_condition_true_must_be_DONE'].each {
 	if(!isCloud) {
 		gint.taskHelper.add([
 				[action    : 'updateIssue',

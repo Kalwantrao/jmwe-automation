@@ -18,71 +18,40 @@ def jqlExpressionToLinkIssue = "project = $projectName and issueType = Task and 
 
 def numberOfIssues = 10
 
-def issuesToLinkServer = [
-        returnByJql : ["jql=$jqlExpressionToLinkIssue"],
+def issuesToLink = [
+        returnByJql : info?.isCloud ? /"jql":"$jqlExpressionToLinkIssue"/ : ["jql=$jqlExpressionToLinkIssue"],
 ]
 
-def issuesToLinkCloud = [
-        returnByJql : /"jql":"$jqlExpressionToLinkIssue"/
+def maxIssues = [
+        zero : info?.isCloud ? /"maxIssues":"0"/ : [ "maxIssues=0"],
+        one : info?.isCloud ? /"maxIssues":"1"/ : [ "maxIssues=1"],
+        two : info?.isCloud ? /"maxIssues":"2"/ : [ "maxIssues=2"],
+        three : info?.isCloud ? /"maxIssues":"3"/ : [ "maxIssues=3"],
 ]
 
-def issuesToLink = info?.isCloud ? issuesToLinkCloud : issuesToLinkServer
-
-def maxIssuesServer = [
-        zero : [ "maxIssues=0"],
-        one : [ "maxIssues=1"],
-        two : [ "maxIssues=2"],
-        three : [ "maxIssues=3"],
+def selectedLinkType = [
+        Blocks: info?.isCloud ? /"selectedLinkType":"$relatedIssue.linkByBlock"/ : ["selectedLinkType=$linkByBlock"],
+        Cloners: info?.isCloud ? /"selectedLinkType":"$relatedIssue.linkByClones"/ : ["selectedLinkType=$linkByClones"],
+        Duplicate: info?.isCloud ? /"selectedLinkType":"$relatedIssue.linkByDuplicates"/ : ["selectedLinkType=$linkByDuplicates"],
+        Relates: info?.isCloud ? /"selectedLinkType":"$relatedIssue.linkByRelatesTo"/ : ["selectedLinkType=$linkByRelatesTo"],
 ]
 
-def maxIssuesCloud = [
-        zero: /"maxIssues":"0"/,
-        one: /"maxIssues":"1"/,
-        two: /"maxIssues":"2"/,
-        three: /"maxIssues":"3"/
+def useGroovyFilter = [
+        no : info ?.isCloud ? /"useFilter":false,"filterExpression:""/ : ["useGroovyFilter=false"],
+        yes : info ?.isCloud ? /"useFilter":true,"filterExpression:""/ : ["useGroovyFilter=true"]
 ]
-
-def maxIssues = info?.isCloud ? maxIssuesCloud : maxIssuesServer
-
-def selectedLinkTypeServer = [
-        Blocks: ["selectedLinkType=$linkByBlock"],
-        Cloners: ["selectedLinkType=$linkByClones"],
-        Duplicate: ["selectedLinkType=$linkByDuplicates"],
-        Relates: ["selectedLinkType=$linkByRelatesTo"],
-]
-
-def selectedLinkTypeCloud = [
-        Blocks: /"selectedLinkType":"$relatedIssue.linkByBlock"/,
-        Cloners: /"selectedLinkType":"$relatedIssue.linkByClones"/,
-        Duplicate: /"selectedLinkType":"$relatedIssue.linkByDuplicates"/,
-        Relates: /"selectedLinkType":"$relatedIssue.linkByRelatesTo"/,
-]
-
-def selectedLinkType = info?.isCloud ? selectedLinkTypeCloud : selectedLinkTypeServer
-
-def useGroovyFilterServer = [
-        no : ["useGroovyFilter=false"],
-        yes : ["useGroovyFilter=true"]
-]
-
-def useGroovyFilterCloud = [
-        no : /"useFilter":false,"filterExpression:""/,
-        yes : /"useFilter":true,"filterExpression:""/
-]
-
-def useGroovyFilter = info ?.isCloud ? useGroovyFilterCloud : useGroovyFilterServer
 
 selectedLinkType.eachWithIndex { key,  value, i ->
         def transition = 'linkIssuesToCurrentIssueByType'
         def cloud =  "{\"conditionalExecution\":false,\"jql\":\"$jqlExpressionToLinkIssue\",$value,\"maxIssues\":\"1\",\"runAsType\":\"addonUser\",\"useFilter\":false,\"filterExpression\":\"\"}"
-        def server =  value + issuesToLink.returnByJql + maxIssues.one +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.false
+        def server =  [value , issuesToLink.returnByJql , maxIssues.one ,  useGroovyFilter.no , runAsUser.currentUser , conditionalExecution.false]
         addTransitionFunction(transition + key, 'postfunction', info?.isCloud ? cloud : server, functionKey )
 }
 
 selectedLinkType.take(1).eachWithIndex { key,  value, i ->
     def transition = 'linkIssuesToCurrentIssueIfConditionTrueByType'
     def cloud =  "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"jql\":\"$jqlExpressionToLinkIssue\",$value,\"maxIssues\":\"1\",\"runAsType\":\"addonUser\",\"useFilter\":false,\"filterExpression\":\"\"}"
-    def server =  value + issuesToLink.returnByJql + maxIssues.one +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.true
+    def server =  [value , issuesToLink.returnByJql , maxIssues.one ,  useGroovyFilter.no , runAsUser.currentUser , conditionalExecution.true]
     addTransitionFunction(transition + key, 'postfunction', info?.isCloud ? cloud : server, functionKey )
 }
 
@@ -90,7 +59,7 @@ selectedLinkType.take(1).eachWithIndex { key,  value, i ->
         'numberOfIssuesToBeLinked'
 ].each {
     def cloud =  "{\"conditionalExecution\":false,\"jql\":\"$jqlExpressionToLinkIssue\",\"selectedLinkType\":\"$relatedIssue.linkByBlock\",\"maxIssues\":\"$numberOfIssues\",\"runAsType\":\"addonUser\",\"useFilter\":false,\"filterExpression\":\"\"}"
-    def server =  selectedLinkType.Blocks + issuesToLink.returnByJql + "maxIssues=$numberOfIssues" +  useGroovyFilter.no + runAsUser.currentUser + conditionalExecution.false
+    def server =  [selectedLinkType.Blocks , issuesToLink.returnByJql , "maxIssues=$numberOfIssues" ,  useGroovyFilter.no , runAsUser.currentUser , conditionalExecution.false]
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
 }
 
@@ -249,7 +218,6 @@ selectedLinkType.take(1).eachWithIndex { linkType, value, i ->
     }
 }
 
-
 (1..numberOfIssues).each {
     gint.taskHelper.add(
             action: 'createIssue', ext: ":create issue number: $it",
@@ -268,7 +236,6 @@ selectedLinkType.take(1).eachWithIndex { linkType, value, i ->
             [action    : 'transitionIssue',
              sleep: info?.isCloud ? 5000 : 0,
              ext: ":with:" + it ,
-             sleepAfter: info?. isCloud ? 5000 : 5000,
              parameters: [
                      transition: it,
                      issue     : { -> defaultIssue[] },

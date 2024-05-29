@@ -39,22 +39,28 @@ def noCodeFields = [
         "targetText="
 ]
 
-
-//def functionKey = info?.isCloud ? 'com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.jmwe.jira-misc-workflow-extensions__ScriptedValidator' : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-validator'
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__ScriptedValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-validator'
 
 [
         'verify_issue_must_assigned_to_specific_user'
 ].each {
-    def server = "errorMessage=$errorMessage" + "field=" + "scriptDescription=" + "groovyExpression=issue.getAsString(\"assignee\") == \"$getCurrentUserName\""
+    def server = ["errorMessage=$errorMessage" , "field=" , "scriptDescription=" , "groovyExpression=issue.getAsString(\"assignee\") == \"$getCurrentUserName\""]
     def cloud = "{\"conditionalValidation\":false,\"script\":\"!!issue.assignee && issue.assignee.accountId == '$currentUserKey'\",\"expression\":\"!!issue.assignee && issue.assignee.accountId == '$currentUserKey'\",\"scriptDescription\":\"\",\"errorMessage\":\"$errorMessage\"}"
     addTransitionFunction(it, 'validator', info?.isCloud ? cloud : server, functionKey )
+}
+
+['labelsShouldBeEmptyOnCreateTransition'].each {
+    def server = ["errorMessage=$errorMessage" , "field=" , "scriptDescription=" , "groovyExpression=!issue.get(\"labels\")"]
+    def cloud = "{\"errorMessage\":\"$errorMessage\",\"script\":\"(! issue.labels || issue.labels.length == 0)\",\"type\":\"script\",\"expression\":\"(! issue.labels || issue.labels.length == 0)\"}"
+    if(isCloud){
+        addTransitionFunctionOnCreateTransition(it, 'validator', info?.isCloud ? cloud : server, functionKey)
+    }
 }
 
 [
         'check_no_code'
 ].each {
-    def server = "errorMessage=$errorMessage" + "field=" + "scriptDescription=" + chooseType.noCode + valueToCompareType.field + field.reporter + valueToCompare.assignee + operator.equals +  noCodeFields
+    def server = ["errorMessage=$errorMessage" , "field=" , "scriptDescription=" , chooseType.noCode , valueToCompareType.field , field.reporter , valueToCompare.assignee , operator.equals ,  noCodeFields]
     if(!isCloud) {
         addTransitionFunction( it, 'validator', server, functionKey )
     }
@@ -65,6 +71,36 @@ createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->defaultIssue[]}], 'subtask')
+
+// Check create transition , field labels should be
+if(isCloud){
+    gint.taskHelper.add(
+            action: "createIssue",
+            ext: ":to check build your own validator on create transition error when field label provided",
+            expected: -3,
+            parameters: [
+                    summary: "JMWE_Issue",
+                    type: "Task",
+                    project: projectName,
+                    labels: "testLabel",
+            ],
+            data: [errorMessage]
+    )
+
+}
+
+if(isCloud){
+    gint.taskHelper.add(
+            action: "createIssue",
+            ext: ":to check build your own validator on create transition error when field label not provided",
+            parameters: [
+                    summary: "JMWE_Issue",
+                    type: "Task",
+                    project: projectName
+            ]
+    )
+}
+
 
 // SCRIPTED_GROOVY_VALIDATOR -Verify for the Groovy script_The system should display error message
 [

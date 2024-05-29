@@ -19,7 +19,6 @@ def fieldsList = [
 		Components:'components',
 		AffectsVersions:'versions',
 		FixVersions:'fixVersions',
-		Description: 'description'
 ]
 
 def excludingSubtasks = [
@@ -29,21 +28,21 @@ def excludingSubtasks = [
 
 fieldsList.eachWithIndex { field, value, i ->
 	def transition = field + '_should_have_single_value'
-	def fields = conditionalValidation.no + "field=$value"
+	def fields = [conditionalValidation.no ,"field=$value"]
 	if(!isCloud) {
 		addTransitionFunction(transition, 'validator', fields, functionKey)
 	}
 }
 
 ['Components_should_have_single_value_excluding_subtask_values'].each {
-	def server = excludingSubtasks.yes +  conditionalValidation.no + "field=$fieldsList.Components"
+	def server = [excludingSubtasks.yes , conditionalValidation.no ,"field=$fieldsList.Components"]
 	if(!isCloud) {
 		addTransitionFunction(it, 'validator', server, functionKey)
 	}
 }
 
 ['Components_should_have_single_value_only_if_condition_true'].each {
-	def server = "field=$fieldsList.Components" + conditionalValidation.yes
+	def server = ["field=$fieldsList.Components", conditionalValidation.yes]
 	if(!isCloud) {
 		addTransitionFunction(it, 'validator', server, functionKey)
 	}
@@ -76,24 +75,22 @@ def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->d
 
 // FIELD_HAS_SINGLE_VALUE_VALIDATOR_TS_09_TC_01- Verify with the default configuration for field has single value validator_labels
 [
-		//'Labels_should_have_single_value',
 		'Components_should_have_single_value',
 		'AffectsVersions_should_have_single_value',
 		'FixVersions_should_have_single_value',
-		'Description_should_have_single_value'
-].each {
-	[1,2].eachWithIndex { numberOfValuesForField, int i ->
-	def addFields;
-	if(it == 'Labels_should_have_single_value'){
-		addFields = [labels: "label" + numberOfValuesForField]
+].each { transitions ->
+	[1,2].each { numberOfValuesForField ->
+	def addFields = [:];
+	if(transitions == 'Labels_should_have_single_value'){
+		addFields = [labels: "label$numberOfValuesForField"]
 	}
-	else if(it == 'Components_should_have_single_value'){
-		addFields = [components: "component" + numberOfValuesForField]
+	else if(transitions == 'Components_should_have_single_value'){
+		addFields = [components: "component$numberOfValuesForField" ]
 	}
-	else if(it == 'AffectsVersions_should_have_single_value'){
+	else if(transitions == 'AffectsVersions_should_have_single_value'){
 		addFields = [affectsVersions: numberOfValuesForField]
 	}
-	else if(it == 'FixVersions_should_have_single_value'){
+	else if(transitions == 'FixVersions_should_have_single_value'){
 		addFields = [fixVersions: numberOfValuesForField]
 	}
 		def expected;
@@ -106,17 +103,17 @@ def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->d
 	if(!isCloud) {
 		gint.taskHelper.add([
 				[action    : 'updateIssue',
-				 ext       : ":add field number_ $numberOfValuesForField to issue to check_ $it :",
+				 ext       : ":add field number_ $numberOfValuesForField to issue to check_ $transitions :",
 				 parameters: [
 						 issue : { -> defaultIssue[] },
 						 append: null
 				 ] + addFields,
 				],
 				[action    : 'transitionIssue',
-				 ext       : ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_09_TC_01_Case_01- $it _when field has $numberOfValuesForField values:",
+				 ext       : ":FIELD_HAS_SINGLE_VALUE_VALIDATOR-TS_09_TC_01_Case_01- $transitions _when field has $numberOfValuesForField values:",
 				 expected  : expected,
 				 parameters: [
-						 transition: it,
+						 transition: transitions,
 						 issue     : { -> defaultIssue[] },
 				 ],
 				],

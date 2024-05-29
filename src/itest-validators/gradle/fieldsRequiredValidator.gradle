@@ -25,23 +25,31 @@ def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugi
 
 fieldsList.eachWithIndex { field, value, i ->
 	def transition = field + '_field_is_required'
-	def server = conditionalValidation.no + "field=$value" + "errorMessage=$errorMessage"
+	def server = [conditionalValidation.no,"field=$value","errorMessage=$errorMessage"]
 	def cloud = "{\"conditionalValidation\":false,\"fields\":\"$value\",\"errorMessage\":\"$errorMessage\",\"expression\":\"!!issue.${value} && issue.${value}.length > 0\"}"
 	def fields = info?.isCloud ? cloud : server
 	addTransitionFunction( transition, 'validator', fields, functionKey )
 }
 
+['labels_field_is_required_on_create_transition'].each {
+	def server = [conditionalValidation.no,"field=labels","errorMessage=$errorMessage"]
+	def cloud = "{\"conditionalValidation\":false,\"fields\":\"labels\",\"errorMessage\":\"$errorMessage\",\"expression\":\"!!issue.labels && issue.labels.length > 0\"}"
+	def fields = info?.isCloud ? cloud : server
+	if(isCloud){
+		addTransitionFunctionOnCreateTransition("@create", 'validator', fields, functionKey)
+	}
+}
+
 fieldsList.eachWithIndex { field, value, i ->
 	def transition = field + '_field_is_required_only_if_condition_true'
-	def server = conditionalValidation.yes + "field=$value" + "errorMessage=$errorMessage"
+	def server = [conditionalValidation.yes,"field=$value","errorMessage=$errorMessage"]
 	def cloud = "{\"conditionalValidation\":true,\"conditionalValidationExpression\":\"$jiraExpression.checkPriorityHigh\",\"fields\":\"$value\",\"errorMessage\":\"$errorMessage\",\"expression\":\"!($jiraExpression.checkPriorityHigh) || !!issue.${value} && issue.${value}.length > 0\"}"
-	//def abcde = "{\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.priority && issue.priority.name == 'High'\",\"_modified\":\"2024-01-29T06:40:25.133Z\",\"fields\":\"labels\",\"errorMessage\":\"fields required\",\"expression\":\"!(!!issue.priority && issue.priority.name == 'High') || !!issue.labels && issue.labels.length > 0\"}"
 	def fields = info?.isCloud ? cloud : server
 	addTransitionFunction( transition , 'validator', fields, functionKey )
 }
 
 ['labels_assignee_component_multiple_fields_required'].each{
-	def server = conditionalValidation.no + "field=labels,assignee,components" + "errorMessage=$errorMessage"
+	def server = [conditionalValidation.no,"field=labels,assignee,components","errorMessage=$errorMessage"]
 	def cloud = "{\"conditionalValidation\":false,\"fields\":\"labels,assignee,components\",\"errorMessage\":\"$errorMessage\",\"expression\":\"!!issue.labels && issue.labels.length > 0 && issue.assignee != null && (typeof(issue.assignee) != 'List' || issue.assignee.length > 0) && !!issue.components && issue.components.length > 0\"}"
 	def fields = info?.isCloud ? cloud : server
 	addTransitionFunction( it, 'validator', fields, functionKey )
@@ -67,7 +75,44 @@ createProject()
 	])
 }
 
-def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue',labels: "test"], 'defaultIssue')
+
+if(isCloud){
+	gint.taskHelper.add(
+			action: "createIssue",
+			ext: ":to check field required validator on create transition error when field not provided",
+			expected: -3,
+			parameters: [
+					summary: "JMWE_Issue",
+					type: "Task",
+					project: projectName
+			],
+			data: [errorMessage]
+	)
+}
+
+if(isCloud) {
+	gint.taskHelper.add(
+			action: "createIssue",
+			ext: ":to check field required validator on create transition error when field provided",
+			parameters: [
+					summary: "JMWE_Issue",
+					type   : "Task",
+					labels : "testLabel",
+					project: projectName
+			]
+	)
+}
+
+gint.taskHelper.addSetUp(
+		action: "updateIssue",
+		ext: ":clear the value of field provided when creating issue",
+		parameters: [
+		        issue: { ->defaultIssue[] },
+				labels: " "
+		]
+)
+
 
 // FIELDS_REQUIRED_VALIDATOR-TS_09_TC_01 - Verify the validator on issue view for the selected fields
 // FIELDS_REQUIRED_VALIDATOR-TS_09_TC_02 - Verify the validator on issue view for the selected fields

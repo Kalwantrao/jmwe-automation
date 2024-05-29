@@ -12,9 +12,12 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-postfunction3/postfunction.gradle'
 
-def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
-
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__CommentIssueFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function'
+def JIRA_ADMIN_GROUP_ID= getGroupId("jira-admin", "jira-admins.*")
+def jiraAdminGroup = {->JIRA_ADMIN_GROUP_ID.getAt(0).trim()}
+
+def TEST_GROUP_ID= getGroupId("testgroup", "testgroup.*")
+def testGroupId = {->TEST_GROUP_ID.getAt(0).trim()}
 
 String addCommentByTemplate = "add_comment_to_related_issue_by_template"
 String addCommentByExpression = "add_comment_to_related_issue_by_expression"
@@ -27,68 +30,68 @@ String addCommentRunAsUser = 'add_comment_run_as_'
 
 def commentVisibility = [
         notSelected : [ "restrictToGroup=", "restrictToProjectRole=" ],
-        jiraAdminGroups : [ "restrictToGroup=$jiraAdminGrooup", "restrictToProjectRole=" ],
+        jiraAdminGroups : [ "restrictToGroup=jira-administrators", "restrictToProjectRole=" ],
         jiraAdminRoles : [ "restrictToGroup=", "restrictToProjectRole=$jiraAdminRoleId" ],
         testGroupUsers : ["restrictToGroup=$testGroup", "restrictToProjectRole="],
-        testProjectRoleUsers : ["restrictToGroup=$testProjectRoleId", "restrictToProjectRole="]
+        testProjectRoleUsers : ["restrictToGroup=", "restrictToProjectRole=$testProjectRoleId"]
 ]
 
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = addCommentByTemplate + i
-    def server =  "valueType=template" + "value=$transition" + "selectedLinkType=$value"
+    def server =  ["valueType=template" , "value=$transition" , "selectedLinkType=$value"]
     def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",$runAsUser.currentUser}"
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = addCommentByExpression + i
-    def server =  "valueType=expression" + "value=$groovyExpression.getDescription" + "selectedLinkType=$value"
+    def server =  ["valueType=expression" , "value=$groovyExpression.getDescription" , "selectedLinkType=$value"]
     if(!isCloud) {
         addTransitionFunction(transition, 'postfunction', server, functionKey)
     }
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = addCommentIfConditionTrue + i
     def cloud =  "{$conditionalExecution.true,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"currentUser\"}"
-    def server =  "valueType=template" + "value=$transition" + commentVisibility.notSelected+  "selectedLinkType=$value" + conditionalExecution.true + runAsUser.currentUser
+    def server =  ["valueType=template" , "value=$transition" , commentVisibility.notSelected,  "selectedLinkType=$value" , conditionalExecution.true , runAsUser.currentUser]
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
-
-relatedIssue.take(1).eachWithIndex { key, value, i ->
+/*
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = addCommentVisibleToAdminProjectRole + i
-    def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToProjectRoleId\":$jiraAdminRoleCloud,\"runAsType\":\"currentUser\"}"
-    def server =  "valueType=template" + "value=$transition" + commentVisibility.jiraAdminRoles +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToProjectRoleId\":$jiraAdminRoleId,\"runAsType\":\"currentUser\"}"
+    def server =  ["valueType=template" , "value=$transition" , commentVisibility.jiraAdminRoles ,  "selectedLinkType=$value" , conditionalExecution.false , runAsUser.currentUser]
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
-
-relatedIssue.take(1).eachWithIndex { key, value, i ->
+*/
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = addCommentVisibleToAdminGroup + i
-    def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"$jiraAdminGroupCloud\",\"runAsType\":\"currentUser\"}"
-    def server =  "valueType=template" + "value=$transition" + commentVisibility.jiraAdminGroups +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"$jiraAdminGroup\",\"runAsType\":\"currentUser\"}"
+    def server =  ["valueType=template" , "value=$transition" , commentVisibility.jiraAdminGroups ,  "selectedLinkType=$value" , conditionalExecution.false , runAsUser.currentUser]
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = addCommentVisibleToTestGroup + i
-    def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"$testGroupCloud\",\"runAsType\":\"currentUser\"}"
-    def server =  "valueType=template" + "value=$transition" + commentVisibility.testGroupUsers +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"$testGroupId\",\"runAsType\":\"currentUser\"}"
+    def server =  ["valueType=template" , "value=$transition" , commentVisibility.testGroupUsers ,  "selectedLinkType=$value" , conditionalExecution.false , runAsUser.currentUser]
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = addCommentVisibleToTestProjectRole + i
-    def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToProjectRoleId\":$testProjectRoleCloud,\"runAsType\":\"currentUser\"}"
-    def server =  "valueType=template" + "value=$transition" + commentVisibility.testProjectRoleUsers +  "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
+    def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToProjectRoleId\":$testProjectRoleId,\"runAsType\":\"currentUser\"}"
+    def server =  ["valueType=template" , "value=$transition" , commentVisibility.testProjectRoleUsers ,  "selectedLinkType=$value" , conditionalExecution.false , runAsUser.currentUser]
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 runAsUser.remove("currentUser")
 runAsUser.eachWithIndex { usersType, fieldValues, idx ->
-    relatedIssue.take(1).eachWithIndex { key, value, i ->
+    relatedIssue.eachWithIndex { key, value, i ->
         def transition = addCommentRunAsUser + usersType + i
         def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",$fieldValues}"
-        def server =  "valueType=template" + "value=$transition" + commentVisibility.notSelected + "selectedLinkType=$value" + conditionalExecution.false + fieldValues
+        def server =  ["valueType=template" , "value=$transition" , commentVisibility.notSelected , "selectedLinkType=$value" , conditionalExecution.false , fieldValues]
         addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
         if (!isCloud) {
             moveTransitionFunction(transition, 4)
@@ -175,7 +178,7 @@ def relatedIssuesMap = [
 }
 
 runAsUser.eachWithIndex { userToCheck, fieldsValues, idx ->
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         def transition = addCommentRunAsUser + userToCheck + i
         def getCurrentUserName1 = info?.isCloud? info?.userDisplayName : user
         if(userToCheck == "userInFieldAssignee"){
@@ -217,7 +220,7 @@ runAsUser.eachWithIndex { userToCheck, fieldsValues, idx ->
 [
         addCommentByExpression
 ].each {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         def transition = it+i
         if (!isCloud) {
             gint.taskHelper.add([
@@ -256,7 +259,7 @@ runAsUser.eachWithIndex { userToCheck, fieldsValues, idx ->
 [
         addCommentVisibleToTestProjectRole,
 ].each {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         def transition = it + i
         ['addProjectRoleActors','removeProjectRoleActors'].each { action ->
             gint.taskHelper.add([
@@ -264,7 +267,7 @@ runAsUser.eachWithIndex { userToCheck, fieldsValues, idx ->
                      ext       : ":$action in $testRole role user $user before transition issue with_ $transition:after $action",
                      sleep     : sleep,
                      parameters: [
-                             userId : "@self",
+                             userId : user,
                              role   : testRole,
                              project: projectName
                      ],
@@ -310,15 +313,15 @@ runAsUser.eachWithIndex { userToCheck, fieldsValues, idx ->
 [
         addCommentVisibleToTestGroup
 ].each {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         ['addUserToGroup', 'removeUserFromGroup'].each { action ->
             def transition = it + i
             gint.taskHelper.add([
                     [action    : action,
-                     ext       : "$action:user $user to $testGroup",
+                     ext       : ":user $user to $testGroup" + i,
                      sleep     : defaultSleepTime,
                      parameters: [
-                             userId     : "@self",
+                             userId     : user,
                              group: testGroup,
                      ],
                     ],
@@ -362,9 +365,9 @@ runAsUser.eachWithIndex { userToCheck, fieldsValues, idx ->
 }
 
 [
-        addCommentVisibleToAdminProjectRole,
+       // addCommentVisibleToAdminProjectRole,
 ].each {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         ['removeProjectRoleActors', 'addProjectRoleActors'].each { action ->
             def transition = it + i
             gint.taskHelper.add([
@@ -372,7 +375,7 @@ runAsUser.eachWithIndex { userToCheck, fieldsValues, idx ->
                      ext       : ":$action in admin role user $user before transition issue with_ $transition:",
                      sleep     : sleep,
                      parameters: [
-                             userId : "@self",
+                             userId : user,
                              role   : "Administrators",
                              project: projectName
                      ],
@@ -418,7 +421,7 @@ runAsUser.eachWithIndex { userToCheck, fieldsValues, idx ->
 [
         //addCommentVisibleToAdminGroup
 ].each {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         def transition = it + i
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
@@ -446,7 +449,7 @@ runAsUser.eachWithIndex { userToCheck, fieldsValues, idx ->
 [
         addCommentIfConditionTrue
 ].each {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         ["Low","High"].eachWithIndex { priority, idx ->
             def transition = it + i
             gint.taskHelper.add([

@@ -12,7 +12,6 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-postfunction3/postfunction.gradle'
 
-def relatedIssue = info?.isCloud ? relatedIssueCloud : relatedIssueServer
 def removeIssueTypesList = info?.isCloud ? ["currentIssue","returnsFromJqlSearch","returnsByNunjucksExpression"] : ["currentIssue"]
 
 removeIssueTypesList.each {
@@ -40,54 +39,54 @@ def fields = info?.isCloud ? fieldsCloud : fieldsServer
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'clearFieldLabel'
     def cloud =  "{$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.labels,$runAsUser.currentUser}"
-    def server =  fields.labels + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.currentUser
+    def server =  [fields.labels , "selectedLinkType=$value" , conditionalExecution.false , runAsUser.currentUser]
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsSpecificUser'
     def cloud =  "{$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.components,$runAsUser.specificUser}"
-    def server =  fields.components + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.specificUser
+    def server =  [fields.components , "selectedLinkType=$value" , conditionalExecution.false , runAsUser.specificUser]
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(transition + i, 4)
     }
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldAssignee'
     def cloud =  "{$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.fixVersions,$runAsUser.userInFieldAssignee}"
-    def server = fields.fixVersions + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldAssignee
+    def server = [fields.fixVersions , "selectedLinkType=$value" , conditionalExecution.false , runAsUser.userInFieldAssignee]
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(transition + i, 4)
     }
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldReporter'
     def cloud =  "{$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.assignee,$runAsUser.userInFieldReporter}"
-    def server = fields.assignee + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldReporter
+    def server = [fields.assignee , "selectedLinkType=$value" , conditionalExecution.false , runAsUser.userInFieldReporter]
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(transition + i, 4)
     }
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'runAsUserInFieldCreator'
     def cloud =  "{$conditionalExecution.false,\"selectedLinkType\":\"$value\",$fields.affectsVersions,$runAsUser.userInFieldCreator}"
-    def server = fields.affectsVersions + "selectedLinkType=$value" + conditionalExecution.false + runAsUser.userInFieldCreator
+    def server = [fields.affectsVersions , "selectedLinkType=$value" , conditionalExecution.false , runAsUser.userInFieldCreator]
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     if(!isCloud) {
         moveTransitionFunction(transition + i, 4)
     }
 }
 
-relatedIssue.take(1).eachWithIndex { key, value, i ->
+relatedIssue.eachWithIndex { key, value, i ->
     def transition = 'clearFieldsIfConditionalExecutionTrue'
     def cloud =  "{$conditionalExecution.true,\"selectedLinkType\":\"$value\",$fields.labels,$runAsUser.currentUser}"
-    def server =  fields.labels + "selectedLinkType=$value" + conditionalExecution.true + runAsUser.currentUser
+    def server =  [fields.labels , "selectedLinkType=$value" , conditionalExecution.true , runAsUser.currentUser]
     addTransitionFunction( transition + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
@@ -219,7 +218,7 @@ def component = 'component1'
 [
         'runAsSpecificUser',
 ].each {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action: 'updateIssue',
                  ext: " : add field component to check $it _" + i,
@@ -264,7 +263,7 @@ def component = 'component1'
 [
         'runAsUserInFieldAssignee'
 ].collect {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         def userInFieldAssignee1 = info?.isCloud? info?.userDisplayName : user
         def getFixVersions = info?.isCloud ? "Fix versions  . . . . . . . . : 1" : "Fix Version/s . . . . . . . . : 1"
         gint.taskHelper.add([
@@ -331,7 +330,7 @@ def component = 'component1'
 ].each {
     def userInFieldReporter1 = info?.isCloud? info?.userDisplayName : user
     def userInFieldAssignee1 = info?.isCloud? info?.userDisplayName : user
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action: 'assignIssue',
                  ext: ": to check run as user in field reporter related issue: " +it + i ,
@@ -379,7 +378,7 @@ def component = 'component1'
 ].each {
     def userInFieldCreator1 = info?.isCloud? info?.userDisplayName : user
     def affectsVersionToCheck = info?.isCloud? "Affects versions  . . . . . . : $affectsVersions" : "Affects Version/s . . . . . . : $affectsVersions"
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action: 'updateIssue',
                  ext: " : add field affects versions_target issue to check $it _" + i,
@@ -416,7 +415,7 @@ def component = 'component1'
 [
         'clearFieldsIfConditionalExecutionTrue'
 ].each {
-        relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+        relatedIssuesMap.eachWithIndex { key, value, i ->
             gint.taskHelper.add([
                     [action: 'updateIssue',
                      ext: " : add field labels to before transition issue with_ $it$i _  : ",

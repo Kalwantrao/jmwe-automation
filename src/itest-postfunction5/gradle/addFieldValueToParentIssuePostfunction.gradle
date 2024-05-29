@@ -17,7 +17,7 @@ def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:AddFieldValu
 [
         'verify_the_field_dropdown_for_field_affectsVersions'
 ].each {
-    def fields = "field=versions" + conditionalExecution.false
+    def fields = ["field=versions" , conditionalExecution.false]
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', fields, functionKey)
     }
@@ -26,7 +26,7 @@ def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:AddFieldValu
 [
         'verify_the_condition_execution_if_issues_priority_is_high'
 ].each {
-    def fields = "field=versions" + conditionalExecution.true
+    def fields = ["field=versions" , conditionalExecution.true]
     if(!isCloud) {
         addTransitionFunction(it, 'postfunction', fields, functionKey)
     }

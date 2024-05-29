@@ -37,37 +37,37 @@ def options = [
 
 relatedIssue.eachWithIndex { key, value, i ->
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
-    def server =  "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.noOption + conditionalExecution.false
+    def server =  ["selectedLinkType=$value" ,  sourceField.labels , destField.sameAsSource ,  options.noOption , conditionalExecution.false]
     addTransitionFunction('valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues'+i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":true,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
-    def server =  "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.copyOnlyIfNotSet + conditionalExecution.false
+    def server =  ["selectedLinkType=$value" ,  sourceField.labels , destField.sameAsSource ,  options.copyOnlyIfNotSet , conditionalExecution.false]
     addTransitionFunction('valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues_copyOnlyIfNotSet'+i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":true,\"runAsType\":\"addonUser\"}"
-    def server =  "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.ignoreEmptyValue + conditionalExecution.false
+    def server =  ["selectedLinkType=$value" ,  sourceField.labels , destField.sameAsSource ,  options.ignoreEmptyValue , conditionalExecution.false]
     addTransitionFunction('valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues_ignoreEmptyValue'+i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":true,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
-    def server =  "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.appendValues + conditionalExecution.false
+    def server =  ["selectedLinkType=$value" ,  sourceField.labels , destField.sameAsSource ,  options.appendValues , conditionalExecution.false]
     addTransitionFunction('valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues_appendValues'+i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
     def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"labels\",\"destFieldId\":\"components\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":true,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
-    def server =  "selectedLinkType=$value" +  sourceField.labels + destField.components +  options.createMissingValues + conditionalExecution.false
+    def server = [ "selectedLinkType=$value" ,  sourceField.labels , destField.components ,  options.createMissingValues , conditionalExecution.false]
     addTransitionFunction('valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues_createMissingValues'+i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
     def cloud =  "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"fieldId\":\"labels\",\"destFieldId\":\"\",\"selectedLinkType\":\"$value\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
-    def server =  "selectedLinkType=$value" +  sourceField.labels + destField.sameAsSource +  options.noOption + conditionalExecution.true
+    def server =  ["selectedLinkType=$value" ,  sourceField.labels , destField.sameAsSource ,  options.noOption , conditionalExecution.true]
     addTransitionFunction('valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues_onlyIfConditionTrue'+i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
@@ -229,7 +229,7 @@ def testLabel2 = "label2"
 [
         'valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues_copyOnlyIfNotSet'
 ].collect {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action: 'setFieldValue',
                  sleep: sleep,
@@ -324,7 +324,7 @@ def testLabel2 = "label2"
 
 // COPY_FIELD_VALUE_FROM_RELATED_ISSUE_Postfunction_TS_04- Verify the copy fields value from related issue postfunction for all the source field, destination field and source issue_with ignoreEmptyValue_Option_when field value is empty
 ['valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues_ignoreEmptyValue'].each {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action: 'setFieldValue',
                  sleep: sleep,
@@ -387,7 +387,7 @@ def testLabel2 = "label2"
 [
         'valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues_createMissingValues'
 ].each {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         def getComponentValue = info?.isCloud ? "Components  . . . . . . . . . : $it$i" : "Component/s . . . . . . . . . : $it$i"
         gint.taskHelper.add([
                 [action    : 'setFieldValue',
@@ -433,7 +433,7 @@ def testLabel2 = "label2"
 // COPY_FIELD_VALUE_FROM_RELATED_ISSUE_Postfunction_TS_07 Verify the copy fields value from related issue postfunction for all the source field, destination field and source issue_with appendValues_Option_when postfunction should append the field value,
 
 ['valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues_appendValues'].each {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action    : 'setFieldValue',
                  sleep: sleep,
@@ -497,7 +497,7 @@ def testLabel2 = "label2"
 // COPY_FIELD_VALUE_FROM_RELATED_ISSUE_Postfunction_TS_08- Verify the copy fields value from related issue postfunction for all the source field, destination field and source issue
 
 ['valueOfFieldLabelsWillBeCopiedFromTheIssuesRelatedIssues_onlyIfConditionTrue'].collect {
-    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+    relatedIssuesMap.eachWithIndex { key, value, i ->
         ["Low","High"].each {priority ->
             def transition = it + i
             gint.taskHelper.add([

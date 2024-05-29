@@ -15,9 +15,9 @@ apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
 def functionKey =  'com.innovalog.jmwe.jira-misc-workflow-extensions:separationofduties-condition'
 
 def separationOfDutiesConditionOptions = [
-        FROM_ANY_TO_TODO_STATUS : [  "fromStatus=" + "toStatus=To Do" ],
-        FROM_INPROGRESS_TO_DONE_STATUS : [  "fromStatus=In Progress" + "toStatus=Done"  ],
-        FROM_DONE_TO_INPROGRESS_STATUS : [  "fromStatus=Done" + "toStatus=In Progress" ],
+        FROM_ANY_TO_TODO_STATUS : [  "fromStatus=" , "toStatus=To Do" ],
+        FROM_INPROGRESS_TO_DONE_STATUS : [  "fromStatus=In Progress", "toStatus=Done"  ],
+        FROM_DONE_TO_INPROGRESS_STATUS : [  "fromStatus=Done", "toStatus=In Progress" ],
 ]
 
 separationOfDutiesConditionOptions.eachWithIndex { transitions, fields, i ->
@@ -113,30 +113,30 @@ def transitionByUserTaskForSuccess =  { transition, userId, issue, expected ->
          'FROM_INPROGRESS_TO_DONE_STATUS',
          'FROM_DONE_TO_INPROGRESS_STATUS'
  ].each {
-    transitionByUserTaskForSuccess(it, testUserForServer, {->defaultIssue[]}, 0)
+    transitionByUserTaskForSuccess(it, testUser, {->defaultIssue[]}, 0)
 }
 
 def transitionByUserTaskForError =  { transition, userId, issue, expected ->
     if(!isCloud) {
         gint.taskHelper.add(
                 [expected    : expected,
-                 name        : ":check transition trigger by other user_ when issue transition by test _ $testUserForServer user:" + transition ,
+                 name        : ":check transition trigger by other user_ when issue transition by test _ $testUser user:" + transition ,
                  cmd         : /acli $userId -a transitionIssue --issue $issue --transition "$transition"/,
                 ]
         )
     }
 }
 
-transitionByUserTaskForError('In Progress', testUserForServer, {->defaultIssue[]}, 0)
-transitionByUserTaskForError('Done', testUserForServer, {->defaultIssue[]}, 0)
-transitionByUserTaskForError('To Do', testUserForServer, {->defaultIssue[]}, 0)
+transitionByUserTaskForError('In Progress', testUser, {->defaultIssue[]}, 0)
+transitionByUserTaskForError('Done', testUser, {->defaultIssue[]}, 0)
+transitionByUserTaskForError('To Do', testUser, {->defaultIssue[]}, 0)
 
 // Check transition by other user_ when issue has transitioned FROM status to TO status by current user only
 [
         'FROM_ANY_TO_TODO_STATUS',
         'FROM_INPROGRESS_TO_DONE_STATUS',
 ].each {
-    transitionByUserTaskForError(it, testUserForServer, {->defaultIssue[]}, -1)
+    transitionByUserTaskForError(it, testUser, {->defaultIssue[]}, -1)
 }
 
 /*

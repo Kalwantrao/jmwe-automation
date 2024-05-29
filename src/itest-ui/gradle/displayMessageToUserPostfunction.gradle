@@ -77,8 +77,8 @@ def defaultFieldsForDisplayMessage = [
         'error'
 ].each {
     def transition = 'display_message_to_user_' + it
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"messageTitle\":\"$title\",\"messageBody\":\"$body\",\"messageType\":\"$it\",\"autoClose\":true}"
-    def server = defaultFieldsServer + defaultFieldsForDisplayMessage + autoClose('true') + messageTitle(title) + messageBody(body) + messageType(it) + url("none")
+    def cloud = "{\"conditionalExecution\":false,\"messageTitle\":\"$title\",\"messageBody\":\"$body\",\"messageType\":\"$it\",\"autoClose\":true}"
+    def server =  [defaultFieldsForDisplayMessage, autoClose('true'), messageTitle(title), messageBody(body), messageType(it), url("none")]
     addTransitionFunction(transition, 'postfunction', isCloud ? cloud : server, functionKey)
 }
 
@@ -86,8 +86,8 @@ def defaultFieldsForDisplayMessage = [
         'info',
 ].each {
     def transition = 'display_message_to_user_url_' + it
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"messageTitle\":\"$title\",\"messageBody\":\"$body\",\"messageType\":\"info\",\"autoClose\":true,\"actionLink\":{\"title\":\"$testUrlTitle\",\"type\":\"url\",\"url\":\"$testUrl\"}}"
-    def server = defaultFieldsServer + defaultFieldsForDisplayMessage + messageTitle(title) + autoClose('false') + messageBody(body) + messageType(it) + url("appfire")
+    def cloud = "{\"conditionalExecution\":false,\"messageTitle\":\"$title\",\"messageBody\":\"$body\",\"messageType\":\"info\",\"autoClose\":true,\"actionLink\":{\"title\":\"$testUrlTitle\",\"type\":\"url\",\"url\":\"$testUrl\"}}"
+    def server = [defaultFieldsForDisplayMessage, messageTitle(title), autoClose('false'), messageBody(body), messageType(it), url("appfire")]
     addTransitionFunction(transition, 'postfunction', isCloud ? cloud : server, functionKey)
 }
 
@@ -98,8 +98,8 @@ def defaultFieldsForDisplayMessage = [
         'error'
 ].each {
     def transition = 'display_message_to_user_if_condition_true_' + it
-    def cloud = defaultFieldsCloud.postfunction + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={$conditionalExecution.true,\"messageTitle\":\"$title\",\"messageBody\":\"$body\",\"messageType\":\"$it\",\"autoClose\":true}"
-    def server = defaultFieldsServer + defaultFieldsForDisplayMessage + conditionalExecution.true + messageTitle(title) + messageBody(body) + messageType(it) + url("none") + autoClose('true')
+    def cloud = "{$conditionalExecution.true,\"messageTitle\":\"$title\",\"messageBody\":\"$body\",\"messageType\":\"$it\",\"autoClose\":true}"
+    def server = [defaultFieldsForDisplayMessage, conditionalExecution.true, messageTitle(title), messageBody(body), messageType(it), url("none"), autoClose('true')]
     addTransitionFunction(transition, 'postfunction', isCloud ? cloud : server, functionKey)
 }
 def driver = gint.seleniumHelper

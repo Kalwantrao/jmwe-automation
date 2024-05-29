@@ -14,6 +14,12 @@ apply from: gint.resourceDirectory + '/src/itest-postfunction5/postfunction.grad
 
 def functionKey = "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__CopyCommentsToLinkedIssuesFunction"
 
+ext.JIRA_ADMIN_GROUP_ID = getGroupId("Admin", "jira-admins.*")
+project.ext.jiraAdminGroupId = {->JIRA_ADMIN_GROUP_ID.getAt(0).trim()}
+
+ext.TEST_GROUP_ID = getGroupId("testgroup","testgroup.*")
+project.ext.testGroupId = {->TEST_GROUP_ID.getAt(0).trim()}
+
 relatedIssue.remove("currentIssue")
 
 String allComments = 'copy_all_comments_to_related_issue_'
@@ -98,7 +104,7 @@ relatedIssue.take(1).eachWithIndex { key, value, i ->
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = copyCommentByTestUser + i
-    def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"whichComments\":\"all-comments\",\"filterCommentsToCopy\":false,\"commentAuthor\":\"thisUser\",\"commentUser\":\"accountId:$cloudUserId\",\"commentVisibility\":\"original-visibility\",\"copyInlineImages\":true,\"copyMentionedAttachments\":false,\"runAsType\":\"currentUser\"}"
+    def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"whichComments\":\"all-comments\",\"filterCommentsToCopy\":false,\"commentAuthor\":\"thisUser\",\"commentUser\":\"accountId:$testUserId\",\"commentVisibility\":\"original-visibility\",\"copyInlineImages\":true,\"copyMentionedAttachments\":false,\"runAsType\":\"currentUser\"}"
     if(isCloud) {
         addTransitionFunction(transition, 'postfunction', cloud, functionKey)
     }
@@ -106,7 +112,7 @@ relatedIssue.take(1).eachWithIndex { key, value, i ->
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = copyCommentVisibleToAdminGroup + i
-    def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"whichComments\":\"all-comments\",\"filterCommentsToCopy\":false,\"commentAuthor\":\"original-author\",\"commentUser\":\"\",\"commentVisibility\":\"override-visibility\",\"copyInlineImages\":false,\"copyMentionedAttachments\":false,\"restrictToInternal\":false,\"restrictToGroup\":\"$jiraAdminGroupIdCloud\",\"runAsType\":\"currentUser\"}"
+    def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"whichComments\":\"all-comments\",\"filterCommentsToCopy\":false,\"commentAuthor\":\"original-author\",\"commentUser\":\"\",\"commentVisibility\":\"override-visibility\",\"copyInlineImages\":false,\"copyMentionedAttachments\":false,\"restrictToInternal\":false,\"restrictToGroup\":\"$jiraAdminGroupId\",\"runAsType\":\"currentUser\"}"
     if(isCloud) {
         addTransitionFunction(transition, 'postfunction', cloud, functionKey)
     }
@@ -114,7 +120,7 @@ relatedIssue.take(1).eachWithIndex { key, value, i ->
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = copyCommentVisibleToTestGroup + i
-    def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"whichComments\":\"all-comments\",\"filterCommentsToCopy\":false,\"commentAuthor\":\"original-author\",\"commentUser\":\"\",\"commentVisibility\":\"override-visibility\",\"copyInlineImages\":false,\"copyMentionedAttachments\":false,\"restrictToInternal\":false,\"restrictToGroup\":\"$testGroupIdCloud\",\"runAsType\":\"currentUser\"}"
+    def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"whichComments\":\"all-comments\",\"filterCommentsToCopy\":false,\"commentAuthor\":\"original-author\",\"commentUser\":\"\",\"commentVisibility\":\"override-visibility\",\"copyInlineImages\":false,\"copyMentionedAttachments\":false,\"restrictToInternal\":false,\"restrictToGroup\":\"$testGroupId\",\"runAsType\":\"currentUser\"}"
     if(isCloud) {
         addTransitionFunction(transition, 'postfunction', cloud, functionKey)
     }
@@ -122,7 +128,7 @@ relatedIssue.take(1).eachWithIndex { key, value, i ->
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = copyCommentVisibleToAdminProjectRole + i
-    def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"outward:jira_subtask_link\",\"whichComments\":\"all-comments\",\"filterCommentsToCopy\":false,\"commentAuthor\":\"original-author\",\"commentUser\":\"\",\"commentVisibility\":\"override-visibility\",\"copyInlineImages\":false,\"copyMentionedAttachments\":false,\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$jiraAdminRoleIdCloud,\"runAsType\":\"currentUser\"}"
+    def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"outward:jira_subtask_link\",\"whichComments\":\"all-comments\",\"filterCommentsToCopy\":false,\"commentAuthor\":\"original-author\",\"commentUser\":\"\",\"commentVisibility\":\"override-visibility\",\"copyInlineImages\":false,\"copyMentionedAttachments\":false,\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$jiraAdminRoleId,\"runAsType\":\"currentUser\"}"
     if(isCloud) {
         addTransitionFunction(transition, 'postfunction', cloud, functionKey)
     }
@@ -130,7 +136,7 @@ relatedIssue.take(1).eachWithIndex { key, value, i ->
 
 relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = copyCommentVisibleToTestProjectRole + i
-    def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"outward:jira_subtask_link\",\"whichComments\":\"all-comments\",\"filterCommentsToCopy\":false,\"commentAuthor\":\"original-author\",\"commentUser\":\"\",\"commentVisibility\":\"override-visibility\",\"copyInlineImages\":false,\"copyMentionedAttachments\":false,\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$testProjectRoleIdCloud,\"runAsType\":\"currentUser\"}"
+    def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"outward:jira_subtask_link\",\"whichComments\":\"all-comments\",\"filterCommentsToCopy\":false,\"commentAuthor\":\"original-author\",\"commentUser\":\"\",\"commentVisibility\":\"override-visibility\",\"copyInlineImages\":false,\"copyMentionedAttachments\":false,\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$testProjectRoleId,\"runAsType\":\"currentUser\"}"
     if(isCloud) {
         addTransitionFunction(transition, 'postfunction', cloud, functionKey)
     }
@@ -208,36 +214,38 @@ def getCurrentUserName = info?.isCloud? info?.userDisplayName : user
         allComments
 ].eachWithIndex { transitionPrefix, idx->
     relatedIssuesMap.eachWithIndex { key, value, i ->
-        def transition = transitionPrefix + i
-        gint.taskHelper.add([
-                [action: "addComment",
-                 sleep: sleep,
-                 ext: ":to current issue before transition issue with_$transition",
-                 parameters: [
-                         issue: key,
-                         comment: transition,
-                 ]
-                ],
-                [action    : 'transitionIssue',
-                 sleep: sleep,
-                 ext: ":by transition_ $transition:",
-                 parameters: [
-                         issue     : key,
-                         transition: transition,
-                         comment: transition
-                 ],
-                ],
-                [action: 'getComments',
-                 sleep: sleep,
-                 ext: ":after transition issue with_$transition:",
-                 parameters: [
-                         issue: value
-                 ],
-                 data:[  /$getCurrentUserName added a comment/,
-                         /$transition/
-                 ],
-                ]
-        ])
+        if (isCloud) {
+            def transition = transitionPrefix + i
+            gint.taskHelper.add([
+                    [action    : "addComment",
+                     sleep     : sleep,
+                     ext       : ":to current issue before transition issue with_$transition",
+                     parameters: [
+                             issue  : key,
+                             comment: transition,
+                     ]
+                    ],
+                    [action    : 'transitionIssue',
+                     sleep     : sleep,
+                     ext       : ":by transition_ $transition:",
+                     parameters: [
+                             issue     : key,
+                             transition: transition,
+                             comment   : transition
+                     ],
+                    ],
+                    [action    : 'getComments',
+                     sleep     : sleep,
+                     ext       : ":after transition issue with_$transition:",
+                     parameters: [
+                             issue: value
+                     ],
+                     data      : [/$getCurrentUserName added a comment/,
+                                  /$transition/
+                     ],
+                    ]
+            ])
+        }
     }
 }
 
@@ -253,6 +261,7 @@ def getCurrentUserName = info?.isCloud? info?.userDisplayName : user
         //copyCommentVisibleToTestProjectRole
 ].eachWithIndex { transitionPrefix, idx->
     relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+        if(isCloud){
         def transition = transitionPrefix + i
         gint.taskHelper.add([
                 [action: "addComment",
@@ -332,10 +341,11 @@ def getCurrentUserName = info?.isCloud? info?.userDisplayName : user
             ])
         }
     }
-}
+}}
 
 runAsUser.eachWithIndex { userToRun, configFields, idx ->
     relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+        if(isCloud){
         def transition = copyLatestCommentRunAsUser + userToRun + i
         if(userToRun == 'userInFieldAssignee'){
             gint.taskHelper.add([
@@ -387,7 +397,7 @@ runAsUser.eachWithIndex { userToRun, configFields, idx ->
                 ]
         ])
     }
-}
+}}
 
 // TODO- need acli support to add the attachment and inline comment by add comment action -improvement: ACLI-3758 created.
 [
@@ -395,6 +405,7 @@ runAsUser.eachWithIndex { userToRun, configFields, idx ->
         //copyInlineImages
 ].eachWithIndex { transitionPrefix, idx ->
     relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
+        if(isCloud){
         def transition = transitionPrefix + i
         gint.taskHelper.add([
                 [action: "addAttachment",
@@ -430,64 +441,66 @@ runAsUser.eachWithIndex { userToRun, configFields, idx ->
                 ]
         ])
     }
-}
+}}
 
 [
         copyLatestCommentIfConditionTrue
-].eachWithIndex { transitionPrefix, idx->
+].eachWithIndex { transitionPrefix, idx ->
     relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
-        ["Low","High"].eachWithIndex { priority, index ->
-            def transition = transitionPrefix + i
-            gint.taskHelper.add([
-                    [action    : 'setFieldValue',
-                     ext       : " : Of priority to $priority to current issue before transition issue with $transition:",
-                     sleep     : defaultSleepTime,
-                     parameters: [
-                             issue: key,
-                             field: "Priority",
-                             value: priority
-                     ],
-                    ],
-                    [action    : "addComment",
-                     sleep     : sleep,
-                     ext       : ":to current issue before transition issue with_$transition:when priority is:$priority",
-                     parameters: [
-                             issue  : key,
-                             comment: transition,
-                     ]
-                    ],
-                    [action    : 'transitionIssue',
-                     sleep     : sleep,
-                     ext       : ":by transition_ $transition:when priority is:$priority",
-                     parameters: [
-                             issue     : key,
-                             transition: transition,
-                             comment   : transition
-                     ],
-                    ],
-            ])
-            if (priority == "High") {
-                gint.taskHelper.add(
-                        [action    : 'getComments',
-                         sleep     : sleep,
-                         ext       : ":after transition issue with_$transition:when priority is $priority",
+        ["Low", "High"].eachWithIndex { priority, index ->
+            if (isCloud) {
+                def transition = transitionPrefix + i
+                gint.taskHelper.add([
+                        [action    : 'setFieldValue',
+                         ext       : " : Of priority to $priority to current issue before transition issue with $transition:",
+                         sleep     : defaultSleepTime,
                          parameters: [
-                                 issue: value
+                                 issue: key,
+                                 field: "Priority",
+                                 value: priority
                          ],
-                         data      : [/$getCurrentUserName added a comment/,
-                                      /$transition/
-                         ],
-                        ])
-            } else {
-                gint.taskHelper.add(
-                        [action    : 'getComments',
+                        ],
+                        [action    : "addComment",
                          sleep     : sleep,
-                         ext       : ":after transition issue with_$transition:when priority is $priority",
+                         ext       : ":to current issue before transition issue with_$transition:when priority is:$priority",
                          parameters: [
-                                 issue: value
+                                 issue  : key,
+                                 comment: transition,
+                         ]
+                        ],
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ":by transition_ $transition:when priority is:$priority",
+                         parameters: [
+                                 issue     : key,
+                                 transition: transition,
+                                 comment   : transition
                          ],
-                         failData  : [ /$transition/  ],
-                        ])
+                        ],
+                ])
+                if (priority == "High") {
+                    gint.taskHelper.add(
+                            [action    : 'getComments',
+                             sleep     : sleep,
+                             ext       : ":after transition issue with_$transition:when priority is $priority",
+                             parameters: [
+                                     issue: value
+                             ],
+                             data      : [/$getCurrentUserName added a comment/,
+                                          /$transition/
+                             ],
+                            ])
+                } else {
+                    gint.taskHelper.add(
+                            [action    : 'getComments',
+                             sleep     : sleep,
+                             ext       : ":after transition issue with_$transition:when priority is $priority",
+                             parameters: [
+                                     issue: value
+                             ],
+                             failData  : [/$transition/],
+                            ])
+                }
             }
         }
     }

@@ -13,6 +13,15 @@ apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-conditions/condition.gradle'
 
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__CurrentStatusCondition" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:currentstatus-condition'
+def STATUS_ID_TODO = getStatusId("To Do")
+def STATUS_ID_INPROGRESS = getStatusId("In Progress")
+def STATUS_ID_INREVIEW = getStatusId("In Review")
+def STATUS_ID_DONE = getStatusId("Done")
+
+def ToDo = {->STATUS_ID_TODO.getAt(0).trim()}
+def InProgress = {->STATUS_ID_INPROGRESS.getAt(0).trim()}
+def InReview = {->STATUS_ID_INREVIEW.getAt(0).trim()}
+def Done = {->STATUS_ID_DONE.getAt(0).trim()}
 
 def currentStatusServer = [
 		SELECT_CURRENT_STATUS_TODO : [ "issue_statuses=$ToDo", "not="],
@@ -30,6 +39,7 @@ def currentStatusCloud = [
 
 def currentStatusCondition = info?.isCloud ? currentStatusCloud : currentStatusServer
 
+
 currentStatusCondition.eachWithIndex { transitions, fields, i->
 	addTransitionFunction(transitions, 'condition', fields, functionKey)
 }
@@ -39,128 +49,49 @@ createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
-// CURRENT_STATUS_CONDITION_TC_10_Verify transition tab after apply Current Status Condition on ToDo status and current status of Issue is also ToDo
-[
-		'SELECT_CURRENT_STATUS_TODO',
-].each {
+currentStatusCondition.eachWithIndex { transitions, fields, i->
+	def expected;
+	if(transitions == 'SELECT_CURRENT_STATUS_TODO' || transitions == 'SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE'){
+		expected = 0
+	}else if(transitions == 'SELECT_CURRENT_STATUS_TODO_AND_REVERSE' || transitions == 'SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE_REVERSE'){
+		expected = -1
+	}
 	gint.taskHelper.add([
 			[action: 'getFieldValue',
-			 ext: ":Validate that the current issue in status_ TODO:$it ",
-			parameters: [
-			        issue: {->defaultIssue[]},
-					field: "Status"
-			],
-					finalClosure: {Task task ->
-						def currentStatus = "$task.outData"
-						assert currentStatus.contains("Status  . . . . . . . . . . . : To Do")
-					}
-			],
-			[action    : 'transitionIssue',
-			ext: ": CURRENT_STATUS_CONDITION_TC_10-Verify transition tab $it _when current issue in selected status:",
-			expected  : 0,
-			parameters: [
-					transition: it,
-					issue: { -> defaultIssue[] },
-			],
-			]
-	])
-}
-
-// CURRENT_STATUS_CONDITION_TC_14-Verify transition eg $it tab on issue screen when apply Reverse condition with ToDo status and current status of issue is also ToDo
-[
-		'SELECT_CURRENT_STATUS_TODO_AND_REVERSE',
-].each {
-	gint.taskHelper.add([
-			[action: 'getFieldValue',
-			 ext: ":Validate that the current issue in status_ TODO:$it",
+			 ext: ":Validate that the current issue in status_ TODO:$transitions ",
 			 parameters: [
 					 issue: {->defaultIssue[]},
 					 field: "Status"
 			 ],
-			 finalClosure: {Task task ->
-				 def currentStatus = "$task.outData"
-				 assert currentStatus.contains("Status  . . . . . . . . . . . : To Do")
-			 }
+					data: ["Status  . . . . . . . . . . . : To Do"]
 			],
 			[action    : 'transitionIssue',
-			ext: ": CURRENT_STATUS_CONDITION_TC_14-Verify transition eg $it _ when current issue not in selected status:",
-			expected  : -1,
-			parameters: [
-					transition: it,
-					issue: { -> defaultIssue[] },
-			],
-			]
-	])
-}
-
-// CURRENT_STATUS_CONDITION-Verify transition tab on issue screen when apply Reverse condition with all status and current status of issue is ToDo
-['SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE'].each {
-	gint.taskHelper.add([
-			[action: 'getFieldValue',
-			 ext: ":Validate that the current issue in status_ TODO: $it",
+			 ext: ": CURRENT_STATUS_CONDITION_TC_10-Verify transition tab $transitions _when current issue in selected status:",
+			 expected  : expected,
 			 parameters: [
-					 issue: {->defaultIssue[]},
-					 field: "Status"
+					 transition: transitions,
+					 issue: { -> defaultIssue[] },
 			 ],
-			 finalClosure: {Task task ->
-				 def currentStatus = "$task.outData"
-				 assert currentStatus.contains("Status  . . . . . . . . . . . : To Do")
-			 }
-			],
-			[action    : 'transitionIssue',
-			ext: ": CURRENT_STATUS_CONDITION_-Verify transition tab $it after apply Current Status Condition on all status and current status of Issue also ToDo:",
-			expected  : 0,
-			parameters: [
-					transition: it,
-					issue: { -> defaultIssue[] },
-			],
 			]
 	])
 }
 
-// CURRENT_STATUS_CONDITION-Verify transition tab on issue screen when apply Reverse condition with all status and current status of issue is ToDo
-[
-		'SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE_REVERSE',
-].each {
-	gint.taskHelper.add([
-			[action: 'getFieldValue',
-			 ext: ":Validate that the current issue in status_ TODO:$it ",
-			 parameters: [
-					 issue: {->defaultIssue[]},
-					 field: "Status"
-			 ],
-			 finalClosure: {Task task ->
-				 def currentStatus = "$task.outData"
-				 assert currentStatus.contains("Status  . . . . . . . . . . . : To Do")
-			 }
-			],
-			[action    : 'transitionIssue',
-			ext: ": CURRENT_STATUS_CONDITION_TC_14-Verify transition eg $it tab on issue screen when apply Reverse condition with all status and current status of issue is ToDo:",
-			expected  : -1,
-			parameters: [
-					transition: it,
-					issue: { -> defaultIssue[] },
-			],
-			]
-	])
-}
-
-def transitionByUserTask =  { transition, userId, issue, expected ->
+def transitionByUserTask =  { transition, issue, expected ->
 	if(!isCloud) {
 		gint.taskHelper.add(
 				[expected    : expected,
 				 name        : ":check transition trigger by other user:" + transition,
-				 cmd         : /acli $userId -a transitionIssue --issue $issue --transition $transition/,
+				 cmd         : /acli $testUser -a transitionIssue --issue $issue --transition $transition/,
 				]
 		)
 	}
 }
 
 // CURRENT_STATUS_CONDITION-Verify transition by user other than admin
-transitionByUserTask('SELECT_CURRENT_STATUS_TODO', testUserForServer, {->defaultIssue[]}, 0)
-transitionByUserTask('SELECT_CURRENT_STATUS_TODO_REVERSE', testUserForServer, {->defaultIssue[]}, -1)
-transitionByUserTask('SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE', testUserForServer, {->defaultIssue[]}, 0)
-transitionByUserTask('SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE_REVERSE', testUserForServer, {->defaultIssue[]}, -1)
+transitionByUserTask('SELECT_CURRENT_STATUS_TODO', {->defaultIssue[]}, 0)
+transitionByUserTask('SELECT_CURRENT_STATUS_TODO_REVERSE', {->defaultIssue[]}, -1)
+transitionByUserTask('SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE', {->defaultIssue[]}, 0)
+transitionByUserTask('SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE_REVERSE', {->defaultIssue[]}, -1)
 
 /*
 
@@ -187,7 +118,3 @@ transitionByUserTask('SELECT_CURRENT_STATUS_TODO_INPROGRESS_INREVIEW_DONE_REVERS
 	- unselect the reverse checkbox and check on issue - PENDING
 
  */
-
-
-
-

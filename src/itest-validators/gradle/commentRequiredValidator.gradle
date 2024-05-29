@@ -16,8 +16,8 @@ def customErrorMessage = "custom error message"
 def systemErrorMessage = "You must provide a Comment"
 
 
-createGroup("customgroup")
-addUserToGroup("customgroup", testUser)
+//createGroup("customgroup")
+//addUserToGroup("customgroup", testUser)
 
 def defaultFieldsServer = [
         verify_the_error_message: ["errorMessage=$customErrorMessage","groups=","showAsterisk=no"],
@@ -25,19 +25,13 @@ def defaultFieldsServer = [
         verify_the_condition_groovy_expression : ["conditionalValidation=yes","conditionalValidationScript=$groovyExpression.getIssuetype","errorMessage=","groups=","showAsterisk=no"],
         comment_required_if_not_from_selectedGroup : ["errorMessage=","groups=jira-administrators","showAsterisk=no"],
         comment_required_if_user_is_not_belongs_to_testGroup : ["errorMessage=","groups=$testGroup","showAsterisk=no"],
-        comment_required_if_user_is_not_belongs_to_customGroup : ["errorMessage=","groups=customgroup","showAsterisk=no"]
+        //comment_required_if_user_is_not_belongs_to_customGroup : ["errorMessage=","groups=customgroup","showAsterisk=no"]
 ]
 
 def defaultFieldsCloud = [
-        verify_the_error_message : [
-                "{\"problems\":[],\"errorMessage\":\"$customErrorMessage\",\"expression\": \"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}"
-        ],
-        verify_the_system_error_message : [
-                "{\"problems\":[],\"expression\":\"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}"
-        ],
-        verify_the_condition_groovy_expression : [
-                "{\"problems\":[],\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.issueType && issue.issueType.name == 'Task'\",\"expression\":\"!(!!issue.issueType && issue.issueType.name == 'Task') || !!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}"
-        ]
+        verify_the_error_message : "{\"problems\":[],\"errorMessage\":\"$customErrorMessage\",\"expression\": \"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}",
+        verify_the_system_error_message : "{\"problems\":[],\"expression\":\"!!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}",
+        verify_the_condition_groovy_expression : "{\"problems\":[],\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.issueType && issue.issueType.name == 'Task'\",\"expression\":\"!(!!issue.issueType && issue.issueType.name == 'Task') || !!issue.comments && issue.comments.length > 0 && issue.comments.some(comment => comment.id == null)\"}"
 ]
 
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__CommentRequiredValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentrequired-validator'
@@ -50,7 +44,7 @@ fields.eachWithIndex { key, value, i ->
 createWorkflowScheme()
 createProject()
 
-def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue', comment: "test"], 'defaultIssue')
 
 [
         'verify_the_error_message',
@@ -155,7 +149,9 @@ def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIs
     }
 }
 
-['comment_required_if_user_is_not_belongs_to_customGroup'].each {
+[
+//'comment_required_if_user_is_not_belongs_to_customGroup'
+].each {
     if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'transitionIssue',

@@ -58,7 +58,7 @@ def savedID = {->shared_actionId[0] }
 ].each {
     def transition = it
     def server = "selectedLinkType=currentIssue:*" + conditionalExecution.false + "shared-action-id=${savedID}"
-    def cloud = "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249={\"conditionalExecution\":false,\"sharedActionId\":\"$savedID\",\"stopAtErrors\":false}"
+    def cloud = "{\"conditionalExecution\":false,\"sharedActionId\":\"$savedID\",\"stopAtErrors\":false}"
     addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud :server, functionKey)
 }
 
@@ -68,14 +68,14 @@ createProject()
 def currentIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'currentIssue')
 
 def listOfUser = [
-        inactiveAdmin, testAdmin, testUser1, testUser2
+        inactiveAdmin, testAdmin, testUser1, testUser
 ]
 
 listOfUser.collect{users ->
     def role;
     if(users == inactiveAdmin || users == testAdmin){
         role = 'Administrators'
-    }else if (users == testUser1 || users == testUser2){
+    }else if (users == testUser1 || users == testUser){
         role = testRole
     }
         gint.taskHelper.addSetUp(
@@ -91,12 +91,12 @@ listOfUser.collect{users ->
 }
 
 [
-        "@self",testUser1,testUser2
+        "@self",testUser1,testUser
 ].collect{users ->
     def role;
     if(users == "@self"){
         role = 'Administrators'
-    }else if (users == testUser1 || users == testUser2){
+    }else if (users == testUser1 || users == testUser){
         role = testRole
     }
         gint.taskHelper.addSetUp(
@@ -115,6 +115,15 @@ listOfUser.collect{users ->
         'sharedAction_assign_issue_to_admin_role_user'
 ].each {
     gint.taskHelper.add([
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : ":Of current issue_before transition issue by:$it:",
+             parameters: [
+                     issue: { ->currentIssue[] },
+                     field: "Assignee"
+             ],
+             failData      : ["Assignee  . . . . . . . . . . : $getCurrentUserName"],
+            ],
             [action    : 'transitionIssue',
              sleep: sleep,
              ext       : ":by_ $it:",
@@ -135,6 +144,6 @@ listOfUser.collect{users ->
     ])
 }
 
-tearDownAfter(projectName, ":tearDown_to delete the shared action")
-deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/shared-actions/${savedID}" : "/rest/jmwe/1/shared-actions/${savedID}", "shared action")
+//tearDownAfter(projectName, ":tearDown_to delete the shared action")
+//deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/shared-actions/${savedID}" : "/rest/jmwe/1/shared-actions/${savedID}", "shared action")
 
