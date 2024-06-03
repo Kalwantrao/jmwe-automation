@@ -1,0 +1,85 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+// gradle -b cleanData.gradle -Pcli='acli jiraCloud2'
+apply plugin: "org.gint.atlassian"
+
+gint.verbose = true
+def info = gint.getJiraHelper().getServerInfoWithVerify()
+
+def projectList = [
+
+]
+
+
+projectList.each {
+    gint.taskHelper.addTearDown(
+            action: 'deleteProject',
+            ext: ':Clean project : removing:' + it,
+            parameters: [
+                    project: it,
+                    continue: null
+            ],
+    )
+}
+/*
+(14559..15558).each {
+    gint.taskHelper.addTearDown(
+            action:'removeScreen',
+            ext: ':Clean screens : removing:'+ it ,
+            parameters:[
+                    screen: it,
+                    continue: null
+            ],
+    )
+}
+
+
+
+
+gint.taskHelper.addTearDown('clean',[
+	[action:'runFromCsv',ext: ':Clean workflows: ',
+		parameters:[
+			file:"workflowList.csv" ,
+			common:[
+				/-a deleteWorkflow --continue /,
+				],
+			],
+	],
+]
+)
+
+
+
+ */
+/*
+gint.taskHelper.add([
+	[action:'addScreen',
+		parameters:[
+			screen: screen,
+			],
+	],
+	[action:'addScreenFields',
+		parameters:[
+			screen: screen,
+			field: fieldList,
+			],
+	],
+])
+*/
+
+
+
+
+
+
+
+
+
