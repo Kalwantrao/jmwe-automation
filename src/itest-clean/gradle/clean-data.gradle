@@ -8,7 +8,8 @@ buildscript {
         classpath "org.gint:gint-atlassian:3.8.4"
     }
 }
-// gradle -b cleanData.gradle -Pcli='acli jiraCloud2'
+// gradle -b src/itest-clean/clean-data.gradle -Pcli='acli jiraCloud
+
 apply plugin: "org.gint.atlassian"
 
 gint.verbose = true
