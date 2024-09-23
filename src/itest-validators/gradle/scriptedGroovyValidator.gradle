@@ -12,40 +12,376 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
-def errorMessage = "Check the scripted groovy returns true"
-
-def chooseType = [
-        noCode: ["type=noCode"]
-]
-def valueToCompareType = [
-        text: ["valueToCompare=text"],
-        field: ["valueToCompare=field"]
-]
-def field = [
-        reporter: "field=reporter"
-]
-
-def operator = [
-        equals : ["operator=equals"]
-]
-def valueToCompare = [
-        assignee: ["targetField=assignee"],
-        reporter: ["targetField=reporter"],
-]
-
-def noCodeFields = [
-        "targetListText=",
-        "targetRegex=",
-        "targetText="
-]
+def errorMessage = "Error from JMWE validator"
 
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__ScriptedValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-validator'
+/*
+addVersion(projectName)
+addComponent(projectName)
 
+addCustomField('Age', "number")
+addFieldToScreen(screen, 'Age')
+
+def GET_CUSTOM_FIELD_AGE_ID = getCustomFieldId('Age')
+def CF_Age_Id = {->GET_CUSTOM_FIELD_AGE_ID.getAt(0).trim()}
+
+def GET_CUSTOM_FIELD_STORY_POINTS_ID = getCustomFieldId("Story Point")
+def CF_Story_Points_Id = {->GET_CUSTOM_FIELD_STORY_POINTS_ID.getAt(0).trim()}
+
+def integerFieldsList = [
+        storyPoints: [
+                name: "Story Points",
+                value: 10,
+                configValue: CF_Story_Points_Id
+                ],
+        age:  [
+                name: "Age",
+                value: 10,
+                configValue: CF_Age_Id
+                ]
+]
+
+//Check custom field age and story points does not equals to given value
+[
+        'age',
+        'storyPoints'
+].each {fieldName ->
+    def fieldsData = integerFieldsList[fieldName]
+    def transition = 'checkFieldsDoesNotEqualsToGivenValue' + fieldName
+    def server = ["errorMessage=$errorMessage", "field=", "scriptDescription=", "groovyExpression=issue.getAsString(\"assignee\") == \"$getCurrentUserName\""]
+    def cloud = "{\"errorMessage\":\"$errorMessage\",\"script\":\"let convertToNumber = x => x ? Number(x) : 0;\\nlet convertToCalendarDate = x => x ? new CalendarDate(x) : null;\\nlet convertToDate = x => x ? new Date(x) : null;\\nlet convertCalendarDateToDate = x => x ? new Date(x.toISOString() + 'T00:00:00') : null;\\nlet convertDateToCalendarDate = x =>x ? x.toCalendarDate() : null;\\nlet convertRichText = x => typeof x == 'RichText' ? x.plainText : x; \\nlet source = convertRichText(issue.${fieldsData.configValue});\\nlet target = 10;\\nsource != target\",\"expression\":\"let convertToNumber = x => x ? Number(x) : 0;\\nlet convertToCalendarDate = x => x ? new CalendarDate(x) : null;\\nlet convertToDate = x => x ? new Date(x) : null;\\nlet convertCalendarDateToDate = x => x ? new Date(x.toISOString() + 'T00:00:00') : null;\\nlet convertDateToCalendarDate = x =>x ? x.toCalendarDate() : null;\\nlet convertRichText = x => typeof x == 'RichText' ? x.plainText : x; \\nlet source = convertRichText(issue.${fieldsData.configValue});\\nlet target = 10;\\nsource != target\",\"type\":\"noCode\",\"field\":\"$fieldsData.configValue\",\"operator\":\"notEqual\",\"valueToCompare\":\"text\",\"targetText\":\"10\"}"
+    addTransitionFunction(transition, 'validator', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Story', summary: 'JMWE_Issue'], transition)
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             expected  : 0,
+             ext       : ": By $transition when field $fieldName is empty",
+             parameters: [
+                     issue     : { -> issue[] },
+                     transition: transition
+             ],
+             failData      : [errorMessage]
+            ],
+            [action    : "setFieldValue",
+             ext       : ":Of $fieldName to 5 before transition with: $transition",
+             sleep     : sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: fieldsData.name,
+                     value: 5,
+
+             ]
+            ],
+            [action    : 'transitionIssue',
+             expected  : 0,
+             ext       : ": By $transition when field $fieldName does not equals to 10",
+             parameters: [
+                     issue     : { -> issue[] },
+                     transition: transition
+             ],
+             failData      : [errorMessage]
+            ],
+            [action    : "setFieldValue",
+             ext       : ":Of $fieldName to 10 before transition with: $transition",
+             sleep     : sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: fieldsData.name,
+                     value: 10,
+
+             ]
+            ],
+            [action    : 'transitionIssue',
+             expected  : -3,
+             ext       : ": By $transition when field $fieldName equals 10",
+             parameters: [
+                     issue     : { -> issue[] },
+                     transition: transition
+             ],
+             data      : [errorMessage]
+            ],
+
+    ])
+}
+
+//Check custom field age and story points equals to given value
+[
+        'age',
+        'storyPoints'
+].each {fieldName ->
+    def fieldsData = integerFieldsList[fieldName]
+    def transition = 'checkFieldsEqualsToGivenValue' + fieldName
+    def server = ["errorMessage=$errorMessage", "field=", "scriptDescription=", "groovyExpression=issue.getAsString(\"assignee\") == \"$getCurrentUserName\""]
+    def cloud = "{\"errorMessage\":\"$errorMessage\",\"script\":\"let convertToNumber = x => x ? Number(x) : 0;\\nlet convertToCalendarDate = x => x ? new CalendarDate(x) : null;\\nlet convertToDate = x => x ? new Date(x) : null;\\nlet convertCalendarDateToDate = x => x ? new Date(x.toISOString() + 'T00:00:00') : null;\\nlet convertDateToCalendarDate = x =>x ? x.toCalendarDate() : null;\\nlet convertRichText = x => typeof x == 'RichText' ? x.plainText : x; \\nlet source = convertRichText(issue.${fieldsData.configValue});\\nlet target = 10;\\nsource == target\",\"expression\":\"let convertToNumber = x => x ? Number(x) : 0;\\nlet convertToCalendarDate = x => x ? new CalendarDate(x) : null;\\nlet convertToDate = x => x ? new Date(x) : null;\\nlet convertCalendarDateToDate = x => x ? new Date(x.toISOString() + 'T00:00:00') : null;\\nlet convertDateToCalendarDate = x =>x ? x.toCalendarDate() : null;\\nlet convertRichText = x => typeof x == 'RichText' ? x.plainText : x; \\nlet source = convertRichText(issue.${fieldsData.configValue});\\nlet target = 10;\\nsource == target\",\"type\":\"noCode\",\"field\":\"$fieldsData.configValue\",\"operator\":\"equals\",\"valueToCompare\":\"text\",\"targetText\":\"10\"}"
+    addTransitionFunction(transition, 'validator', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Story', summary: 'JMWE_Issue'], transition)
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             expected  : -3,
+             ext       : ": By $transition when field $fieldName is not equals to 10",
+             parameters: [
+                     issue     : { -> issue[] },
+                     transition: transition
+             ],
+             data      : [errorMessage]
+            ],
+            [action    : "setFieldValue",
+             ext       : ":Of $fieldName to 10 before transition with: $transition",
+             sleep     : sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: fieldsData.name,
+                     value: 10,
+
+             ]
+            ],
+            [action    : 'transitionIssue',
+             expected  : 0,
+             ext       : ": By $transition when field $fieldName equals 10",
+             parameters: [
+                     issue     : { -> issue[] },
+                     transition: transition
+             ],
+             failData      : [errorMessage]
+            ],
+    ])
+}
+
+// Check custom field Age equals to story points
+[
+        'CustomField-Age Does not Equals To StoryPoints',
+].each {
+    def transition = 'checkCustomFieldAgeDoesNotEqualsToStoryPoints'
+    def server = ["errorMessage=$errorMessage", "field=", "scriptDescription=", "groovyExpression=issue.getAsString(\"assignee\") == \"$getCurrentUserName\""]
+    def cloud = "{\"errorMessage\":\"$errorMessage\",\"script\":\"let convertToNumber = x => x ? Number(x) : 0;\\nlet convertToCalendarDate = x => x ? new CalendarDate(x) : null;\\nlet convertToDate = x => x ? new Date(x) : null;\\nlet convertCalendarDateToDate = x => x ? new Date(x.toISOString() + 'T00:00:00') : null;\\nlet convertDateToCalendarDate = x =>x ? x.toCalendarDate() : null;\\nlet convertRichText = x => typeof x == 'RichText' ? x.plainText : x; \\nlet source = convertRichText(issue.${CF_Age_Id});\\nlet target = convertRichText(issue.${CF_Story_Points_Id});\\nsource != target\",\"expression\":\"let convertToNumber = x => x ? Number(x) : 0;\\nlet convertToCalendarDate = x => x ? new CalendarDate(x) : null;\\nlet convertToDate = x => x ? new Date(x) : null;\\nlet convertCalendarDateToDate = x => x ? new Date(x.toISOString() + 'T00:00:00') : null;\\nlet convertDateToCalendarDate = x =>x ? x.toCalendarDate() : null;\\nlet convertRichText = x => typeof x == 'RichText' ? x.plainText : x; \\nlet source = convertRichText(issue.${CF_Age_Id});\\nlet target = convertRichText(issue.${CF_Story_Points_Id});\\nsource != target\",\"type\":\"noCode\",\"field\":\"$CF_Age_Id\",\"operator\":\"notEqual\",\"valueToCompare\":\"field\",\"targetField\":\"$CF_Story_Points_Id\"}"
+    addTransitionFunction(transition, 'validator', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Story', summary: 'JMWE_Issue'], transition)
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             expected  : -3,
+             ext       : ": By $transition when fields are emmpty",
+             parameters: [
+                     issue     : { -> issue[] },
+                     transition: transition
+             ],
+             data      : [errorMessage]
+            ],
+            [action    : "setFieldValue",
+             ext       : ":Of Story Points to 5 before transition with: $transition",
+             sleep     : sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: 'Story Points',
+                     value: 5,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             expected  : 0,
+             ext       : ": By $transition when field age is empty and Story points has value",
+             parameters: [
+                     issue     : { -> issue[] },
+                     transition: transition
+             ],
+             failData      : [errorMessage]
+            ],
+            [action    : "setFieldValue",
+             ext       : ":Of Age to 5 before transition with: $transition",
+             sleep     : sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: 'Age',
+                     value: 5,
+
+             ]
+            ],
+            [action    : 'transitionIssue',
+             expected  : -3,
+             ext       : ": By $transition when field age value is not equals to Story points",
+             parameters: [
+                     issue     : { -> issue[] },
+                     transition: transition
+             ],
+             data      : [errorMessage]
+            ],
+    ])
+}
+
+
+// Check custom field Age equals to story points
+[
+       'CustomField-Age EqualsToStoryPoints',
+].each {
+    def transition = 'checkCustomFieldAgeEqualsToStoryPoints'
+    def server = ["errorMessage=$errorMessage", "field=", "scriptDescription=", "groovyExpression=issue.getAsString(\"assignee\") == \"$getCurrentUserName\""]
+    def cloud = "{\"errorMessage\":\"$errorMessage\",\"script\":\"let convertToNumber = x => x ? Number(x) : 0;\\nlet convertToCalendarDate = x => x ? new CalendarDate(x) : null;\\nlet convertToDate = x => x ? new Date(x) : null;\\nlet convertCalendarDateToDate = x => x ? new Date(x.toISOString() + 'T00:00:00') : null;\\nlet convertDateToCalendarDate = x =>x ? x.toCalendarDate() : null;\\nlet convertRichText = x => typeof x == 'RichText' ? x.plainText : x; \\nlet source = convertRichText(issue.${CF_Age_Id});\\nlet target = convertRichText(issue.${CF_Story_Points_Id});\\nsource == target\",\"expression\":\"let convertToNumber = x => x ? Number(x) : 0;\\nlet convertToCalendarDate = x => x ? new CalendarDate(x) : null;\\nlet convertToDate = x => x ? new Date(x) : null;\\nlet convertCalendarDateToDate = x => x ? new Date(x.toISOString() + 'T00:00:00') : null;\\nlet convertDateToCalendarDate = x =>x ? x.toCalendarDate() : null;\\nlet convertRichText = x => typeof x == 'RichText' ? x.plainText : x; \\nlet source = convertRichText(issue.${CF_Age_Id});\\nlet target = convertRichText(issue.${CF_Story_Points_Id});\\nsource == target\",\"type\":\"noCode\",\"field\":\"${CF_Age_Id}\",\"operator\":\"equals\",\"valueToCompare\":\"field\",\"targetField\":\"${CF_Story_Points_Id}\"}"
+    addTransitionFunction(transition, 'validator', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Story', summary: 'JMWE_Issue'], transition)
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             expected  : 0,
+             ext       : ": By $transition when fields are emmpty",
+             parameters: [
+                     issue     : { -> issue[] },
+                     transition: transition
+             ],
+             failData      : [errorMessage]
+            ],
+            [action    : "setFieldValue",
+             ext       : ":Of Story Points to 5 before transition with: $transition",
+             sleep     : sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: 'Story Points',
+                     value: 5,
+
+             ]
+            ],
+            [action    : 'transitionIssue',
+             expected  : -3,
+             ext       : ": By $transition when field age is empty and Story points has value",
+             parameters: [
+                     issue     : { -> issue[] },
+                     transition: transition
+             ],
+             data      : [errorMessage]
+            ],
+            [action    : "setFieldValue",
+             ext       : ":Of Age to 10 before transition with: $transition",
+             sleep     : sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: 'Age',
+                     value: 10,
+
+             ]
+            ],
+            [action    : 'transitionIssue',
+             expected  : -3,
+             ext       : ": By $transition when field age value is not equals to Story points",
+             parameters: [
+                     issue     : { -> issue[] },
+                     transition: transition
+             ],
+             data      : [errorMessage]
+            ],
+    ])
+}
+
+// Check fix versions equals to affects versions.
+[
+        'equals',
+].each {
+    def transition = 'checkFixVersionsEqualsAffectsVersions'
+    def server = ["errorMessage=$errorMessage", "field=", "scriptDescription=", "groovyExpression=issue.getAsString(\"assignee\") == \"$getCurrentUserName\""]
+    def cloud = "{\"errorMessage\":\"$errorMessage\",\"script\":\"let convertToNumber = x => x ? Number(x) : 0;\\nlet convertToCalendarDate = x => x ? new CalendarDate(x) : null;\\nlet convertToDate = x => x ? new Date(x) : null;\\nlet convertCalendarDateToDate = x => x ? new Date(x.toISOString() + 'T00:00:00') : null;\\nlet convertDateToCalendarDate = x =>x ? x.toCalendarDate() : null;\\nlet convertRichText = x => typeof x == 'RichText' ? x.plainText : x; \\nlet source = (issue.fixVersions ?? []).map(f => f?.name).map(convertRichText);\\nlet target = (issue.versions ?? []).map(f => f?.name).map(convertRichText);\\nsource == target\",\"expression\":\"let convertToNumber = x => x ? Number(x) : 0;\\nlet convertToCalendarDate = x => x ? new CalendarDate(x) : null;\\nlet convertToDate = x => x ? new Date(x) : null;\\nlet convertCalendarDateToDate = x => x ? new Date(x.toISOString() + 'T00:00:00') : null;\\nlet convertDateToCalendarDate = x =>x ? x.toCalendarDate() : null;\\nlet convertRichText = x => typeof x == 'RichText' ? x.plainText : x; \\nlet source = (issue.fixVersions ?? []).map(f => f?.name).map(convertRichText);\\nlet target = (issue.versions ?? []).map(f => f?.name).map(convertRichText);\\nsource == target\",\"type\":\"noCode\",\"field\":\"fixVersions\",\"operator\":\"equals\",\"valueToCompare\":\"field\",\"targetField\":\"versions\"}"
+    addTransitionFunction(transition, 'validator', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Task', summary: 'JMWE_Issue'], transition)
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             expected  : 0,
+             ext       : ": By $transition when fields are empty",
+             parameters: [
+                     issue     : { -> issue[] },
+                     transition: transition
+             ],
+             failData      : [errorMessage]
+            ],
+            [action    : "setFieldValue",
+             ext       : ":Of affects version to $defaultValueOfVersions1: $transition",
+             sleep     : sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: fields.affectsVersions.name,
+                     value: fields.affectsVersions.value,
+             ]
+            ],
+            [action    : "setFieldValue",
+             ext       : ":Of fix version to $defaultValueOfVersions2: $transition",
+             sleep     : sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: fields.fixVersions.name,
+                     value: defaultValueOfVersions2,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             expected  : -3,
+             ext       : ": By $transition when fields are equal",
+             parameters: [
+                     issue     : { -> issue[] },
+                     transition: transition
+             ],
+             data      : [errorMessage]
+            ],
+    ])
+}
+
+[
+        'notEquals',
+].each {
+    def transition = 'checkFixVersionsDoesNotEqualsAffectsVersions'
+    def server = ["errorMessage=$errorMessage", "field=", "scriptDescription=", "groovyExpression=issue.getAsString(\"assignee\") == \"$getCurrentUserName\""]
+    def cloud = "{\"errorMessage\":\"$errorMessage\",\"script\":\"let convertToNumber = x => x ? Number(x) : 0;\\nlet convertToCalendarDate = x => x ? new CalendarDate(x) : null;\\nlet convertToDate = x => x ? new Date(x) : null;\\nlet convertCalendarDateToDate = x => x ? new Date(x.toISOString() + 'T00:00:00') : null;\\nlet convertDateToCalendarDate = x =>x ? x.toCalendarDate() : null;\\nlet convertRichText = x => typeof x == 'RichText' ? x.plainText : x; \\nlet source = (issue.fixVersions ?? []).map(f => f?.name).map(convertRichText);\\nlet target = (issue.versions ?? []).map(f => f?.name).map(convertRichText);\\nsource != target\",\"expression\":\"let convertToNumber = x => x ? Number(x) : 0;\\nlet convertToCalendarDate = x => x ? new CalendarDate(x) : null;\\nlet convertToDate = x => x ? new Date(x) : null;\\nlet convertCalendarDateToDate = x => x ? new Date(x.toISOString() + 'T00:00:00') : null;\\nlet convertDateToCalendarDate = x =>x ? x.toCalendarDate() : null;\\nlet convertRichText = x => typeof x == 'RichText' ? x.plainText : x; \\nlet source = (issue.fixVersions ?? []).map(f => f?.name).map(convertRichText);\\nlet target = (issue.versions ?? []).map(f => f?.name).map(convertRichText);\\nsource != target\",\"type\":\"noCode\",\"field\":\"fixVersions\",\"operator\":\"notEqual\",\"valueToCompare\":\"field\",\"targetField\":\"versions\"}"
+    addTransitionFunction(transition, 'validator', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Task', summary: 'JMWE_Issue'], transition)
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             expected  : -3,
+             ext       : ": By $transition when fields are empty",
+             parameters: [
+                     issue     : { -> issue[] },
+                     transition: transition
+             ],
+             data      : [errorMessage]
+            ],
+            [action    : "setFieldValue",
+             ext       : ":Of affects version to $defaultValueOfVersions1:$transition",
+             sleep     : sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: fields.affectsVersions.name,
+                     value: fields.affectsVersions.value,
+
+             ]
+            ],
+            [action    : "setFieldValue",
+             ext       : ":Of fix version to $defaultValueOfVersions2: $transition",
+             sleep     : sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: fields.fixVersions.name,
+                     value: defaultValueOfVersions2,
+             ]
+            ],
+            [action    : 'transitionIssue',
+             expected  : 0,
+             ext       : ": By $transition when fields are not equal",
+             parameters: [
+                     issue     : { -> issue[] },
+                     transition: transition
+             ],
+             failData      : [errorMessage]
+            ],
+    ])
+}
+*/
 [
         'verify_issue_must_assigned_to_specific_user'
 ].each {
     def server = ["errorMessage=$errorMessage" , "field=" , "scriptDescription=" , "groovyExpression=issue.getAsString(\"assignee\") == \"$getCurrentUserName\""]
-    def cloud = "{\"conditionalValidation\":false,\"script\":\"!!issue.assignee && issue.assignee.accountId == '$currentUserKey'\",\"expression\":\"!!issue.assignee && issue.assignee.accountId == '$currentUserKey'\",\"scriptDescription\":\"\",\"errorMessage\":\"$errorMessage\"}"
+    def cloud = "{\"conditionalValidation\":false,\"script\":\"!!issue.assignee && issue.assignee.accountId == '$info.userKey'\",\"expression\":\"!!issue.assignee && issue.assignee.accountId == '$info.userKey'\",\"scriptDescription\":\"\",\"errorMessage\":\"$errorMessage\"}"
     addTransitionFunction(it, 'validator', info?.isCloud ? cloud : server, functionKey )
 }
 
@@ -56,18 +392,6 @@ def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugi
         addTransitionFunctionOnCreateTransition(it, 'validator', info?.isCloud ? cloud : server, functionKey)
     }
 }
-
-[
-        'check_no_code'
-].each {
-    def server = ["errorMessage=$errorMessage" , "field=" , "scriptDescription=" , chooseType.noCode , valueToCompareType.field , field.reporter , valueToCompare.assignee , operator.equals ,  noCodeFields]
-    if(!isCloud) {
-        addTransitionFunction( it, 'validator', server, functionKey )
-    }
-}
-
-createWorkflowScheme()
-createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: {->defaultIssue[]}], 'subtask')
@@ -86,7 +410,6 @@ if(isCloud){
             ],
             data: [errorMessage]
     )
-
 }
 
 if(isCloud){
@@ -100,7 +423,6 @@ if(isCloud){
             ]
     )
 }
-
 
 // SCRIPTED_GROOVY_VALIDATOR -Verify for the Groovy script_The system should display error message
 [
@@ -237,6 +559,7 @@ if(isCloud){
             ],
     ])
 }
+
 
 /*
 REVIEWED BY Chirag: 13.03.2024

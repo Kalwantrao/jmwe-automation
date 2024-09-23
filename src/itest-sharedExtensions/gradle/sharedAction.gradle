@@ -53,22 +53,152 @@ def shared_actionId = createSharedExtensionSetUp(info?.isCloud ? "POST" : "PUT",
 
 def savedID = {->shared_actionId[0] }
 
+def relatedIssue = [:]
+def relatedIssuesMap = [:]
+
+relatedIssuesList.each{
+    relatedIssue.putAll(createRelatedIssuesMap('CONFIGURATION', it, projectName, " "))
+    relatedIssuesMap.putAll(createRelatedIssuesMap('TRANSITION', it, projectName, " "))
+}
+
 [
-        "sharedAction_assign_issue_to_admin_role_user"
+        "sharedActionAssignToAdminRoleMemberPf"
 ].each {
-    def transition = it
-    def server = "selectedLinkType=currentIssue:*" + conditionalExecution.false + "shared-action-id=${savedID}"
-    def cloud = "{\"conditionalExecution\":false,\"sharedActionId\":\"$savedID\",\"stopAtErrors\":false}"
-    addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud :server, functionKey)
+    relatedIssue.eachWithIndex{ key, value, int i ->
+        def transition = it + i
+        def server = "selectedLinkType=$value" + conditionalExecution.false + "shared-action-id=${savedID}"
+        def cloud = "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"sharedActionId\":\"$savedID\",\"stopAtErrors\":false}"
+        addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud :server, functionKey)
+    }
+    relatedIssuesMap.eachWithIndex { currentIssue, targetIssue, int i ->
+        def transition = it + i
+        gint.taskHelper.add([
+                [action    : 'setFieldValue',
+                 sleep     : sleep,
+                 ext       : ":Of assignee of target issue_to empty before transition issue by:$transition",
+                 parameters: [
+                         issue: targetIssue,
+                         field: "Assignee",
+                         value: " "
+                 ],
+                ],
+
+                [action    : 'getFieldValue',
+                 sleep     : sleep,
+                 ext       : ":Of assignee of target issue_before transition issue by:$transition:",
+                 parameters: [
+                         issue: targetIssue,
+                         field: "Assignee"
+                 ],
+                 failData  : ["Assignee  . . . . . . . . . . : $getCurrentUserName"],
+                ],
+                [action    : 'transitionIssue',
+                 sleep     : sleep,
+                 ext       : ":by_ $transition:",
+                 parameters: [
+                         issue     : currentIssue,
+                         transition: transition,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep     : sleep,
+                 ext       : ":Of assignee of target issue_after transition issue by:$transition:",
+                 parameters: [
+                         issue: targetIssue,
+                         field: "Assignee"
+                 ],
+                 data      : ["Assignee  . . . . . . . . . . : $getCurrentUserName"],
+                ],
+        ])
+    }
+}
+
+[
+        "conditionalExecutionOfSharedAction"
+].each {
+    relatedIssue.take(1).eachWithIndex{ key, value, int i ->
+        def transition = it + i
+        def server = "selectedLinkType=$value" + conditionalExecution.false + "shared-action-id=${savedID}"
+        def cloud = "{$conditionalExecution.true,\"targetIssue\":\"$value\",\"sharedActionId\":\"$savedID\",\"stopAtErrors\":false}"
+        addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud :server, functionKey)
+    }
+    ["High","Low"].each { priority ->
+        relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, int i ->
+            def transition = it + i
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":Of assignee of target issue_to empty before transition issue by:$transition:when priority is $priority",
+                     parameters: [
+                             issue: targetIssue,
+                             field: "Assignee",
+                             value: " "
+                     ],
+                    ],
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":Of priority of target issue_to $priority before transition issue by:$transition:",
+                     parameters: [
+                             issue: targetIssue,
+                             field: "Priority",
+                             value: priority
+                     ],
+                    ],
+                    [action    : 'getFieldValue',
+                     sleep     : sleep,
+                     ext       : ":Of assignee of target issue_before transition issue by:$transition:when priority is $priority",
+                     parameters: [
+                             issue: targetIssue,
+                             field: "Assignee"
+                     ],
+                     failData  : ["Assignee  . . . . . . . . . . : $getCurrentUserName"],
+                    ],
+                    [action    : 'transitionIssue',
+                     sleep     : sleep,
+                     ext       : ":by_ $transition:when priority is $priority",
+                     parameters: [
+                             issue     : currentIssue,
+                             transition: transition,
+                     ]
+                    ],
+            ])
+            if(priority == "High"){
+                gint.taskHelper.add([
+                        [action    : 'getFieldValue',
+                         sleep     : sleep,
+                         ext       : ":Of assignee of target issue_after transition issue by:$transition:when priority is $priority",
+                         parameters: [
+                                 issue: targetIssue,
+                                 field: "Assignee"
+                         ],
+                         data      : ["Assignee  . . . . . . . . . . : $getCurrentUserName"],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'getFieldValue',
+                         sleep     : sleep,
+                         ext       : ":Of assignee of target issue_after transition issue by:$transition:when priority is $priority",
+                         parameters: [
+                                 issue: targetIssue,
+                                 field: "Assignee"
+                         ],
+                         failData      : ["Assignee  . . . . . . . . . . : $getCurrentUserName"],
+                        ],
+                ])
+            }
+        }
+    }
 }
 
 createWorkflowScheme()
 createProject()
 
-def currentIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'currentIssue')
-
 def listOfUser = [
-        inactiveAdmin, testAdmin, testUser1, testUser
+        inactiveAdmin,
+        testAdmin,
+        testUser1,
+        testUser
 ]
 
 listOfUser.collect{users ->
@@ -111,39 +241,6 @@ listOfUser.collect{users ->
         )
 }
 
-[
-        'sharedAction_assign_issue_to_admin_role_user'
-].each {
-    gint.taskHelper.add([
-            [action    : 'getFieldValue',
-             sleep: sleep,
-             ext       : ":Of current issue_before transition issue by:$it:",
-             parameters: [
-                     issue: { ->currentIssue[] },
-                     field: "Assignee"
-             ],
-             failData      : ["Assignee  . . . . . . . . . . : $getCurrentUserName"],
-            ],
-            [action    : 'transitionIssue',
-             sleep: sleep,
-             ext       : ":by_ $it:",
-             parameters: [
-                     issue     : { ->currentIssue[] },
-                     transition: it,
-             ]
-            ],
-            [action    : 'getFieldValue',
-             sleep: sleep,
-             ext       : ":Of current issue_after transition issue by:$it:",
-             parameters: [
-                     issue: { ->currentIssue[] },
-                     field: "Assignee"
-             ],
-             data      : ["Assignee  . . . . . . . . . . : $getCurrentUserName"],
-            ],
-    ])
-}
 
 //tearDownAfter(projectName, ":tearDown_to delete the shared action")
 //deleteSharedExtension("DELETE", info?.isCloud? "/rest/jmwe-api/shared-actions/${savedID}" : "/rest/jmwe/1/shared-actions/${savedID}", "shared action")
-

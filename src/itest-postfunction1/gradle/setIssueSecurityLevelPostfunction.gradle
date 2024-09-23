@@ -12,129 +12,339 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction.gradle'
 
-def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:setsecurityfromrole'
+def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__SetIssueSecurityLevelFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:setsecurityfromrole'
 
-def SECURITY_LEVEL1_ID = getSecurityLevelId("Level1", TestProject)
-def SECURITY_LEVEL2_ID = getSecurityLevelId("Level2", TestProject)
-
-def securityLevel1Id = {->SECURITY_LEVEL1_ID.getAt(0).trim()}
-def securityLevel2Id = {->SECURITY_LEVEL2_ID.getAt(0).trim()}
-
-def projectRole = [
-        admin : [ "selectedProjectRoleId=$jiraAdminRoleId" ],
-        testRole : ["selectedProjectRoleId=$testProjectRoleId"]
+def securityLevels = [
+        setToNoMembers : 'Level1',
+        setToAdminProjectRoleUsers : 'Level2',
+        setToAdminGroupUsers : 'Level3',
+        setToProjectLead : 'Level4',
+        setToAssignee : 'Level5',
+        setToCurrentUser : 'Level6',
+        setToReporter : 'Level7',
+        setToServiceProjectCustomer : 'Level8',
+        setToApplicationAccessAnyLoggedInUser : 'Level9'
 ]
 
-['setLevel1IfAdminRole'].each {
-    def fields =  [projectRole.admin, "selectedSecurityLevelId=$securityLevel1Id", conditionalExecution.false]
-    if(!isCloud) {
-        addTransitionFunction(it, 'postfunction', fields, functionKey)
-    }
-}
+def JIRA_ADMIN_PROJECT_ROLE_ID = getProjectRoleId("Administrators")
+def jiraAdminRoleId = {->JIRA_ADMIN_PROJECT_ROLE_ID.getAt(0).trim()}
 
-['setLevel2IfTestRole'].each {
-    def fields =  [projectRole.testRole, "selectedSecurityLevelId=$securityLevel2Id" , conditionalExecution.false]
-    if(!isCloud) {
-        addTransitionFunction(it, 'postfunction', fields, functionKey)
-    }
-}
+def JIRA_TEST_PROJECT_ROLE_ID = getProjectRoleId("testprojectrole")
+def testProjectRoleId = {->JIRA_TEST_PROJECT_ROLE_ID.getAt(0).trim()}
 
-['setLevel1IfAdminRoleWhenConditionTrue'].each {
-    def fields =  [projectRole.admin, "selectedSecurityLevelId=$securityLevel1Id", conditionalExecution.true]
-    if(!isCloud) {
-        addTransitionFunction(it, 'postfunction', fields, functionKey)
-    }
-}
+def id_level1 = getSecurityLevelId("Level1", TestProject)
+def id_level2 = getSecurityLevelId("Level2", TestProject)
+def id_level3 = getSecurityLevelId("Level3", TestProject)
+def id_level4 = getSecurityLevelId("Level4", TestProject)
+def id_level5 = getSecurityLevelId("Level5", TestProject)
+def id_level6 = getSecurityLevelId("Level6", TestProject)
+def id_level7 = getSecurityLevelId("Level7", TestProject)
+def id_level8 = getSecurityLevelId("Level8", TestProject)
+def id_level9 = getSecurityLevelId("Level9", TestProject)
 
-createWorkflowScheme()
-createProject()
-
-def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
-def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue', priority: 'High'], 'defaultIssue1')
-
-[
-        'setLevel1IfAdminRoleWhenConditionTrue'
-].each {
-    if(!isCloud) {
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: " :  labels " + it,
-                 parameters: [
-                         transition: it,
-                         issue     : { -> defaultIssue[] },
-                 ],
-                ],
-                [action    : 'getFieldValue', ext: ": Chack field value should be added to parent issue" + it,
-                 parameters: [
-                         issue: { -> defaultIssue[] },
-                         field: "Security Level",
-                 ],
-                 failData  : ["Security Level  . . . . . . . : Level1"],
-                ]
-        ])
-    }
-}
+def level1_id =  {->id_level1.getAt(0).toString().trim()}
+def level2_id =  {->id_level2.getAt(0).toString().trim()}
+def level3_id =  {->id_level3.getAt(0).toString().trim()}
+def level4_id =  {->id_level4.getAt(0).toString().trim()}
+def level5_id =  {->id_level5.getAt(0).toString().trim()}
+def level6_id =  {->id_level6.getAt(0).toString().trim()}
+def level7_id =  {->id_level7.getAt(0).toString().trim()}
+def level8_id =  {->id_level8.getAt(0).toString().trim()}
+def level9_id =  {->id_level9.getAt(0).toString().trim()}
 
 [
-        'setLevel2IfTestRole'
+       // 'Level1_IfUserIsMemberOfTestProjectRole'
 ].each {
-    if(!isCloud) {
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: " : Security Level " + it,
-                 parameters: [
-                         transition: it,
-                         issue     : { -> defaultIssue[] },
-                 ],
-                ],
-                [action    : 'getFieldValue', ext: ": Security Level :" + it,
-                 parameters: [
-                         issue: { -> defaultIssue[] },
-                         field: "Security Level",
-                 ],
-                 failData  : ["Security Level  . . . . . . . : Level2"],
-                ]
-        ])
-    }
-}
-[
-        'setLevel1IfAdminRole'
-].each {
-    if(!isCloud) {
-        gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: " :  " + it,
-                 parameters: [
-                         transition: it,
-                         issue     : { -> defaultIssue[] },
-                 ],
-                ],
-                [action    : 'getFieldValue', ext: ": " + it,
-                 parameters: [
-                         issue: { -> defaultIssue[] },
-                         field: "Security Level",
-                 ],
-                 data      : ["Security Level  . . . . . . . : Level1"]
-                ]
-        ])
-    }
+    def server =  ["selectedProjectRoleId=$testProjectRoleId", "selectedSecurityLevelId=$level1_id" , conditionalExecution.false]
+    def cloud =  "{\"securityLevel\":\"$level1_id\",\"role\":$testProjectRoleId,\"conditionalExecution\":false,}"
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Task', summary: 'JMWE_Issue'], it)
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " :" + it,
+             sleep: sleep,
+             parameters: [
+                     transition: it,
+                     issue     : { -> issue[] },
+             ],
+            ],
+            [action    : 'getFieldValue', ext: ": " + it,
+             sleep: sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: "Security Level",
+             ],
+             data      : ["Security Level  . . . . . . . : Level1"]
+            ]
+    ])
 }
 
 [
-        'setLevel1IfAdminRoleWhenConditionTrue'
+        'Level2_IfUserIsMemberOfAdminProjectRole'
 ].each {
-    if(!isCloud) {
+    def server =  ["selectedProjectRoleId=$jiraAdminRoleId", "selectedSecurityLevelId=$level2_id", conditionalExecution.false]
+    def cloud =  "{\"securityLevel\":\"$level2_id\",\"role\":$jiraAdminRoleId,\"conditionalExecution\":false,}"
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Task', summary: 'JMWE_Issue'], it)
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " :" + it,
+             sleep: sleep,
+             parameters: [
+                     transition: it,
+                     issue     : { -> issue[] },
+             ],
+            ],
+            [action    : 'getFieldValue', ext: ": " + it,
+             sleep: sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: "Security Level",
+             ],
+             data      : ["Security Level  . . . . . . . : Level2"]
+            ]
+    ])
+}
+
+[
+        'setLevel2_IfUserIsMemberOfAdminProjectRoleAndConditionalExecutionTrue'
+].each {
+    def server =  ["selectedProjectRoleId=$jiraAdminRoleId", "selectedSecurityLevelId=$level2_id", conditionalExecution.true]
+    def cloud =  "{\"securityLevel\":\"$level2_id\",\"role\":$jiraAdminRoleId,$conditionalExecution.true}"
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Task', summary: 'JMWE_Issue'], it)
+
+    ["Low", "High"].each {priority ->
         gint.taskHelper.add([
-                [action    : 'transitionIssue', ext: " :  when condition true ",
+                [action: "setFieldValue", ext: " Of priority to $priority",
+                 sleep: sleep,
+                 parameters: [
+                         issue: {->issue[]},
+                         field: "Priority",
+                         value: priority
+                 ]],
+                [action    : 'transitionIssue', ext: ":by $it when priority is $priority",
+                 sleep: sleep,
                  parameters: [
                          transition: it,
-                         issue     : { -> defaultIssue1[] },
+                         issue     : { -> issue[] },
                  ],
                 ],
-                [action    : 'getFieldValue', ext: ": when condition is true",
-                 parameters: [
-                         issue: { -> defaultIssue1[] },
-                         field: "Security Level",
-                 ],
-                 data      : ["Security Level  . . . . . . . : Level1"]
-                ]
         ])
+        if(priority == "High"){
+            gint.taskHelper.add([
+                    [action    : 'getFieldValue', ext: ":Of security level after transition issue with:when priority is $priority " + it,
+                     sleep: sleep,
+                     parameters: [
+                             issue: { -> issue[] },
+                             field: "Security Level",
+                     ],
+                     data  : [ "Security Level  . . . . . . . : Level2" ],
+                    ]
+            ])
+        }else{
+            gint.taskHelper.add([
+                    [action    : 'getFieldValue', ext: ":Of security level after transition issue with:when priority is $priority " + it,
+                     sleep: sleep,
+                     parameters: [
+                             issue: { -> issue[] },
+                             field: "Security Level",
+                     ],
+                     failData  : [ "Security Level  . . . . . . . : Level2" ],
+                    ]
+            ])
+        }
     }
+
 }
+
+[
+        'Level3_IfUserIsMemberOfAdminGroup'
+].each {
+    def server =  ["selectedProjectRoleId=$jiraAdminRoleId", "selectedSecurityLevelId=$level3_id", conditionalExecution.false]
+    def cloud =  "{\"securityLevel\":\"$level3_id\",\"role\":$jiraAdminRoleId,\"conditionalExecution\":false,}"
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Task', summary: 'JMWE_Issue'], it)
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " :" + it,
+             sleep: sleep,
+             parameters: [
+                     transition: it,
+                     issue     : { -> issue[] },
+             ],
+            ],
+            [action    : 'getFieldValue', ext: ": " + it,
+             sleep: sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: "Security Level",
+             ],
+             data      : ["Security Level  . . . . . . . : Level3"]
+            ]
+    ])
+}
+
+[
+        'Level4_IfUserIsProjectLead'
+].each {
+    def server =  ["selectedProjectRoleId=$jiraAdminRoleId", "selectedSecurityLevelId=$level4_id", conditionalExecution.false]
+    def cloud =  "{\"securityLevel\":\"$level4_id\",\"role\":$jiraAdminRoleId,\"conditionalExecution\":false,}"
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Task', summary: 'JMWE_Issue'], it)
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " :" + it,
+             sleep: sleep,
+             parameters: [
+                     transition: it,
+                     issue     : { -> issue[] },
+             ],
+            ],
+            [action    : 'getFieldValue', ext: ": " + it,
+             sleep: sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: "Security Level",
+             ],
+             data      : ["Security Level  . . . . . . . : Level4"]
+            ]
+    ])
+}
+
+[
+        'Level5_IfUserIsAssigneeOfCurrentIssue'
+].each {
+    def server =  ["selectedProjectRoleId=$jiraAdminRoleId", "selectedSecurityLevelId=$level5_id", conditionalExecution.false]
+    def cloud =  "{\"securityLevel\":\"$level5_id\",\"role\":$jiraAdminRoleId,\"conditionalExecution\":false,}"
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Task', summary: 'JMWE_Issue'], it)
+
+    gint.taskHelper.add([
+            [action    : 'setFieldValue', ext: ": Of assignee to current user " + it,
+             sleep: sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: "Assignee",
+                     value: user
+             ],
+            ],
+            [action    : 'transitionIssue', ext: " :" + it,
+             sleep: sleep,
+             parameters: [
+                     transition: it,
+                     issue     : { -> issue[] },
+             ],
+            ],
+            [action    : 'getFieldValue', ext: ": " + it,
+             sleep: sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: "Security Level",
+             ],
+             data      : ["Security Level  . . . . . . . : Level5"]
+            ],
+            [action    : 'setFieldValue', ext: ":Of assignee to $testUser " + it,
+             sleep: sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: "Assignee",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue', ext: ":when current user is not an assignee of the issue" + it,
+             sleep: sleep,
+                    expected: -1,
+             parameters: [
+                     transition: it,
+                     issue     : { -> issue[] },
+             ],
+            ],
+    ])
+}
+
+[
+        'Level6_IfUserIsCurrentUser'
+].each {
+    def server =  ["selectedProjectRoleId=$jiraAdminRoleId", "selectedSecurityLevelId=$level6_id", conditionalExecution.false]
+    def cloud =  "{\"securityLevel\":\"$level6_id\",\"role\":$jiraAdminRoleId,\"conditionalExecution\":false,}"
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Task', summary: 'JMWE_Issue'], it)
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " :" + it,
+             sleep: sleep,
+             parameters: [
+                     transition: it,
+                     issue     : { -> issue[] },
+             ],
+            ],
+            [action    : 'getFieldValue', ext: ": " + it,
+             sleep: sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: "Security Level",
+             ],
+             data      : ["Security Level  . . . . . . . : Level6"]
+            ]
+    ])
+}
+
+[
+        'Level7_IfUserIsReporterOfCurrentIssue'
+].each {
+    def server =  ["selectedProjectRoleId=$jiraAdminRoleId", "selectedSecurityLevelId=$level7_id", conditionalExecution.false]
+    def cloud =  "{\"securityLevel\":\"$level7_id\",\"role\":$jiraAdminRoleId,\"conditionalExecution\":false,}"
+    addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Task', summary: 'JMWE_Issue'], it)
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue', ext: " :" + it,
+             sleep: sleep,
+             parameters: [
+                     transition: it,
+                     issue     : { -> issue[] },
+             ],
+            ],
+            [action    : 'getFieldValue', ext: ": " + it,
+             sleep: sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: "Security Level",
+             ],
+             data      : ["Security Level  . . . . . . . : Level7"]
+            ],
+            [action    : 'setFieldValue', ext: ": " + it,
+             sleep: sleep,
+             parameters: [
+                     issue: { -> issue[] },
+                     field: "Reporter",
+                     value: testUser
+             ],
+            ],
+            [action    : 'transitionIssue', ext: ":when the current user is not the reporter of the issue" + it,
+             sleep: sleep,
+             expected: -1,
+             parameters: [
+                     transition: it,
+                     issue     : { -> issue[] },
+             ],
+            ],
+    ])
+}
+
+
+/*
+Review by CHIRAG: 16.07:
+1. Delayed execution
+2. Conditional execution : "Condition1" && "Condition2" , "Condition1" || "Condition2" = DONE
+
+ */

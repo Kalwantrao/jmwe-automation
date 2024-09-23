@@ -37,9 +37,13 @@ def options = [
         appendValues : "appendValues=yes"
 ]
 
-def defaultFieldsCloud = [
-        "postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249",
-]
+["On create_transition"].each { fieldsName ->
+    def server =  ["field=labels" , destField.sameAsSource ,  options.noOption , conditionalExecution.false]
+    def cloud =  "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"{{ parentIssue.fields.issuetype.name == 'Story' }}\",\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    if(isCloud){
+        addTransitionFunctionOnCreateTransition("create", 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    }
+}
 
 sourceField.each { fieldsName ->
     def transition = 'valueOfFieldLabelsWillBeCopiedToTheIssuesParent' + fieldsName
@@ -85,11 +89,8 @@ sourceField.each { fieldsName ->
 }
 
 
-createWorkflowScheme()
-createProject()
-
 (1..2).each {
-    gint.taskHelper.addSetUp([
+    gint.taskHelper.add([
             [action: 'addVersion', ext: ': create versions : ' + it,
              parameters: [
                      project: projectName,
@@ -106,12 +107,28 @@ createProject()
 }
 // set issue status to In Progress
 
-def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
-def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
-
 def testLabel1 = "testLabel1"
 def testLabel2 = "testLabel2"
 def createMissingValue = "createMissingValueOfComponent"
+
+def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
+def storyTypeIssue = createIssue([type: 'Story', summary: 'JMWE_Issue'], 'storyTypeIssue')
+def subtaskOfStory = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> storyTypeIssue[]}, labels:testLabel1], 'subtask of storyTypeIssue')
+
+if(isCloud){
+    gint.taskHelper.add([
+            [action      : 'getFieldValue',
+             sleep       : sleep,
+             ext         : ":Validate that the subtask set the value of labels to the parent issue_if is of story type on create transition :",
+             parameters  : [
+                     issue: { -> storyTypeIssue[] },
+                     field: "Labels"
+             ],
+             data: ["Labels  . . . . . . . . . . . : $testLabel1"]
+            ],
+    ])
+}
 
 ['valueOfFieldLabelsWillBeCopiedToTheIssuesParent'].collect {
     sourceField.each { field ->

@@ -14,6 +14,7 @@ apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
 def errorMessage = "fields required"
 
+
 def fieldsList = [
 		labels : 'labels',
 		fixVersions : 'fixVersions',
@@ -55,11 +56,9 @@ fieldsList.eachWithIndex { field, value, i ->
 	addTransitionFunction( it, 'validator', fields, functionKey )
 }
 
-createWorkflowScheme()
-createProject()
 
 (1..2).each {
-	gint.taskHelper.addSetUp([
+	gint.taskHelper.add([
 			[action: 'addVersion', ext: ': create versions : ' + it,
 			 parameters: [
 					 project: projectName,

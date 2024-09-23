@@ -27,9 +27,6 @@ separationOfDutiesConditionOptions.eachWithIndex { transitions, fields, i ->
 }
 
 
-createWorkflowScheme()
-createProject()
-
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
 

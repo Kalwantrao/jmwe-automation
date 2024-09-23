@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 buildscript {
     repositories {
         maven {
@@ -9,10 +11,293 @@ buildscript {
     }
 }
 
+
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 def info =  gint.getJiraHelper().getServerInfoWithVerify()
+def currentUserKey=info.userKey
+def userName = info?.isCloud? user : testUserNameServer
+def password = info?.isCloud ? testUserTokenCloud : testUserPasswordServer
+
+def getProjectRoleId = { role ->
+    def projectRoleId = [] as LinkedList
+    gint.taskHelper.addTearDown(
+            action: "getProjectRoleList", ext: " $role",
+            mustRunBefore:"addSecurityScheme",
+            sleep: 3000,
+            parameters:[
+                    outputType: "Text",
+                    columns: "id",
+                    select: "name:$role"
+            ],
+            finalClosure:{ Task task ->
+                def outPut = task.outData;
+                projectRoleId.add(outPut[2]);
+                gint.helper.log(role + " id is", projectRoleId.getAt(0));
+            }
+    )
+    return projectRoleId;
+}
+
+def getAtlassianAddonUserProjectRoleId = { role ->
+    def projectRoleId = [] as LinkedList
+    gint.taskHelper.addTearDown(
+            action: "getProjectRoleList", ext: " $role",
+            mustRunBefore:"addSecurityScheme",
+            sleep: 3000,
+            parameters:[
+                    outputType: "Text",
+                    columns: "id",
+                    select: "name:$role"
+            ],
+            finalClosure:{ Task task ->
+                def outPut = task.outData;
+                projectRoleId.add(outPut[2]);
+                gint.helper.log(role + " id is", projectRoleId.getAt(0));
+            }
+    )
+    return projectRoleId;
+}
+
+def getSecuritySchemeId = {
+    def securitySchemeId = [] as LinkedList
+    gint.taskHelper.addTearDown(
+            action: "getIssueSecuritySchemeList",
+            mustRunBefore: ["deleteProject","addSecurityScheme"],
+            sleep: 3000,
+            parameters:[
+                    outputType: "Text",
+                    columns: "id",
+                    select: "name:$screen"
+            ],
+            finalClosure:{ Task task ->
+                def outPut = task.outData;
+                securitySchemeId.add(outPut[2]);
+                gint.helper.log(screen + " id is", securitySchemeId.getAt(0));
+            }
+    )
+    return securitySchemeId;
+}
+
+def getGroupName = { group, regex ->
+    def groupName = [] as LinkedList
+    gint.taskHelper.addTearDown(
+            [action: "getGroupList",
+            mustRunBefore:"addSecurityScheme",
+            sleep: 3000,
+            parameters:[
+                    outputType: "Text",
+                    columns: "name",
+                    regex: regex
+            ],
+            finalClosure:{ Task task ->
+                def outPut = task.outData;
+                groupName.add(outPut[2]);
+                gint.helper.log(group + " name is", groupName.getAt(0));
+            }
+            ]
+    )
+    return groupName;
+}
+
+def ADMIN_GROUP_NAME = getGroupName("jira-admins-group","jira-admins.*")
+def jiraAdminGroupName = {->ADMIN_GROUP_NAME.getAt(0).toString().trim()}
+
+def ADMIN_ROLE_ID = getProjectRoleId("Administrators")
+def jiraAdminRoleId = {->ADMIN_ROLE_ID.getAt(0).toString().trim()}
+
+def ATLASSIAN_ADDON_PROJECT_ROLE = getAtlassianAddonUserProjectRoleId("atlassian-addons-project-access")
+def atlassianAddonsRoleId = {->ATLASSIAN_ADDON_PROJECT_ROLE.getAt(0).toString().trim()}
+
+def SECURITY_SCHEME_ID = getSecuritySchemeId()
+def issueSecuritySchemeId = {->SECURITY_SCHEME_ID.getAt(0).toString().trim()}
+
+gint.taskHelper.addTearDown([
+        [action: 'deleteProject',
+         mustRunBefore: "addSecurityScheme",
+         sleep: 2000,
+         parameters: [project: TestProject,
+                 continue: null
+         ]
+        ],
+        [action: "deleteIssueSecurityScheme",
+         mustRunAfter: "deleteProject",
+         mustRunBefore: "addSecurityScheme",
+                sleep: 3000,
+                parameters: [
+                        id: issueSecuritySchemeId,
+                        continue: null
+                        ]
+        ]
+])
+
+ext.createIssueSecurityScheme = { uriForAction, requestBody ->
+    gint.taskHelper.addTearDown(
+            name: "addSecurityScheme",
+            mustRunAfter: "deleteProject",
+            sleepAfter: 5000,
+            inline: {
+                def URI = new URL(uriForAction)
+                def connection = URI.openConnection() as HttpURLConnection
+                connection.requestMethod = "POST"
+                connection.setRequestProperty("Content-Type", "application/json")
+                String auth = "${userName}:${password}"
+                String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes())
+                connection.setRequestProperty("Authorization", "Basic " + encodedAuth)
+
+                gint.helper.log("payload", requestBody)
+
+                connection.doOutput = true
+                def outputStream = connection.outputStream
+                outputStream.write(requestBody.getBytes("UTF-8"))
+                outputStream.flush()
+                try {
+                    def responseCode = connection.responseCode
+                    def inputStream
+                    if (responseCode >= 200 && responseCode < 400) {
+                        inputStream = connection.inputStream
+                    } else {
+                        inputStream = connection.errorStream
+                    }
+                    def response = new StringBuilder()
+                    def reader = new BufferedReader(new InputStreamReader(inputStream))
+                    def line
+                    while ((line = reader.readLine()) != null) {
+                        response.append(line)
+                    }
+                    gint.helper.log("Response",response.toString())
+                } catch (Exception e) {
+                    gint.helper.log("Error", "Error creating shared extension: ${e.message}")
+                } finally {
+                    connection.disconnect()
+                }
+            }
+    )
+}
+
+
+def url_createIssueSecurityScheme = "/rest/api/3/issuesecurityschemes"
+//$atlassianAddonsRoleId
+def payload_createIssueSecurityScheme =""" {
+  "levels": [
+      {
+      "isDefault": false,
+      "name": "Level1"
+      },
+      {
+      "isDefault": false,
+      "members": [
+        {
+          "parameter": "$jiraAdminGroupName",
+          "type": "group"
+        },
+        {
+        "parameter": $atlassianAddonsRoleId,
+        "type": "projectrole"
+        }
+      ],
+      "name": "Level3"
+    },
+      {
+      "isDefault": false,
+      "members": [
+        {
+          "parameter": $jiraAdminRoleId,
+          "type": "projectrole"
+        },
+        {
+        "parameter": $atlassianAddonsRoleId,
+        "type": "projectrole"
+        }
+      ],
+      "name": "Level2"
+    },
+    {
+      "isDefault": false,
+      "members": [
+        {
+          "type": "lead"
+        },
+        {
+        "parameter": $atlassianAddonsRoleId,
+        "type": "projectrole"
+        }
+      ],
+      "name": "Level4"
+    },
+    {
+      "isDefault": false,
+      "members": [
+        {
+          "type": "assignee"
+        },
+        {
+        "parameter": $atlassianAddonsRoleId,
+        "type": "projectrole"
+        }
+      ],
+      "name": "Level5"
+    },
+    {
+      "isDefault": false,
+      "members": [
+        {
+          "type": "user",
+          "parameter": "$currentUserKey"
+        },
+        {
+        "parameter": $atlassianAddonsRoleId,
+        "type": "projectrole"
+        }
+      ],
+      "name": "Level6"
+    },
+    {
+      "isDefault": false,
+      "members": [
+        {
+          "type": "reporter"
+        },
+        {
+        "parameter": $atlassianAddonsRoleId,
+        "type": "projectrole"
+        }
+      ],
+      "name": "Level7"
+    },
+    {
+      "isDefault": false,
+      "members": [
+        {
+          "type": "sd.customer.portal.only"
+        },
+        {
+        "parameter": $atlassianAddonsRoleId,
+        "type": "projectrole"
+        }
+      ],
+      "name": "Level8"
+    },
+    {
+      "isDefault": false,
+      "members": [
+        {
+          "type": "applicationRole"
+        },
+        {
+        "parameter": $atlassianAddonsRoleId,
+        "type": "projectrole"
+        }
+      ],
+      "name": "Level9"
+    }
+  ],
+  "name": "$screen"
+}"""
+
+createIssueSecurityScheme(url + url_createIssueSecurityScheme, payload_createIssueSecurityScheme)
+
 /*
 gint.taskHelper.addTearDown(
         [action    : 'installApp',
@@ -23,18 +308,21 @@ gint.taskHelper.addTearDown(
          ],
         ]
 )
-
  */
-def additionalProjectParams = info?.isCloud? [] : [issueSecurityScheme: issueSecurityScheme]
+
 gint.taskHelper.addTearDown([
-        [action    : 'createProject',ext: ': FOR WORKFLOW',
+        [action    : 'createProject',
+         sleep: 2000,
+         mustRunAfter: ["deleteProject","addSecurityScheme"],
          parameters: [
                  project: TestProject,
                  lead: '@Self',
-                 template: info?.isCloud? projectTemplateCloud : projectTemplateServer
-         ] + additionalProjectParams,
+                 template: info?.isCloud? projectTemplateCloud : projectTemplateServer,
+                 issueSecurityScheme: issueSecurityScheme
+         ],
         ],
         [action    : 'addComponent',ext: ': in project' + TestProject,
+                mustRunAfter: "createProject",
          parameters: [
                  project: TestProject,
                  lead: '@Self',
@@ -43,6 +331,8 @@ gint.taskHelper.addTearDown([
         ],
 ]
 )
+
+
 gint.taskHelper.addTearDown("addScreen",[
         [action: 'addScreen',
          ext: ": for transition screen :",
@@ -69,8 +359,13 @@ def fieldsListCloud = [
         "Epic Link",
         "Parent Link",
         "Epic Name",
-        "Parent"
+        "Parent",
+        "Request Type",
+        "Request participants",
+        "Resolution",
+        "Organizations"
 ]
+
 def fieldsListServer = [
         "Epic Name",
         "Summary",
@@ -92,7 +387,12 @@ def fieldsListServer = [
         "Parent Link",
         "Original story points",
         "Story Points",
+        "Request Type",
+        "Request participants",
+        "Resolution",
+        "Organizations"
 ]
+
 def fieldsList = info?.isCloud ? fieldsListCloud : fieldsListServer
 fieldsList.eachWithIndex { it, index->
     gint.taskHelper.addTearDown("addScreenFields",[
@@ -113,6 +413,7 @@ usersList.eachWithIndex { it, index ->
     def additionalParams = info?.isCloud? [userEmail: it + "@jmweGintTest.com",] : [ userEmail: it + "@gmail.com",userPassword : it]
     gint.taskHelper.addTearDown("addUsers",[
             [action: 'addUser',
+             mustRunAfter: "createProject",
              ext: ": creating user with username _ $it :",
              parameters:[
                      userId: it,

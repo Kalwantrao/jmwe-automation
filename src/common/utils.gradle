@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 apply from: gint.resourceDirectory +'/src/common/commonTasks.gradle'
 apply from: gint.resourceDirectory +'/src/common/helper.gradle'
 
@@ -14,14 +16,16 @@ project.ext.startStepServer=11
 project.ext.workflowFile="resources/workflowJ8.xml"
 project.ext.tearDownFile="resources/tearDown.txt"
 project.ext.baseWorkflow="Software Simplified Workflow for Project $TestProject"
+project.ext.baseWorkflowForJSMProject="$TestJSMProject: Jira Service Management default workflow"
 project.ext.getCurrentUserName = info?.isCloud? info?.userDisplayName : user
-project.ext.defaultSleepTime = info?.isCloud ? 8000 : 0
 project.ext.sleep = info?.isCloud ? 8000 : 0
+project.ext.defaultSleepTime = info?.isCloud ? 8000 : 0
 project.ext.returnsReporter = "issue.reporter.accountId == '$currentUserKey'"
 project.ext.returnsLinkedIssues = "issue.getLinkedIssues()"
-project.ext.testUser = info?.isCloud ? testUserForCloud : "jmwe_qa"
-project.ext.testCloudBuild=null
+project.ext.testUser = info?.isCloud ? TEST_USER_NAME_CLOUD : "jmwe_qa"
+project.ext.testCloudBuild = null
 project.ext.addonName = null
+
 
 if(buildType == 'testing'){
     testCloudBuild = 'mwec'
@@ -46,19 +50,11 @@ project.ext.statusList = [
         done: "Done"
 ]
 
-ext.TEST_USER_ID = getUserId(testUser)
-ext.testUserId = {->TEST_USER_ID.getAt(0).trim()}
-
-ext.JIRA_ADMIN_PROJECT_ROLE_ID = getProjectRoleId("Administrators")
-project.ext.jiraAdminRoleId = {->JIRA_ADMIN_PROJECT_ROLE_ID.getAt(0).trim()}
-
-ext.JIRA_TEST_PROJECT_ROLE_ID = getProjectRoleId("testprojectrole")
-project.ext.testProjectRoleId = {->JIRA_TEST_PROJECT_ROLE_ID.getAt(0).trim()}
-
 project.ext.groovyExpression = [
         getIssuetype: "issue.get('issuetype')?.name == 'Task'",
         checkPriorityHigh: "issue.get('priority')?.name == 'High'",
         checkPriorityLow: "issue.get('priority')?.name == 'Low'",
+        assigneeShouldNotNull: "!!issue.assignee",
         returnsReporter : "issue.get('reporter') == '$currentUserKey'",
         getDescription : "issue.get('description')",
         getEntityValue : "currentUser.getEntityProperty('Name')",
@@ -71,8 +67,9 @@ project.ext.nunjuckExpression = [
         getIssuetype: "{{ issue.fields.issuetype.name == 'Task' }}",
         checkPriorityHigh: "{{ issue.fields.priority.name == 'High' }}",
         checkPriorityLow: "{{ issue.fields.priority.name == 'Low' }}",
+        assigneeShouldNotNull: "{{ issue.fields.assignee != null }}",
         returnsReporter : "{{issue.reporter.accountId == '$currentUserKey'}}",
-        thisUser : "accountId:$currentUserKey"
+        currentUser : "accountId:$currentUserKey"
 ]
 
 project.ext.jiraExpression = [
@@ -80,7 +77,7 @@ project.ext.jiraExpression = [
         checkPriorityHigh: "!!issue.priority && issue.priority.name == 'High'"
 ]
 
-project.ext.fields = [
+project.ext.fieldsList = [
         Labels:'labels',
         Components:'components',
         Assignee:'assignee',
@@ -109,23 +106,99 @@ project.ext.relatedIssue = [
 
 relatedIssue.put(info?.isCloud? 'returnsByNunjucksExpression': 'returnsByGroovyExpression', info?.isCloud ? "nunjucks:$nunjuckExpression.returnsLinkedIssues" : "groovy:$returnsLinkedIssues")
 
-project.ext.conditionalExecution = [
-        false : info?.isCloud ? /"conditionalExecution":false/ : [ "useGroovyCondition=false", "groovyExpression=" ],
-        true : info?.isCloud ? /"conditionalExecution":true,"conditionalExecutionScript":"$nunjuckExpression.checkPriorityHigh"/ : [ "useGroovyCondition=yes", "groovyExpression=$groovyExpression.checkPriorityHigh" ]
+def config_conditionalExecution = { mode, config ->
+    if(mode == "CONFIG"){
+        def conditionalExecutionElementsMap = [:]
+        switch(config){
+            case "true":
+                conditionalExecutionElementsMap.put(config, info?.isCloud ? /"conditionalExecution":true,"conditionalExecutionScript":"$nunjuckExpression.checkPriorityHigh"/ : [ "useGroovyCondition=yes", "groovyExpression=$groovyExpression.checkPriorityHigh" ])
+                break
+            case "false":
+                conditionalExecutionElementsMap.put(config, info?.isCloud ? /"conditionalExecution":false/ : [ "useGroovyCondition=false", "groovyExpression=" ])
+                break
+            case "bothConditionsTrue":
+                conditionalExecutionElementsMap.put(config, info?.isCloud ? /"conditionalExecution":true,"conditionalExecutionScript":"{{ issue.fields.priority.name == 'High' and  issue.fields.assignee != null }}"/ : [ "useGroovyCondition=yes", "groovyExpression=$groovyExpression.checkPriorityHigh" ])
+                break
+            case "eitherOneConditionTrue":
+                conditionalExecutionElementsMap.put(config, info?.isCloud ? /"conditionalExecution":true,"conditionalExecutionScript":"{{ issue.fields.priority.name == 'High' or  issue.fields.assignee != null }}"/ : [ "useGroovyCondition=yes", "groovyExpression=$groovyExpression.checkPriorityHigh" ])
+                break
+        }
+        return conditionalExecutionElementsMap
+    }
+}
+
+def config_conditionalValidation = { mode, config ->
+    if(mode == "CONFIG"){
+        def conditionalValidationElementsMap = [:]
+        switch(config){
+            case 'yes':
+                conditionalValidationElementsMap.put(config, info?.isCloud ? /"conditionalValidation":true,"conditionalValidationExpression":"!!issue.priority && issue.priority.name == 'High'"/ : [ "conditionalValidation=yes", "conditionalValidationScript=$groovyExpression.checkPriorityHigh" ])
+                break
+            case "no":
+                conditionalValidationElementsMap.put(config, info?.isCloud? /"conditionalValidation":false/ : [ "conditionalValidation=no", "conditionalValidationScript=" ])
+        }
+        return conditionalValidationElementsMap
+    }
+}
+
+ext.conditionalExecution = [:]
+["true","false","bothConditionsTrue","eitherOneConditionTrue"].each {
+    conditionalExecution.putAll(config_conditionalExecution("CONFIG", it))
+}
+
+ext.conditionalValidation = [:]
+
+['no','yes'].each {
+    conditionalValidation.putAll(config_conditionalValidation("CONFIG", it))
+}
+
+def config_runAsUser = { mode, selectUserToRun ->
+    if(mode == 'CONFIG'){
+        def runAsUserFieldsMap = [:]
+        switch(selectUserToRun){
+            case 'currentUser' :
+                runAsUserFieldsMap.put('currentUser', info?.isCloud ? /"runAsType":"addonUser"/ : "runAsUser=")
+                break
+            case 'specificUser' :
+                runAsUserFieldsMap.put('specificUser', info?.isCloud ? /"runAsType":"thisUser","runAs":"accountId:$currentUserKey"/ : "runAsUser=userByKey:$currentUserKey")
+                break
+            case 'userInFieldAssignee':
+                runAsUserFieldsMap.put('userInFieldAssignee', info?.isCloud ? /"runAsType":"userField","runAsField":"assignee"/ : "runAsUser=userField:assignee")
+                break
+            case 'userInFieldReporter':
+                runAsUserFieldsMap.put('userInFieldReporter', info?.isCloud ? /"runAsType":"userField","runAsField":"reporter"/ : "runAsUser=userField:reporter")
+                break
+            case 'userInFieldCreator':
+                runAsUserFieldsMap.put('userInFieldCreator', info?.isCloud ? /"runAsType":"userField","runAsField":"creator"/ : "runAsUser=userField:creator")
+                break
+            case 'userFromScript':
+                runAsUserFieldsMap.put('userFromScript', info?.isCloud ? /"runAsType":"userFromScript","runAsScript":"$nunjuckExpression.currentUser"/ : "runAsUser=userFromScript:currentUser")
+                break
+            case 'userFromScriptInvalid':
+                runAsUserFieldsMap.put('userFromScriptInvalid', info?.isCloud ? /"runAsType":"userFromScript","runAsScript":"accountId:abcdInvalidScript"/ : "runAsUser=userFromScript:invalidUser")
+                break
+        }
+        return runAsUserFieldsMap
+    }
+}
+
+def listOfRunAsUserOptions = [
+        'currentUser',
+        'specificUser',
+        'userInFieldAssignee',
+        'userInFieldReporter',
+        'userInFieldCreator',
+        'userFromScript',
+        'userFromScriptInvalid'
 ]
 
-project.ext.conditionalValidationServer = [
-        no : [ "conditionalValidation=no", "conditionalValidationScript=" ],
-        yes : [ "conditionalValidation=yes", "conditionalValidationScript=$groovyExpression.checkPriorityHigh" ]
-]
+ext.runAsUser = [:]
 
-project.ext.conditionalValidationCloud = [
-        no : /"conditionalValidation":false/,
-        yes : /"conditionalValidation":true,"conditionalValidationExpression":"!!issue.priority && issue.priority.name == 'High'"/
-]
+listOfRunAsUserOptions.each {
+    runAsUser.putAll(config_runAsUser('CONFIG', it))
+}
 
-project.ext.conditionalValidation = info?.isCloud? conditionalValidationCloud : conditionalValidationServer
-
+/*
 project.ext.runAsUser = [
         currentUser : info?.isCloud ? /"runAsType":"addonUser"/ : "runAsUser=",
         specificUser: info?.isCloud ? /"runAsType":"thisUser","runAs":"accountId:$currentUserKey"/ : "runAsUser=userByKey:$currentUserKey",
@@ -134,5 +207,333 @@ project.ext.runAsUser = [
         userInFieldCreator : info?.isCloud ? /"runAsType":"userField","runAsField":"creator"/ : "runAsUser=userField:creator",
         userFromScript : info?.isCloud ? /"runAsType":"userFromScript","runAsScript":"$nunjuckExpression.thisUser"/ : "runAsUser=userFromScript:currentUser"
 ]
+*/
+ext.relatedIssuesList = [
+        'CurrentIssue',
+        'Subtask',
+        "ParentIssue",
+        'IssueBelongsToEpic',
+        'EpicOfTheCurrentIssue',
+        'ChildPortfolio',
+        'ParentPortfolio',
+        'LinkByAnyLink',
+        'LinkByBlock',
+        'LinkByisBlockedBy',
+        'LinkByClones',
+        'LinkByIsClonedBy',
+        'LinkByDuplicates',
+        'LinkByIsDuplicatedBy',
+        'LinkByRelatesTo',
+        info?.isCloud? 'ReturnsByNunjucksExpression': 'ReturnsByGroovyExpression',
+        'ReturnsFromJqlSearch'
+]
 
+ext.createRelatedIssuesMap = { mode, key, project, ext ->
+    if (mode == "CONFIGURATION") {
+        def linkedIssueFields = [:]
+            switch (key) {
+                case "CurrentIssue":
+                    linkedIssueFields.put(key, info?.isCloud ? "currentIssue:*" : "$currentIssue")
+                    break
+                case "Subtask":
+                    linkedIssueFields.put(key, info?.isCloud ? "outward:jira_subtask_link" : "$subtask")
+                    break
+                case "ParentIssue":
+                    linkedIssueFields.put(key, info?.isCloud ? "inward:jira_subtask_link" : "$parentIssue")
+                    break
+                case "IssueBelongsToEpic":
+                    linkedIssueFields.put(key, info?.isCloud ? "outward:Epic-Story Link" : "$issueBelongsToEpic")
+                    break
+                case "EpicOfTheCurrentIssue":
+                    linkedIssueFields.put(key, info?.isCloud ? "inward:Epic-Story Link" : "$epicOfTheCurrentIssue")
+                    break
+                case "ChildPortfolio":
+                    linkedIssueFields.put(key, info?.isCloud ? "inward:Portfolio Parent Link" : "$childPortfolio")
+                    break
+                case "ParentPortfolio":
+                    linkedIssueFields.put(key, info?.isCloud ? "outward:Portfolio Parent Link" : "$parentPortfolio")
+                    break
+                case "LinkByAnyLink":
+                    linkedIssueFields.put(key, info?.isCloud ? "*:*" : "$linkByAnyLink")
+                    break
+                case "LinkByBlock":
+                    linkedIssueFields.put(key, info?.isCloud ? "outward:10000" : "$linkByBlock")
+                    break
+                case "LinkByisBlockedBy":
+                    linkedIssueFields.put(key, info?.isCloud ? "inward:10000" : "$linkByisBlockedBy")
+                    break
+                case "LinkByClones":
+                    linkedIssueFields.put(key, info?.isCloud ? "outward:10001" : "$linkByClones")
+                    break
+                case "LinkByIsClonedBy":
+                    linkedIssueFields.put(key, info?.isCloud ? "inward:10001" : "$linkByIsClonedBy")
+                    break
+                case "LinkByDuplicates":
+                    linkedIssueFields.put(key, info?.isCloud ? "outward:10002" : "$linkByDuplicates")
+                    break
+                case "LinkByIsDuplicatedBy":
+                    linkedIssueFields.put(key, info?.isCloud ? "inward:10002" : "$linkByIsDuplicatedBy")
+                    break
+                case "LinkByRelatesTo":
+                    linkedIssueFields.put(key, info?.isCloud ? "outward:10003" : "$linkByRelatesTo")
+                    break
+                case info?.isCloud ? 'ReturnsByNunjucksExpression' : 'ReturnsByGroovyExpression':
+                    linkedIssueFields.put(key, info?.isCloud ? "nunjucks:$nunjuckExpression.returnsLinkedIssues" : "groovy:$returnsLinkedIssues")
+                    break
+                case 'ReturnsFromJqlSearch':
+                    linkedIssueFields.put(key, "jql:project = $project and issuetype = Task and summary~JQL_ISSUE")
+                    break
+            }
+            return linkedIssueFields
 
+    } else if(mode =="TRANSITION"){
+        def linkedIssuesMap = [:]
+        switch (key) {
+            case "CurrentIssue":
+                def currentIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'currentIssue'+ext)
+                linkedIssuesMap.put({->currentIssue[]}, {->currentIssue[]})
+                break
+            case "Subtask":
+                def subtask = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'Sub-task to check subtask'+ext)
+                def parent = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> subtask[]}], 'to check subtask'+ext)
+                linkedIssuesMap.put({->subtask[]}, {->parent[]})
+                break
+            case "ParentIssue":
+                def subtask = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'Sub-task to check parent issue'+ext)
+                def parent = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> subtask[]}], 'to check parent'+ext)
+                linkedIssuesMap.put({->parent[]}, {->subtask[]})
+                break
+            case "IssueBelongsToEpic":
+                def issueBelongsToEpic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'BelongsToEpic1'+ext)
+                def  epic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> issueBelongsToEpic[]} ], 'Epic1'+ext)
+                linkedIssuesMap.put({->issueBelongsToEpic[]}, {->epic[]})
+                break
+            case "EpicOfTheCurrentIssue":
+                def issueBelongsToEpic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'BelongsToEpic2'+ext)
+                def epic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> issueBelongsToEpic[]} ], 'Epic2'+ext)
+                linkedIssuesMap.put({->epic[]}, {->issueBelongsToEpic[]})
+                break
+            case "ChildPortfolio":
+                def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Initiative1'+ext)
+                def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative1'+ext)
+                updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic1"+ext)
+                linkedIssuesMap.put({->initiative[]}, {->epic_initiative[]})
+                break
+            case "ParentPortfolio":
+                def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Initiative2'+ext)
+                def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative2'+ext)
+                updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic2"+ext)
+                linkedIssuesMap.put({->epic_initiative[]}, {->initiative[]})
+                break
+            case "LinkByAnyLink":
+                def anyLink1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks1'+ext)
+                def anyLink2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks2'+ext)
+                linkIssue([issue: {->anyLink1[]}, toIssue: { ->anyLink2[] }, link: "blocks"], "to check issue link by any link type"+ext)
+                linkedIssuesMap.put({->anyLink1[]}, {->anyLink2[]})
+                break
+            case "LinkByBlock":
+                def blocks1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks1'+ext)
+                def blocks2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks2'+ext)
+                linkIssue([issue: {->blocks1[]}, toIssue: { ->blocks2[] }, link: "blocks"], "to check the issue link by blocks link type"+ext)
+                linkedIssuesMap.put({->blocks1[]}, {->blocks2[]})
+                break
+            case "LinkByisBlockedBy":
+                def blocks1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'is blocked by1'+ext)
+                def blocks2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'is blocked by2'+ext)
+                linkIssue([issue: {->blocks1[]}, toIssue: { ->blocks2[] }, link: "blocks"], "to check the issue link by  by is blocked link type"+ext)
+                linkedIssuesMap.put({->blocks2[]}, {->blocks1[]})
+                break
+            case "LinkByClones":
+                def clones1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones1'+ext)
+                def clones2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones2'+ext)
+                linkIssue([issue: {->clones1[]}, toIssue: { ->clones2[] }, link: "$clonesLinkType"], "to check issue link by clones link type"+ext)
+                linkedIssuesMap.put({->clones1[]}, {->clones2[]})
+                break
+            case "LinkByIsClonedBy":
+                def clones1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'is cloned by1'+ext)
+                def clones2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'is cloned by2'+ext)
+                linkIssue([issue: {->clones1[]}, toIssue: { ->clones2[] }, link: "$clonesLinkType"], "to check issue link by is cloned by link type"+ext)
+                linkedIssuesMap.put({->clones2[]}, {->clones1[]})
+                break
+            case "LinkByDuplicates":
+                def duplicates1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates1'+ext)
+                def duplicates2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates2'+ext)
+                linkIssue([issue: {->duplicates1[]}, toIssue: { ->duplicates2[] }, link: "duplicates"], " to check the issue link by duplicates link type"+ext)
+                linkedIssuesMap.put({->duplicates1[]}, {->duplicates2[]})
+                break
+            case "LinkByIsDuplicatedBy":
+                def duplicates1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'is duplicated by1'+ext)
+                def duplicates2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'is duplicated by2'+ext)
+                linkIssue([issue: {->duplicates1[]}, toIssue: { ->duplicates2[] }, link: "duplicates"], " to check the issue link by is duplicated by link type"+ext)
+                linkedIssuesMap.put({->duplicates2[]}, {->duplicates1[]})
+                break
+            case "LinkByRelatesTo":
+                def relatesTo1 = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo1'+ext)
+                def relatesTo2 = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo2'+ext)
+                linkIssue([issue: {->relatesTo1[]}, toIssue: { ->relatesTo2[] }, link: 'relates to'], 'to check the issue link by relates to link type'+ext)
+                linkedIssuesMap.put({->relatesTo1[]}, {->relatesTo2[]})
+                break
+            case info?.isCloud ? 'ReturnsByNunjucksExpression' : 'ReturnsByGroovyExpression':
+                def linkIssues1 = createIssue([type: 'Task', summary: 'JMWE_Task'], 'linkIssues1'+ext)
+                def linkIssues2 = createIssue([type: 'Task', summary: 'JMWE_Task'], 'linkIssues2'+ext)
+                linkIssue([issue: {->linkIssues1[]}, toIssue: { ->linkIssues2[] }, link: 'relates to'], info?.isCloud? 'to check the issue return by nunjucks expression' : "to check the issue return by groovy expression"+ext)
+                linkedIssuesMap.put({->linkIssues1[]}, {->linkIssues2[]})
+                break
+            case "ReturnsFromJqlSearch":
+                def jqlIssue1 = createIssue([type: 'Task', summary: 'JMWE_Task'], 'jqlIssue1'+ext)
+                def jqlIssue2 = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue2'+ext)
+                linkedIssuesMap.put({->jqlIssue1[]}, {->jqlIssue2[]})
+                break
+        }
+        return linkedIssuesMap
+    }
+}
+
+ext.defaultValueOfLabels = "testLabel"
+ext.defaulValueOfLebels1 = "testLabel1"
+ext.defaultValueOfComponent = 'component1'
+ext.defaultValueOfVersions = 1
+ext.securityLevel1 = 'Level1'
+ext.securityLevel2 = 'Level2'
+
+ext.addVersion = { project ->
+    gint.taskHelper.add([
+            [action: 'addVersion',
+             ext: ': create versions : ' + defaultValueOfVersions,
+             parameters: [
+                     project: project,
+                     version: defaultValueOfVersions
+             ]
+            ],
+    ])
+}
+
+ext.addComponent = { project ->
+    gint.taskHelper.add([
+            [action: 'addComponent',
+             ext: ": create Component in project $project:by name "+ defaultValueOfComponent,
+             parameters: [
+                     project: project,
+                     component: defaultValueOfComponent
+             ],
+            ]
+    ])
+}
+
+ext.addComponentForConfiguration = {
+    gint.taskHelper.addTearDown('addComponentForConfiguration',[
+            [action: 'addComponent',
+             ext: ": create Component in project $TestProject:by name "+ defaultValueOfComponent,
+             parameters: [
+                     project: TestProject,
+                     component: defaultValueOfComponent,
+                     continue: null
+             ],
+            ]
+    ])
+}
+
+ext.fields = { mode, key ->
+    if(mode == "NAME"){
+        def setFieldsMap = [:]
+        switch(key){
+            case 'labels':
+                setFieldsMap.put(key, "Labels")
+                break
+            case 'components':
+                setFieldsMap.put(key, "Components")
+                break
+            case 'fixVersions':
+                setFieldsMap.put(key, "Fix versions")
+                break
+            case 'affectsVersions':
+                setFieldsMap.put(key, "Affects versions")
+                break
+            case 'assignee':
+                setFieldsMap.put(key, "Assignee")
+                break
+        }
+        return setFieldsMap
+    }else if(mode == 'CONFIG_VALUE' || mode == 'configField' || mode == "CONFIG") {
+        def configFieldsMap = [:]
+        switch (key) {
+            case 'labels':
+                configFieldsMap.put(key, "labels")
+                break
+            case 'components':
+                configFieldsMap.put(key, "components")
+                break
+            case 'fixVersions':
+                configFieldsMap.put(key, "fixVersions")
+                break
+            case 'affectsVersions':
+                configFieldsMap.put(key, "versions")
+                break
+            case 'assignee':
+                configFieldsMap.put(key, "assignee")
+                break
+        }
+        return configFieldsMap;
+    } else if(mode == 'VALUE' || mode == 'SETVALUE'){
+        def setIssueFieldsMap = [:]
+        switch(key) {
+            case 'labels':
+                setIssueFieldsMap.put(key, defaultValueOfLabels)
+                break
+            case 'components':
+                setIssueFieldsMap.put(key, component)
+                break
+            case 'fixVersions':
+                setIssueFieldsMap.put(key, defaultValueOfVersions)
+                break
+            case 'affectsVersions':
+                setIssueFieldsMap.put(key, defaultValueOfVersions)
+                break
+            case 'assignee':
+                setIssueFieldsMap.put(key, user)
+                break
+            case 'assignee_testUser':
+                setIssueFieldsMap.put('assignee', testUser)
+                break
+            case 'securityLevel1':
+                setIssueFieldsMap.put('securityLevel', securityLevel1)
+                break
+            case 'securityLevel2':
+                setIssueFieldsMap.put('securityLevel', securityLevel2)
+                break
+        }
+        return setIssueFieldsMap;
+    } else if(mode == 'GETVALUE' || mode == 'GET' || mode == 'VALUE' ){
+        def getIssueFieldsMap = [:]
+        switch(key) {
+            case 'labels':
+                getIssueFieldsMap.put(key, "Labels  . . . . . . . . . . . : $defaultValueOfLabels")
+                break
+            case 'labels_append':
+                getIssueFieldsMap.put(key, "Labels  . . . . . . . . . . . : $defaultValueOfLabels $defaulValueOfLebels1")
+                break
+            case 'components':
+                getIssueFieldsMap.put(key, "Components  . . . . . . . . . : $defaultValueOfComponent")
+                break
+            case 'fixVersions':
+                getIssueFieldsMap.put(key, info?.isCloud ? "Fix versions  . . . . . . . . : $defaultValueOfVersions" : "Fix Version/s . . . . . . . . : $defaultValueOfVersions")
+                break
+            case 'affectsVersions':
+                getIssueFieldsMap.put(key, info?.isCloud? "Affects versions  . . . . . . : $defaultValueOfVersions" : "Affects Version/s . . . . . . : $defaultValueOfVersions")
+                break
+            case 'assignee':
+                getIssueFieldsMap.put(key, "Assignee  . . . . . . . . . . : $getCurrentUserName")
+                break
+            case 'assignee_testUser':
+                getIssueFieldsMap.put(key, "Assignee  . . . . . . . . . . : $testUser")
+                break
+            case 'securityLevel1':
+                getIssueFieldsMap.put(key, "Security Level  . . . . . . . : $securityLevel1")
+                break
+            case 'securityLevel2':
+                getIssueFieldsMap.put(key, "Security Level  . . . . . . . : $securityLevel2")
+                break
+        }
+        return getIssueFieldsMap;
+    }
+}

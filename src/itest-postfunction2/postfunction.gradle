@@ -8,3 +8,5 @@ relatedIssue.put('returnsFromJqlSearch', "jql:$jqlSearchExpression")
 tearDown(projectName)
 addWorkflow()
 
+createWorkflowScheme()
+createProject()

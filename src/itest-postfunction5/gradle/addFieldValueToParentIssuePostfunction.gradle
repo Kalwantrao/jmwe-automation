@@ -32,12 +32,9 @@ def functionKey = 'com.innovalog.jmwe.jira-misc-workflow-extensions:AddFieldValu
     }
 }
 
-createWorkflowScheme()
-createProject()
-
 (1..2).each {
     if(!isCloud) {
-        gint.taskHelper.addSetUp([
+        gint.taskHelper.add([
                 [action    : 'addVersion', ext: ': create versions : ' + it,
                  parameters: [
                          project: projectName,

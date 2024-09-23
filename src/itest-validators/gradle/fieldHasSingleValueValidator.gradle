@@ -48,12 +48,9 @@ fieldsList.eachWithIndex { field, value, i ->
 	}
 }
 
-createWorkflowScheme()
-createProject()
-
 (1..4).each {
 	if(!isCloud) {
-		gint.taskHelper.addSetUp([
+		gint.taskHelper.add([
 				[action    : 'addVersion', ext: ': create versions : ' + it,
 				 parameters: [
 						 project: projectName,

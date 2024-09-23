@@ -16,6 +16,7 @@ def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugi
 
 def fieldOptions = [
         assigneeToLabels : [ "copyFieldsConfig=[{\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}]" ],
+        reporterToAssignee : [ "copyFieldsConfig=[{\"sourceField\":\"reporter\",\"destinationField\":\"assignee\"}]" ],
         copyOnlyIfNotSet : ["copyFieldsConfig=[{\"options\":{\"copyOnlyIfNotSet\":true},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}]"],
         createMissingValues : ["copyFieldsConfig=[{\"options\":{\"createMissingValues\":true},\"sourceField\":\"assignee\",\"destinationField\":\"components\"}]"],
         labelsToComponent : ["copyFieldsConfig=[{\"options\":{\"createMissingValues\":true},\"sourceField\":\"labels\",\"destinationField\":\"components\"}]"],
@@ -24,6 +25,22 @@ def fieldOptions = [
         removeValues : ["copyFieldsConfig=[{\"options\":{\"removeValues\":true},\"sourceField\":\"fixVersions\",\"destinationField\":\"versions\"}]"],
         useOldValue : ["copyFieldsConfig=[{\"options\":{\"useOldValue\":true},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}]"],
 ]
+
+def relatedIssue = [:]
+def relatedIssuesMap = [:]
+
+relatedIssuesList.each{
+    relatedIssue.putAll(createRelatedIssuesMap('CONFIGURATION', it, projectName, " "))
+    relatedIssuesMap.putAll(createRelatedIssuesMap('TRANSITION', it, projectName, " "))
+}
+
+["CreateTransition"].each {
+    def cloud =  "{\"problems\":[],\"sourceIssues\":\"currentIssue:*\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"sourceField\":\"reporter\",\"destinationField\":\"assignee\"}],\"conditionalExecution\":true,\"conditionalExecutionScript\":\"{{ issue.fields.issuetype.name == 'Story' }}\",\"runAsType\":\"addonUser\"}"
+    def server =  [fieldOptions.reporterToAssignee, "selectedLinkTypeSource=currentIssue:*" , "selectedLinkTypeDestination=$currentIssue" , "conditionalValidation=yes", "conditionalValidationScript=issue.get('issuetype')?.name == 'Story'" , runAsUser.currentUser]
+    if(isCloud){
+        addTransitionFunctionOnCreateTransition("Create", 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    }
+}
 
 relatedIssue.eachWithIndex { targetIssue, fields, i ->
     def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_' + i
@@ -39,28 +56,28 @@ relatedIssue.eachWithIndex { targetIssue, fields, i ->
     addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { targetIssue, fields, i ->
+relatedIssue.take(1).eachWithIndex { targetIssue, fields, i ->
     def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_copyOnlyIfNotSet_' + i
     def cloud =  "{\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"options\":{\"copyOnlyIfNotSet\":true,\"ignoreEmptyValue\":false,\"appendValues\":false,\"useOldValue\":false},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"runAsType\":\"addonUser\"}"
     def server =  [fieldOptions.copyOnlyIfNotSet , "selectedLinkTypeSource=$fields" , "selectedLinkTypeDestination=$currentIssue" , conditionalExecution.false , runAsUser.currentUser]
     addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { targetIssue, fields, i ->
+relatedIssue.take(1).eachWithIndex { targetIssue, fields, i ->
     def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_ignoreEmptyValue_' + i
     def cloud =  "{\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"options\":{\"copyOnlyIfNotSet\":false,\"ignoreEmptyValue\":true,\"appendValues\":false,\"useOldValue\":false},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"runAsType\":\"addonUser\"}"
     def server =  [fieldOptions.ignoreEmptyValue , "selectedLinkTypeSource=$fields" , "selectedLinkTypeDestination=$currentIssue" , conditionalExecution.false , runAsUser.currentUser]
     addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { targetIssue, fields, i ->
+relatedIssue.take(1).eachWithIndex { targetIssue, fields, i ->
     def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_appendValues_' + i
     def cloud =  "{\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"options\":{\"copyOnlyIfNotSet\":false,\"ignoreEmptyValue\":false,\"appendValues\":true,\"useOldValue\":false},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"runAsType\":\"addonUser\"}"
     def server =  [fieldOptions.appendValues , "selectedLinkTypeSource=$fields" , "selectedLinkTypeDestination=$currentIssue" , conditionalExecution.false , runAsUser.currentUser]
     addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { targetIssue, fields, i ->
+relatedIssue.take(1).eachWithIndex { targetIssue, fields, i ->
     def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_removeValues_' + i
     def server =  [fieldOptions.removeValues , "selectedLinkTypeSource=$fields" , "selectedLinkTypeDestination=$currentIssue" , conditionalExecution.false , runAsUser.currentUser]
     if(!isCloud) {
@@ -68,23 +85,26 @@ relatedIssue.eachWithIndex { targetIssue, fields, i ->
     }
 }
 
-relatedIssue.eachWithIndex { targetIssue, fields, i ->
+relatedIssue.take(1).eachWithIndex { targetIssue, fields, i ->
     def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_useOldValue_' + i
     def server =  [fieldOptions.useOldValue , "selectedLinkTypeSource=$fields" , "selectedLinkTypeDestination=$currentIssue" , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"options\":{\"copyOnlyIfNotSet\":false,\"ignoreEmptyValue\":false,\"appendValues\":false,\"useOldValue\":true},\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"runAsType\":\"addonUser\"}"
     addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { targetIssue, fields, i ->
+relatedIssue.take(1).eachWithIndex { targetIssue, fields, i ->
     def transition = 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_onlyIfConditionTrue' + i
     def cloud =  "{\"problems\":[],\"sourceIssues\":\"$fields\",\"destinationIssues\":\"currentIssue:*\",\"copyFieldsConfig\":[{\"sourceField\":\"assignee\",\"destinationField\":\"labels\"}],\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"runAsType\":\"addonUser\"}"
     def server =  [fieldOptions.assigneeToLabels, "selectedLinkTypeSource=$fields" , "selectedLinkTypeDestination=$currentIssue" , conditionalExecution.true , runAsUser.currentUser]
     addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-runAsUser.remove("currentUser")
+["userFromScriptInvalid","currentUser"].each {
+    runAsUser.remove(it)
+}
+
 runAsUser.eachWithIndex { user, fieldsValue, index ->
-    relatedIssue.eachWithIndex { targetIssue, fields, i ->
+    relatedIssue.take(1).eachWithIndex { targetIssue, fields, i ->
         def transition = 'verify_current_issue_from_source_and_all_target_issue_options_to_destination_issue_run_as_' + user + i
         def cloud =  "{\"copyFieldsConfig\":[{\"options\":{\"createMissingValues\":true},\"sourceField\":\"labels\",\"destinationField\":\"components\"}],\"sourceIssues\":\"currentIssue:*\",\"destinationIssues\":\"$fields\",\"problems\":[],$fieldsValue}"
         def server =  [fieldOptions.labelsToComponent , "selectedLinkTypeSource=$currentIssue" , "selectedLinkTypeDestination=$fields" , fieldsValue , conditionalExecution.false]
@@ -95,9 +115,6 @@ runAsUser.eachWithIndex { user, fieldsValue, index ->
     }
 }
 
-createWorkflowScheme()
-createProject()
-
 float testVersion = 1.0
 
 gint.taskHelper.add(
@@ -107,54 +124,25 @@ gint.taskHelper.add(
                 version : testVersion
         ]
 )
+
 def testLabel = "label1"
 def getCurrentUserName = info?.isCloud? currentUserKey : user
+def storyTypeIssue = createIssue([type: 'Story', summary: 'JMWE_Issue'], 'currentIssue'+ext)
 
-def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
-def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
-def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
-def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
-def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[]} ], 'BelongsToEpic')
-def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Initiative')
-def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
-def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
-def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
-def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
-def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
-def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
-def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
-updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
-
-def linkIssuesMap = [
-        blocks : {->blocks[]},
-        "$clonesLinkType" : {->clones[]},
-        duplicates : {->duplicates[]},
-        'relates to': {->relatesTo[]}
-]
-
-linkIssuesMap.eachWithIndex { key, value, i ->
-    linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
+if(isCloud){
+    gint.taskHelper.add([
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : ":Of assignee copied from reporter field on create transition:",
+             parameters: [
+                     issue: { ->storyTypeIssue[] },
+                     field: "Assignee"
+             ],
+             data      : [/Assignee  . . . . . . . . . . : ${info.isCloud? info?.userDisplayName : user}/],
+            ],
+])
 }
 
-def relatedIssuesMap = [
-        {->current[]} : {->current[]},
-        {->parent[]} : {->subtask[]},
-        {->subtask[]} : {->parent[]},
-        {->epic[]} : {->issueBelongsToEpic[]},
-        {->issueBelongsToEpic[]} : {->epic[]},
-        {-> initiative[]} : {->epic_initiative[]},
-        {->epic_initiative[]} : {-> initiative[]},
-        {->blocks[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->blocks[]},
-        {->blocks[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->clones[]},
-        {->clones[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->duplicates[]},
-        {->duplicates[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->relatesTo[]},
-        {->relatesTo[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->jqlIssue[]}
-]
 // COPY_ISSUE_FIELDS_Postfunction_-Verify all target issue Options from Source issues_user should be able to copy the value of the selected field from the target issue to current issue
 // COPY_ISSUE_FIELDS_Postfunction_-Verify all target issue Options from Source issues_user should be able to copy the value of the selected field from the target issue to current issue
 [
@@ -227,7 +215,7 @@ def relatedIssuesMap = [
 [
         'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_copyOnlyIfNotSet_',
 ].collect {
-    relatedIssuesMap.eachWithIndex { key, value, int i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, int i ->
         def currentIssue;
         def targetIssue
         if(it == 'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_copyOnlyIfNotSet_'){
@@ -319,7 +307,7 @@ def relatedIssuesMap = [
 [
         'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_ignoreEmptyValue_',
 ].collect {
-    relatedIssuesMap.eachWithIndex { key, value, int i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, int i ->
         def transition = it+i
         gint.taskHelper.add([
                 [action: 'setFieldValue',
@@ -365,7 +353,7 @@ def relatedIssuesMap = [
 [
         'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_appendValues_',
 ].collect {
-    relatedIssuesMap.eachWithIndex { key, value, int i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, int i ->
         def transition = it+i
         gint.taskHelper.add([
                 [action: 'setFieldValue',
@@ -411,7 +399,7 @@ def relatedIssuesMap = [
 [
         'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_removeValues_',
 ].collect {
-    relatedIssuesMap.eachWithIndex { key, value, int i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, int i ->
         if(!isCloud) {
             gint.taskHelper.add([
                     [action    : 'setFieldValue',
@@ -458,7 +446,7 @@ def relatedIssuesMap = [
 [
         'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_useOldValue_'
 ].collect {
-    relatedIssuesMap.eachWithIndex { key, value, int i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, int i ->
         gint.taskHelper.add([
                 [action: 'setFieldValue',
                  sleep: sleep,
@@ -505,7 +493,7 @@ def relatedIssuesMap = [
         'verify_current_issue_in_destination_and_all_target_issue_options_from_source_issue_onlyIfConditionTrue'
 ].collect {
     ["High","Low"].eachWithIndex{ priority, int idx ->
-        relatedIssuesMap.eachWithIndex { key, value, int i ->
+        relatedIssuesMap.take(1).eachWithIndex { key, value, int i ->
             def expectedData = info?.isCloud ? "Labels  . . . . . . . . . . . : accountId:$getCurrentUserName" : "Labels  . . . . . . . . . . . : $user"
             gint.taskHelper.add([
                     [action: 'setFieldValue',
@@ -580,7 +568,7 @@ def relatedIssuesMap = [
         'userInFieldCreator',
         'userFromScript'
 ].each {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         def getCurrentUserName1 = info?.isCloud? info?.userDisplayName : user
         def transition = 'verify_current_issue_from_source_and_all_target_issue_options_to_destination_issue_run_as_' + it + i
         gint.taskHelper.add([
@@ -628,7 +616,7 @@ def relatedIssuesMap = [
 [
         'userInFieldAssignee',
 ].each {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         def getCurrentUserName1 = info?.isCloud? info?.userDisplayName : user
         def transition = 'verify_current_issue_from_source_and_all_target_issue_options_to_destination_issue_run_as_' + it +i
         gint.taskHelper.add([

@@ -1,0 +1,263 @@
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+
+project.ext.projectName='JSM'
+project.ext.workflowScheme = projectName
+project.ext.jqlSearchExpression="project = $projectName and issuetype = Task and summary~JQL_ISSUE"
+
+ext.CUST_FIELD_REQUEST_PARTICIPANTS_ID = getCustomFieldId("Request participants")
+ext.CUST_FIELD_REQUEST_TYPE_ID = getCustomFieldId("Request Type")
+ext.CUST_FIELD_ORGANIZATIONS_ID = getCustomFieldId("Organizations")
+
+ext.requestParticipantsId = {->CUST_FIELD_REQUEST_PARTICIPANTS_ID.getAt(0).trim()}
+ext.requestTypeId = {->CUST_FIELD_REQUEST_TYPE_ID.getAt(0).trim()}
+ext.organizationsId = {->CUST_FIELD_ORGANIZATIONS_ID.getAt(0).trim()}
+
+ext.TASK_ISSUE_TYPE_ID = getIssueTypeId("Task")
+ext.TaskIssueTypeId = {->TASK_ISSUE_TYPE_ID.getAt(0).trim()}
+
+ext.INITIATIVE_ISSUE_TYPE_ID = getIssueTypeId("Initiative")
+ext.InitiativeIssueTypeId = {->INITIATIVE_ISSUE_TYPE_ID.getAt(0).trim()}
+
+ext.EPIC_ISSUE_TYPE_ID = getIssueTypeId("Epic")
+ext.EpicIssueTypeId = {->EPIC_ISSUE_TYPE_ID.getAt(0).trim()}
+
+ext.TEST_USER_ID = getUserId(testUser)
+ext.testUserId = {->TEST_USER_ID.getAt(0).trim()}
+
+ext.fieldsList = [
+        Organizations : organizationsId,
+        requestParticipant : requestParticipantsId,
+        resolution : 'resolution',
+        requestType : requestTypeId
+]
+
+ext.organization = "TEC"
+ext.organization1 = "APP"
+ext.requestTypeFieldValue = "Fix an account problem"
+ext.requestTypeFieldValue1 = "Get IT help"
+ext.defaultValueOfResolution = "Done"
+ext.defaultRequestParticipant = user
+
+ext.checkFieldValueOnIssue = [
+        Organizations:      "Organizations . . . . . . . . : $organization",
+        requestParticipant: "Request participants  . . . . : ${info?.isCloud? info?.userDisplayName : user}",
+        requestType:        "Request Type  . . . . . . . . : $requestTypeFieldValue",
+        resolution:         "Resolution  . . . . . . . . . : $defaultValueOfResolution",
+]
+
+ext.fieldNameToSet = [
+        Organizations:      "Organizations",
+        requestParticipant: "Request participants",
+        requestType:        "Request Type",
+        resolution:         "Resolution"
+]
+
+ext.fieldValuesToSet = [
+        Organizations:      organization,
+        requestParticipant: user,
+        requestType:        requestTypeFieldValue,
+        resolution:         defaultValueOfResolution
+]
+
+ext.fieldValuesToConfigure = [
+        Organizations:      organization,
+        requestParticipant: "accountId:${info.userKey}",
+        requestType:        requestTypeFieldValue,
+        resolution:         defaultValueOfResolution
+]
+
+ext.addOrganization = {
+    [organization, organization1].each{
+        gint.taskHelper.add([
+                [action: 'addOrganization', ext: ": add organization globally with name: $it",
+                 parameters: [
+                         organization: it,
+                         continue: null
+                 ]
+                ],
+                [action: 'addOrganization', ext: ": add organization in project:$projectName _with name: $it",
+                 parameters: [
+                         project: projectName,
+                         organization: it,
+                         continue: null
+                 ],
+                ]
+        ])
+
+    }
+}
+
+ext.addRequestType = {
+    [requestTypeFieldValue, requestTypeFieldValue1].each{
+        gint.taskHelper.add([
+                [action: 'addRequestType',
+                 ext: ": add request type to project $projectName:with name $it:for Task issue types",
+                 parameters: [
+                         project: projectName,
+                         name: it,
+                         issueType: TaskIssueTypeId,
+                         continue: null
+                 ]
+                ],
+                [action: 'addRequestType',
+                 ext: ": add request type to project $projectName:with name $it:for Initiative issue types",
+                 parameters: [
+                         project: projectName,
+                         name: it,
+                         issueType: InitiativeIssueTypeId,
+                         continue: null
+                 ]
+                ],
+                [action: 'addRequestType',
+                 ext: ": add request type to project $projectName:with name $it:for Epic issue types",
+                 parameters: [
+                         project: projectName,
+                         name: it,
+                         issueType: EpicIssueTypeId,
+                         continue: null
+                 ]
+                ],
+        ])
+    }
+}
+
+ext.createProjectWithCustomTemplate = { template ->
+    gint.taskHelper.addSetUp(
+            [action: 'createProject',
+             dependsOn: 'addTransitionFunction',
+             retry: true,
+             parameters:[
+                     project: projectName,
+                     template: template,
+                     lead: '@Self',
+                     workflowScheme: workflowScheme,
+                     issueTypeScreenScheme: issueTypeScreenScheme,
+                     issueTypeScheme: issueTypeScheme,
+             ] ,
+            ]
+    )
+}
+
+tearDownForJSM(projectName)
+addWorkflowClassic(baseWorkflowForJSMProject)
+
+createWorkflowScheme()
+createProjectWithCustomTemplate(projectTemplateForJSM)
+
+ext.addTransitionFunctionForJSM = { transitions, type, field, functionKey -> // key, type, condition, functionKey, description
+    def defaultFieldsServer = [
+            "restrictToInternal=no",
+            "sendNotification=no",
+            "throwExceptions=",
+            "correlationId=",
+    ]
+    def defaultFieldsCloud;
+    if(type == 'condition'){
+        defaultFieldsCloud = ["condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9"] + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9=$field"
+    } else if(type == 'validator'){
+        defaultFieldsCloud = ["validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a"] + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a=$field"
+    } else {
+        defaultFieldsCloud = ["postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249"] + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249=$field"
+    }
+    if(skipSetup != "true"){
+        gint.taskHelper.addSetUp('addTransitionFunction',[
+                [action    : 'addTransition',
+                 mustRunAfter: "copyWorkflow",
+                 ext: ':' + transitions,
+                 retry: true,
+                 parameters: [
+                         workflow: workflow,
+                         name    : transitions,
+                         step    : 1,
+                         transition: 1,
+                         screen  : screen
+                 ]
+                ],
+                [action    : 'addTransitionFunction',
+                 mustRunAfter: "copyWorkflow",
+                 ext: ':' + transitions,
+                 retry: true,
+                 parameters: [
+                         workflow   : workflow,
+                         transition : transitions,
+                         functionKey: functionKey,
+                         type       : type,
+                         step       : 1,
+                         field      : info?.isCloud ? defaultFieldsCloud : defaultFieldsServer + field
+                 ],
+                ],
+        ])
+    }
+}
+
+ext.jsmFields = { mode, key ->
+    if (mode == "set" || mode == "get") {
+        def setFieldsMap = [:]
+        switch (key) {
+            case 'organizations':
+                setFieldsMap.put(key, "Organizations")
+                break
+            case 'requestParticipant':
+                setFieldsMap.put(key, "Request participants")
+                break
+            case 'requestType':
+                setFieldsMap.put(key, "Request Type")
+                break
+            case 'resolution':
+                setFieldsMap.put(key, "Resolution")
+                break
+        }
+        return setFieldsMap
+    } else if (mode == 'config') {
+        def configFieldsMap = [:]
+        switch (key) {
+            case 'organizations':
+                setFieldsMap.put(key, organizationsId)
+                break
+            case 'requestParticipant':
+                setFieldsMap.put(key, requestParticipantsId)
+                break
+            case 'requestType':
+                setFieldsMap.put(key, requestTypeId)
+                break
+            case 'resolution':
+                setFieldsMap.put(key, "resolution")
+                break
+        }
+        return configFieldsMap;
+    } else if (mode == 'getFieldValue') {
+        def getIssueFieldsMap = [:]
+        switch (key) {
+            case 'organizations':
+                setFieldsMap.put(key, "Organizations . . . . . . . . : $organization")
+                break
+            case 'requestParticipant':
+                setFieldsMap.put(key, "Request participants  . . . . : $defaultRequestParticipant")
+                break
+            case 'requestType':
+                setFieldsMap.put(key, "Request Type  . . . . . . . . : $requestTypeFieldValue")
+                break
+            case 'resolution':
+                setFieldsMap.put(key, "Resolution  . . . . . . . . . : $defaultValueOfResolution")
+                break
+        }
+        return getIssueFieldsMap;
+    } else if (mode == 'setFieldValue') {
+        def setIssueFieldsMap = [:]
+        switch (key) {
+            case 'organizations':
+                setFieldsMap.put(key, organization)
+                break
+            case 'requestParticipant':
+                setFieldsMap.put(key, defaultRequestParticipant)
+                break
+            case 'requestType':
+                setFieldsMap.put(key, requestTypeFieldValue)
+                break
+            case 'resolution':
+                setFieldsMap.put(key, defaultValueOfResolution)
+                break
+        }
+        return setIssueFieldsMap;
+    }
+}

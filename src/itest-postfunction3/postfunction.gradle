@@ -6,6 +6,11 @@ project.ext.jqlSearchExpression="project = $projectName and issuetype = Task and
 
 relatedIssue.put('returnsFromJqlSearch', "jql:$jqlSearchExpression")
 
+ext.TEST_USER_ID = getUserId(testUser)
+ext.testUserId = {->TEST_USER_ID.getAt(0).trim()}
+
 tearDown(projectName)
 addWorkflow()
 
+createWorkflowScheme()
+createProject()

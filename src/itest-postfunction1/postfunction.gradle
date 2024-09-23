@@ -9,3 +9,50 @@ relatedIssue.put('returnsFromJqlSearch', "jql:$jqlSearchExpression")
 tearDown(projectName)
 addWorkflow()
 
+createWorkflowScheme()
+createProject()
+
+ext.addTransitionFunctionForPreviousStatusPf = { transitions, type, field, functionKey -> // key, type, condition, functionKey, description
+    def defaultFieldsServer = [
+            "restrictToInternal=no",
+            "sendNotification=no",
+            "throwExceptions=",
+            "correlationId=",
+    ]
+    def defaultFieldsCloud;
+    if(type == 'condition'){
+        defaultFieldsCloud = ["condition.id=d150ebe9-f65f-4199-ade5-c38062e8d5b9"] + "condition.config-d150ebe9-f65f-4199-ade5-c38062e8d5b9=$field"
+    } else if(type == 'validator'){
+        defaultFieldsCloud = ["validator.id=ba2aae99-13c1-422b-933c-1c16e0739d3a"] + "validator.config-ba2aae99-13c1-422b-933c-1c16e0739d3a=$field"
+    } else {
+        defaultFieldsCloud = ["postFunction.id=18b36491-f556-48cd-b476-7b82f02c7249"] + "postFunction.config-18b36491-f556-48cd-b476-7b82f02c7249=$field"
+    }
+    if(skipSetup != "true"){
+        gint.taskHelper.addSetUp('addTransitionFunction',[
+                [action    : 'addTransition',
+                 ext: ':' + transitions,
+                 mustRunAfter: "copyWorkflow",
+                 mustRunBefore: "createWorkflowScheme",
+                 retry: true,
+                 parameters: [
+                         workflow: workflow,
+                         name    : transitions,
+                         step    : "In Progress",
+                         transition: 11,
+                         screen  : screen
+                 ]
+                ],
+                [action    : 'addTransitionFunction', ext: ':' + transitions,
+                 retry: true,
+                 parameters: [
+                         workflow   : workflow,
+                         transition : transitions,
+                         functionKey: functionKey,
+                         type       : type,
+                         step       : "In Progress",
+                         field      : info?.isCloud ? defaultFieldsCloud : defaultFieldsServer + field
+                 ],
+                ],
+        ])
+    }
+}

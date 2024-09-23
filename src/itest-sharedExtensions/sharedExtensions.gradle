@@ -115,7 +115,7 @@ ext.createSharedExtension = { requestType, uriForAction, requestBody, ext ->
 
 ext.createSharedExtensionSetUp = { requestType, uriForAction, requestBody, ext ->
     def ActionID = [];
-    gint.taskHelper.addSetUp(
+    gint.taskHelper.addTearDown(
             name: "create a $ext by $requestType request:SETUP",
             inline: {
                 def URI = new URL(jiraUrl+ uriForAction)

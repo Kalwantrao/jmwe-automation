@@ -44,9 +44,6 @@ currentStatusCondition.eachWithIndex { transitions, fields, i->
 	addTransitionFunction(transitions, 'condition', fields, functionKey)
 }
 
-createWorkflowScheme()
-createProject()
-
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
 currentStatusCondition.eachWithIndex { transitions, fields, i->

@@ -1,0 +1,488 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/itest-JSM/JSM.gradle'
+
+addOrganization()
+addRequestType()
+
+def issue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], "issue1")
+
+fieldsList.eachWithIndex { fieldName, fieldId, idx ->
+    def transition = "verifyIsEmptyOperatorInBuildYourOwnConditionForField" + fieldName
+    def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+    def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+    def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+
+    def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__ScriptedCondition" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-condition'
+
+    if(fieldName.equalsIgnoreCase('Organizations')) {
+        def fields = "{\"script\":\"let convertToNumber = x => x ? Number(x) : 0;\\nlet convertToCalendarDate = x => x ? new CalendarDate(x) : null;\\nlet convertToDate = x => x ? new Date(x) : null;\\nlet convertCalendarDateToDate = x => x ? new Date(x.toISOString() + 'T00:00:00') : null;\\nlet convertDateToCalendarDate = x =>x ? x.toCalendarDate() : null;\\nlet convertRichText = x => typeof x == 'RichText' ? x.plainText : x; \\nlet source = (issue.customfield_10002 ?? []).map(f => f?.name).map(convertRichText);\\n\\nsource == null || ((typeof source == 'List' || typeof source == 'string') && source.length == 0)\",\"type\":\"noCode\",\"field\":\"$fieldId\",\"operator\":\"isEmpty\",\"valueToCompare\":\"field\",\"expression\":\"let convertToNumber = x => x ? Number(x) : 0;\\nlet convertToCalendarDate = x => x ? new CalendarDate(x) : null;\\nlet convertToDate = x => x ? new Date(x) : null;\\nlet convertCalendarDateToDate = x => x ? new Date(x.toISOString() + 'T00:00:00') : null;\\nlet convertDateToCalendarDate = x =>x ? x.toCalendarDate() : null;\\nlet convertRichText = x => typeof x == 'RichText' ? x.plainText : x; \\nlet source = (issue.${fieldId} ?? []).map(f => f?.name).map(convertRichText);\\n\\nsource == null || ((typeof source == 'List' || typeof source == 'string') && source.length == 0)\"}"
+        addTransitionFunctionForJSM(transition, 'condition', fields, functionKey)
+
+        [organization," "].each { it ->
+            gint.taskHelper.add(
+                     action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ]
+            )
+            if(it == organization){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION_ $transition _ when $fieldName is $it:",
+                         expected  : -1,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            }
+        }
+    }
+}
+
+gint.tearDownStrategy("both")
+
+//Validate the Build your own condition with JSM
+
+fieldsList.eachWithIndex { fieldName, fieldId, idx ->
+    def transition = "verifyBuildYourOwnConditionScriptShouldReturnTrueForField" + fieldName
+    def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+    def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+    def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+
+    def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__ScriptedCondition" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-condition'
+
+    if(fieldName == 'requestParticipant') {
+        def fields = "{\"script\":\"!!issue.${fieldId} && issue.${fieldId}.some(it => it.accountId == '${info.userKey}')\",\"type\":\"script\",\"expression\":\"!!issue.${fieldId} && issue.${fieldId}.some(it => it.accountId == '${info.userKey}')\"}"
+        addTransitionFunctionForJSM(transition, 'condition', fields, functionKey)
+        [user,testUser," "].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if(it == user){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION $transition _ when $fieldName is $it:",
+                         expected  : -1,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            }
+        }
+    } else if(fieldName.equalsIgnoreCase('Organizations')) {
+        def fields = "{\"script\":\"!!issue.${fieldId} && issue.${fieldId}.some(it => it.name == '$organization')\",\"type\":\"script\",\"expression\":\"!!issue.${fieldId} && issue.${fieldId}.some(it => it.name == '$organization')\"}"
+        addTransitionFunctionForJSM(transition, 'condition', fields, functionKey)
+
+        [organization," "].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if(it == organization){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION_ $transition _ when $fieldName is $it:",
+                         expected  : -1,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            }
+        }
+    } else if(fieldName == 'resolution') {
+        def fields = "{\"script\":\"!!issue.resolution && issue.resolution.name == '${defaultValueOfResolution}'\",\"type\":\"script\",\"expression\":\"!!issue.resolution && issue.resolution.name == '${defaultValueOfResolution}'\"}"
+        addTransitionFunctionForJSM(transition, 'condition', fields, functionKey)
+
+        ["Won't Do", defaultValueOfResolution].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if(it == defaultValueOfResolution){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION_ $transition _ when $fieldName is $it:",
+                         expected  : -1,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            }
+        }
+    }else if(fieldName == 'requestType') {
+        def fields = "{\"script\":\"!!issue.${fieldId} && issue.${fieldId}.requestType.name == '$requestTypeFieldValue'\",\"type\":\"script\",\"expression\":\"!!issue.${fieldId} && issue.${fieldId}.requestType.name == '$requestTypeFieldValue'\"}"
+        addTransitionFunctionForJSM(transition, 'condition', fields, functionKey)
+
+        [" ", requestTypeFieldValue].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if(it == requestTypeFieldValue){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION_ $transition _ when $fieldName is $it:",
+                         expected  : -1,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            }
+        }
+    }
+}
+
+// Validate the USER CONDITION with JSM.
+fieldsList.eachWithIndex { fieldName, fieldId, idx ->
+    def transition = "userConditionVerifyCurrentUserShouldBeInField" + fieldName
+
+    def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+    def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+    def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+    def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__UserCondition" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-condition'
+
+    if(fieldName == 'requestParticipant') {
+
+        def configElements = "{\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"userFieldsToCheck\":[\"$fieldId\"]},\"expression\":\"let selectedUser = user; ((!!user && (false || ((!!issue.${fieldId} && issue.${fieldId}.some( fieldUser => fieldUser.accountId == user.accountId))))))\"}"
+
+        addTransitionFunctionForJSM(transition, 'condition', configElements, functionKey)
+
+        def issue = createIssue([type: 'Task', summary: 'JMWE_Issue'], transition)
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep : sleep,
+                 ext: ": USER_CONDITION- $transition _when current user not in field request participant:",
+                 expected  : -1,
+                 parameters: [
+                         transition: transition,
+                         issue     : { -> issue[] },
+                 ],
+                ],
+                [action    : 'setFieldValue',
+                 sleep     : sleep,
+                 ext       : ":of Request participants to $user:",
+                 parameters: [
+                         issue     : { -> issue[] },
+                         field     : fieldNameToSetOnIssue,
+                         value     : user
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 sleep : sleep,
+                 ext: ": USER_CONDITION- $transition _when current user in field request participant:",
+                 expected  : 0,
+                 parameters: [
+                         transition: transition,
+                         issue     : { -> issue[] },
+                 ],
+                ],
+        ])
+    }
+}
+
+fieldsList.eachWithIndex { fieldName, fieldId, idx ->
+    def transition = "verifyUserConditionTheScriptShouldReturnTrueForField" + fieldName
+    def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+    def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+    def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+
+    def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__ScriptedCondition" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-condition'
+
+    if(fieldName == 'requestParticipant') {
+        def fields = "{\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"usersConditionScript\":\"!!issue.${fieldId} && issue.${fieldId}.some(it => it.accountId == '${info.userKey}')\"},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.${fieldId} && issue.${fieldId}.some(it => it.accountId == '${info.userKey}')))))\"}"
+        addTransitionFunctionForJSM(transition, 'condition', fields, functionKey)
+        [user,testUser," "].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if(it == user){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION $transition _ when $fieldName is $it:",
+                         expected  : -1,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            }
+        }
+    } else if(fieldName.equalsIgnoreCase('Organizations')) {
+        def fields = "{\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"usersConditionScript\":\"!!issue.${fieldId} && issue.${fieldId}.some(it => it.name == '$organization')\"},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.${fieldId} && issue.${fieldId}.some(it => it.name == '$organization')))))\"}"
+        addTransitionFunctionForJSM(transition, 'condition', fields, functionKey)
+
+        [organization," "].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if(it == organization){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION_ $transition _ when $fieldName is $it:",
+                         expected  : -1,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            }
+        }
+    } else if(fieldName == 'resolution') {
+
+        def fields = "{\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"usersConditionScript\":\"!!issue.resolution && issue.resolution.name == '${defaultValueOfResolution}'\"},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.resolution && issue.resolution.name == '${defaultValueOfResolution}'))))\"}"
+        addTransitionFunctionForJSM(transition, 'condition', fields, functionKey)
+
+        ["Won't Do", defaultValueOfResolution].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if(it == defaultValueOfResolution){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION_ $transition _ when $fieldName is $it:",
+                         expected  : -1,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            }
+        }
+    }else if(fieldName == 'requestType') {
+        def fields = "{\"script\":\"!!issue.${fieldId} && issue.${fieldId}.requestType.name == '${requestTypeFieldValue}'\",\"conditionMode\":\"all-user-condition\",\"expression\":\"!!issue.${fieldId} && issue.${fieldId}.requestType.name == '${requestTypeFieldValue}'\",\"fromUserType\":\"currentUser\",\"userCriteria\":{\"usersConditionScript\":\"!!issue.${fieldId} && issue.${fieldId}.requestType.name == '${requestTypeFieldValue}'\"},\"type\":\"script\"}"
+
+        addTransitionFunctionForJSM(transition, 'condition', fields, functionKey)
+
+        [" ", requestTypeFieldValue].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if(it == requestTypeFieldValue){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_CONDITION_ $transition _ when $fieldName is $it:",
+                         expected  : -1,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                        ],
+                ])
+            }
+        }
+    }
+}
+
+/*
+REVIEWED By Chirag: 02.09.2024 -
+All Four fields need to cover -
+1. Build your own condition : Jira expression  - !!issue.customfield_10024 && issue.customfield_10024.some(it => it.accountId == "63b454d34bc858b303ce6603") = DONE
+2. User condition : Condition for issue - !!issue.customfield_10024 && issue.customfield_10024.some(it => it.accountId == "63b454d34bc858b303ce6603") = DONE
+ */
+

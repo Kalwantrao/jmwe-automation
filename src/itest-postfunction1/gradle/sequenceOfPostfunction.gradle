@@ -1,0 +1,223 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory + '/src/itest-postfunction1/postfunction.gradle'
+
+def functionKey =	info?.isCloud ?  "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__SequenceFunction" : ' '
+
+addVersion(projectName)
+
+def relatedIssue = [:]
+def relatedIssuesMap = [:]
+
+def getFieldValue = [:];
+def getFieldName = [:];
+def setFieldValue = [:];
+
+['assignee', 'affectsVersions'].each {
+    getFieldValue.putAll(fields("GET", it))
+    getFieldName.putAll(fields("NAME", it))
+    setFieldValue.putAll(fields("VALUE", it))
+}
+
+relatedIssuesList.each{
+    relatedIssue.putAll(createRelatedIssuesMap('CONFIGURATION', it, projectName, " "))
+}
+
+["currentUser","userFromScriptInvalid"].each {
+    runAsUser.remove(it)
+}
+
+// Configuration for sequence of postfunction with single postfunction for current issue.
+relatedIssue.take(1).eachWithIndex { targetIssue, value, issueIndex ->
+    def transition = "checkSequenceOfPostfunctionForSinglePostfunctionForCurrentIssue" + issueIndex
+    def cloud =  "{\"conditionalExecution\":false,\"postFunctions\":[{\"postFunctionId\":\"86ddc194-24ba-457e-accf-0b91a172a044\",\"postFunction\":\"ClearFieldsFunction\",\"configuration\":{\"conditionalExecution\":false,\"fields\":\"versions\",\"runAsType\":\"addonUser\"}}],\"stopAtErrors\":false}"
+    if(isCloud){
+        addTransitionFunction(transition, 'postfunction', cloud, functionKey)
+    }
+}
+
+// Check on issue by transitioning the issue with the above configuration
+relatedIssuesMap.take(1).eachWithIndex{ key, value, int i ->
+    def transition = 'checkSequenceOfPostfunctionForSinglePostfunctionForCurrentIssue' + i
+    gint.taskHelper.add([
+            [action: "setFieldValue", ext: " Of affects versions before transition issue with $transition",
+            sleep: sleep,
+            parameters: [
+                    issue: value,
+                    field: getFieldName.affectsVersions,
+                    value: setFieldValue.affectsVersions
+            ]],
+            [action: "getFieldValue", ext: " Of affects versions before transition issue with $transition",
+             sleep: sleep,
+             parameters: [
+                     issue: value,
+                     field: getFieldName.affectsVersions
+             ],
+             data: [ getFieldValue.affectsVersions ]
+            ],
+            [action: "transitionIssue", ext: " By $transition",
+            sleep: sleep,
+            parameters:[
+                    issue: key,
+                    transition: transition,
+            ]],
+            [action: "getFieldValue", ext: " Of affects versions after transition issue with $transition",
+            sleep: sleep,
+            parameters: [
+                    issue: value,
+                    field: getFieldName.affectsVersions
+            ],
+                    failData: [ getFieldValue.affectsVersions ]
+            ]
+    ]
+    )
+}
+
+// Configuration for sequence of postfunction with multiple postfunctions for current issue.
+relatedIssue.eachWithIndex { targetIssue, value, issueIndex ->
+    def transition = "checkSequenceOfPostfunctionForMultiplePostfunctionsForAllTargetIssues" + issueIndex
+    def cloud =  "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"postFunctions\":[{\"postFunctionId\":\"86ddc194-24ba-457e-accf-0b91a172a044\",\"postFunction\":\"ClearFieldsFunction\",\"configuration\":{\"conditionalExecution\":false,\"fields\":\"assignee\",\"runAsType\":\"addonUser\"}},{\"postFunctionId\":\"2426879b-d12b-472d-bc66-4f98135b61be\",\"postFunction\":\"CommentIssueFunction\",\"configuration\":{\"conditionalExecution\":false,\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"currentUser\"}}],\"stopAtErrors\":false}"
+    if(isCloud){
+        addTransitionFunction(transition, 'postfunction', cloud, functionKey)
+    }
+}
+
+// Check on issue by transitioning the issue with the above configuration
+relatedIssuesMap.eachWithIndex{ key, value, int i ->
+    def transition = 'checkSequenceOfPostfunctionForMultiplePostfunctionsForAllTargetIssues' + i
+    gint.taskHelper.add([
+            [action: "setFieldValue", ext: " Of assignee before transition issue with $transition",
+             sleep: sleep,
+             parameters: [
+                     issue: value,
+                     field: getFieldName.assignee,
+                     value: setFieldValue.assignee
+             ]],
+            [action: "getFieldValue", ext: " Of assignee before transition issue with $transition",
+             sleep: sleep,
+             parameters: [
+                     issue: value,
+                     field: getFieldName.assignee
+             ],
+             data: [ getFieldValue.assignee ]
+            ],
+            [action: "transitionIssue", ext: " By $transition",
+             sleep: sleep,
+             parameters:[
+                     issue: key,
+                     transition: transition,
+             ]],
+            [action: "getFieldValue", ext: " Of assignee after transition issue with $transition",
+             sleep: sleep,
+             parameters: [
+                     issue: value,
+                     field: getFieldName.assignee
+             ],
+             failData: [ getFieldValue.assignee ]
+            ],
+            [action: 'getComments', ext: " after transition the issue with $transition",
+             sleep: sleep,
+             parameters: [
+                     issue: value
+             ],
+             data: [ /$transition/ ]
+            ]
+    ]
+    )
+}
+
+
+// Configuration for sequence of postfunction with multiple postfunctions for current issue with condition execution.
+relatedIssue.take(1).eachWithIndex { targetIssue, value, issueIndex ->
+    def transition = "checkSequenceOfPostfunctionForMultiplePostfunctionsConditionalExecution" + issueIndex
+    def cloud =  "{$conditionalExecution.true,\"targetIssue\":\"$value\",\"postFunctions\":[{\"postFunctionId\":\"86ddc194-24ba-457e-accf-0b91a172a044\",\"postFunction\":\"ClearFieldsFunction\",\"configuration\":{\"conditionalExecution\":false,\"fields\":\"assignee\",\"runAsType\":\"addonUser\"}},{\"postFunctionId\":\"2426879b-d12b-472d-bc66-4f98135b61be\",\"postFunction\":\"CommentIssueFunction\",\"configuration\":{\"conditionalExecution\":false,\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"currentUser\"}}],\"stopAtErrors\":false}"
+    if(isCloud){
+        addTransitionFunction(transition, 'postfunction', cloud, functionKey)
+    }
+}
+
+// Check on issue by transitioning the issue with the above configuration
+relatedIssuesMap.take(1).eachWithIndex{ key, value, int i ->
+    def transition = 'checkSequenceOfPostfunctionForMultiplePostfunctionsConditionalExecution' + i
+    ['Low','High'].each {priority ->
+        gint.taskHelper.add([
+                [action: "setFieldValue", ext: " Of priority to $priority before transition issue with $transition",
+                 sleep: sleep,
+                 parameters: [
+                         issue: value,
+                         field: "Priority",
+                         value: priority
+                 ]],
+                [action: "setFieldValue", ext: " Of assignee before transition issue with $transition when priority is $priority",
+                 sleep: sleep,
+                 parameters: [
+                         issue: value,
+                         field: getFieldName.assignee,
+                         value: setFieldValue.assignee
+                 ]],
+                [action: "getFieldValue", ext: " Of assignee before transition issue with $transition when priority is $priority",
+                 sleep: sleep,
+                 parameters: [
+                         issue: value,
+                         field: getFieldName.assignee
+                 ],
+                 data: [ getFieldValue.assignee ]
+                ],
+                [action: "transitionIssue", ext: " By $transition when priority is $priority",
+                 sleep: sleep,
+                 parameters:[
+                         issue: key,
+                         transition: transition,
+                 ]],
+        ])
+        if(priority == 'High'){
+            gint.taskHelper.add([
+                    [action: "getFieldValue", ext: " Of assignee after transition issue with $transition when priority is $priority",
+                     sleep: sleep,
+                     parameters: [
+                             issue: value,
+                             field: getFieldName.assignee
+                     ],
+                     failData: [ getFieldValue.assignee ]
+                    ],
+                    [action: 'getComments', ext: " after transition the issue with $transition when priority is $priority",
+                     sleep: sleep,
+                     parameters: [
+                             issue: value
+                     ],
+                     data: [ /$transition/ ]
+                    ]
+            ])
+        } else {
+            gint.taskHelper.add([
+                    [action: "getFieldValue", ext: " Of assignee after transition issue with $transition when priority is $priority",
+                     sleep: sleep,
+                     parameters: [
+                             issue: value,
+                             field: getFieldName.assignee
+                     ],
+                     data: [ getFieldValue.assignee ]
+                    ],
+                    [action: 'getComments', ext: " after transition the issue with $transition when priority is $priority",
+                     sleep: sleep,
+                     parameters: [
+                             issue: value
+                     ],
+                     failData: [ /$transition/ ]
+                    ]
+            ])
+        }
+    }
+}
+
+

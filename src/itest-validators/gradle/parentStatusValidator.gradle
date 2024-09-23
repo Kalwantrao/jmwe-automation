@@ -53,8 +53,6 @@ statusList.eachWithIndex { status, value, i ->
 	}
 }
 
-createWorkflowScheme()
-createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 def linkedIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'linkedIssue')
@@ -267,7 +265,6 @@ if(!isCloud) {
 		])
 	}
 }
-
 
 /*
 1. check single status and multiple status - pos and neg

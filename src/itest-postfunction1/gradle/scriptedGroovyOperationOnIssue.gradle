@@ -14,6 +14,10 @@ apply from: gint.resourceDirectory +'/src/itest-postfunction1/postfunction.gradl
 
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__ScriptedPostFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-function'
 
+["currentUser","userFromScriptInvalid"].each {
+    runAsUser.remove(it)
+}
+
 String scriptForSummary = "{{ '/rest/api/2/issue/:issue' | callJira(verb=('PUT'), params={'issue':issue.key}, body={'fields': {'summary': 'test_summary'} }) }}"
 String scriptForSummaryCreateTransition = "{{ '/rest/api/2/issue/:issue' | callJira(verb=('PUT'), params={'issue':issue.key}, body={'fields': {'summary': 'issue_created_by_create_transition'} }) }}"
 
@@ -38,10 +42,6 @@ runAsUser.eachWithIndex { userType, fields, idx ->
         moveTransitionFunction(transition, 4)
     }
 }
-
-
-createWorkflowScheme()
-createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 

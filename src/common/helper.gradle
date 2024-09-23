@@ -1,7 +1,8 @@
 ext.getStatusId = { status ->
     def statusId = [] as LinkedList
-    gint.taskHelper.addSetUp(
+    gint.taskHelper.addTearDown(
             action: "getStatusList",
+            mustRunBefore:"addTransitionFunction",
             ext: ":To get id of status_ $status",
             sleep: 3000,
             parameters:[
@@ -12,7 +13,7 @@ ext.getStatusId = { status ->
             finalClosure:{ Task task ->
                 def outPut = task.outData;
                 statusId.add(outPut[2]);
-                gint.helper.log("output", statusId.getAt(0));
+                gint.helper.log(status + " id is", statusId.getAt(0));
             }
     )
     return statusId;
@@ -20,8 +21,9 @@ ext.getStatusId = { status ->
 
 ext.getIssueTypeId = { issueType ->
     def issueTypeId = [] as LinkedList;
-    gint.taskHelper.addSetUp(
+    gint.taskHelper.addTearDown(
             action: "getIssueTypeList",
+            mustRunBefore:"addTransitionFunction",
             ext: ":To get id of issue type_ $issueType",
             sleep: 3000,
             parameters:[
@@ -32,7 +34,7 @@ ext.getIssueTypeId = { issueType ->
             finalClosure:{ Task task ->
                 def outPut = task.outData
                 issueTypeId.add(outPut[2])
-                gint.helper.log("output", issueTypeId.getAt(0))
+                gint.helper.log(issueType + " id is", issueTypeId.getAt(0))
             }
     )
     return issueTypeId
@@ -40,8 +42,9 @@ ext.getIssueTypeId = { issueType ->
 
 ext.getCustomFieldId = { customFieldName ->
     def customFieldId = [] as LinkedList;
-    gint.taskHelper.addSetUp(
+    gint.taskHelper.addTearDown(
             action: "getCustomFieldList",
+            mustRunBefore:"addTransitionFunction",
             ext: ":To get id of custom field_ $customFieldName",
             sleep: 3000,
             parameters:[
@@ -52,7 +55,7 @@ ext.getCustomFieldId = { customFieldName ->
             finalClosure:{ Task task ->
                 def outPut = task.outData
                 customFieldId.add(outPut[2])
-                gint.helper.log("output", customFieldId.getAt(0))
+                gint.helper.log(customFieldName + " id is", customFieldId.getAt(0))
             }
     )
     return customFieldId
@@ -60,8 +63,9 @@ ext.getCustomFieldId = { customFieldName ->
 
 ext.getProjectRoleId = { role ->
     def projectRoleId = [] as LinkedList
-    gint.taskHelper.addSetUp(
+    gint.taskHelper.addTearDown(
             action: "getProjectRoleList",
+            mustRunBefore:"addTransitionFunction",
             ext: ":To get id of projectRole_ $role",
             sleep: 3000,
             parameters:[
@@ -72,7 +76,7 @@ ext.getProjectRoleId = { role ->
             finalClosure:{ Task task ->
                 def outPut = task.outData;
                 projectRoleId.add(outPut[2]);
-                gint.helper.log("output", projectRoleId.getAt(0));
+                gint.helper.log(role + " id is", projectRoleId.getAt(0));
             }
     )
     return projectRoleId;
@@ -80,8 +84,9 @@ ext.getProjectRoleId = { role ->
 
 ext.getGroupId = { group, regex ->
     def groupId = [] as LinkedList
-    gint.taskHelper.addSetUp(
+    gint.taskHelper.addTearDown(
             action: "getGroupList",
+            mustRunBefore:"addTransitionFunction",
             ext: ":To get id of group_ $group",
             sleep: 3000,
             parameters:[
@@ -92,7 +97,7 @@ ext.getGroupId = { group, regex ->
             finalClosure:{ Task task ->
                 def outPut = task.outData;
                 groupId.add(outPut[2]);
-                gint.helper.log("output", groupId.getAt(0));
+                gint.helper.log(group + " id is", groupId.getAt(0));
             }
     )
     return groupId;
@@ -100,9 +105,9 @@ ext.getGroupId = { group, regex ->
 
 ext.getSecurityLevelId = { level, project ->
     def securityLevelId = [] as LinkedList
-    if(!isCloud){
-    gint.taskHelper.addSetUp(
+    gint.taskHelper.addTearDown(
             action: "getSecurityLevelList",
+            mustRunBefore:"addTransitionFunction",
             ext: ":To get id of security level_ $level",
             sleep: 3000,
             parameters:[
@@ -114,16 +119,38 @@ ext.getSecurityLevelId = { level, project ->
             finalClosure:{ Task task ->
                 def outPut = task.outData;
                 securityLevelId.add(outPut[2]);
-                gint.helper.log("saved id", securityLevelId.getAt(0));
+                gint.helper.log(level + " id is", securityLevelId.getAt(0));
             }
     )
     return securityLevelId;
-}}
+}
+
+ext.getIssueSecuritySchemeId = {
+    def securityLevelId = [] as LinkedList
+    gint.taskHelper.addTearDown(
+            action: "getIssueSecuritySchemeList",
+            mustRunBefore:"addTransitionFunction",
+            ext: ":To get id of security scheme $screen",
+            sleep: 3000,
+            parameters:[
+                    outputType: "Text",
+                    columns: "id",
+                    select: "name:$screen"
+            ],
+            finalClosure:{ Task task ->
+                def outPut = task.outData;
+                securityLevelId.add(outPut[2]);
+                gint.helper.log("security scheme " + screen + " id is", securityLevelId.getAt(0));
+            }
+    )
+    return securityLevelId;
+}
 
 ext.getUserId = { userName ->
     def getUserList = [] as LinkedList
-    gint.taskHelper.addSetUp(
+    gint.taskHelper.addTearDown(
             action: "getUserList",
+            mustRunBefore:"addTransitionFunction",
             ext: ":To get id of user_ $userName",
             sleep: 3000,
             parameters:[
@@ -135,7 +162,7 @@ ext.getUserId = { userName ->
             finalClosure:{ Task task ->
                 def outPut = task.outData;
                 getUserList.add(outPut[2]);
-                gint.helper.log("saved id", getUserList.getAt(0));
+                gint.helper.log("user id for" + userName , getUserList.getAt(0));
             }
     )
     return getUserList;
@@ -143,8 +170,31 @@ ext.getUserId = { userName ->
 
 ext.getComponentId = { component ->
     def getComponentId = [] as LinkedList
-    gint.taskHelper.addSetUp(
+    gint.taskHelper.addTearDown(
             action: "getComponentList",
+            mustRunBefore:"addTransitionFunction",
+            ext: ":To get id of component_ $component",
+            sleep: 3000,
+            parameters:[
+                    outputType: "Text",
+                    columns: "id",
+                    project: TestProject,
+                    select: "name:$component"
+            ],
+            finalClosure:{ Task task ->
+                def outPut = task.outData;
+                getComponentId.add(outPut[2]);
+                gint.helper.log("saved id", getComponentId.getAt(0));
+            }
+    )
+    return getComponentId;
+}
+
+ext.getComponentId = { component ->
+    def getComponentId = [] as LinkedList
+    gint.taskHelper.addTearDown(
+            action: "getComponentList",
+            mustRunBefore:"addTransitionFunction",
             ext: ":To get id of component_ $component",
             sleep: 3000,
             parameters:[

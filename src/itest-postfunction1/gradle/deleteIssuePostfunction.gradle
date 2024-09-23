@@ -23,7 +23,14 @@ def listOfTransitions = [
 ]
 
 ["linkByisBlockedBy","linkByIsClonedBy","linkByIsDuplicatedBy"].each {
-    relatedIssue.remove(it)
+    relatedIssuesList.remove(it)
+}
+
+def relatedIssue = [:]
+//def relatedIssuesMap = [:]
+
+relatedIssuesList.each{
+    relatedIssue.putAll(createRelatedIssuesMap('CONFIGURATION', it, projectName, " "))
 }
 
 relatedIssue.eachWithIndex { key, value, i ->
@@ -57,9 +64,6 @@ runAsUser.eachWithIndex{ user, fields, idx ->
     }
 }
 */
-
-createWorkflowScheme()
-createProject()
 
 
 def createIssues = { parameters, ext ->

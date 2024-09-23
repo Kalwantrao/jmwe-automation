@@ -1,11 +1,12 @@
 apply from: gint.resourceDirectory +'/src/common/utils.gradle'
 
 project.ext.projectName='POSTFUNCT5'
-project.ext.workflowScheme = "POSTFUNCT5"
-project.ext.jqlSearchExpression="project = $projectName and issuetype = Task and summary~JQL_ISSUE"
+project.ext.workflowScheme = projectName
 
-relatedIssue.put('returnsFromJqlSearch', "jql:$jqlSearchExpression")
+project.ext.jqlSearchExpression="project = $projectName and issuetype = Task and summary~JQL_ISSUE"
 
 tearDown(projectName)
 addWorkflow()
 
+createWorkflowScheme()
+createProject()

@@ -1,0 +1,575 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/itest-JSM/JSM.gradle'
+
+addOrganization()
+addRequestType()
+
+def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__CopyFieldValueFromParentFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:copy-fields-function'
+
+// Verify the copy fields value from parent issue postfunction for ignore empty value option.
+[
+        "CopyFieldValueFromParentIssueIgnoreEmptyValue"
+].each {
+    fieldsList.eachWithIndex { fieldName, fieldValue, i ->
+        def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+        def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+        def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+
+        if (fieldName != 'resolution') {
+            def transition = it + fieldName
+            def cloud = "{\"conditionalExecution\":false,\"fieldId\":\"$fieldValue\",\"destFieldId\":\"\",\"selectedLinkType\":\"$relatedIssue.linkByBlock\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":false,\"appendValues\":false,\"ignoreEmptyValue\":true,\"runAsType\":\"addonUser\"}"
+            def server = [["copyFieldsConfig=[{\"sourceField\":\"assignee\",\"destinationField\":\"$fieldValue\"}]"], "selectedLinkTypeSource=$relatedIssue.linkByBlock", "selectedLinkTypeDestination=$relatedIssue.linkByBlock", conditionalExecution.false, runAsUser.currentUser]
+
+            addTransitionFunctionForJSM(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+            def issue1 = createIssue([type: 'Initiative',summary: 'JMWE_Issue'], transition + "Parent issue")
+            def issue2 = createIssue([type: 'Epic', field:"Epic Name", value: "JMWE_Issue", summary: 'JMWE_Issue'], transition + "Child issue of issue1")
+
+            gint.taskHelper.addSetUp(
+                    [action      : 'setFieldValue',
+                     mustRunAfter: ["createIssues", 'createProject'],
+                     ext         : ":Link epic to inittiative by Parent Link:" + transition,
+                     parameters  : [
+                             issue  : { -> issue2[] },
+                             field: "Parent Link",
+                             value: { -> issue1[] }
+                     ],
+                    ]
+            )
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldNameToSetOnIssue to empty before transition issue with: $transition",
+                     parameters: [
+                             issue   : { -> issue1[] },
+                             field   : fieldNameToSetOnIssue,
+                             value   : " ",
+                     ],
+                    ],
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldNameToSetOnIssue to $fieldValuesToSetOnIssue before transition issue with: $transition",
+                     parameters: [
+                             issue: { -> issue2[] },
+                             field: fieldNameToSetOnIssue,
+                             value: fieldValuesToSetOnIssue
+                     ],
+                    ],
+            ])
+            gint.taskHelper.add(
+                    [action    : 'getFieldValue',
+                     sleep     : sleep,
+                     ext       : ": before transition issue with $transition:",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                     ],
+                     failData  : [getFieldValueResult],
+                    ],
+            )
+            gint.taskHelper.add(
+                    [action    : 'transitionIssue',
+                     sleep     : sleep,
+                     ext       : ":by $transition:",
+                     parameters: [
+                             transition: transition,
+                             issue     : { -> issue2[] },
+                     ],
+                    ],
+            )
+            gint.taskHelper.add(
+                    [action    : 'getFieldValue',
+                     sleep     : sleep,
+                     ext       : ": JSM-COPY_ISSUE_FIELDS_POSTFUNCTION after transition issue with $transition:",
+                     parameters: [
+                             issue: { -> issue2[] },
+                             field: fieldNameToSetOnIssue,
+                     ],
+                     data      : [getFieldValueResult],
+                    ],
+            )
+        }
+    }
+}
+
+// Verify the copy issue fields postfunction for default configuration for all fields(four fields)
+fieldsList.eachWithIndex { fieldName, fieldValue, i ->
+    def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+    def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+    def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+
+    def transition = fieldName + "WillBeCopiedFromTheIssuesParentIssue"
+    def cloud = "{\"conditionalExecution\":false,\"fieldId\":\"$fieldValue\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    def server = [["copyFieldsConfig=[{\"sourceField\":\"assignee\",\"destinationField\":\"$fieldValue\"}]"], "selectedLinkTypeSource=$relatedIssue.linkByBlock", "selectedLinkTypeDestination=$relatedIssue.linkByBlock", conditionalExecution.false, runAsUser.currentUser]
+
+    addTransitionFunctionForJSM(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+    def issue1 = createIssue([type: 'Initiative', summary: 'JMWE_Issue'], transition + "Parent issue")
+    def issue2 = createIssue([type: 'Epic', field: "Epic Name", value: "JMWE_Issue", summary: 'JMWE_Issue'], transition + "Child issue of issue1")
+
+    gint.taskHelper.addSetUp(
+            [action      : 'setFieldValue',
+             mustRunAfter: ["createIssues", 'createProject'],
+             ext         : ": to check:" + transition,
+             parameters  : [
+                     issue: { -> issue2[] },
+                     field: "Parent Link",
+                     value: { -> issue1[] }
+             ],
+            ]
+    )
+    gint.taskHelper.add(
+            [action    : 'setFieldValue',
+             sleep     : sleep,
+             ext       : ":of $fieldNameToSetOnIssue to $fieldValuesToSetOnIssue before transition issue with: $transition",
+             parameters: [
+                     issue: { -> issue1[] },
+                     field: fieldNameToSetOnIssue,
+                     value: fieldValuesToSetOnIssue
+             ],
+            ],
+    )
+    gint.taskHelper.add(
+            [action    : 'getFieldValue',
+             sleep     : sleep,
+             ext       : ": before transition issue with $transition:",
+             parameters: [
+                     issue: { -> issue2[] },
+                     field: fieldNameToSetOnIssue,
+             ],
+             failData  : [getFieldValueResult],
+            ],
+    )
+    gint.taskHelper.add(
+            [action    : 'transitionIssue',
+             sleep     : sleep,
+             ext       : ":by $transition:",
+             parameters: [
+                     transition: transition,
+                     issue     : { -> issue2[] },
+             ],
+            ],
+    )
+    gint.taskHelper.add(
+            [action    : 'getFieldValue',
+             sleep     : sleep,
+             ext       : ":Of $fieldName after transition issue with $transition:",
+             parameters: [
+                     issue: { -> issue2[] },
+                     field: fieldNameToSetOnIssue,
+             ],
+             data      : [getFieldValueResult],
+            ],
+    )
+    if (fieldName == "requestParticipant") {
+        gint.taskHelper.add([
+                [action    : 'setFieldValue',
+                 sleep     : sleep,
+                 ext       : ":of $fieldNameToSetOnIssue to $testUser before transition issue with: $transition:when field already has a value",
+                 parameters: [
+                         issue: { -> issue1[] },
+                         field: fieldNameToSetOnIssue,
+                         value: testUser
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 sleep     : sleep,
+                 ext       : ":by $transition:when field already has a value",
+                 parameters: [
+                         transition: transition,
+                         issue     : { -> issue2[] },
+                 ],
+                ],
+                [action    : 'getFieldValue',
+                 sleep     : sleep,
+                 ext       : ": after transition issue with $transition:when field already has a value",
+                 parameters: [
+                         issue: { -> issue2[] },
+                         field: fieldNameToSetOnIssue,
+                 ],
+                 failData  : [getFieldValueResult],
+                 data      : ["Request participants  . . . . : $testUser"],
+                ],
+        ])
+    }
+    if (fieldName.equalsIgnoreCase("organization")) {
+        gint.taskHelper.add([
+                [action    : 'setFieldValue',
+                 sleep     : sleep,
+                 ext       : ":of $fieldNameToSetOnIssue to empty before transition issue with: $transition:when not ignoring empty value",
+                 parameters: [
+                         issue: { -> issue1[] },
+                         field: fieldNameToSetOnIssue,
+                         value: " "
+                 ],
+                ],
+                [action    : 'transitionIssue',
+                 sleep     : sleep,
+                 ext       : ":by $transition:when not ignoring empty value",
+                 parameters: [
+                         transition: transition,
+                         issue     : { -> issue2[] },
+                 ],
+                ],
+                [action    : 'getFieldValue',
+                 sleep     : sleep,
+                 ext       : ": after transition issue with $transition:when not ignoring empty value",
+                 parameters: [
+                         issue: { -> issue2[] },
+                         field: fieldNameToSetOnIssue,
+                 ],
+                 failData  : [getFieldValueResult],
+                ],
+        ])
+    }
+}
+
+// Verify the copy issue fields postfunction for copy only if not set option
+[
+        "CopyFieldValueFromIssuesParentIssueOnlyIfNotSet"
+].each {
+    fieldsList.eachWithIndex { fieldName, fieldValue, i ->
+        def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+        def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+        def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+
+        def transition = it + fieldName
+        def cloud =  "{\"conditionalExecution\":false,\"fieldId\":\"$fieldValue\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":true,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+        def server = [["copyFieldsConfig=[{\"sourceField\":\"assignee\",\"destinationField\":\"$fieldValue\"}]"], "selectedLinkTypeSource=$relatedIssue.linkByBlock", "selectedLinkTypeDestination=$relatedIssue.linkByBlock", conditionalExecution.false, runAsUser.currentUser]
+
+        addTransitionFunctionForJSM(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+        def issue1 = createIssue([type: 'Initiative',summary: 'JMWE_Issue'], transition + "Parent issue")
+        def issue2 = createIssue([type: 'Epic', field:"Epic Name", value: "JMWE_Issue", summary: 'JMWE_Issue'], transition + "Child issue of issue1")
+
+        gint.taskHelper.addSetUp(
+                [action      : 'setFieldValue',
+                 mustRunAfter: ["createIssues", 'createProject'],
+                 ext         : ": to check:" + transition,
+                 parameters  : [
+                         issue  : { -> issue2[] },
+                         field: "Parent Link",
+                         value: { -> issue1[] }
+                 ],
+                ]
+        )
+        gint.taskHelper.add([
+                [action    : 'setFieldValue',
+                 sleep     : sleep,
+                 ext       : ":of $fieldNameToSetOnIssue to $fieldValuesToSetOnIssue before transition issue with: $transition",
+                 parameters: [
+                         issue     : { ->issue1[] },
+                         field     : fieldNameToSetOnIssue,
+                         value     : fieldValuesToSetOnIssue
+                 ],
+                ],
+        ])
+        gint.taskHelper.add([
+                [action    : 'getFieldValue',
+                 sleep : sleep,
+                 ext: ": before transition issue with $transition:",
+                 parameters: [
+                         issue     : { ->issue2[] },
+                         field: fieldNameToSetOnIssue,
+                 ] ,
+                 failData: [ getFieldValueResult ],
+                ],
+        ])
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep : sleep,
+                 ext: ":by $transition:",
+                 parameters: [
+                         transition: transition,
+                         issue     : { ->issue2[] },
+                 ],
+                ],
+        ])
+        gint.taskHelper.add([
+                [action    : 'getFieldValue',
+                 sleep : sleep,
+                 ext: ": JSM-COPY_ISSUE_FIELDS_POSTFUNCTION after transition issue with $transition:",
+                 parameters: [
+                         issue     : { ->issue2[] },
+                         field: fieldNameToSetOnIssue,
+                 ],
+                 data: [ getFieldValueResult ],
+                ],
+        ])
+        if(fieldName == "requestParticipant"){
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldNameToSetOnIssue to $testUser before transition issue with: $transition:when field already has a value",
+                     parameters: [
+                             issue     : { ->issue1[] },
+                             field     : fieldNameToSetOnIssue,
+                             value     : testUser
+                     ],
+                    ],
+                    [action    : 'transitionIssue',
+                     sleep : sleep,
+                     ext: ":by $transition:when field already has a value",
+                     parameters: [
+                             transition: transition,
+                             issue     : { ->issue2[] },
+                     ],
+                    ],
+                    [action    : 'getFieldValue',
+                     sleep : sleep,
+                     ext: ": after transition issue with $transition:when field already has a value",
+                     parameters: [
+                             issue     : { ->issue2[] },
+                             field: fieldNameToSetOnIssue,
+                     ] ,
+                     data: [ getFieldValueResult ],
+                     failData: ["Request participants  . . . . : $testUser"],
+                    ],
+            ])
+        }
+    }
+}
+
+// Verify the copy issue fields postfunction for conditional execution any one fields(request participant)
+[
+        'CopyFieldValueFromIssuesParentIssueIfConditionTrue'
+].each {
+    fieldsList.take(1).eachWithIndex { fieldName, fieldValue, i ->
+        def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+        def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+        def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+
+        def transition = it + fieldName
+        def cloud =  "{$conditionalExecution.true,\"fieldId\":\"$fieldValue\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+        def server =  [[ "copyFieldsConfig=[{\"sourceField\":\"assignee\",\"destinationField\":\"$fieldValue\"}]" ] , "selectedLinkTypeSource=$relatedIssue.linkByBlock" , "selectedLinkTypeDestination=$relatedIssue.currentIssue" , conditionalExecution.true , runAsUser.currentUser]
+
+        addTransitionFunctionForJSM(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+        def issue1 = createIssue([type: 'Initiative',summary: 'JMWE_Issue'], transition + "Parent issue")
+        def issue2 = createIssue([type: 'Epic', field:"Epic Name", value: "JMWE_Issue", summary: 'JMWE_Issue'], transition + "Child issue of issue1")
+
+        gint.taskHelper.addSetUp(
+                [action      : 'setFieldValue',
+                 mustRunAfter: ["createIssues", 'createProject'],
+                 ext         : ": to check:" + transition,
+                 parameters  : [
+                         issue  : { -> issue2[] },
+                         field: "Parent Link",
+                         value: { -> issue1[] }
+                 ],
+                ]
+        )
+        ["Low", "High"].each {
+            gint.taskHelper.add(
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of Priority to $it before transition issue with: $transition",
+                     parameters: [
+                             issue     : { ->issue2[] },
+                             field     : "Priority",
+                             value     : it
+                     ],
+                    ],
+            )
+            gint.taskHelper.add(
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldNameToSetOnIssue to $fieldValuesToSetOnIssue before transition issue with: $transition:when priority is $it",
+                     parameters: [
+                             issue     : { ->issue1[] },
+                             field     : fieldNameToSetOnIssue,
+                             value     : fieldValuesToSetOnIssue
+                     ],
+                    ],
+            )
+            gint.taskHelper.add(
+                    [action    : 'getFieldValue',
+                     sleep : sleep,
+                     ext: ": before transition issue with $transition:when priority is $it",
+                     parameters: [
+                             issue     : { ->issue2[] },
+                             field: fieldNameToSetOnIssue,
+                     ] ,
+                     failData: [ getFieldValueResult ],
+                    ],
+            )
+            gint.taskHelper.add(
+                    [action    : 'transitionIssue',
+                     sleep : sleep,
+                     ext: ":by $transition:when priority is $it",
+                     parameters: [
+                             transition: transition,
+                             issue     : { ->issue2[] },
+                     ],
+                    ],
+            )
+            if(it == "High"){
+                gint.taskHelper.add(
+                        [action    : 'getFieldValue',
+                         sleep : sleep,
+                         ext: ":Of $fieldName after transition issue with $transition:when priority is $it",
+                         parameters: [
+                                 issue     : { ->issue2[] },
+                                 field: fieldNameToSetOnIssue,
+                         ] ,
+                         data: [ getFieldValueResult ],
+                        ],
+                )
+            } else {
+                gint.taskHelper.add(
+                        [action    : 'getFieldValue',
+                         sleep : sleep,
+                         ext: ":Of $fieldName after transition issue with $transition:when priority is $it",
+                         parameters: [
+                                 issue     : { ->issue2[] },
+                                 field: fieldNameToSetOnIssue,
+                         ] ,
+                         failData: [ getFieldValueResult ],
+                        ],
+                )
+            }
+        }
+    }
+}
+
+runAsUser.remove("userFromScriptInvalid")
+
+// Check run as user for clear fields of linked issue postfunction
+runAsUser.eachWithIndex { userType, configFields, i ->
+    fieldsList.take(1).eachWithIndex { fieldName, fieldValue, idx ->
+        if (fieldName != 'resolution') {
+
+            def transition = fieldName + "CopyFieldValueFromIssuesParentIssuePostfunctionRunAs" + userType
+            def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+            def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+            def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+
+            def cloud = "{\"conditionalExecution\":false,\"fieldId\":\"$fieldValue\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":false,$configFields}"
+            def server = ["fields=$fieldValue", "selectedLinkType=$relatedIssue.linkByBlock", conditionalExecution.true, configFields]
+            addTransitionFunctionForJSM(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+            def issue1 = createIssue([type: 'Initiative', summary: 'JMWE_Issue'], transition + "Parent issue")
+            def issue2 = createIssue([type: 'Epic', field: "Epic Name", value: "JMWE_Issue", summary: 'JMWE_Issue'], transition + "Child issue of issue1")
+
+            gint.taskHelper.addSetUp(
+                    [action      : 'setFieldValue',
+                     mustRunAfter: ["createIssues", 'createProject'],
+                     ext         : ": to check:" + transition,
+                     parameters  : [
+                             issue: { -> issue2[] },
+                             field: "Parent Link",
+                             value: { -> issue1[] }
+                     ],
+                    ]
+            )
+            if (userType.equalsIgnoreCase("userInFieldReporter")) {
+                gint.taskHelper.add([
+                        [action    : 'setFieldValue',
+                         sleep     : sleep,
+                         ext       : ":of reporter to $user before transition issue with: $transition:",
+                         parameters: [
+                                 issue: { -> issue2[] },
+                                 field: "Reporter",
+                                 value: user
+                         ],
+                        ],
+                ])
+            } else if (userType.equalsIgnoreCase("userInFieldAssignee")) {
+                gint.taskHelper.add([
+                        [action    : 'setFieldValue',
+                         sleep     : sleep,
+                         ext       : ":of assignee to $user before transition issue with: $transition:",
+                         parameters: [
+                                 issue: { -> issue2[] },
+                                 field: "Assignee",
+                                 value: user
+                         ],
+                        ],
+                ])
+            }
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName before transition issue with: $transition:",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: fieldValuesToSetOnIssue
+                     ],
+                    ],
+            ])
+            gint.taskHelper.add([
+                    [action    : 'getFieldValue',
+                     sleep     : sleep,
+                     ext       : ": before transition issue with $transition:",
+                     parameters: [
+                             issue: { -> issue2[] },
+                             field: fieldNameToSetOnIssue,
+                     ],
+                     failData  : [getFieldValueResult],
+                    ],
+            ])
+            gint.taskHelper.add([
+                    [action    : 'transitionIssue',
+                     sleep     : sleep,
+                     ext       : ":by $transition:",
+                     parameters: [
+                             transition: transition,
+                             issue     : { -> issue2[] },
+                     ],
+                    ],
+            ])
+            gint.taskHelper.add([
+                    [action    : 'getFieldValue',
+                     sleep     : sleep,
+                     ext       : ": JSM-COPY_ISSUE_FIELDS_POSTFUNCTION check $transition:",
+                     parameters: [
+                             issue: { -> issue2[] },
+                             field: fieldNameToSetOnIssue,
+                     ],
+                     data      : [getFieldValueResult],
+                    ],
+            ])
+            if (userType.equalsIgnoreCase("currentUser")) {
+                gint.taskHelper.add([
+                        [action    : 'getIssueHistoryList',
+                         sleep     : sleep,
+                         ext       : ": JSM-COPY_ISSUE_FIELDS_POSTFUNCTION check $transition:",
+                         parameters: [
+                                 issue     : { -> issue2[] },
+                                 outputType: "text",
+                                 select    : ["Field:$fieldNameToSetOnIssue", "To String:$fieldValuesToSetOnIssue"],
+                                 columns   : "Author,'To String'"
+                         ],
+                         data      : ["$addonName", "$fieldValuesToSetOnIssue", ""],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'getIssueHistoryList',
+                         sleep     : sleep,
+                         ext       : ": JSM-COPY_ISSUE_FIELDS_POSTFUNCTION check $transition:",
+                         parameters: [
+                                 issue     : { -> issue2[] },
+                                 outputType: "text",
+                                 select    : ["Field:$fieldNameToSetOnIssue", "To String:$fieldValuesToSetOnIssue"],
+                                 columns   : "Author,'To String'"
+                         ],
+                         data      : ["$getCurrentUserName", "$fieldValuesToSetOnIssue"],
+                        ],
+                ])
+            }
+        }
+    }
+}

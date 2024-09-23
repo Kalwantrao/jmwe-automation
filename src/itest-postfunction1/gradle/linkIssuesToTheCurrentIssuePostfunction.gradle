@@ -63,9 +63,6 @@ selectedLinkType.take(1).eachWithIndex { key,  value, i ->
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey )
 }
 
-createWorkflowScheme()
-createProject()
-
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_LinkIssue'], 'defaultIssue1')
 

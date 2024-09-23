@@ -12,6 +12,12 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-validators/validator.gradle'
 
+ext.JIRA_ADMIN_PROJECT_ROLE_ID = getProjectRoleId("Administrators")
+project.ext.jiraAdminRoleId = {->JIRA_ADMIN_PROJECT_ROLE_ID.getAt(0).trim()}
+
+ext.JIRA_TEST_PROJECT_ROLE_ID = getProjectRoleId("testprojectrole")
+project.ext.testProjectRoleId = {->JIRA_TEST_PROJECT_ROLE_ID.getAt(0).trim()}
+
 
 ext.TEST_GROUP_ID = getGroupId('testgroup', "testgroup.*")
 ext.ADMIN_GROUP_ID = getGroupId('jira-admins', "jira-admins.*")
@@ -204,9 +210,6 @@ userInFieldCreatorUserValidatorCriteria.eachWithIndex { criteria, userFields, i 
         addTransitionFunctionOnCreateTransition(it, 'validator', info?.isCloud ? cloud : server, functionKey)
     }
 }
-
-createWorkflowScheme()
-createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue',assignee: "@self"], 'defaultIssue')
 def currentUser = info?.isCloud ? info?.userDisplayName : user

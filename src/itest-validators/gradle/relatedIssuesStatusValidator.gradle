@@ -182,8 +182,6 @@ atLeastOneNotRelatedIssuesStatus.eachWithIndex { linkedIssue, fieldValues, i ->
     addTransitionFunction(it, 'validator', info?.isCloud? cloud : server, functionKey)
 }
 
-createWorkflowScheme()
-createProject()
 
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
 def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { ->parent[] }], 'Sub-task')

@@ -90,7 +90,88 @@ ext.tearDown = { projectName ->
                                 ]
                         ],
         ])
-    }
+    } //JSM: Jira Service Management: Change Management Screen Scheme
+}
+
+ext.tearDownForJSM = { projectName ->
+    gint.taskHelper.addTearDown([
+            [action    : 'deleteProject',
+             parameters: [
+                     project: projectName,
+             ],
+             finalClosure:{ Task task->
+                 if(task.result == true){
+                     gint.helper.log("project not found", projectName)
+                 }
+                 else{
+                     gint.helper.log("deleting project", projectName)
+                 }
+             }
+            ],
+            [
+                    action      : 'deleteIssueTypeScreenScheme',
+                    dependsOn   : 'deleteProject',
+                    parameters  : [
+                            issueTypeScreenScheme:  "$projectName: Jira Service Management Issue Type Screen Scheme" //info?.isCloud ? "$projectName: Software Development Issue Type Screen Scheme" : "$projectName: Scrum Issue Type Screen Scheme"
+                    ]
+            ] ,
+            [
+                    action      : 'deleteScreenScheme', ext: 'Bug',
+                    dependsOn   : 'deleteProject',
+                    mustRunAfter: 'deleteIssueTypeScreenScheme',
+                    parameters  : [
+                            screenScheme: "$projectName: Jira Service Management: Change Management Screen Scheme" //info?.isCloud ? "$projectName: Software Development Bug Screen Scheme" : "$projectName: Scrum Bug Screen Scheme"
+                    ]
+            ] ,
+            [
+                    action      : 'deleteScreenScheme', ext: 'Default',
+                    dependsOn   : 'deleteProject',
+                    mustRunAfter: 'deleteIssueTypeScreenScheme',
+                    parameters  : [
+                            screenScheme: "$projectName: Jira Service Management: Incident Management Screen Scheme" // info?.isCloud ? "$projectName: Software Development Default Screen Scheme" : "$projectName: Scrum Default Screen Scheme"
+                    ]
+            ] ,
+            [
+                    action      : 'removeScreen', ext: 'Bug',
+                    dependsOn   : 'deleteProject',
+                    mustRunAfter: 'deleteScreenSchemeBug',
+                    parameters  : [
+                            screen: "$projectName: Jira Service Management: Change Create Issue Screen" // info?.isCloud ? "$projectName: Software Development Bug Screen" : "$projectName: Scrum Bug Screen"
+                    ]
+            ] ,
+            [
+                    action      : 'removeScreen', ext: 'Default',
+                    dependsOn   : 'deleteProject',
+                    mustRunAfter: 'deleteScreenSchemeDefault',
+                    parameters  : [
+                            screen: "$projectName: Jira Service Management: Change View/Edit Screen" //info?.isCloud ? "$projectName: Software Development Default Issue Screen" : "$projectName: Scrum Default Issue Screen"
+                    ]
+            ],
+            [action: 'deleteWorkflowScheme',
+             onlyIf: skipSetup != "true",
+             mustRunAfter: 'deleteProject',
+             parameters: [
+                     workflowScheme: projectName
+             ]
+            ],
+            [action: 'deleteWorkflowScheme',ext: ":delete copy:",
+             mustRunAfter: 'deleteProject',
+             parameters: [
+                     workflowScheme: "Jira Service Management IT Support Workflow Scheme generated for Project $projectName"
+             ]
+            ],
+    ])
+    if(skipSetup != "true"){
+        gint.taskHelper.addTearDown([
+                [action: 'deleteWorkflow',
+                 sleep: info?.isCloud? 5000 : 0,
+                 mustRunAfter: 'deleteWorkflowScheme',
+                 parameters: [
+                         workflow: workflow
+                 ]
+                ],
+        ])
+    } //JSM: Jira Service Management: Change Management Screen Scheme
 }
 
 ext.tearDownAfter = { projectName,tearDownAfter ->

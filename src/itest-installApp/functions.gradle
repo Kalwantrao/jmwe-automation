@@ -1,0 +1,90 @@
+ext.info = gint.getJiraHelper().getServerInfoWithVerify()
+project.ext.jiraUrl = info?.url
+
+def getUpmToken() {
+    if(info?.isCloud){
+        def upmToken;
+        def URI = new URL(info?.url + "/rest/plugins/1.0/")
+
+        def connection = URI.openConnection() as HttpURLConnection
+        connection.requestMethod = "GET"
+        connection.setRequestProperty("Content-Type", "application/json")
+
+        String auth = "${info.user}:${testUserTokenCloud}"
+        String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes())
+
+        connection.setRequestProperty("Authorization", "Basic "+ encodedAuth)
+
+        connection.connect()
+
+        upmToken = connection.getHeaderField("upm-token")
+
+        return upmToken
+    }
+}
+
+ext.uninstallApp = {
+    if(info?.isCloud) {
+        gint.taskHelper.add(
+                name: "Uninstall the app by DELETE request:",
+                sleepAfter: 8000,
+                inline: {
+                    def URI = new URL(info?.url + "/rest/plugins/1.0/com.innovalog.mwec-key")
+                    def connection = URI.openConnection() as HttpURLConnection
+                    connection.requestMethod = "DELETE"
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    String auth = "${info.user}:${testUserTokenCloud}"
+                    String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes())
+
+                    connection.setRequestProperty("Authorization", "Basic " + encodedAuth)
+                    gint.helper.log("Authorization", "Basic " + encodedAuth)
+
+                    def responseCode = connection.responseCode
+                    def responseMessage = connection.responseMessage
+
+                    gint.helper.log("response code", responseCode)
+                    gint.helper.log("response message", responseMessage)
+                }
+        )
+    }
+}
+
+ext.installApp = {
+    if(info?.isCloud) {
+        gint.taskHelper.add(
+                name: "Install app by POST request",
+                sleepAfter: 8000,
+                inline: {
+                    def UPM_TOKEN = getUpmToken()
+                    def URI = new URL(info?.url + "/rest/plugins/1.0/?token=${UPM_TOKEN}")
+                    gint.helper.log("upm token", UPM_TOKEN)
+                    def connection = URI.openConnection() as HttpURLConnection
+                    connection.requestMethod = "POST"
+                    connection.setRequestProperty("Content-Type", "application/vnd.atl.plugins.install.uri+json")
+                    String auth = "${info.user}:${testUserTokenCloud}"
+                    String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes())
+
+                    connection.setRequestProperty("Authorization", "Basic " + encodedAuth)
+                    connection.doOutput = true
+
+                    def jsonBody = """{ "pluginUri" : "${BASE_APP_URL}" }"""
+                    connection.outputStream.withWriter("UTF-8") { writer ->
+                        writer.write(jsonBody)
+                    }
+
+                    def responseCode = connection.responseCode
+                    def responseMessage = connection.responseMessage
+
+                    gint.helper.log("response code", responseCode)
+                    gint.helper.log("response message", responseMessage)
+
+                    def response = connection.inputStream.withReader("UTF-8") { reader ->
+                        reader.text
+                    }
+                    println "Response Body: ${response}"
+
+                    connection.disconnect()
+                }
+        )
+    }
+}

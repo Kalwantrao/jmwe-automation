@@ -1,0 +1,640 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/itest-JSM/JSM.gradle'
+
+addOrganization()
+addRequestType()
+
+def issue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issue1')
+
+
+fieldsList.eachWithIndex { fieldName, fieldId, idx ->
+    def transition = "verifyIsEmptyOperatorInBuildYourOwnValidatorForField" + fieldName
+    def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__ScriptedValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-validator'
+    def errorMessage = "check field $fieldName should not be empty"
+
+    def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+    def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+    def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+
+
+    if (fieldName == 'requestParticipant') {
+        def fields = "{\"errorMessage\":\"$errorMessage\",\"script\":\"let convertToNumber = x => x ? Number(x) : 0;\\nlet convertToCalendarDate = x => x ? new CalendarDate(x) : null;\\nlet convertToDate = x => x ? new Date(x) : null;\\nlet convertCalendarDateToDate = x => x ? new Date(x.toISOString() + 'T00:00:00') : null;\\nlet convertDateToCalendarDate = x =>x ? x.toCalendarDate() : null;\\nlet convertRichText = x => typeof x == 'RichText' ? x.plainText : x; \\nlet source = (issue.${fieldId} ?? []).map(f => f?.accountId).map(convertRichText);\\n\\nsource == null || ((typeof source == 'List' || typeof source == 'string') && source.length == 0)\",\"type\":\"noCode\",\"field\":\"${fieldId}\",\"operator\":\"isEmpty\",\"valueToCompare\":\"field\",\"expression\":\"let convertToNumber = x => x ? Number(x) : 0;\\nlet convertToCalendarDate = x => x ? new CalendarDate(x) : null;\\nlet convertToDate = x => x ? new Date(x) : null;\\nlet convertCalendarDateToDate = x => x ? new Date(x.toISOString() + 'T00:00:00') : null;\\nlet convertDateToCalendarDate = x =>x ? x.toCalendarDate() : null;\\nlet convertRichText = x => typeof x == 'RichText' ? x.plainText : x; \\nlet source = (issue.${fieldId} ?? []).map(f => f?.accountId).map(convertRichText);\\n\\nsource == null || ((typeof source == 'List' || typeof source == 'string') && source.length == 0)\"}"
+        addTransitionFunctionForJSM(transition, 'validator', fields, functionKey)
+
+        [user, " "].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if (it == user) {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR_ $transition _ when $fieldName is $it:",
+                         expected  : -3,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         data  : [errorMessage],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         failData      : [errorMessage],
+                        ],
+                ])
+            }
+        }
+    }
+}
+
+fieldsList.eachWithIndex { field, value, i ->
+
+    def fieldNameToSetOnIssue = fieldNameToSet[field]
+    def getFieldValueResult = checkFieldValueOnIssue[field]
+    def fieldValuesToSetOnIssue = fieldValuesToSet[field]
+
+    def transition = field + "fieldIsRequired"
+    def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__FieldRequiredValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldrequired-validator'
+    def errorMessage = field + " field is required"
+    def server = [conditionalValidation.no, "field=$value", "errorMessage=$errorMessage"]
+    def cloud = "{\"conditionalValidation\":false,\"fields\":\"$value\",\"errorMessage\":\"$errorMessage\",\"expression\":\"issue.${value} != null && (typeof(issue.${value}) != 'List' || issue.${value}.length > 0)\"}"
+    addTransitionFunctionForJSM(transition, 'validator', info?.isCloud ? cloud : server, functionKey)
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             sleep : sleep,
+             ext: ": FIELDS_REQUIRED_VALIDATOR-TS_09_TC_01_Case_01- $transition _ when field not has value:",
+             expected  : -3,
+             parameters: [
+                     transition: transition,
+                     issue     : { -> issue1[] },
+             ],
+             data: ["$errorMessage"],
+            ],
+            ]
+    )
+    if(field == 'requestType'){
+        gint.taskHelper.add([
+                [action    : 'setFieldValue',
+                 sleep     : sleep,
+                 ext       : ":of request type to $fieldValuesToSetOnIssue:",
+                 parameters: [
+                         issue     : { -> issue1[] },
+                         field     : fieldNameToSetOnIssue,
+                         value     : fieldValuesToSetOnIssue
+                 ],
+                ],
+        ])
+    } else {
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep : sleep,
+                 ext: ": FIELDS_REQUIRED_VALIDATOR-TS_09_TC_01_Case_02 $transition _ when field $field value added on transition screen:",
+                 expected  : 0,
+                 parameters: [
+                         transition: transition,
+                         issue     : { -> issue1[] },
+                         field: fieldNameToSetOnIssue,
+                         value: fieldValuesToSetOnIssue
+                 ] ,
+                 failData: ["$errorMessage"],
+                ],
+        ])
+    }
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             sleep : sleep,
+             ext: ": FIELDS_REQUIRED_VALIDATOR-TS_09_TC_01_Case_03 $transition _ when field has value:",
+             expected  : 0,
+             parameters: [
+                     transition: transition,
+                     issue     : { -> issue1[] },
+             ],
+             failData: ["$errorMessage"],
+            ],
+    ])
+}
+
+fieldsList.eachWithIndex { field, value, i ->
+
+    def fieldNameToSetOnIssue = fieldNameToSet[field]
+    def getFieldValueResult = checkFieldValueOnIssue[field]
+    def fieldValuesToSetOnIssue = fieldValuesToSet[field]
+
+    def transition = "checkConditionalValidation_labelsRequiredWhenRequestParticipantNotEmpty"
+    def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__FieldRequiredValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:fieldrequired-validator'
+    def errorMessage = "labels field is required if request participant is not empty"
+    if (field == 'requestParticipant') {
+        def server = [conditionalValidation.no, "field=$value", "errorMessage=$errorMessage"]
+        def cloud = "{\"conditionalValidation\":true,\"conditionalValidationExpression\":\"!!issue.${value} && issue.${value}.length > 0\",\"skipValidationOnCreate\":false,\"fields\":\"labels\",\"errorMessage\":\"$errorMessage\",\"expression\":\"let skipOnCreate = false;\\nlet conditionalValidationRes = !() => {\\n!!issue.${value} && issue.${value}.length > 0\\n}();\\nif(skipOnCreate || conditionalValidationRes){\\nreturn true;\\n} else {!!issue.labels && issue.labels.length > 0}\"}"
+        addTransitionFunctionForJSM(transition, 'validator', info?.isCloud ? cloud : server, functionKey)
+
+        [user, " "].each {
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $field to $it:before transition issue with $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if (it == user) {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ":By $transition when $field has value $it",
+                         expected  : -3,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         data      : ["$errorMessage"],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ":By $transition when $field has value $it",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         failData  : ["$errorMessage"],
+                        ],
+                ])
+            }
+        }
+    }
+}
+
+def issue2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], "issue2")
+
+fieldsList.eachWithIndex { fieldName, fieldId, idx ->
+    def transition = "verifyBuildYourOwnValidatorScriptShouldReturnTrueForField" + fieldName
+    def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__ScriptedValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-validator'
+    def errorMessage = "check field $fieldName should not be empty"
+
+    def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+    def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+    def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+
+
+    if(fieldName == 'requestParticipant') {
+        def fields = "{\"script\":\"!!issue.${fieldId} && issue.${fieldId}.some(it => it.accountId == '${info.userKey}')\",\"errorMessage\":\"$errorMessage\",\"type\":\"script\",\"expression\":\"!!issue.${fieldId} && issue.${fieldId}.some(it => it.accountId == '${info.userKey}')\"}"
+        addTransitionFunctionForJSM(transition, 'validator', fields, functionKey)
+
+        [user,testUser," "].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue2[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if(it == user){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue2[] },
+                         ],
+                                failData: [errorMessage],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR $transition _ when $fieldName is $it:",
+                         expected  : -3,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue2[] },
+                         ],
+                         data: [errorMessage],
+                        ],
+                ])
+            }
+        }
+    } else if(fieldName.equalsIgnoreCase('Organizations')) {
+        def fields = "{\"errorMessage\":\"$errorMessage\",\"script\":\"!!issue.${fieldId} && issue.${fieldId}.some(it => it.name == '$organization')\",\"type\":\"script\",\"expression\":\"!!issue.${fieldId} && issue.${fieldId}.some(it => it.name == '$organization')\"}"
+        addTransitionFunctionForJSM(transition, 'validator', fields, functionKey)
+
+        [organization," "].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if(it == organization){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         failData: [errorMessage],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR_ $transition _ when $fieldName is $it:",
+                         expected  : -3,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         data: [errorMessage],
+                        ],
+                ])
+            }
+        }
+    } else if(fieldName == 'resolution') {
+        def fields = "{\"errorMessage\":\"$errorMessage\",\"script\":\"!!issue.resolution && issue.resolution.name == '${defaultValueOfResolution}'\",\"type\":\"script\",\"expression\":\"!!issue.resolution && issue.resolution.name == '${defaultValueOfResolution}'\"}"
+        addTransitionFunctionForJSM(transition, 'validator', fields, functionKey)
+
+        ["Won't Do", defaultValueOfResolution].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if(it == defaultValueOfResolution){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         failData: [errorMessage],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR_ $transition _ when $fieldName is $it:",
+                         expected  : -3,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         data: [errorMessage],
+                        ],
+                ])
+            }
+        }
+    }else if(fieldName == 'requestType') {
+        def fields = "{\"errorMessage\":\"$errorMessage\",\"script\":\"!!issue.${fieldId} && issue.${fieldId}.requestType.name == '$requestTypeFieldValue'\",\"type\":\"script\",\"expression\":\"!!issue.${fieldId} && issue.${fieldId}.requestType.name == '$requestTypeFieldValue'\"}"
+        addTransitionFunctionForJSM(transition, 'validator', fields, functionKey)
+
+        [" ", requestTypeFieldValue].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if(it == requestTypeFieldValue){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         failData: [errorMessage],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR_ $transition _ when $fieldName is $it:",
+                         expected  : -3,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         data: [errorMessage],
+                        ],
+                ])
+            }
+        }
+    }
+}
+
+fieldsList.eachWithIndex { fieldName, fieldId, idx ->
+    if(fieldName == 'requestParticipant') {
+        def transition = "userValidatorVerifyCurrentUserShouldBeInField" + fieldName
+        def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+        def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+        def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+        def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__UserValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:generic-user-validator'
+        def errorMessage = "Check current user is in field request participant"
+        def cloud = "{\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"userFieldsToCheck\":[\"${fieldId}\"]},\"errorMessage\":\"$errorMessage\",\"expression\":\"let selectedUser = user; ((!!user && (false || ((!!issue.${fieldId} && issue.${fieldId}.some( fieldUser => fieldUser.accountId == user.accountId))))))\"}"
+        addTransitionFunctionForJSM(transition, 'validator', cloud, functionKey)
+
+        def issue = createIssue([type: 'Task', summary: 'JMWE_Issue'], transition)
+
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep : sleep,
+                 ext: ": USER_VALIDATOR- $transition _when current user not in field request participant:",
+                 expected  : -3,
+                 parameters: [
+                         transition: transition,
+                         issue     : { -> issue[] },
+                 ],
+                 data: ["$errorMessage"],
+                ],
+        ])
+        gint.taskHelper.add([
+                [action    : 'setFieldValue',
+                 sleep     : sleep,
+                 ext       : ":of Request participants to $user:",
+                 parameters: [
+                         issue     : { -> issue[] },
+                         field     : fieldNameToSetOnIssue,
+                         value     : user
+                 ],
+                ],
+        ])
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep : sleep,
+                 ext: ": USER_VALIDATOR- $transition _when current user in field request participant:",
+                 expected  : 0,
+                 parameters: [
+                         transition: transition,
+                         issue     : { -> issue[] },
+                 ],
+                 failData: ["$errorMessage"],
+                ],
+        ])
+
+    }
+}
+
+// Validate the USER-VALIDATOR with JSM
+fieldsList.eachWithIndex { fieldName, fieldId, idx ->
+    def transition = "verifyUserValidatorTheScriptShouldReturnTrueForField" + fieldName
+    def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+    def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+    def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+
+    def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__ScriptedValidator" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:groovy-validator'
+    def errorMessage = "check field $fieldName should not be empty"
+
+    if(fieldName == 'requestParticipant') {
+        def fields = "{\"errorMessage\":\"$errorMessage\",\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"usersConditionScript\":\"!!issue.${fieldId} && issue.${fieldId}.some(it => it.accountId == '${info.userKey}')\"},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.${fieldId} && issue.${fieldId}.some(it => it.accountId == '${info.userKey}')))))\"}"
+        addTransitionFunctionForJSM(transition, 'validator', fields, functionKey)
+        [user,testUser," "].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if(it == user){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         failData: [errorMessage]
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR $transition _ when $fieldName is $it:",
+                         expected  : -3,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         data: [errorMessage]
+                        ],
+                ])
+            }
+        }
+    } else if(fieldName.equalsIgnoreCase('Organizations')) {
+        def fields = "{\"errorMessage\":\"$errorMessage\",\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"usersConditionScript\":\"!!issue.${fieldId} && issue.${fieldId}.some(it => it.name == '$organization')\"},\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.${fieldId} && issue.${fieldId}.some(it => it.name == '$organization')))))\"}"
+        addTransitionFunctionForJSM(transition, 'validator', fields, functionKey)
+
+        [organization," "].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if(it == organization){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         failData: [errorMessage]
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR_ $transition _ when $fieldName is $it:",
+                         expected  : -3,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         data: [errorMessage]
+                        ],
+                ])
+            }
+        }
+    } else if(fieldName == 'resolution') {
+        def fields = "{\"problems\":[],\"fromUserType\":\"currentUser\",\"conditionMode\":\"all-user-condition\",\"userCriteria\":{\"usersConditionScript\":\"!!issue.resolution && issue.resolution.name == '${defaultValueOfResolution}'\"},\"errorMessage\":\"$errorMessage\",\"expression\":\"let selectedUser = user; ((!!user && (false || (!!issue.resolution && issue.resolution.name == '${defaultValueOfResolution}'))))\"}"
+        addTransitionFunctionForJSM(transition, 'validator', fields, functionKey)
+
+        ["Won't Do", defaultValueOfResolution].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if(it == defaultValueOfResolution){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         failData: [errorMessage]
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR_ $transition _ when $fieldName is $it:",
+                         expected  : -3,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         data: [errorMessage]
+                        ],
+                ])
+            }
+        }
+    }else if(fieldName == 'requestType') {
+        def fields = "{\"errorMessage\":\"$errorMessage\",\"script\":\"!!issue.${fieldId} && issue.${fieldId}.requestType.name == '${requestTypeFieldValue}'\",\"conditionMode\":\"all-user-condition\",\"expression\":\"!!issue.${fieldId} && issue.${fieldId}.requestType.name == '${requestTypeFieldValue}'\",\"fromUserType\":\"currentUser\",\"userCriteria\":{\"usersConditionScript\":\"!!issue.${fieldId} && issue.${fieldId}.requestType.name == '${requestTypeFieldValue}'\"},\"type\":\"script\"}"
+        addTransitionFunctionForJSM(transition, 'validator', fields, functionKey)
+
+        [" ", requestTypeFieldValue].each { it ->
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName to $it:before transition issue $transition",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                             value: it
+                     ],
+                    ],
+            ])
+            if(it == requestTypeFieldValue){
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR_ $transition _ when $fieldName is $it:",
+                         expected  : 0,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                         failData: [errorMessage]
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'transitionIssue',
+                         sleep     : sleep,
+                         ext       : ": BUILD_YOUR_OWN_VALIDATOR_ $transition _ when $fieldName is $it:",
+                         expected  : -3,
+                         parameters: [
+                                 transition: transition,
+                                 issue     : { -> issue1[] },
+                         ],
+                                data: [errorMessage]
+                        ],
+                ])
+            }
+        }
+    }
+}
+
+/*
+REVIEWED by Chirag : 02.09.2024 -
+1. Fields Required Validator - Conditional validation - any one JSM field. = DONE
+2. User validator : Condition for issue - !!issue.customfield_10024 && issue.customfield_10024.some(it => it.accountId == "63b454d34bc858b303ce6603") = DONE
+3. Build your own validator - No code option by Jira expression - pass while configuration on workflow.
+*/
+

@@ -37,6 +37,14 @@ def options = [
         appendValues : "appendValues=yes"
 ]
 
+["create_transition"].each { fieldsName ->
+    def server =  ["field=labels" , destField.sameAsSource ,  options.noOption , conditionalExecution.false]
+    def cloud =  "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"{{ issue.fields.issuetype.name == 'Sub-task' }}\",\"fieldId\":\"labels\",\"destFieldId\":\"\",\"copyOnlyIfNotSet\":false,\"createMissingValues\":false,\"sendNotifications\":true,\"appendValues\":false,\"ignoreEmptyValue\":false,\"runAsType\":\"addonUser\"}"
+    if(isCloud){
+        addTransitionFunctionOnCreateTransition("create", 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    }
+}
+
 sourceField.each { fieldsName ->
     def transition = 'valueOfFieldLabelsWillBeCopiedFromTheIssuesParent' + fieldsName
     def server =  ["field=$fieldsName" , destField.sameAsSource ,  options.noOption , conditionalExecution.false]
@@ -73,11 +81,8 @@ sourceField.each { fieldsName ->
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-createWorkflowScheme()
-createProject()
-
 (1..2).each {
-    gint.taskHelper.addSetUp([
+    gint.taskHelper.add([
             [action: 'addVersion', ext: ': create versions : ' + it,
              parameters: [
                      project: projectName,
@@ -93,14 +98,35 @@ createProject()
     ])
 }
 // set issue status to In Progress
-
-def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
-def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
-
 def testLabel1 = "testLabel1"
 def testLabel2 = "testLabel2"
 def createMissingValue = "createMissingValueOfComponent"
 
+def parent = createIssue([type: 'Task', summary: 'JMWE_Issue',labels:testLabel1], 'parent')
+def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
+
+if(isCloud){
+    gint.taskHelper.add([
+            [action      : 'getFieldValue',
+             sleep       : sleep,
+             ext         : ":Validate that the subtask set the value of labels from parent issue_on create transition :",
+             parameters  : [
+                     issue: { -> subtask[] },
+                     field: "Labels"
+             ],
+             data: ["Labels  . . . . . . . . . . . : $testLabel1"]
+            ],
+            [action      : 'setFieldValue',
+             sleep       : sleep,
+             ext         : ":set the value of labels of subtask to empty:",
+             parameters  : [
+                     issue: { -> subtask[] },
+                     field: "Labels",
+                     value: " "
+             ],
+            ],
+    ])
+}
 
 ['valueOfFieldLabelsWillBeCopiedFromTheIssuesParent'].collect {
     sourceField.each { field ->

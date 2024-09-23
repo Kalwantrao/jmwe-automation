@@ -1,0 +1,466 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/itest-JSM/JSM.gradle'
+
+addOrganization()
+addRequestType()
+
+def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__SequenceFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:set-issue-fields-function'
+
+def delayTime = 15
+
+// Verify the sequence of postfunctions for stop at errors.
+
+fieldsList.eachWithIndex { fieldName, fieldValue, i ->
+    if(fieldName.equalsIgnoreCase("Organizations")){
+        def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+        def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+        def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+        def fieldIdToConfigure = fieldValuesToConfigure[fieldName]
+
+        ["true","false"].each {stopAtErrors ->
+            def transition = "SequenceOfPostfunction_SetIssueFields_ClearFields$fieldName when_StopAtErrors_" + stopAtErrors
+
+            def server = [conditionalExecution.false, "selectedLinkType=currentIssue:*", runAsUser.currentUser, ["fields=[{\"fieldId\":\"labels\",\"value\":\"default_value\",\"options\":[],\"isTemplate\":true}]"]]
+            def cloud = "{\"conditionalExecution\":false,\"postFunctions\":[{\"postFunctionId\":\"e47d990d-bdd9-4850-b7df-9a3202328e00\",\"postFunction\":\"SetFieldValueFunction\",\"configuration\":{\"runAsType\":\"currentUser\",\"fieldsConfig\":[{\"fieldId\":\"$fieldValue\",\"options\":{},\"value\":\"$fieldIdToConfigure\"}],\"sendNotifications\":false,\"targetIssue\":\"currentIssue:*\",\"conditionalExecution\":false}},{\"postFunctionId\":\"72be8b95-0325-4ce0-8cf5-46bf13a86826\",\"postFunction\":\"ClearFieldsFunction\",\"configuration\":{\"runAsType\":\"currentUser\",\"targetIssue\":\"currentIssue:*\",\"fields\":\"$fieldValue\",\"conditionalExecution\":true,\"conditionalExecutionScript\":\"{{ issue.fields.priority.name == 'High' InvalidText}}\"}},{\"postFunctionId\":\"1ee09529-dee9-41d8-ac0b-b5c7a0785f3a\",\"postFunction\":\"SetFieldValueFunction\",\"configuration\":{\"runAsType\":\"currentUser\",\"fieldsConfig\":[{\"fieldId\":\"$fieldValue\",\"options\":{},\"value\":\"$organization1\"}],\"sendNotifications\":false,\"targetIssue\":\"currentIssue:*\",\"conditionalExecution\":false}}],\"stopAtErrors\":$stopAtErrors}"
+            addTransitionFunctionForJSM(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+            def issue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], transition)
+
+            gint.taskHelper.add([
+                    [action    : 'getFieldValue',
+                     sleep     : sleep,
+                     ext       : ": before transition issue with $transition:",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: fieldNameToSetOnIssue,
+                     ],
+                     failData  : [getFieldValueResult],
+                    ],
+            ])
+            gint.taskHelper.add([
+                    [action    : 'transitionIssue',
+                     sleep     : sleep,
+                     ext       : ":by $transition:",
+                     parameters: [
+                             transition: transition,
+                             issue     : { -> issue1[] },
+                     ],
+                    ],
+            ])
+            if(stopAtErrors.equalsIgnoreCase("true")){
+                gint.taskHelper.add(
+                        [action    : 'getFieldValue',
+                         sleep     : sleep,
+                         ext       : ": Of $fieldName after transition issue with $transition:when stopping at error",
+                         parameters: [
+                                 issue: { -> issue1[] },
+                                 field: fieldNameToSetOnIssue,
+                         ],
+                         data      : [getFieldValueResult],
+                        ],
+                )
+            } else if(stopAtErrors.equalsIgnoreCase("false")){
+                gint.taskHelper.add(
+                        [action    : 'getFieldValue',
+                         sleep     : sleep,
+                         ext       : ": Of $fieldName after transition issue with $transition:when not stopping at error",
+                         parameters: [
+                                 issue: { -> issue1[] },
+                                 field: fieldNameToSetOnIssue,
+                         ],
+                         failData      : [getFieldValueResult],
+                        ],
+                )
+            }
+        }
+    }
+}
+
+// Verify the sequence of postfunctions for all the JSM fields.
+fieldsList.eachWithIndex { fieldName, fieldValue, i ->
+    def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+    def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+    def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+    def fieldIdToConfigure = fieldValuesToConfigure[fieldName]
+    def transition = "SequenceOfPostfunction_SetIssueFields_ClearFields_" + fieldName
+
+    def server = [conditionalExecution.false, "selectedLinkType=$relatedIssue.linkByBlock", runAsUser.currentUser, ["fields=[{\"fieldId\":\"labels\",\"value\":\"default_value\",\"options\":[],\"isTemplate\":true}]"]]
+    def cloud = "{\"conditionalExecution\":false,\"postFunctions\":[{\"postFunctionId\":\"a5d0cdb4-8e4a-44fc-b42d-78579ffa6590\",\"postFunction\":\"SetFieldValueFunction\",\"configuration\":{\"runAsType\":\"currentUser\",\"fieldsConfig\":[{\"fieldId\":\"$fieldValue\",\"options\":{},\"value\":\"$fieldIdToConfigure\"}],\"sendNotifications\":false,\"targetIssue\":\"$relatedIssue.linkByBlock\",\"conditionalExecution\":false}},{\"postFunctionId\":\"d53bd334-0bf9-4052-872a-f4e6c4fa1a7e\",\"postFunction\":\"ClearFieldsFunction\",\"configuration\":{\"runAsType\":\"currentUser\",\"executionDelay\":$delayTime,\"targetIssue\":\"$relatedIssue.linkByBlock\",\"fields\":\"$fieldValue\",\"conditionalExecution\":false}}],\"stopAtErrors\":false}"
+    addTransitionFunctionForJSM(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+    def issue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], transition + "issue1")
+    def issue2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], transition + "issue2")
+
+    gint.taskHelper.addSetUp(
+            [action      : 'linkIssue',
+             mustRunAfter: ["createIssues", 'createProject'],
+             ext         : ": to check:" + transition,
+             parameters  : [
+                     issue  : { -> issue1[] },
+                     toIssue: { -> issue2[] },
+                     link   : "blocks"
+             ],
+            ]
+    )
+    gint.taskHelper.add([
+            [action    : 'getFieldValue',
+             sleep     : sleep,
+             ext       : ": before transition issue with $transition:",
+             parameters: [
+                     issue: { -> issue2[] },
+                     field: fieldNameToSetOnIssue,
+             ],
+             failData  : [getFieldValueResult],
+            ],
+    ])
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             sleep     : sleep,
+             ext       : ":by $transition:",
+             parameters: [
+                     transition: transition,
+                     issue     : { -> issue1[] },
+             ],
+            ],
+    ])
+    gint.taskHelper.add([
+            [action    : 'getFieldValue',
+             sleep     : sleep,
+             ext       : ": Of $fieldName after transition issue with $transition:",
+             parameters: [
+                     issue: { -> issue2[] },
+                     field: fieldNameToSetOnIssue,
+             ],
+             data      : [getFieldValueResult],
+            ],
+    ])
+    gint.taskHelper.add([
+            [action    : 'getFieldValue',
+             sleep     : delayTime * 1000,
+             ext       : ": Of $fieldName after transition issue with $transition: after $delayTime seconds",
+             parameters: [
+                     issue: { -> issue2[] },
+                     field: fieldNameToSetOnIssue,
+             ],
+             failData      : [getFieldValueResult],
+            ],
+    ])
+}
+
+def relatedIssues = [:]
+def relatedIssuesMap = [:]
+
+relatedIssuesList.each {
+    relatedIssues.putAll(createRelatedIssuesMap('CONFIGURATION', it, projectName, " "))
+    relatedIssuesMap.putAll(createRelatedIssuesMap('TRANSITION', it, projectName, " "))
+}
+
+// Verify sequence of postfunctions for all target issues options with any one JSM field [Organizations].
+fieldsList.take(1).eachWithIndex { fieldName, fieldValue, i ->
+    def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+    def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+    def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+    def fieldIdToConfigure = fieldValuesToConfigure[fieldName]
+
+    relatedIssues.eachWithIndex { key, value, int idx ->
+        def transition = "sequenceOfPostfunctionRunOnLinkedIssues" + fieldName + idx
+        def server = [conditionalExecution.false, "selectedLinkType=$value", runAsUser.currentUser, ["fields=[{\"fieldId\":\"labels\",\"value\":\"default_value\",\"options\":[],\"isTemplate\":true}]"]]
+        def cloud = "{\"conditionalExecution\":false,\"targetIssue\":\"$value\",\"postFunctions\":[{\"postFunctionId\":\"a5d0cdb4-8e4a-44fc-b42d-78579ffa6590\",\"postFunction\":\"SetFieldValueFunction\",\"configuration\":{\"runAsType\":\"currentUser\",\"fieldsConfig\":[{\"fieldId\":\"$fieldValue\",\"options\":{},\"value\":\"$fieldIdToConfigure\"}],\"sendNotifications\":false,\"targetIssue\":\"currentIssue:*\",\"conditionalExecution\":false}},{\"postFunctionId\":\"d53bd334-0bf9-4052-872a-f4e6c4fa1a7e\",\"postFunction\":\"ClearFieldsFunction\",\"configuration\":{\"runAsType\":\"currentUser\",\"executionDelay\":$delayTime,\"targetIssue\":\"currentIssue:*\",\"fields\":\"$fieldValue\",\"conditionalExecution\":false}}],\"stopAtErrors\":false}"
+        addTransitionFunctionForJSM(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    }
+
+    relatedIssuesMap.eachWithIndex { currentIssue, linkedIssue, int index ->
+        def transition = "sequenceOfPostfunctionRunOnLinkedIssues" + fieldName + index
+        gint.taskHelper.add([
+                [action    : 'getFieldValue',
+                 sleep     : sleep,
+                 ext       : ": before transition issue with $transition:",
+                 parameters: [
+                         issue: linkedIssue,
+                         field: fieldNameToSetOnIssue,
+                 ],
+                 failData  : [getFieldValueResult],
+                ],
+        ])
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep     : sleep,
+                 ext       : ":by $transition:",
+                 parameters: [
+                         transition: transition,
+                         issue     : currentIssue,
+                 ],
+                ],
+        ])
+        gint.taskHelper.add([
+                [action    : 'getFieldValue',
+                 sleep     : sleep,
+                 ext       : ": Of $fieldName after transition issue with $transition:",
+                 parameters: [
+                         issue: linkedIssue,
+                         field: fieldNameToSetOnIssue,
+                 ],
+                 data      : [getFieldValueResult],
+                ],
+        ])
+        gint.taskHelper.add([
+                [action    : 'getFieldValue',
+                 sleep     : delayTime * 1000,
+                 ext       : ": Of $fieldName after transition issue with $transition:after $delayTime seconds",
+                 parameters: [
+                         issue: linkedIssue,
+                         field: fieldNameToSetOnIssue,
+                 ],
+                 failData      : [getFieldValueResult],
+                ],
+        ])
+    }
+}
+
+// Verify the sequence of postfunctions for all the JSM fields.
+runAsUser.remove("userFromScriptInvalid")
+
+// Check run as user for set issue fields postfunction
+runAsUser.eachWithIndex { userType, configFields, i ->
+    fieldsList.take(1).eachWithIndex { fieldName, fieldValue, index ->
+        def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+        def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+        def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+        def fieldIdToConfigure = fieldValuesToConfigure[fieldName]
+        def transition = "SequenceOfPostfunction_RunAsUser_"+ userType + fieldName
+
+        def server = [conditionalExecution.false, "selectedLinkType=$relatedIssue.linkByBlock", runAsUser.currentUser, ["fields=[{\"fieldId\":\"labels\",\"value\":\"default_value\",\"options\":[],\"isTemplate\":true}]"]]
+        def cloud = "{\"conditionalExecution\":false,\"postFunctions\":[{\"postFunctionId\":\"a5d0cdb4-8e4a-44fc-b42d-78579ffa6590\",\"postFunction\":\"SetFieldValueFunction\",\"configuration\":{$configFields,\"fieldsConfig\":[{\"fieldId\":\"$fieldValue\",\"options\":{},\"value\":\"$fieldIdToConfigure\"}],\"sendNotifications\":false,\"targetIssue\":\"$relatedIssue.linkByBlock\",\"conditionalExecution\":false}},{\"postFunctionId\":\"d53bd334-0bf9-4052-872a-f4e6c4fa1a7e\",\"postFunction\":\"ClearFieldsFunction\",\"configuration\":{$configFields,\"executionDelay\":$delayTime,\"targetIssue\":\"$relatedIssue.linkByBlock\",\"fields\":\"$fieldValue\",\"conditionalExecution\":false}}],\"stopAtErrors\":false}"
+        addTransitionFunctionForJSM(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+        def issue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], transition + "issue1")
+        def issue2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], transition + "issue2")
+
+        gint.taskHelper.addSetUp(
+                [action      : 'linkIssue',
+                 mustRunAfter: ["createIssues", 'createProject'],
+                 ext         : ": to check:" + transition,
+                 parameters  : [
+                         issue  : { -> issue1[] },
+                         toIssue: { -> issue2[] },
+                         link   : "blocks"
+                 ],
+                ]
+        )
+        if (userType.equalsIgnoreCase("userInFieldReporter")) {
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of reporter to $user before transition issue with: $transition:",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: "Reporter",
+                             value: user
+                     ],
+                    ],
+            ])
+        } else if (userType.equalsIgnoreCase("userInFieldAssignee")) {
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of assignee to $user before transition issue with: $transition:",
+                     parameters: [
+                             issue: { -> issue1[] },
+                             field: "Assignee",
+                             value: user
+                     ],
+                    ],
+            ])
+        }
+        gint.taskHelper.add([
+                [action    : 'getFieldValue',
+                 sleep     : sleep,
+                 ext       : ": before transition issue with $transition:",
+                 parameters: [
+                         issue: { -> issue2[] },
+                         field: fieldNameToSetOnIssue,
+                 ],
+                 failData  : [getFieldValueResult],
+                ],
+        ])
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep     : sleep,
+                 ext       : ":by $transition:",
+                 parameters: [
+                         transition: transition,
+                         issue     : { -> issue1[] },
+                 ],
+                ],
+        ])
+        gint.taskHelper.add([
+                [action    : 'getFieldValue',
+                 sleep     : sleep,
+                 ext       : ": Of $fieldName after transition issue with $transition:",
+                 parameters: [
+                         issue: { -> issue2[] },
+                         field: fieldNameToSetOnIssue,
+                 ],
+                 data      : [getFieldValueResult],
+                ],
+        ])
+        gint.taskHelper.add([
+                [action    : 'getFieldValue',
+                 sleep     : delayTime * 1000,
+                 ext       : ": Of $fieldName after transition issue with $transition: after $delayTime seconds",
+                 parameters: [
+                         issue: { -> issue2[] },
+                         field: fieldNameToSetOnIssue,
+                 ],
+                 failData      : [getFieldValueResult],
+                ],
+        ])
+        if (userType.equalsIgnoreCase("currentUser")) {
+            gint.taskHelper.add([
+                    [action    : 'getIssueHistoryList',
+                     sleep     : sleep,
+                     ext       : ": JSM-SEQUENCE-OF-POSTFUNCTIONS check $transition:",
+                     parameters: [
+                             issue     : { -> issue2[] },
+                             outputType: "text",
+                             select    : ["Field:$fieldNameToSetOnIssue", "To String:$fieldValuesToSetOnIssue"],
+                             columns   : "Author,'To String'"
+                     ],
+                     data      : ["$addonName", "$fieldValuesToSetOnIssue", ""],
+                    ],
+            ])
+        } else {
+            gint.taskHelper.add([
+                    [action    : 'getIssueHistoryList',
+                     sleep     : sleep,
+                     ext       : ": JSM-SEQUENCE-OF-POSTFUNCTIONS check $transition:",
+                     parameters: [
+                             issue     : { -> issue2[] },
+                             outputType: "text",
+                             select    : ["Field:$fieldNameToSetOnIssue", "To String:$fieldValuesToSetOnIssue"],
+                             columns   : "Author,'To String'"
+                     ],
+                     data      : ["$getCurrentUserName", "$fieldValuesToSetOnIssue"],
+                    ],
+            ])
+        }
+    }
+}
+
+// Verify the sequence of postfunctions conditional execution.
+fieldsList.take(1).eachWithIndex { fieldName, fieldValue, i ->
+    def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+    def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+    def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+    def fieldIdToConfigure = fieldValuesToConfigure[fieldName]
+    def transition = "SequenceOfPostfunction_SetIssueFields_ClearFields_IfConditionTrue" + fieldName
+
+    def server = [conditionalExecution.false, "selectedLinkType=$relatedIssue.linkByBlock", runAsUser.currentUser, ["fields=[{\"fieldId\":\"labels\",\"value\":\"default_value\",\"options\":[],\"isTemplate\":true}]"]]
+    def cloud = "{$conditionalExecution.true,\"postFunctions\":[{\"postFunctionId\":\"a5d0cdb4-8e4a-44fc-b42d-78579ffa6590\",\"postFunction\":\"SetFieldValueFunction\",\"configuration\":{\"runAsType\":\"currentUser\",\"fieldsConfig\":[{\"fieldId\":\"$fieldValue\",\"options\":{},\"value\":\"$fieldIdToConfigure\"}],\"sendNotifications\":false,\"targetIssue\":\"$relatedIssue.linkByBlock\",\"conditionalExecution\":false}},{\"postFunctionId\":\"d53bd334-0bf9-4052-872a-f4e6c4fa1a7e\",\"postFunction\":\"ClearFieldsFunction\",\"configuration\":{\"runAsType\":\"currentUser\",\"executionDelay\":$delayTime,\"targetIssue\":\"$relatedIssue.linkByBlock\",\"fields\":\"$fieldValue\",\"conditionalExecution\":false}}],\"stopAtErrors\":false}"
+    addTransitionFunctionForJSM(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+    def issue1 = createIssue([type: 'Task', summary: 'JMWE_Issue'], transition + "issue1")
+    def issue2 = createIssue([type: 'Task', summary: 'JMWE_Issue'], transition + "issue2")
+
+    gint.taskHelper.addSetUp(
+            [action      : 'linkIssue',
+             mustRunAfter: ["createIssues", 'createProject'],
+             ext         : ": to check:" + transition,
+             parameters  : [
+                     issue  : { -> issue1[] },
+                     toIssue: { -> issue2[] },
+                     link   : "blocks"
+             ],
+            ]
+    )
+    ["High","Low"].each {priority ->
+        gint.taskHelper.add([
+                [action    : 'setFieldValue',
+                 sleep     : sleep,
+                 ext       : ": Of priority to $priority before transition issue with $transition:",
+                 parameters: [
+                         issue: { -> issue1[] },
+                         field: "Priority",
+                         value: priority,
+                 ],
+                ],
+        ])
+        gint.taskHelper.add([
+                [action    : 'getFieldValue',
+                 sleep     : sleep,
+                 ext       : ": before transition issue with $transition:when priority is $priority",
+                 parameters: [
+                         issue: { -> issue2[] },
+                         field: fieldNameToSetOnIssue,
+                 ],
+                 failData  : [getFieldValueResult],
+                ],
+        ])
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep     : sleep,
+                 ext       : ":by $transition:when priority is $priority",
+                 parameters: [
+                         transition: transition,
+                         issue     : { -> issue1[] },
+                 ],
+                ],
+        ])
+        if(priority == "High"){
+            gint.taskHelper.add([
+                    [action    : 'getFieldValue',
+                     sleep     : sleep,
+                     ext       : ": Of $fieldName after transition issue with $transition:when priority is $priority",
+                     parameters: [
+                             issue: { -> issue2[] },
+                             field: fieldNameToSetOnIssue,
+                     ],
+                     data      : [getFieldValueResult],
+                    ],
+            ])
+            gint.taskHelper.add([
+                    [action    : 'getFieldValue',
+                     sleep     : delayTime * 1000,
+                     ext       : ": Of $fieldName after transition issue with $transition: after $delayTime seconds, when priority is $priority",
+                     parameters: [
+                             issue: { -> issue2[] },
+                             field: fieldNameToSetOnIssue,
+                     ],
+                     failData      : [getFieldValueResult],
+                    ],
+            ])
+        } else {
+            gint.taskHelper.add([
+                    [action    : 'getFieldValue',
+                     sleep     : sleep,
+                     ext       : ": Of $fieldName after transition issue with $transition, when priority is $priority",
+                     parameters: [
+                             issue: { -> issue2[] },
+                             field: fieldNameToSetOnIssue,
+                     ],
+                     failData      : [getFieldValueResult],
+                    ],
+            ])
+        }
+    }
+}
+
+/*
+Reviewed by Chirag:
+1. Run as user for individual postfunctions = DONE
+2. Check all fields in one transition. = Not feasible
+3. Conditional execution = DONE
+4. Error handling: Stop the sequence if a post-function encounters an error. = DONE
+*/
+

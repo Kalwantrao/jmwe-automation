@@ -19,7 +19,7 @@ if(!isCloud){
     addFieldToScreen(screen, 'Age')
 }
 
-fields.eachWithIndex { fieldName, fieldValue, i ->
+fieldsList.eachWithIndex { fieldName, fieldValue, i ->
     def transition = fieldName + '_should_be_modified'
     def server = [conditionalValidation.no, "field=$fieldValue"]
     if(!isCloud){
@@ -27,7 +27,7 @@ fields.eachWithIndex { fieldName, fieldValue, i ->
     }
 }
 
-fields.eachWithIndex { fieldName, fieldValue, i ->
+fieldsList.eachWithIndex { fieldName, fieldValue, i ->
     def transition  = fieldName + '_should_be_modified_if_condition_true'
     def server = ["field=$fieldValue", conditionalValidation.yes]
     if(!isCloud){
@@ -44,9 +44,6 @@ fields.eachWithIndex { fieldName, fieldValue, i ->
         addTransitionFunction( transition, 'validator', server, functionKey )
     }
 }
-
-createWorkflowScheme()
-createProject()
 
 (1..2).each {
     if(!isCloud) {

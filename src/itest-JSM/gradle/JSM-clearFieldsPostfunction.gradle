@@ -1,0 +1,407 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/itest-JSM/JSM.gradle'
+
+addOrganization()
+addRequestType()
+
+def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__ClearFieldsFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:ClearFieldValue-function'
+
+def singleUserPickerCf = 'singleUserPickerCF'
+
+addCustomField(singleUserPickerCf, 'com.atlassian.jira.plugin.system.customfieldtypes:userpicker')
+addFieldToScreen(screen, singleUserPickerCf)
+
+// Verify clear fields postfunctions for JSM fields.
+fieldsList.eachWithIndex { fieldName, fieldId, idx ->
+
+    def transition = fieldName + "ShouldBeClearVerifyClearFieldsPostfunction"
+    def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+    def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+    def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+
+    def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"currentIssue:*\",\"fields\":\"$fieldId\",$runAsUser.currentUser}"
+    def server =  ["fields=$fieldId" , "selectedLinkType=currentIssue:*" , conditionalExecution.false , runAsUser.currentUser]
+    addTransitionFunctionForJSM(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Task', summary: 'JMWE_Issue'], transition)
+
+    gint.taskHelper.add(
+            [action    : 'setFieldValue',
+             sleep     : sleep,
+             ext       : ":of $fieldName before transition issue with: $transition",
+             parameters: [
+                     issue     : {->issue[]},
+                     field     : fieldNameToSetOnIssue,
+                     value     : fieldValuesToSetOnIssue
+             ],
+            ]
+    )
+    gint.taskHelper.add([
+            [action    : 'getFieldValue',
+             sleep : sleep,
+             ext: ": before transition issue with $transition:",
+             parameters: [
+                     issue     : {->issue[]},
+                     field: fieldNameToSetOnIssue,
+             ] ,
+             data: [ getFieldValueResult ],
+            ],
+    ])
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             sleep : sleep,
+             ext: ":by $transition:",
+             parameters: [
+                     transition: transition,
+                     issue     : {->issue[]},
+             ],
+            ],
+    ])
+    gint.taskHelper.add([
+            [action    : 'getFieldValue',
+             sleep : sleep,
+             ext: ": JSM-CLEAR_FIELDS_POSTFUNCTION check $transition:",
+             parameters: [
+                     issue     : { ->issue[] },
+                     field: fieldNameToSetOnIssue,
+             ] ,
+             failData: [getFieldValueResult],
+            ],
+    ])
+}
+
+// Verify the clear fields postfunction to clear all the four JSM fields in one transition.
+[
+        'allJSMFieldsShouldBeClearedVerifyClearFieldsPostfunction'
+].each { transition ->
+
+    def cloud =  "{\"runAsType\":\"currentUser\",\"targetIssue\":\"currentIssue:*\",\"fields\":\"$organizationsId,$requestTypeId,resolution,$requestParticipantsId\",$conditionalExecution.false}"
+    def server =  ["fields=$organizationsId,$requestTypeId,resolution,$requestParticipantsId" , "selectedLinkType=currentIssue:*" , conditionalExecution.false , runAsUser.currentUser]
+    addTransitionFunctionForJSM(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Task', summary: 'JMWE_Issue'], transition)
+
+    fieldsList.eachWithIndex { fieldName, fieldId, i ->
+        def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+        def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+        def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+
+        gint.taskHelper.add(
+                [action    : 'setFieldValue',
+                 sleep     : sleep,
+                 ext       : ":of $fieldName before transition issue with: $transition :$fieldName",
+                 parameters: [
+                         issue: { -> issue[] },
+                         field: fieldNameToSetOnIssue,
+                         value: fieldValuesToSetOnIssue
+                 ],
+                ]
+        )
+        gint.taskHelper.add([
+                [action    : 'getFieldValue',
+                 sleep     : sleep,
+                 ext       : ": before transition issue with $transition :$fieldName",
+                 parameters: [
+                         issue: { -> issue[] },
+                         field: fieldNameToSetOnIssue,
+                 ],
+                 data      : [getFieldValueResult],
+                ],
+        ])
+    }
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep     : sleep,
+                 ext       : ":by $transition:",
+                 parameters: [
+                         transition: transition,
+                         issue     : { -> issue[] },
+                 ],
+                ],
+        ])
+    fieldsList.eachWithIndex { fieldName, fieldId, i ->
+        def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+        def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+        def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+        gint.taskHelper.add([
+                [action    : 'getFieldValue',
+                 sleep     : sleep,
+                 ext       : ": JSM-CLEAR_FIELDS_POSTFUNCTION check $transition :$fieldName",
+                 parameters: [
+                         issue: { -> issue[] },
+                         field: fieldNameToSetOnIssue,
+                 ],
+                 failData  : [getFieldValueResult],
+                ],
+        ])
+    }
+}
+
+//Verify the conditional execution for clear fields postfunction.
+fieldsList.take(1).eachWithIndex { fieldName, fieldId, idx ->
+
+    def transition = fieldName + "ShouldBeClearVerifyClearFieldsPostfunctionIfConditionTrue"
+    def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+    def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+    def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+
+    def cloud =  "{$conditionalExecution.true,\"targetIssue\":\"currentIssue:*\",\"fields\":\"$fieldId\",$runAsUser.currentUser}"
+    def server =  ["fields=$fieldId" , "selectedLinkType=currentIssue:*" , conditionalExecution.true , runAsUser.currentUser]
+    addTransitionFunctionForJSM(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issue')
+
+    ["High","Low"].each { priority ->
+        gint.taskHelper.add([
+                [action    : 'setFieldValue',
+                 sleep     : sleep,
+                 ext       : ":of $fieldName before transition issue with: $transition: when priority is $priority",
+                 parameters: [
+                         issue: { -> issue[] },
+                         field: fieldNameToSetOnIssue,
+                         value: fieldValuesToSetOnIssue
+                 ],
+                ],
+                [action    : 'setFieldValue',
+                 sleep     : sleep,
+                 ext       : ":of priority to $priority _before transition issue with: $transition",
+                 parameters: [
+                         issue: { -> issue[] },
+                         field: "Priority",
+                         value: priority
+                 ],
+                ]
+        ])
+        gint.taskHelper.add([
+                [action    : 'getFieldValue',
+                 sleep     : sleep,
+                 ext       : ": before transition issue with $transition:when priority is $priority",
+                 parameters: [
+                         issue: { -> issue[] },
+                         field: fieldNameToSetOnIssue,
+                 ],
+                 data      : [getFieldValueResult],
+                ],
+        ])
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 sleep     : sleep,
+                 ext       : ":by $transition:when priority is $priority",
+                 parameters: [
+                         transition: transition,
+                         issue     : { -> issue[] },
+                 ],
+                ],
+        ])
+        if(priority == "High"){
+            gint.taskHelper.add([
+                    [action    : 'getFieldValue',
+                     sleep     : sleep,
+                     ext       : ": JSM-CLEAR_FIELDS_POSTFUNCTION check $transition:when priority is $priority",
+                     parameters: [
+                             issue: { -> issue[] },
+                             field: fieldNameToSetOnIssue,
+                     ],
+                     failData  : [getFieldValueResult],
+                    ],
+            ])
+        } else {
+            gint.taskHelper.add([
+                    [action    : 'getFieldValue',
+                     sleep     : sleep,
+                     ext       : ": JSM-CLEAR_FIELDS_POSTFUNCTION check $transition:when priority is $priority",
+                     parameters: [
+                             issue: { -> issue[] },
+                             field: fieldNameToSetOnIssue,
+                     ],
+                     data  : [getFieldValueResult],
+                    ],
+            ])
+        }
+    }
+}
+
+runAsUser.remove("userFromScriptInvalid")
+
+// Check run as user for clear fields of linked issue postfunction
+runAsUser.eachWithIndex { userType, configFields, i ->
+    fieldsList.take(1).eachWithIndex { fieldName, fieldId, idx ->
+        if (fieldName != 'resolution') {
+
+            def transition = fieldName + "ShouldBeClearVerifyClearFieldsPostfunctionRunAs" + userType
+            def fieldNameToSetOnIssue = fieldNameToSet[fieldName]
+            def getFieldValueResult = checkFieldValueOnIssue[fieldName]
+            def fieldValuesToSetOnIssue = fieldValuesToSet[fieldName]
+
+            def cloud = "{$conditionalExecution.false,\"targetIssue\":\"currentIssue:*\",\"fields\":\"$fieldId\",$configFields}"
+            def server = ["fields=$fieldId", "selectedLinkType=$relatedIssue.linkByBlock", conditionalExecution.true, configFields]
+            addTransitionFunctionForJSM(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+            def issue = createIssue([type: 'Task', summary: 'JMWE_Issue'], transition + "issue")
+
+            if (userType.equalsIgnoreCase("userInFieldReporter")) {
+                gint.taskHelper.add([
+                        [action    : 'setFieldValue',
+                         sleep     : sleep,
+                         ext       : ":of reporter to $testUser before transition issue with: $transition:",
+                         parameters: [
+                                 issue: { -> issue[] },
+                                 field: "Reporter",
+                                 value: user
+                         ],
+                        ],
+                ])
+            } else if (userType.equalsIgnoreCase("userInFieldAssignee")) {
+                gint.taskHelper.add([
+                        [action    : 'setFieldValue',
+                         sleep     : sleep,
+                         ext       : ":of assignee to $user before transition issue with: $transition:",
+                         parameters: [
+                                 issue: { -> issue[] },
+                                 field: "Assignee",
+                                 value: user
+                         ],
+                        ],
+                ])
+            }
+            gint.taskHelper.add([
+                    [action    : 'setFieldValue',
+                     sleep     : sleep,
+                     ext       : ":of $fieldName before transition issue with: $transition:",
+                     parameters: [
+                             issue: { -> issue[] },
+                             field: fieldNameToSetOnIssue,
+                             value: fieldValuesToSetOnIssue
+                     ],
+                    ],
+            ])
+            gint.taskHelper.add([
+                    [action    : 'getFieldValue',
+                     sleep     : sleep,
+                     ext       : ": before transition issue with $transition:",
+                     parameters: [
+                             issue: { -> issue[] },
+                             field: fieldNameToSetOnIssue,
+                     ],
+                     data      : [getFieldValueResult],
+                    ],
+            ])
+            gint.taskHelper.add([
+                    [action    : 'transitionIssue',
+                     sleep     : sleep,
+                     ext       : ":by $transition:",
+                     parameters: [
+                             transition: transition,
+                             issue     : { -> issue[] },
+                     ],
+                    ],
+            ])
+            if (userType.equalsIgnoreCase('userFromScriptInvalid')) {
+                gint.taskHelper.add([
+                        [action    : 'getFieldValue',
+                         sleep     : sleep,
+                         ext       : ": JSM-CLEAR_FIELDS_POSTFUNCTION check $transition:",
+                         parameters: [
+                                 issue: { -> issue[] },
+                                 field: fieldNameToSetOnIssue,
+                         ],
+                         data      : [getFieldValueResult],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'getFieldValue',
+                         sleep     : sleep,
+                         ext       : ": JSM-CLEAR_FIELDS_POSTFUNCTION check $transition:",
+                         parameters: [
+                                 issue: { -> issue[] },
+                                 field: fieldNameToSetOnIssue,
+                         ],
+                         failData  : [getFieldValueResult],
+                        ],
+                ])
+            }
+            if (userType.equalsIgnoreCase("currentUser")) {
+                gint.taskHelper.add([
+                        [action    : 'getIssueHistoryList',
+                         sleep     : sleep,
+                         ext       : ": JSM-CLEAR_FIELDS_POSTFUNCTION check $transition:",
+                         parameters: [
+                                 issue     : { -> issue[] },
+                                 outputType: "text",
+                                 select    : ["Field:$fieldNameToSetOnIssue", "From String:$fieldValuesToSetOnIssue"],
+                                 columns   : "Author,'From String','To String'"
+                         ],
+                         data      : ["$addonName", "$fieldValuesToSetOnIssue", ""],
+                        ],
+                ])
+            } else if (userType.equalsIgnoreCase("userInFieldReporter")) {
+                gint.taskHelper.add([
+                        [action    : 'getIssueHistoryList',
+                         sleep     : sleep,
+                         ext       : ": JSM-CLEAR_FIELDS_POSTFUNCTION check $transition:",
+                         parameters: [
+                                 issue     : { -> issue[] },
+                                 outputType: "text",
+                                 select    : ["Field:$fieldNameToSetOnIssue", "From String:$fieldValuesToSetOnIssue"],
+                                 columns   : "Author,'From String','To String'"
+                         ],
+                         data      : ["$testUser", "$fieldValuesToSetOnIssue", ""],
+                        ],
+                ])
+            } else if (userType.equalsIgnoreCase('userFromScriptInvalid')) {
+                gint.taskHelper.add([
+                        [action    : 'getIssueHistoryList',
+                         sleep     : sleep,
+                         ext       : ": JSM-CLEAR_FIELDS_POSTFUNCTION check $transition:",
+                         parameters: [
+                                 issue     : { -> issue[] },
+                                 outputType: "text",
+                                 select    : ["Field:$fieldNameToSetOnIssue", "From String:$fieldValuesToSetOnIssue"],
+                                 columns   : "Author,'From String','To String'"
+                         ],
+                         failData  : ["$getCurrentUserName", "$fieldValuesToSetOnIssue", ""],
+                        ],
+                ])
+            } else {
+                gint.taskHelper.add([
+                        [action    : 'getIssueHistoryList',
+                         sleep     : sleep,
+                         ext       : ": JSM-CLEAR_FIELDS_POSTFUNCTION check $transition:",
+                         parameters: [
+                                 issue     : { -> issue[] },
+                                 outputType: "text",
+                                 select    : ["Field:$fieldNameToSetOnIssue", "From String:$fieldValuesToSetOnIssue"],
+                                 columns   : "Author,'From String','To String'"
+                         ],
+                         data      : ["$getCurrentUserName", "$fieldValuesToSetOnIssue", ""],
+                        ],
+                ])
+            }
+        }
+    }
+}
+
+
+/*
+REVIEWED By Chirag : 02.09.2024 -
+1. Configure two clear fields postfunctions on same transition with same configuration. = Pending
+2. Run as user from user picker custom field - single and multiple user picker. =
+3. Run as user in field: with user picker custom field.
+4. Run as user in field: with user picker custom field and check after deleting this fields.
+5. Run as User from script:
+    case1 : accountId:$testUserKey
+    case2 : accountId:$InvalidKey
+ */
+

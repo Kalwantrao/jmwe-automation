@@ -60,9 +60,6 @@ def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugi
     addTransitionFunction(it , 'postfunction', info?.isCloud ? cloud : server, functionKey )
 }
 
-createWorkflowScheme()
-createProject()
-
 
 def defaultIssue = createIssue([type: 'Story', summary: 'JMWE_Issue'], 'defaultIssue')
 

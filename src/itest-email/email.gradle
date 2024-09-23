@@ -1,0 +1,244 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath 'com.mailosaur:mailosaur-java:7.13.1'
+        classpath 'org.jsoup:jsoup:1.14.3'
+        classpath 'com.sun.mail:javax.mail:1.6.2'
+        classpath 'javax.activation:activation:1.1.1'
+    }
+}
+
+apply from: gint.resourceDirectory +'/src/common/utils.gradle'
+
+ext.projectName='EMAILISSUE'
+ext.workflowScheme = projectName
+ext.jqlSearchExpression="project = $projectName and issuetype = Task and summary~JQL_ISSUE"
+
+relatedIssue.put('returnsFromJqlSearch', "jql:$jqlSearchExpression")
+
+tearDown(projectName)
+addWorkflow()
+
+createWorkflowScheme()
+createProject()
+
+ext.TEST_USER_ID = getUserId(testUser)
+ext.testUserId = {->TEST_USER_ID.getAt(0).trim()}
+
+ext.JIRA_ADMIN_PROJECT_ROLE_ID = getProjectRoleId("Administrators")
+ext.jiraAdminRoleId = {->JIRA_ADMIN_PROJECT_ROLE_ID.getAt(0).trim()}
+
+ext.JIRA_TEST_PROJECT_ROLE_ID = getProjectRoleId("testprojectrole")
+ext.testProjectRoleId = {->JIRA_TEST_PROJECT_ROLE_ID.getAt(0).trim()}
+
+import javax.mail.*
+
+ext.verifyMailIsReceivedWithSubjectAndBody = { searchSubject, senderName ->
+    gint.taskHelper.add(
+            name: "VERIFY_EMAIL_RECEIVED_WITH_SUBJECT_ $searchSubject",
+            inline: {
+                String user = TEST_USER_EMAIL
+                String password = TEST_USER_EMAIL_APP_PASSWORD
+                String mailStoreType = "pop3s"
+                String host = "pop.gmail.com"
+
+                Properties properties = new Properties()
+                properties.put("mail.pop3.host", host)
+                properties.put("mail.pop3.port", "995")
+                properties.put("mail.pop3.ssl.enable", "true")
+                properties.put("mail.pop3.starttls.enable", "true")
+
+                Session emailSession = Session.getInstance(properties, new Authenticator() {
+                    protected PasswordAuthentication getPasswordAuthentication() {
+                        return new PasswordAuthentication(user, password)
+                    }
+                })
+
+                Store store = null
+                Folder emailFolder = null
+
+                try {
+                    store = emailSession.getStore(mailStoreType)
+                    store.connect(host, user, password)
+
+                    emailFolder = store.getFolder("INBOX")
+                    emailFolder.open(Folder.READ_WRITE)
+
+                    Message[] messages = emailFolder.getMessages()
+                    gint.helper.log "Number of messages",messages.length
+
+                    boolean found = false
+                    for (Message message : messages) {
+                        def matcher = (url =~ /https?:\/\/([^\/]+)/)
+                        def domain = matcher ? matcher[0][1] : null
+                        //String content = message.content.toString().trim()
+                        gint.helper.log "Checking email with subject", message.subject
+                        gint.helper.log "Checking email from user", /"$senderName (Jira)" <jira@${domain}>/
+                        if (message.subject.equalsIgnoreCase(searchSubject) && message.from.join(", ").equalsIgnoreCase(/"$senderName (Jira)" <jira@${domain}>/)) {
+                            gint.helper.log "Found email with subject", message.subject
+                            gint.helper.log "From", message.from.join(", ")
+                            //&& message.from.join(", ").equalsIgnoreCase(/"$senderName (Jira)" <jira@$domain>/)
+                            //gint.helper.log "Body", content
+
+                            message.setFlag(Flags.Flag.DELETED, true)
+                            found = true
+                            break
+                        }
+                    }
+                    // Assert that the email was found
+                    assert found : "Email not received with subject '$searchSubject' from $senderName"
+                    if (found) {
+                        gint.helper.log "Email with subject found and deleted", searchSubject
+                        emailFolder.close(true)
+                    } else {
+                        gint.helper.log "No messages found with subject", searchSubject
+                        emailFolder.close(false)
+                    }
+                } catch (AuthenticationFailedException e) {
+                    gint.helper.log "Authentication failed", e.message
+                    e.printStackTrace()
+                } catch (MessagingException e) {
+                    gint.helper.log "Messaging exception", e.message
+                    e.printStackTrace()
+                } catch (Exception e) {
+                    gint.helper.log "Unexpected error", e.message
+                    e.printStackTrace()
+                } finally {
+                    try {
+                        if (store != null) {
+                            store.close()
+                        }
+                    } catch (MessagingException e) {
+                        gint.helper.log "Error closing the store or folder", e.message
+                        e.printStackTrace()
+                    }
+                }
+            }
+    )
+}
+
+ext.verifyMailIsNotReceivedWithSubject = { searchSubject, senderName ->
+    gint.taskHelper.add(
+            name: "VERIFY_EMAIL_NOT_RECEIVED_WITH_SUBJECT_ $searchSubject",
+            inline: {
+                String user = TEST_USER_EMAIL
+                String password = TEST_USER_EMAIL_APP_PASSWORD
+                String mailStoreType = "pop3s"
+                String host = "pop.gmail.com"
+
+                Properties properties = new Properties()
+                properties.put("mail.pop3.host", host)
+                properties.put("mail.pop3.port", "995")
+                properties.put("mail.pop3.ssl.enable", "true")
+                properties.put("mail.pop3.starttls.enable", "true")
+
+                Session emailSession = Session.getInstance(properties, new Authenticator() {
+                    protected PasswordAuthentication getPasswordAuthentication() {
+                        return new PasswordAuthentication(user, password)
+                    }
+                })
+
+                Store store = null
+                Folder emailFolder = null
+
+                try {
+                    store = emailSession.getStore(mailStoreType)
+                    store.connect(host, user, password)
+
+                    emailFolder = store.getFolder("INBOX")
+                    emailFolder.open(Folder.READ_WRITE)
+
+                    Message[] messages = emailFolder.getMessages()
+                    gint.helper.log "Number of messages", messages.length
+
+                    boolean found = false
+                    for (Message message : messages) {
+                        def matcher = (url =~ /https?:\/\/([^\/]+)/)
+                        def domain = matcher ? matcher[0][1] : null
+                        gint.helper.log "Checking email with subject", message.subject
+                        gint.helper.log "Checking email from sender", message.from.join(", ")
+                        if (message.subject.equalsIgnoreCase(searchSubject) && message.from.join(", ").equalsIgnoreCase(/"$senderName (Jira)" <jira@${domain}>/)) {
+                            gint.helper.log "Email with subject found", message.subject
+                            found = true
+                            break
+                        }
+                    }
+
+                    // Assert that the email was not found
+                    assert !found : "Email with subject '$searchSubject' was found but it should not be from sender $senderName"
+                    if (!found) {
+                        gint.helper.log "No email found with subject", searchSubject
+                    }
+                    emailFolder.close(false)
+                } catch (AuthenticationFailedException e) {
+                    gint.helper.log "Authentication failed", e.message
+                    e.printStackTrace()
+                } catch (MessagingException e) {
+                    gint.helper.log "Messaging exception", e.message
+                    e.printStackTrace()
+                } catch (Exception e) {
+                    gint.helper.log "Unexpected error", e.message
+                    e.printStackTrace()
+                } finally {
+                    try {
+                        if (store != null) {
+                            store.close()
+                        }
+                    } catch (MessagingException e) {
+                        gint.helper.log "Error closing the store or folder", e.message
+                        e.printStackTrace()
+                    }
+                }
+            }
+    )
+}
+
+
+
+
+// TODO- below code is to validate the mail by using third party tool Mailosaur
+//
+//def mailId = 'news-paper@unsskfqr.mailosaur.net'
+//def serverId = "unsskfqr"
+//def apiKey = "8KV37nE673JTLEvj02n3kLQAJVR1kn1J"
+//
+//@Grab(group='com.mailosaur', module='mailosaur-java', version='8.1.0')
+//import com.mailosaur.MailosaurClient
+//import com.mailosaur.models.MessageSearchParams
+//import com.mailosaur.models.SearchCriteria
+//
+//MailosaurClient mailosaur = new MailosaurClient(apiKey)
+//
+//MessageSearchParams params = new MessageSearchParams()
+//SearchCriteria criteria = new SearchCriteria()
+//
+//ext.verifyEmailSubjectAndBody = { mailSubject,mailBody ->
+//    gint.taskHelper.add(
+//            name: ":validate mail with subject:$mailSubject",
+//            inline:{
+//                params.withServer(serverId)
+//                criteria.withSentTo(mailId)
+//                def message = mailosaur.messages().get(params, criteria)
+//
+//                def subject = message.subject
+//
+//                 def pattern = ~/.*$mailSubject.*/
+//                def matcher1 = subject =~ pattern
+//                assert matcher1
+//
+//                def bodyList = message.text().body
+//                def pattern2 = ~/.*$mailBody.*/
+//                def matcher2 = bodyList =~ pattern2
+//                assert matcher2
+//
+//
+//                gint.helper.log("body", message.text().body)
+//                gint.helper.log("subject", message.subject)
+//            }
+//    )
+//}
+//

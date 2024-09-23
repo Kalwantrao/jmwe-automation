@@ -31,52 +31,73 @@ def fieldsOptions = [
         runAsUserReturnFromScript : ["fields=[{\"fieldId\":\"labels\",\"value\":\"runAsUserReturnFromScript\",\"options\":[],\"isTemplate\":true}]"],
 ]
 
+def relatedIssue = [:]
+def relatedIssuesMap = [:]
+
+relatedIssuesList.each{
+    relatedIssue.putAll(createRelatedIssuesMap('CONFIGURATION', it, projectName, " "))
+    relatedIssuesMap.putAll(createRelatedIssuesMap('TRANSITION', it, projectName, " "))
+}
+
+
+["Create_transition"].each {
+    def server =  [conditionalExecution.false ,  fieldsOptions.noOption , "selectedLinkType=currentIssue:*" , runAsUser.currentUser]
+    def cloud =  "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"{{ issue.fields.issuetype.name == 'Story' }}\",\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"currentIssue:*\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"create_transition\"}],\"runAsType\":\"addonUser\"}"
+    if(isCloud){
+        addTransitionFunctionOnCreateTransition('Create', 'postfunction', info?.isCloud ? cloud : server, functionKey)
+    }
+}
+
 relatedIssue.eachWithIndex { key, value, i ->
     def server =  [conditionalExecution.false ,  fieldsOptions.noOption , "selectedLinkType=$value" , runAsUser.currentUser]
     def cloud =  "{\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"default_value\"}],\"runAsType\":\"addonUser\"}"
     addTransitionFunction('setFieldLabelsToTargetIssue' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def server =  [conditionalExecution.false, fieldsOptions.ifEmpty , "selectedLinkType=$value" , runAsUser.currentUser]
     def cloud =  "{\"sendNotifications\":true,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{\"copyOnlyIfNotSet\":true},\"value\":\"ifEmpty\"}],\"runAsType\":\"addonUser\"}"
     addTransitionFunction('ifEmpty' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def server =  [conditionalExecution.false , fieldsOptions.createMissingValues , "selectedLinkType=$value" , runAsUser.currentUser]
     if(!isCloud) {
         addTransitionFunction('createMissingValueComponent' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
     }
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def server =  [conditionalExecution.false , fieldsOptions.ignoreEmptyValue , "selectedLinkType=$value" , runAsUser.currentUser]
     def cloud =  "{\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{\"ignoreEmptyValue\":true},\"value\":\"\"}],\"runAsType\":\"addonUser\"}"
     addTransitionFunction('ignoreEmptyValue' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def server =  [conditionalExecution.false , fieldsOptions.appendValues , "selectedLinkType=$value" , runAsUser.currentUser]
     def cloud =  "{\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{\"appendValues\":true},\"value\":\"appendValues\"}],\"runAsType\":\"addonUser\"}"
     addTransitionFunction('appendValues' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def server =  [conditionalExecution.false , fieldsOptions.removeValues , "selectedLinkType=$value" , runAsUser.currentUser]
     if(!isCloud) {
         addTransitionFunction('removeValues' + i, 'postfunction', server, functionKey)
     }
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def server =  [conditionalExecution.true ,  fieldsOptions.conditionalExecution , "selectedLinkType=$value" , runAsUser.currentUser]
     def cloud =  "{\"sendNotifications\":true,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"conditionalExecution\"}],\"conditionalExecution\":true,\"conditionalExecutionScript\":\"$nunjuckExpression.checkPriorityHigh\",\"runAsType\":\"addonUser\"}"
     addTransitionFunction('conditionalExecution' + i, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
+["currentUser","userFromScriptInvalid"].each {
+    runAsUser.remove(it)
+}
+
 runAsUser.eachWithIndex { userType, runAsUserFields, idx ->
-    relatedIssue.eachWithIndex { key, value, i ->
+    relatedIssue.take(1).eachWithIndex { key, value, i ->
         def transition = userType + i
         def server =  [runAsUserFields ,  conditionalExecution.false , "selectedLinkType=$value" , ["fields=[{\"fieldId\":\"labels\",\"value\":\"$transition\",\"options\":[],\"isTemplate\":true}]"]]
         def cloud =  "{\"sendNotifications\":false,\"problems\":[],\"targetIssue\":\"$value\",\"fieldsConfig\":[{\"fieldId\":\"labels\",\"options\":{},\"value\":\"$transition\"}],$runAsUserFields}"
@@ -87,11 +108,8 @@ runAsUser.eachWithIndex { userType, runAsUserFields, idx ->
     }
 }
 
-createWorkflowScheme()
-createProject()
-
 (1..2).each {
-    gint.taskHelper.addSetUp([
+    gint.taskHelper.add([
             [action: 'addVersion', ext: ': create versions : ' + it,
              parameters: [
                      project: projectName,
@@ -107,53 +125,33 @@ createProject()
     ])
 }
 
-def current = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'current')
-def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
-def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
-def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
-def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[]} ], 'BelongsToEpic')
-def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Initiative')
-def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
-def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
-def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
-def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
-def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
-def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
-def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
-updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
-
-def linkIssuesMap = [
-        blocks : {->blocks[]},
-        "$clonesLinkType" : {->clones[]},
-        duplicates : {->duplicates[]},
-        'relates to': {->relatesTo[]}
-]
-
-linkIssuesMap.eachWithIndex { key, value, i ->
-    linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
-}
-
-def relatedIssuesMap = [
-        {->current[]} : {->current[]},
-        {->parent[]} : {->subtask[]},
-        {->subtask[]} : {->parent[]},
-        {->epic[]} : {->issueBelongsToEpic[]},
-        {->issueBelongsToEpic[]} : {->epic[]},
-        {-> initiative[]} : {->epic_initiative[]},
-        {->epic_initiative[]} : {-> initiative[]},
-        {->blocks[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->blocks[]},
-        {->blocks[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->clones[]},
-        {->clones[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->duplicates[]},
-        {->duplicates[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->relatesTo[]},
-        {->relatesTo[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->jqlIssue[]}
-]
+def storyTypeIssue = createIssue([type: 'Story', summary: 'JMWE_Issue'], 'storyTypeIssue')
+def taskTypeIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'taskTypeIssue')
 
 def getCurrentUserName = info?.isCloud? info?.userDisplayName : user
+
+if(isCloud){
+    gint.taskHelper.add([
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : ":Of Labels_after create issue with create transition when issue type is story:",
+             parameters: [
+                     issue: { ->storyTypeIssue[] },
+                     field: "Labels"
+             ],
+             data      : [/Labels  . . . . . . . . . . . : create_transition/],
+            ],
+            [action    : 'getFieldValue',
+             sleep: sleep,
+             ext       : ":Of Labels_after create issue with create transition when issue type is task:",
+             parameters: [
+                     issue: { ->taskTypeIssue[] },
+                     field: "Labels"
+             ],
+             failData      : [/Labels  . . . . . . . . . . . : create_transition/],
+            ],
+    ])
+}
 
 [
         'setFieldLabelsToTargetIssue'
@@ -194,7 +192,7 @@ def getCurrentUserName = info?.isCloud? info?.userDisplayName : user
 [
         'ifEmpty'
 ].collect {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action    : 'setFieldValue',
                  sleep: sleep,
@@ -264,7 +262,7 @@ def getCurrentUserName = info?.isCloud? info?.userDisplayName : user
 [
         'ignoreEmptyValue'
 ].collect {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action    : 'setFieldValue',
                  sleep: sleep,
@@ -308,7 +306,7 @@ def getCurrentUserName = info?.isCloud? info?.userDisplayName : user
 [
         'appendValues'
 ].collect {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         gint.taskHelper.add([
                 [action    : 'setFieldValue',
                  sleep: sleep,
@@ -352,7 +350,7 @@ def getCurrentUserName = info?.isCloud? info?.userDisplayName : user
 [
         'createMissingValueComponent'
 ].collect {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         if(!isCloud) {
             gint.taskHelper.add([
                     [action    : 'transitionIssue',
@@ -380,7 +378,7 @@ def getCurrentUserName = info?.isCloud? info?.userDisplayName : user
 [
         'removeValues'
 ].collect {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         if(!isCloud) {
             gint.taskHelper.add([
                     [action    : 'transitionIssue',
@@ -405,7 +403,7 @@ def getCurrentUserName = info?.isCloud? info?.userDisplayName : user
     }
 }
 
-relatedIssuesMap.eachWithIndex{ key, value,  i ->
+relatedIssuesMap.take(1).eachWithIndex{ key, value,  i ->
     gint.taskHelper.add(
             action: 'assignIssue',
             sleep: sleep,
@@ -418,7 +416,7 @@ relatedIssuesMap.eachWithIndex{ key, value,  i ->
 }
 
 runAsUser.eachWithIndex { userType, runAsUserFields, idx ->
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         def transition = userType + i
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
@@ -439,7 +437,7 @@ runAsUser.eachWithIndex { userType, runAsUserFields, idx ->
                          parameters: [
                                  issue     : value,
                                  outputType: "text",
-                                 select    : "Field:labels",
+                                 select    : ["Field:labels","To String:$transition","Author:$addonName"],
                                  columns   : "Author,Field,'To String'"
                          ],
                          data      : ["$addonName", "labels", "$transition"],
@@ -455,7 +453,7 @@ runAsUser.eachWithIndex { userType, runAsUserFields, idx ->
                      parameters: [
                              issue: value,
                              outputType: "text",
-                             select: "Field:labels",
+                             select: ["Field:labels","To String:$transition","Author:$getCurrentUserName"],
                              columns: "Author,Field,'To String'"
                      ],
                      data      : ["$getCurrentUserName", "labels", "$transition"],
@@ -468,8 +466,15 @@ runAsUser.eachWithIndex { userType, runAsUserFields, idx ->
 [
         'conditionalExecution'
 ].each {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         gint.taskHelper.add([
+                [action: 'updateIssue',
+                 sleep: sleep,
+                 ext: ": set priority Low to check conditional execution true " + it+ i,
+                 parameters: [
+                         issue: key,
+                         priority: 'Low'
+                 ]],
                 [action    : 'transitionIssue',
                  sleep: sleep,
                  ext: ': ' + it +' : when false' + i,
@@ -510,6 +515,15 @@ runAsUser.eachWithIndex { userType, runAsUserFields, idx ->
                          field: "Labels"
                  ],
                  data      : [/Labels  . . . . . . . . . . . : conditionalExecution/],
+                ],
+                [action    : 'setFieldValue',
+                 sleep: sleep,
+                 ext       : ": $it _ to empty" +  i,
+                 parameters: [
+                         issue: value,
+                         field: "Labels",
+                         value: " "
+                 ],
                 ],
         ])
     }

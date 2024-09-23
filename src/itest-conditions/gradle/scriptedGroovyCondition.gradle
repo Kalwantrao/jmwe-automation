@@ -21,9 +21,6 @@ def cloudFields = "{\"expression\":\"!! issue.assignee\"}"
 	addTransitionFunction(it, 'condition', fields, functionKey )
 }
 
-createWorkflowScheme()
-createProject()
-
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
 // SCRIPTED_GROOVY_CONDITION_TC_24_Case_01-Verify for the Groovy script_when returns false on issue

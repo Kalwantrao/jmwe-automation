@@ -12,6 +12,16 @@ buildscript {
 apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-postfunction6/postfunction.gradle'
 
+def TEST_USER_ID = getUserId(testUser)
+def testUserId = {->TEST_USER_ID.getAt(0).trim()}
+
+def JIRA_ADMIN_PROJECT_ROLE_ID = getProjectRoleId("Administrators")
+def jiraAdminRoleId = {->JIRA_ADMIN_PROJECT_ROLE_ID.getAt(0).trim()}
+
+def JIRA_TEST_PROJECT_ROLE_ID = getProjectRoleId("testprojectrole")
+def testProjectRoleId = {->JIRA_TEST_PROJECT_ROLE_ID.getAt(0).trim()}
+
+
 def templateComment = "test_comment"
 def labelsByTemplate = "test_labels"
 def description = "test_description"
@@ -170,9 +180,6 @@ runAsUser.eachWithIndex { userType, fields, idx ->
         moveTransitionFunction(userType, 4)
     }
 }
-
-createWorkflowScheme()
-createProject()
 
 def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
 def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
@@ -396,11 +403,11 @@ gint.taskHelper.add(
             ]
 )
 [
-        'userInFieldAssignee'
+        //'userInFieldAssignee'
 ].each {
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
-                 ext: ': Check :  ' + it,
+                 ext: ': Check run as:  ' + it,
                         sleep: sleep,
                         parameters: [
                                 issue     : { ->subtask[] },
@@ -436,7 +443,10 @@ gint.taskHelper.add(
                 ],
         ])
 }
-runAsUser.remove("userInFieldAssignee")
+["userInFieldAssignee","userFromScriptInvalid","userInFieldAssignee"].each {
+    runAsUser.remove(it)
+}
+
 runAsUser.eachWithIndex { userType, fields, idx ->
     def transition = userType
         gint.taskHelper.add([
@@ -450,7 +460,7 @@ runAsUser.eachWithIndex { userType, fields, idx ->
                 ],
                 [action    : 'getFieldValue',
                  sleep: sleep,
-                 ext       : " :run as :" + transition,
+                 ext       : " :run as user :" + transition,
                  parameters: [
                          issue: { ->parent[] },
                          field: "Status"

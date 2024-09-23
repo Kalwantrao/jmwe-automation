@@ -1,0 +1,269 @@
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "org.gint:gint-atlassian:3.8.4"
+        classpath 'com.mailosaur:mailosaur-java:7.13.1'
+    }
+}
+
+apply plugin: 'org.gint.atlassian'
+apply from: gint.resourceDirectory +'/src/itest-email/email.gradle'
+
+def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__EmailIssueFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:email-issue-function'
+
+String subjectOnCreateTransition = "testSubjectOnCreateTransition"
+String bodyOnCreateTransition = "testSubjectOnCreateTransition"
+
+def relatedIssue = [:]
+def relatedIssuesMap = [:]
+
+relatedIssuesList.each{
+    relatedIssue.putAll(createRelatedIssuesMap('CONFIGURATION', it, projectName, " "))
+    relatedIssuesMap.putAll(createRelatedIssuesMap('TRANSITION', it, projectName, " "))
+}
+
+['checkMailOnCreateTransition'].each {
+    def cloud = "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"{{ issue.fields.issuetype.name == 'Bug' }}\",\"subject\":\"$subjectOnCreateTransition\",\"htmlBody\":\"\",\"textBody\":\"$bodyOnCreateTransition\",\"toReporter\":false,\"toAssignee\":false,\"toWatchers\":false,\"toVoters\":false,\"toUsers\":\"accountId:$testUserId\",\"toUserFields\":\"\",\"toUsersScript\":\"\",\"toGroupsScript\":\"\",\"toEmailsScript\":\"\",\"toGroups\":\"\",\"toRoleMembers\":\"\",\"runAsType\":\"currentUser\"}"
+    if(isCloud){
+        addTransitionFunctionOnCreateTransition(it, 'postfunction', cloud , functionKey )
+    }
+}
+
+['sendEmailIfConditionTrue'].each {
+    def cloud = "{$conditionalExecution.true,\"subject\":\"$it\",\"htmlBody\":\"\",\"textBody\":\"$it\",\"toReporter\":false,\"toAssignee\":false,\"toWatchers\":false,\"toVoters\":false,\"toUsers\":\"accountId:$testUserId\",\"toUserFields\":\"\",\"toUsersScript\":\"\",\"toGroupsScript\":\"\",\"toEmailsScript\":\"\",\"toGroups\":\"\",\"toRoleMembers\":\"\",\"runAsType\":\"currentUser\"}"
+    def server = [conditionalExecution.true,"toAssignee=yes","template=issuenotify.vm","subject=$it","textBody=$it","selectedLinkType=$currentIssue"]
+    addTransitionFunction(it, 'postfunction', info?.isCloud? cloud : server, functionKey )
+}
+
+relatedIssue.eachWithIndex { targetIssue, configFields, i ->
+    def transition = "sendEmailToAssigneeOfTheTargetIssue" + i
+    def cloud = "{\"conditionalExecution\":false,\"targetIssue\":\"$configFields\",\"subject\":\"$transition\",\"htmlBody\":\"\",\"textBody\":\"$transition\",\"toReporter\":false,\"toAssignee\":true,\"toWatchers\":false,\"toVoters\":false,\"toUsers\":\"\",\"toUserFields\":\"\",\"toUsersScript\":\"\",\"toGroupsScript\":\"\",\"toEmailsScript\":\"\",\"toGroups\":\"\",\"toRoleMembers\":\"\",\"runAsType\":\"currentUser\"}"
+    def server = [conditionalExecution.false,"toAssignee=yes","template=issuenotify.vm","subject=$transition","textBody=$transition","selectedLinkType=$configFields"]
+    addTransitionFunction(transition, 'postfunction', info?.isCloud? cloud : server, functionKey )
+}
+
+relatedIssue.take(1).eachWithIndex { targetIssue, configFields, i ->
+    def transition = "setDescriptionOfIssueSubjectAndSendEmailToAssigneeOfTheTargetIssue" + i
+    def cloud = "{\"conditionalExecution\":false,\"targetIssue\":\"$configFields\",\"subject\":\"{{ issue.fields.description }}\",\"htmlBody\":\"\",\"textBody\":\"{{ issue.fields.description }}\",\"toReporter\":false,\"toAssignee\":true,\"toWatchers\":false,\"toVoters\":false,\"toUsers\":\"\",\"toUserFields\":\"\",\"toUsersScript\":\"\",\"toGroupsScript\":\"\",\"toEmailsScript\":\"\",\"toGroups\":\"\",\"toRoleMembers\":\"\",\"runAsType\":\"currentUser\"}"
+    def server = [conditionalExecution.false,"toAssignee=yes","template=issuenotify.vm","subject=$transition","textBody=$transition","selectedLinkType=$configFields"]
+    addTransitionFunction(transition, 'postfunction', info?.isCloud? cloud : server, functionKey )
+}
+
+relatedIssue.take(1).eachWithIndex { targetIssue, configFields, i ->
+    def transition = "sendEmailToReporterOfTheTargetIssue" + i
+    def cloud = "{\"conditionalExecution\":false,\"targetIssue\":\"$configFields\",\"subject\":\"$transition\",\"htmlBody\":\"\",\"textBody\":\"$transition\",\"toReporter\":true,\"toAssignee\":false,\"toWatchers\":false,\"toVoters\":false,\"toUsers\":\"\",\"toUserFields\":\"\",\"toUsersScript\":\"\",\"toGroupsScript\":\"\",\"toEmailsScript\":\"\",\"toGroups\":\"\",\"toRoleMembers\":\"\",\"runAsType\":\"currentUser\"}"
+    def server = [conditionalExecution.false,"toReporter=yes","template=issuenotify.vm","subject=$transition","textBody=$transition","selectedLinkType=$configFields"]
+    addTransitionFunction(transition, 'postfunction', info?.isCloud? cloud : server, functionKey )
+}
+
+relatedIssue.take(1).eachWithIndex { targetIssue, configFields, i ->
+    def transition = "verifySendEmailToUserInFieldAssigneeOfTheTargetIssue" + i
+    def cloud = "{\"conditionalExecution\":false,\"subject\":\"$transition\",\"htmlBody\":\"\",\"textBody\":\"$transition\",\"toReporter\":false,\"toAssignee\":false,\"toWatchers\":false,\"toVoters\":false,\"toUsers\":\"\",\"toUserFields\":\"assignee\",\"toUsersScript\":\"\",\"toGroupsScript\":\"\",\"toEmailsScript\":\"\",\"toGroups\":\"\",\"toRoleMembers\":\"\",\"runAsType\":\"currentUser\"}"
+    def server = [conditionalExecution.false,"toAssignee=yes","template=issuenotify.vm","subject=$transition","textBody=$transition","selectedLinkType=$configFields"]
+    addTransitionFunction(transition, 'postfunction', info?.isCloud? cloud : server, functionKey )
+}
+
+relatedIssue.take(1).eachWithIndex { targetIssue, configFields, i ->
+    def transition = "verifySendEmailToUserInFieldReporterOfTheTargetIssue" + i
+    def cloud = "{\"conditionalExecution\":false,\"subject\":\"$transition\",\"htmlBody\":\"\",\"textBody\":\"$transition\",\"toReporter\":false,\"toAssignee\":false,\"toWatchers\":false,\"toVoters\":false,\"toUsers\":\"\",\"toUserFields\":\"reporter\",\"toUsersScript\":\"\",\"toGroupsScript\":\"\",\"toEmailsScript\":\"\",\"toGroups\":\"\",\"toRoleMembers\":\"\",\"runAsType\":\"currentUser\"}"
+    def server = [conditionalExecution.false,"toAssignee=yes","template=issuenotify.vm","subject=$transition","textBody=$transition","selectedLinkType=$configFields"]
+    addTransitionFunction(transition, 'postfunction', info?.isCloud? cloud : server, functionKey )
+}
+
+["currentUser","userFromScriptInvalid"].each {
+    runAsUser.remove(it)
+}
+
+['emailIssueRunAs_'].each {transitionPrefix ->
+    runAsUser.eachWithIndex { userType, configFields, i ->
+        relatedIssue.take(1).eachWithIndex{ targetIssue, targetIssueField, idx ->
+            def transition = transitionPrefix + userType + idx
+            def cloud = "{\"conditionalExecution\":false,\"targetIssue\":\"$targetIssueField\",\"subject\":\"$transition\",\"htmlBody\":\"\",\"textBody\":\"$transition\",\"toReporter\":false,\"toAssignee\":false,\"toWatchers\":false,\"toVoters\":false,\"toUsers\":\"\",\"toUserFields\":\"assignee\",\"toUsersScript\":\"\",\"toGroupsScript\":\"\",\"toEmailsScript\":\"\",\"toGroups\":\"\",\"toRoleMembers\":\"\",$configFields}"
+            def server = [conditionalExecution.false,"toUserFields=assignee","template=issuenotify.vm","subject=$transition","textBody=$transition","selectedLinkType=$targetIssueField",configFields]
+            addTransitionFunction(transition, 'postfunction', info?.isCloud? cloud : server, functionKey )
+        }
+    }
+}
+
+def issue1 = createIssue([type: 'Task', summary: "JMWE_Issue"], 'issue1')
+
+// Check the configuration on create transition, as email will be sent when issue is created
+if(isCloud){
+    gint.taskHelper.addSetUp(
+            action: "createIssue",
+            ext: ": to validate the email on create transition",
+            sleepAfter: 10000,
+            parameters: [
+                    project: projectName,
+                    type: "Bug",
+                    summary: "JMWE_Issue",
+            ]
+    )
+}
+
+if(isCloud){
+    verifyMailIsReceivedWithSubjectAndBody("[JIRA] "+ subjectOnCreateTransition, getCurrentUserName)
+}
+
+// TC_10 - email will be sent to the user in field assignee of target issue
+relatedIssuesMap.eachWithIndex{ currentIssue,targetIssue, int i ->
+    ["sendEmailToAssigneeOfTheTargetIssue"].each {
+        def transition = it + i
+        gint.taskHelper.add([
+                [action: "assignIssue",
+                 ext: ": to user $testUser:before transition issue with $transition",
+                 sleep: 4000,
+                 parameters: [
+                         issue: targetIssue,
+                         userId: testUser
+                 ]
+                ],
+                [action: "transitionIssue",
+                 ext: ":by transition_ $transition to validate the email on issue transition:",
+                 sleepAfter: info?.isCloud? 8000 : 8000,
+                 parameters: [
+                         issue: currentIssue,
+                         transition: transition,
+                 ]
+                ],
+        ]
+        )
+        verifyMailIsReceivedWithSubjectAndBody("[JIRA] $transition", getCurrentUserName)
+    }
+}
+
+// TC_10 - email will be sent to the user in field assignee of target issue
+relatedIssuesMap.take(1).eachWithIndex{ currentIssue,targetIssue, int i ->
+    ["sendEmailToReporterOfTheTargetIssue","verifySendEmailToUserInFieldReporterOfTheTargetIssue"].each {
+        def transition = it + i
+        gint.taskHelper.add([
+                [action: "updateIssue",
+                 ext: ":set reporter to user $testUser:before transition issue with $transition",
+                 sleep: 4000,
+                 parameters: [
+                         issue: targetIssue,
+                         reporter: testUser
+                 ]
+                ],
+                [action: "transitionIssue",
+                 ext: ":by transition_ $transition to validate the email on issue transition:",
+                 sleepAfter: info?.isCloud? 8000 : 8000,
+                 parameters: [
+                         issue: currentIssue,
+                         transition: transition,
+                 ]
+                ],
+        ]
+        )
+        verifyMailIsReceivedWithSubjectAndBody("[JIRA] $transition", getCurrentUserName)
+    }
+}
+
+relatedIssuesMap.take(1).eachWithIndex{ currentIssue,targetIssue, int i ->
+    ["setDescriptionOfIssueSubjectAndSendEmailToAssigneeOfTheTargetIssue","verifySendEmailToUserInFieldAssigneeOfTheTargetIssue"].each {
+        def transition = it + i
+        gint.taskHelper.add([
+                [action: "updateIssue",
+                 ext: ": set assignee to user $testUser and add description as $transition _before transition issue with $transition",
+                 sleep: 4000,
+                 parameters: [
+                         issue: targetIssue,
+                         assignee: testUser,
+                         description: transition
+                 ]
+                ],
+                [action: "transitionIssue",
+                 ext: ":by transition_ $transition to validate the email issue on transition:",
+                 sleepAfter: info?.isCloud? 8000 : 8000,
+                 parameters: [
+                         issue: currentIssue,
+                         transition: transition,
+                 ]
+                ],
+        ]
+        )
+        verifyMailIsReceivedWithSubjectAndBody("[JIRA] $transition", getCurrentUserName)
+    }
+}
+
+["sendEmailIfConditionTrue"].each {
+    ["Low","High"].each {priority ->
+        gint.taskHelper.add([
+                [action: "setFieldValue", ext: ": Of PRIORITY to $priority",
+                 sleep: sleep,
+                 parameters: [
+                         issue: {->issue1[]},
+                         field: "Priority",
+                         value: priority
+                 ]],
+                [action: "transitionIssue",
+                 ext: ": to validate the email on issue transition if condition true when priority is $priority",
+                 sleepAfter: 10000,
+                 parameters: [
+                         issue: {-> issue1[]},
+                         transition: it,
+                 ]]
+        ])
+        if(priority == "High"){
+            verifyMailIsReceivedWithSubjectAndBody("[JIRA] " + it, getCurrentUserName)
+        }else {
+            verifyMailIsNotReceivedWithSubject("[JIRA] " + it, getCurrentUserName)
+        }
+    }
+}
+
+runAsUser.remove("userInFieldAssignee")
+
+['emailIssueRunAs_'].each { transitionPrefix ->
+    runAsUser.eachWithIndex { userType, configFields, i ->
+        relatedIssuesMap.take(1).eachWithIndex { currentIssue, targetIssue, idx ->
+            def transition = transitionPrefix + userType + idx
+            def sender;
+            if(userType == "currentUser"){
+                sender = info?.isCloud ? addonName : getCurrentUserName
+            } else {
+                sender = getCurrentUserName
+            }
+            gint.taskHelper.add([
+                    [action: "updateIssue",
+                     ext: ": set assignee to user $testUser and add description as $transition _before transition issue with $transition",
+                     sleep: 4000,
+                     parameters: [
+                             issue: targetIssue,
+                             assignee: testUser,
+                             description: transition
+                     ]
+                    ],
+            ])
+            if(userType == 'userInFieldReporter' ){
+                gint.taskHelper.add([
+                        [action: "updateIssue",
+                         ext: ": set reporter to user $user _before transition issue with $transition",
+                         sleep: 4000,
+                         parameters: [
+                                 issue: targetIssue,
+                                 reporter: user,
+                                 description: transition
+                         ]
+                        ],
+                ])
+            }
+            gint.taskHelper.add([
+                    [action: "transitionIssue",
+                     ext: ":by transition_ $transition to validate the email issue on transition:",
+                     sleepAfter: info?.isCloud? 8000 : 8000,
+                     parameters: [
+                             issue: currentIssue,
+                             transition: transition,
+                     ]
+                    ],
+            ]
+            )
+            verifyMailIsReceivedWithSubjectAndBody("[JIRA] $transition", sender)
+        }
+    }
+}

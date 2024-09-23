@@ -14,6 +14,15 @@ apply from: gint.resourceDirectory +'/src/itest-postfunction5/postfunction.gradl
 
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__AssignToLastRoleMemberFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:assigntolastrolemember'
 
+def TEST_USER_ID = getUserId(testUser)
+def testUserId = {->TEST_USER_ID.getAt(0).trim()}
+
+def JIRA_ADMIN_PROJECT_ROLE_ID = getProjectRoleId("Administrators")
+def jiraAdminRoleId = {->JIRA_ADMIN_PROJECT_ROLE_ID.getAt(0).trim()}
+
+def JIRA_TEST_PROJECT_ROLE_ID = getProjectRoleId("testprojectrole")
+def testProjectRoleId = {->JIRA_TEST_PROJECT_ROLE_ID.getAt(0).trim()}
+
 ext.EMPTY_PROJECT_ROLE_ID = getProjectRoleId("emptyprojectrole")
 project.ext.emptyProjectRoleId = {->EMPTY_PROJECT_ROLE_ID.getAt(0).trim()}
 
@@ -34,6 +43,126 @@ def action = [
         ifAutomatic : ["assigneeMode=skipIfAssignee"],
         ifChangedOnTransitionScreen : ["assigneeMode=forceSelectedUser"],
 ]
+
+def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+
+if(!isCloud) {
+    gint.taskHelper.add(
+            action: 'updateUser',
+            sleep: sleep,
+            ext: ": Make user active",
+            parameters: [
+                    activate: null,
+                    userId  : inactiveAdmin,
+            ]
+    )
+}
+/*
+[testUser1, testUser, inactiveAdmin, testAdmin, "@self"].collect{
+    def role;
+    if (it == "@self" || it == inactiveAdmin || it == testAdmin){
+        role = "Administrators"
+    }
+    else {
+        role = testRole
+    }
+    gint.taskHelper.add(
+            action: 'removeProjectRoleActors',
+            sleep: info?.isCloud? 5000 : 0,
+            ext: ":remove user $it from project role_ $role",
+            parameters:[
+                    project: projectName,
+                    role: role,
+                    userId: it
+            ]
+    )
+}
+*/
+def usersToAddInProjectRoleServer = [testUser,testUser1,inactiveAdmin, testAdmin,"@self"]
+def usersToAddInProjectRoleCloud = [testUser,testUser1, testAdmin,"@self"]
+def usersToAddInProjectRole = info?.isCloud? usersToAddInProjectRoleCloud : usersToAddInProjectRoleServer
+
+usersToAddInProjectRole.collect{
+    def role;
+    if (it == "@self" || it == inactiveAdmin || it == testAdmin){
+        role = "Administrators"
+    }
+    else {
+        role = testRole
+    }
+    gint.taskHelper.add(
+            action: 'addProjectRoleActors',
+            sleep: info?.isCloud? 5000 : 0,
+            ext: ": add user $it to project role $role",
+            parameters:[
+                    project: projectName,
+                    role: role,
+                    userId: it,
+                    continue: null
+            ]
+    )
+}
+
+[user,testAdmin, " "].collect{
+    gint.taskHelper.add(
+            [action    : 'updateIssue',
+             sleep: info?.isCloud? 5000 : 0,
+             ext       : ': change assignee to: '+it  ,
+             parameters: [
+                     issue: { -> defaultIssue[] },
+                     assignee: it
+             ],
+            ],
+    )
+}
+
+relatedIssuesList.each {
+    def relatedIssuesConfigurationFieldsMap = createRelatedIssuesMap("CONFIGURATION", it, projectName, " ")
+    def transition = "assignIssueToLastAdminRole" + it
+    relatedIssuesConfigurationFieldsMap.eachWithIndex { key, value, i ->
+        def server =  [projectRole.admin , conditionalExecution.false]
+        def cloud =  "{\"targetIssue\":\"$value\",\"conditionalExecution\":false,\"includeReporter\":false,\"includeCurrentAssignee\":false,\"skipInactiveUsers\":false,\"sendNotifications\":false,\"role\":$jiraAdminRoleId,\"runAsType\":\"addonUser\"}"
+        if(isCloud){
+            addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+        }
+    }
+    def relatedIssuesMap = createRelatedIssuesMap("TRANSITION", it, projectName, " ")
+    if(isCloud) {
+        relatedIssuesMap.eachWithIndex { key, value, i ->
+            [user, testAdmin, " "].collect {
+                gint.taskHelper.add(
+                        [action    : 'updateIssue',
+                         sleep     : sleep,
+                         ext       : ": change assignee to: $it before transition issue with" + transition,
+                         parameters: [
+                                 issue   : value,
+                                 assignee: it
+                         ],
+                        ],
+                )
+            }
+            gint.taskHelper.add([
+                    [action    : 'transitionIssue',
+                     sleep     : sleep,
+                     ext       : "By " + transition,
+                     parameters: [
+                             issue     : key,
+                             transition: transition,
+                     ]
+                    ],
+                    [action    : 'getFieldValue',
+                     sleep     : sleep,
+                     ext       : "Of assignee after transition with " + transition,
+                     parameters: [
+                             issue: value,
+                             field: "Assignee"
+                     ],
+                     data      : [/Assignee  . . . . . . . . . . : $testAdmin/],
+                    ],
+            ])
+        }
+    }
+}
 
 ['1. assignToLastAdminRole'].each {
     def server =  [projectRole.admin , conditionalExecution.false]
@@ -124,86 +253,13 @@ def action = [
     addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-createWorkflowScheme();
-createProject()
-
-def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
-
-if(!isCloud) {
-    gint.taskHelper.add(
-            action: 'updateUser',
-            sleep: info?.isCloud ? 5000 : 0,
-            ext: ": Make user active",
-            parameters: [
-                    activate: null,
-                    userId  : inactiveAdmin,
-            ]
-    )
-}
-
-[testUser1,testUser,inactiveAdmin, testAdmin,"@self"].collect{
-    def role;
-    if (it == "@self" || it == inactiveAdmin || it == testAdmin){
-        role = "Administrators"
-    }
-    else {
-        role = testRole
-    }
-    gint.taskHelper.add(
-            action: 'removeProjectRoleActors',
-            sleep: info?.isCloud? 5000 : 0,
-            ext: ":remove user $it from project role_ $role",
-            parameters:[
-                    project: projectName,
-                    role: role,
-                    userId: it
-            ]
-    )
-}
-
-def usersToAddInProjectRoleServer = [testUser,testUser1,inactiveAdmin, testAdmin,"@self"]
-def usersToAddInProjectRoleCloud = [testUser,testUser1, testAdmin,"@self"]
-def usersToAddInProjectRole = info?.isCloud? usersToAddInProjectRoleCloud : usersToAddInProjectRoleServer
-
-usersToAddInProjectRole.collect{
-    def role;
-    if (it == "@self" || it == inactiveAdmin || it == testAdmin){
-        role = "Administrators"
-    }
-    else {
-        role = testRole
-    }
-    gint.taskHelper.add(
-            action: 'addProjectRoleActors',
-            sleep: info?.isCloud? 5000 : 0,
-            ext: ": add user $it to project role $role",
-            parameters:[
-                    project: projectName,
-                    role: role,
-                    userId: it
-            ]
-    )
-}
-
-[user,testAdmin, " "].collect{
-    gint.taskHelper.add(
-            [action    : 'updateIssue',
-             sleep: info?.isCloud? 5000 : 0,
-             ext       : ': change assignee to: '+it  ,
-             parameters: [
-                     issue: { -> defaultIssue[] },
-                     assignee: it
-             ],
-            ],
-    )
-}
 
 [
         '1. assignToLastAdminRole'
 ].collect {
     gint.taskHelper.add([
             [action    : 'transitionIssue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext: it + ': of related issue' ,
              parameters: [
                      issue     : { -> defaultIssue[] },
@@ -211,7 +267,7 @@ usersToAddInProjectRole.collect{
              ]
             ],
             [action    : 'getFieldValue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext       : it + ': of related issue' ,
              parameters: [
                      issue: { -> defaultIssue[] },
@@ -225,7 +281,7 @@ usersToAddInProjectRole.collect{
 [testUser1,testUser, " "].collect{
     gint.taskHelper.add(
             [action    : 'updateIssue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext       : it + ': change assignee2' ,
              parameters: [
                      issue: { -> defaultIssue[] },
@@ -240,7 +296,7 @@ usersToAddInProjectRole.collect{
 ].collect {
     gint.taskHelper.add([
             [action    : 'transitionIssue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext: it + ': of related issue' ,
              parameters: [
                      issue     : { -> defaultIssue[] },
@@ -249,7 +305,7 @@ usersToAddInProjectRole.collect{
              ]
             ],
             [action    : 'getFieldValue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext       : it + ': of related issue' ,
              parameters: [
                      issue: { -> defaultIssue[] },
@@ -265,7 +321,7 @@ def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue1'], 'default
 ].collect {
     gint.taskHelper.add([
             [action    : 'transitionIssue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext: it + ': of related issue' ,
              parameters: [
                      issue     : { -> defaultIssue1[] },
@@ -273,7 +329,7 @@ def defaultIssue1 = createIssue([type: 'Task', summary: 'JMWE_Issue1'], 'default
              ]
             ],
             [action    : 'getFieldValue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext       : it + ': of related issue' ,
              parameters: [
                      issue: { -> defaultIssue1[] },
@@ -290,7 +346,7 @@ def defaultIssue2 = createIssue([type: 'Task', summary: 'JMWE_Issue2'], 'default
     if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
-                 sleep: info?.isCloud? 5000 : 0,
+                 sleep: sleep,
                  ext: it + ': of related issue',
                  parameters: [
                          issue     : { -> defaultIssue2[] },
@@ -299,7 +355,7 @@ def defaultIssue2 = createIssue([type: 'Task', summary: 'JMWE_Issue2'], 'default
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 sleep: info?.isCloud? 5000 : 0,
+                 sleep: sleep,
                  ext       : it + ': of related issue',
                  parameters: [
                          issue: { -> defaultIssue2[] },
@@ -317,7 +373,7 @@ def defaultIssue3 = createIssue([type: 'Task', summary: 'JMWE_Issue3'], 'default
     if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
-                 sleep: info?.isCloud? 5000 : 0,
+                 sleep: sleep,
                  ext: it + ': of related issue',
                  parameters: [
                          issue     : { -> defaultIssue3[] },
@@ -326,7 +382,7 @@ def defaultIssue3 = createIssue([type: 'Task', summary: 'JMWE_Issue3'], 'default
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 sleep: info?.isCloud? 5000 : 0,
+                 sleep: sleep,
                  ext       : it + ': of related issue',
                  parameters: [
                          issue: { -> defaultIssue3[] },
@@ -337,6 +393,7 @@ def defaultIssue3 = createIssue([type: 'Task', summary: 'JMWE_Issue3'], 'default
         ])
     }
 }
+
 /*
 def defaultIssue4 = createIssue([type: 'Task', summary: 'JMWE_Issue4'], 'defaultIssue4')
 [
@@ -345,7 +402,7 @@ def defaultIssue4 = createIssue([type: 'Task', summary: 'JMWE_Issue4'], 'default
 if(!isCloud) {
     gint.taskHelper.add([
             [action    : 'transitionIssue',
-            sleep: info?.isCloud? 5000 : 0,
+            sleep: sleep,
             ext: it + ': of related issue' ,
              parameters: [
                      issue     : { -> defaultIssue4[] },
@@ -354,7 +411,7 @@ if(!isCloud) {
              ]
             ],
             [action    : 'getFieldValue',
-            sleep: info?.isCloud? 5000 : 0,
+            sleep: sleep,
              ext       : it + ': of related issue' ,
              parameters: [
                      issue: { -> defaultIssue4[] },
@@ -373,7 +430,7 @@ def defaultIssue5 = createIssue([type: 'Task', summary: 'JMWE_Issue5'], 'default
     if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
-                 sleep: info?.isCloud? 5000 : 0,
+                 sleep: sleep,
                  ext: it + ': of related issue',
                  parameters: [
                          issue     : { -> defaultIssue5[] },
@@ -382,7 +439,7 @@ def defaultIssue5 = createIssue([type: 'Task', summary: 'JMWE_Issue5'], 'default
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 sleep: info?.isCloud? 5000 : 0,
+                 sleep: sleep,
                  ext       : it + ': of related issue',
                  parameters: [
                          issue: { -> defaultIssue5[] },
@@ -399,7 +456,7 @@ def defaultIssue6 = createIssue([type: 'Task', summary: 'JMWE_Issue6'], 'default
 [testAdmin].collect{
     gint.taskHelper.add(
             [action    : 'updateIssue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext       : it + ': change assignee3' ,
              parameters: [
                      issue: { -> defaultIssue6[] },
@@ -413,7 +470,7 @@ def defaultIssue6 = createIssue([type: 'Task', summary: 'JMWE_Issue6'], 'default
 ].collect {
     gint.taskHelper.add([
             [action    : 'transitionIssue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext: it + ': of related issue' ,
              parameters: [
                      issue     : { -> defaultIssue6[] },
@@ -421,7 +478,7 @@ def defaultIssue6 = createIssue([type: 'Task', summary: 'JMWE_Issue6'], 'default
              ]
             ],
             [action    : 'getFieldValue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext       : it + ': of related issue' ,
              parameters: [
                      issue: { -> defaultIssue6[] },
@@ -436,7 +493,7 @@ def defaultIssue7 = createIssue([type: 'Task', summary: 'JMWE_Issue7'], 'default
 [testUser].collect{
     gint.taskHelper.add(
             [action    : 'updateIssue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext       : ":" + ': change assignee to' + it ,
              parameters: [
                      issue: { -> defaultIssue7[] },
@@ -450,7 +507,7 @@ def defaultIssue7 = createIssue([type: 'Task', summary: 'JMWE_Issue7'], 'default
 ].collect {
     gint.taskHelper.add([
             [action    : 'transitionIssue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext: it + ': of related issue',
              parameters: [
                      issue     : { -> defaultIssue7[] },
@@ -458,7 +515,7 @@ def defaultIssue7 = createIssue([type: 'Task', summary: 'JMWE_Issue7'], 'default
              ]
             ],
             [action    : 'getFieldValue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext       : it + ': of related issue',
              parameters: [
                      issue: { -> defaultIssue7[] },
@@ -472,7 +529,7 @@ def defaultIssue8 = createIssue([type: 'Task', summary: 'JMWE_Issue8'], 'default
 [getCurrentUserName," "].collect{
     gint.taskHelper.add(
             [action    : 'updateIssue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext       : it + ': change assignee5' ,
              parameters: [
                      issue: { -> defaultIssue8[] },
@@ -487,7 +544,7 @@ def defaultIssue8 = createIssue([type: 'Task', summary: 'JMWE_Issue8'], 'default
     if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
-                 sleep: info?.isCloud? 5000 : 0,
+                 sleep: sleep,
                  ext: it + ': of related issue',
                  parameters: [
                          issue     : { -> defaultIssue8[] },
@@ -496,7 +553,7 @@ def defaultIssue8 = createIssue([type: 'Task', summary: 'JMWE_Issue8'], 'default
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 sleep: info?.isCloud? 5000 : 0,
+                 sleep: sleep,
                  ext       : it + ': of related issue',
                  parameters: [
                          issue: { -> defaultIssue8[] },
@@ -511,7 +568,7 @@ def defaultIssue9 = createIssue([type: 'Task', summary: 'JMWE_Issue9'], 'default
 [getCurrentUserName," "].collect{
     gint.taskHelper.add(
             [action    : 'updateIssue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext       :  ': change assignee to : '+ it ,
              parameters: [
                      issue: { -> defaultIssue9[] },
@@ -527,7 +584,7 @@ def defaultIssue9 = createIssue([type: 'Task', summary: 'JMWE_Issue9'], 'default
     if(!isCloud) {
     gint.taskHelper.add([
             [action    : 'transitionIssue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext: it + ': of related issue' ,
              parameters: [
                      issue     : { -> defaultIssue9[] },
@@ -536,7 +593,7 @@ def defaultIssue9 = createIssue([type: 'Task', summary: 'JMWE_Issue9'], 'default
              ]
             ],
             [action    : 'getFieldValue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext       : it + ': of related issue' ,
              parameters: [
                      issue: { -> defaultIssue9[] },
@@ -553,7 +610,7 @@ def defaultIssue10 = createIssue([type: 'Task', summary: 'JMWE_Issue10'], 'defau
 [testAdmin].collect{
     gint.taskHelper.add(
             [action    : 'updateIssue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext       : it + ': change assignee7' ,
              parameters: [
                      issue: { -> defaultIssue10[] },
@@ -569,7 +626,7 @@ def defaultIssue10 = createIssue([type: 'Task', summary: 'JMWE_Issue10'], 'defau
     if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
-                 sleep: info?.isCloud? 5000 : 0,
+                 sleep: sleep,
                  ext: it + ': of related issue',
                  parameters: [
                          issue     : { -> defaultIssue10[] },
@@ -578,7 +635,7 @@ def defaultIssue10 = createIssue([type: 'Task', summary: 'JMWE_Issue10'], 'defau
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 sleep: info?.isCloud? 5000 : 0,
+                 sleep: sleep,
                  ext       : ":" + it + ': of related issue',
                  parameters: [
                          issue: { -> defaultIssue10[] },
@@ -596,7 +653,7 @@ def defaultIssue10 = createIssue([type: 'Task', summary: 'JMWE_Issue10'], 'defau
     if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
-                 sleep: info?.isCloud? 5000 : 0,
+                 sleep: sleep,
                  ext: it + ': of related issue',
                  parameters: [
                          issue     : { -> defaultIssue10[] },
@@ -605,7 +662,7 @@ def defaultIssue10 = createIssue([type: 'Task', summary: 'JMWE_Issue10'], 'defau
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 sleep: info?.isCloud? 5000 : 0,
+                 sleep: sleep,
                  ext       : it + ': of related issue',
                  parameters: [
                          issue: { -> defaultIssue10[] },
@@ -622,7 +679,7 @@ def defaultIssue11 = createIssue([type: 'Task', summary: 'JMWE_Issue11'], 'defau
 if(!isCloud) {
     gint.taskHelper.add(
             action: 'updateUser',
-            sleep: info?.isCloud ? 5000 : 0,
+            sleep: sleep,
             ext: ": Make user active1",
             parameters: [
                     activate: null,
@@ -638,7 +695,7 @@ def listOfUserToCheckActiveUser = info?.isCloud ? listOfUserToCheckActiveUserClo
 listOfUserToCheckActiveUser.collect{
     gint.taskHelper.add(
             [action    : 'updateIssue',
-             sleep: info?.isCloud? 5000 : 0,
+             sleep: sleep,
              ext       : it + ': change assignee8' ,
              parameters: [
                      issue: { -> defaultIssue11[] },
@@ -652,7 +709,7 @@ if(!isCloud) {
     gint.taskHelper.add(
             action: 'updateUser',
             ext: ": Make user inactive",
-            sleep: info?.isCloud ? 5000 : 0,
+            sleep: sleep,
             parameters: [
                     deactivate: null,
                     userId    : inactiveAdmin,
@@ -666,7 +723,7 @@ if(!isCloud) {
     if(!isCloud) {
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
-                 sleep     : info?.isCloud ? 5000 : 0,
+                 sleep     : sleep,
                  ext       : it + ': of related issue',
                  parameters: [
                          issue     : { -> defaultIssue11[] },
@@ -675,7 +732,7 @@ if(!isCloud) {
                  ]
                 ],
                 [action    : 'getFieldValue',
-                 sleep     : info?.isCloud ? 5000 : 0,
+                 sleep     : sleep,
                  ext       : it + ': of related issue',
                  parameters: [
                          issue: { -> defaultIssue11[] },

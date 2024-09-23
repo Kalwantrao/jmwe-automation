@@ -41,9 +41,6 @@ fields.eachWithIndex { key, value, i ->
     addTransitionFunction(key, 'validator', value, functionKey)
 }
 
-createWorkflowScheme()
-createProject()
-
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue', comment: "test"], 'defaultIssue')
 
 [

@@ -60,10 +60,6 @@ previousStatusServer.eachWithIndex { transitions, fields, i->
     }
 }
 
-createWorkflowScheme()
-createProject()
-
-
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 
 def transitionByUserTask =  { transition, userId, issue, expected ->

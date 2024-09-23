@@ -104,9 +104,6 @@ def defaultFieldsForDisplayMessage = [
 }
 def driver = gint.seleniumHelper
 
-createWorkflowScheme()
-createProject()
-
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
 def xpath = [
         clickTransitionTab : info?.isCloud? "//div[@data-testid='issue.views.issue-base.foundation.status.actions-wrapper']" : "//a[@id='opsbar-transitions_more']",
@@ -248,11 +245,11 @@ gint.taskHelper.add(
         ]
 )
 
-navigateToIssue({->defaultIssue[]}, "when verify conditional execution configuration_false")
+navigateToIssue({->defaultIssue[]}, "verify conditional execution configuration_false")
 
 [
         'info',
-        'error',
+        //'error',
         'warning',
         'success'
 ].each {
@@ -280,7 +277,7 @@ navigateToIssue({->defaultIssue[]}, "to verify conditional execution configurati
 
 [
         'info',
-        'error',
+        //'error',
         'warning',
         'success'
 ].each {

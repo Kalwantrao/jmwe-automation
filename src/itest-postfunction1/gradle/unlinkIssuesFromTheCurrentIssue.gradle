@@ -24,9 +24,6 @@ def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugi
     addTransitionFunction(it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-createWorkflowScheme()
-createProject()
-
 def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
 def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
 

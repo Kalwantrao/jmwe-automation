@@ -1,3 +1,4 @@
+/*
 buildscript {
     repositories {
         maven {
@@ -14,12 +15,19 @@ apply from: gint.resourceDirectory + '/src/itest-postfunction1/postfunction.grad
 
 def functionKey =	info?.isCloud ?  "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__CreateIssueFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:CreateIssue-function'
 
+addVersion(projectName)
+
+def JIRA_ADMIN_PROJECT_ROLE_ID = getProjectRoleId("Administrators")
+def jiraAdminRoleId = {->JIRA_ADMIN_PROJECT_ROLE_ID.getAt(0).trim()}
+
+def JIRA_TEST_PROJECT_ROLE_ID = getProjectRoleId("testprojectrole")
+def testProjectRoleId = {->JIRA_TEST_PROJECT_ROLE_ID.getAt(0).trim()}
+
 ext.TEST_GROUP_ID = getGroupId('testgroup', "testgroup.*")
 ext.ADMIN_GROUP_ID = getGroupId('jira-admins', "jira-admins.*")
 
 project.ext.testGroupIdCloud = {->TEST_GROUP_ID.getAt(0).trim()}
 project.ext.jiraAdminGroupCloud = {->ADMIN_GROUP_ID.getAt(0).trim()}
-
 
 def BUG_ISSUE_TYPE_ID = getIssueTypeId("Bug")
 def STORY_ISSUE_TYPE_ID = getIssueTypeId("Story")
@@ -39,74 +47,40 @@ String testSummary = "testSummary"
 String customSummary = "customSummary"
 String testLabel = "testLabel"
 String postCreationScriptToSetPriority = "newIssue.setFieldValue('Assignee',$user)"
+def sameAsCurrentIssue = '$sameAsCurrentIssue$'
 
-def selectProject = { project ->
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
-    def fields;
-    if(project == 'current'){
-        fields = "projectKey=$sameAsCurrentIssue";
-    }else {
-        fields = "projectKey=$project";
-    }
-    return fields
-}
+def selectProject = [
+        current: "projectKey=$sameAsCurrentIssue"
+]
 
-def selectIssueType = { type ->
-    def fields;
-    if(type == 'subtask') {
-        fields = ["issuetype=$SubtaskIssueType", "calculatedIssueType="];
-    }else if(type == 'task') {
-        fields = ["issuetype=$TaskIssueType", "calculatedIssueType="];
-    }else if(type == 'story') {
-        fields = ["issuetype=$StoryIssueType", "calculatedIssueType="];
-    }else if(type == 'bug') {
-        fields = ["issuetype=$BugIssueType", "calculatedIssueType="];
-    }else if(type == 'initiative') {
-        fields = ["issuetype=$InitiativeIssueType", "calculatedIssueType="];
-    }
-    return fields
-}
+def selectIssueType = [
+        subtask: ["issuetype=$SubtaskIssueType", "calculatedIssueType="],
+        task: ["issuetype=$TaskIssueType", "calculatedIssueType="],
+        story: ["issuetype=$StoryIssueType", "calculatedIssueType="],
+        bug: ["issuetype=$BugIssueType", "calculatedIssueType="],
+        initiative: ["issuetype=$InitiativeIssueType", "calculatedIssueType="]
+]
 
-def selectParentIssue = { parentIssue ->
-    def currentIssue = 'currentIssue'
-    def fields;
-    if(parentIssue == 'currentIssue'){
-        fields = ["parentIssueType=$currentIssue","calculatedParentIssue="]
-    }else {
-        fields = ["parentIssueType=","calculatedParentIssue="]
-    }
-    return fields
-}
+def currentIssueVariable = '$currentIssue$'
 
-def selectLinkType = { linkType ->
-    def fields ;
-    if(linkType == 'notLinked') {
-        fields = "selectedLinkType="
-    }else if(linkType == 'Blocks') {
-        fields = "selectedLinkType=$linkByBlock"
-    }else if(linkType == 'Cloners') {
-        fields = "selectedLinkType=$linkByClones"
-    }else if(linkType == 'Duplicate') {
-        fields = "selectedLinkType=$linkByDuplicates"
-    }else if(linkType == info?.isCloud? 'Relates': 'Relates') {
-        fields = "selectedLinkType=$linkByRelatesTo"
-    }else {
-        fields = "selectedLinkType="
-    }
-    return fields
-}
+def selectParentIssue = [
+        none: ["parentIssueType=","calculatedParentIssue="],
+        currentIssue: ["parentIssueType=$currentIssueVariable","calculatedParentIssue="]
+]
 
-def setFieldOfNewIssueMode = { mode ->
-    def fields;
-    if(mode == 'givenFields'){
-        fields = "fieldsToCopy:selected-fields-only"
-    }else if(mode == 'createScreenFields'){
-        fields = "fieldsToCopy:screen-fields"
-    }else if(mode == 'allFields'){
-        fields = "fieldsToCopy:all-fields"
-    }
-    return fields
-}
+def selectLinkType = [
+        notLinked: "selectedLinkType=",
+        Blocks: "selectedLinkType=$linkByBlock",
+        Cloners: "selectedLinkType=$linkByClones",
+        Duplicate: "selectedLinkType=$linkByDuplicates",
+        Related: "selectedLinkType=$linkByRelatesTo"
+]
+
+def setFieldOfNewIssueMode = [
+        givenFields: "fieldsToCopy:selected-fields-only",
+        createScreenFields: "fieldsToCopy:screen-fields",
+        allFields: "fieldsToCopy:all-fields"
+]
 
 def setSummary = { summaryType ->
     def fields;
@@ -185,23 +159,409 @@ def multipleIssueCreation = { createMultiple, script->
     }
 }
 
+def createTransitionIssue = "createIssueOfTypeSubtaskByCreateTransition"
+
+def getFieldValue = fields("GETVALUE", "fixVersions")
+def getFieldValueOfAffectsVersions = fields("GETVALUE", "affectsVersions")
+
+
+[
+        'createIssuesOfTypeSubtaskAndSetSummaryByPostCreationScript',
+].each {
+    def currentIssue = info?.isCloud ? '$currentIssue$' : 'currentIssue'
+    def server = [selectIssueType.subtask , selectProject.current , "parentIssueType=$currentIssue" , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def cloud =  "{\"navigateToNewIssue\":false,\"runAsType\":\"currentUser\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$SubtaskIssueType\",\"parentIssue\":\"$currentIssue\",\"selectedLinkType\":\"\",\"copyAllFields\":false,\"copyScreenFields\":false,\"ignoreInapplicableFields\":false,\"copySubtasks\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"copyCommentVisibility\":\"original-visibility\",\"commentAsType\":\"currentUser\",\"postCreationScript\":\"{{ '/rest/api/2/issue/:issue' | callJira(verb=('PUT'), params={'issue':issue.key}, body={'fields': {'summary': 'test-summary'} }) }}\",\"conditionalExecution\":false}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
+
+    def issueType = "Sub-task"
+    def issue = createIssue([type: 'Task', summary: it], it)
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":by $it:",
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->issue[] },
+                     transition: it,
+             ],
+            ],
+            [action    : 'getFieldValue',
+             ext: ":Of summary to check post creation script after transition $it:",
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->issue[] },
+                     field: "Summary"
+             ],
+                    data: ["Summary . . . . . . . . . . . : test-summary"]
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : delete issue created by post function to check next option: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $it AND type = $issueType",
+                     common: [ "--action deleteIssue --issue @issue@ --continue"
+                     ]
+             ]
+            ]
+    ])
+}
+
+[
+        'createMultipleIssuesOfTypeSubtask',
+
+].each {
+    int iteratorValue = 5
+    def currentIssue = info?.isCloud ? '$currentIssue$' : 'currentIssue'
+    def server = [selectIssueType.subtask , selectProject.current , "parentIssueType=$currentIssue" , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def cloud =  "{\"navigateToNewIssue\":false,\"runAsType\":\"currentUser\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$SubtaskIssueType\",\"parentIssue\":\"$currentIssue\",\"selectedLinkType\":\"\",\"copyAllFields\":false,\"copyScreenFields\":false,\"ignoreInapplicableFields\":false,\"copySubtasks\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"copyCommentVisibility\":\"original-visibility\",\"commentAsType\":\"currentUser\",\"iterationScript\":\"{{range(1,$iteratorValue)}}\",\"iteratorReturnsJSON\":false,\"conditionalExecution\":false}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
+
+    def issueType = "Sub-task"
+    def issue = createIssue([type: 'Task', summary: it], it)
+
+    int numberOfIssues = iteratorValue - 1
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":by $it:",
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->issue[] },
+                     transition: it,
+             ],
+            ],
+            [action: 'getIssueList',
+             ext: ":to check new issue created by postfunction after transition issue by:$it",
+             sleep: sleep,
+             parameters: [
+                     project: projectName,
+                     jql: "project = $projectName AND summary ~ $it AND type = $issueType",
+                     outputType: "Text",
+                     columns:"Type,Summary"
+             ],
+             data:[
+                     "$numberOfIssues issues in list",
+                     "$issueType" ,
+                     /$it/  ],
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : delete issue created by post function to check next option: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $it AND type = $issueType",
+                     common: [ "--action deleteIssue --issue @issue@ --continue"
+                     ]
+             ]
+            ]
+    ])
+}
+
+[
+        'createIssueOfTypeStoryAndDoNotCopyCommentsFromCurrentIssueToNewIssue'
+].each {
+    def currentIssue = '$currentIssue$'
+    def server =  [selectIssueType.story , selectProject.current , selectParentIssue.none , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def cloud =  "{\"navigateToNewIssue\":false,\"runAsType\":\"currentUser\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$StoryIssueType\",\"selectedLinkType\":\"\",\"copyAllFields\":false,\"copyScreenFields\":false,\"ignoreInapplicableFields\":false,\"copySubtasks\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"copyCommentVisibility\":\"original-visibility\",\"commentAsType\":\"currentUser\",\"conditionalExecution\":false}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
+
+    def existingComment = "old comment"
+    def summary = it
+    def issue = createIssue([type: 'Task', summary: summary, comment: existingComment], it)
+
+    def issueType = "Story"
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":by $it:",
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->issue[] },
+                     transition: it,
+                     comment: it
+             ],
+            ],
+            [action: 'getIssueList',
+             ext: ":to check new issue created by postfunction after transition issue by:$it",
+             sleep: sleep,
+             parameters: [
+                     project: projectName,
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     outputType: "Text",
+                     columns:"Type,Summary"
+             ],
+             data:[  "$issueType" ,
+                     /$summary/  ],
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : get comments value from new created issue by postfunction: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action getComments --issue @issue@ --continue/  ]
+             ],
+             failData: [
+                     it,
+                     existingComment
+             ]
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : delete issue created by post function to check next option: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action deleteIssue --issue @issue@ --continue/  ]
+             ],
+            ]
+    ])
+}
+
+[
+        'createIssueOfTypeStoryAndCopyCommentAddedOnTransitionScreenToNewIssue'
+].each {
+    def currentIssue = '$currentIssue$'
+    def server =  [selectIssueType.story , selectProject.current , selectParentIssue.none , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def cloud =  "{\"navigateToNewIssue\":false,\"runAsType\":\"currentUser\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$StoryIssueType\",\"selectedLinkType\":\"\",\"copyAllFields\":false,\"copyScreenFields\":false,\"ignoreInapplicableFields\":false,\"copySubtasks\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"copyCommentToNewIssue\":true,\"copyAllCommentsToNewIssue\":false,\"copyCommentVisibility\":\"original-visibility\",\"commentAsType\":\"currentUser\",\"conditionalExecution\":false}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
+
+    def summary = it
+    def issue = createIssue([type: 'Task', summary: summary], it)
+
+    def issueType = "Story"
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":by $it:",
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->issue[] },
+                     transition: it,
+                     comment: it
+             ],
+            ],
+            [action: 'getIssueList',
+             ext: ":to check new issue created by postfunction after transition issue by:$it",
+             sleep: sleep,
+             parameters: [
+                     project: projectName,
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     outputType: "Text",
+                     columns:"Type,Summary"
+             ],
+             data:[  "$issueType" ,
+                     /$summary/  ],
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : get comments value from new created issue by postfunction: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action getComments --issue @issue@ --continue/  ]
+             ],
+             data: [ it ]
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : delete issue created by post function to check next option: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action deleteIssue --issue @issue@ --continue/  ]
+             ],
+            ]
+    ])
+}
+
+[
+        'createIssueOfTypeStoryAndCopyAllCommentsToNewIssue'
+].each {
+    def currentIssue = '$currentIssue$'
+    def server =  [selectIssueType.story , selectProject.current , selectParentIssue.none , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def cloud =  "{\"navigateToNewIssue\":false,\"runAsType\":\"currentUser\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$StoryIssueType\",\"selectedLinkType\":\"\",\"copyAllFields\":false,\"copyScreenFields\":false,\"ignoreInapplicableFields\":false,\"copySubtasks\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":true,\"copyCommentVisibility\":\"original-visibility\",\"commentAsType\":\"currentUser\",\"conditionalExecution\":false}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
+
+    def existingComment = "old comment"
+    def summary = it
+    def issue = createIssue([type: 'Task', summary: summary, comment: existingComment], it)
+
+    def issueType = "Story"
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":by $it:",
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->issue[] },
+                     transition: it,
+                     comment: it
+             ],
+            ],
+            [action: 'getIssueList',
+             ext: ":to check new issue created by postfunction after transition issue by:$it",
+             sleep: sleep,
+             parameters: [
+                     project: projectName,
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     outputType: "Text",
+                     columns:"Type,Summary"
+             ],
+             data:[  "$issueType" ,
+                     /$summary/  ],
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : get comments value from new created issue by postfunction: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action getComments --issue @issue@ --continue/  ]
+             ],
+             data: [
+                     it,
+                     existingComment
+             ]
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : delete issue created by post function to check next option: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action deleteIssue --issue @issue@ --continue/  ]
+             ],
+            ]
+    ])
+}
+
+[
+        'copyFieldsReturnFromScriptToAffectsVersionsOfNewIssue'
+].each {
+    def currentIssue = info?.isCloud ? '$currentIssue$' : 'currentIssue'
+    def server = [selectIssueType.subtask , selectProject.current , "parentIssueType=$currentIssue" , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def cloud =  "{\"navigateToNewIssue\":false,\"runAsType\":\"currentUser\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$SubtaskIssueType\",\"parentIssue\":\"$currentIssue\",\"selectedLinkType\":\"\",\"copyAllFields\":false,\"copyScreenFields\":false,\"ignoreInapplicableFields\":false,\"copySubtasks\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"},\"versions\":{\"action\":\"set\",\"value\":\"$defaultValueOfVersions\"}},\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"copyCommentVisibility\":\"original-visibility\",\"commentAsType\":\"currentUser\",\"conditionalExecution\":false}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
+
+    def summary = it
+    def issue = createIssue([type: 'Task', summary: summary], it)
+
+    def issueType = "Sub-task"
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":by $it:",
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->issue[] },
+                     transition: it,
+             ],
+            ],
+            [action: 'getIssueList',
+             ext: ":to check new issue created by postfunction after transition issue by:$it",
+             sleep: sleep,
+             parameters: [
+                     project: projectName,
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     outputType: "Text",
+                     columns:"Type,Summary"
+             ],
+             data:[  "$issueType" ,
+                     /$summary/  ],
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : get affects versions value from new created issue by postfunction: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action getFieldValue --issue @issue@ --field "Affects versions" --continue/  ]
+             ],
+             data: [getFieldValueOfAffectsVersions.affectsVersions]
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : delete issue created by post function to check next option: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action deleteIssue --issue @issue@ --continue/  ]
+             ],
+            ]
+    ])
+}
+
 [
         'createIssueOfTypeSubtask'
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
-    //def sameAsCurrentIssue = '$sameAsCurrentIssue$'
-    def currentIssue = '$currentIssue$'
-    def server = [selectIssueType('subtask') , selectProject('current') , selectParentIssue('currentIssue') , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def currentIssue = info?.isCloud ? '$currentIssue$' : 'currentIssue'
+    def server = [selectIssueType.subtask , selectProject.current , "parentIssueType=$currentIssue" , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$SubtaskIssueType\",\"selectedLinkType\":\"\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"copySubtasks\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
 [
+        'createIssueOfTypeEpic'
+].each {
+    def currentIssue = info?.isCloud ? '$currentIssue$' : 'currentIssue'
+    def server = [selectIssueType.subtask , selectProject.current , "parentIssueType=$currentIssue" , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def cloud =  "{\"navigateToNewIssue\":false,\"runAsType\":\"currentUser\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$EpicIssueType\",\"selectedLinkType\":\"\",\"copyAllFields\":false,\"copyScreenFields\":false,\"ignoreInapplicableFields\":false,\"copySubtasks\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"copyCommentVisibility\":\"original-visibility\",\"commentAsType\":\"currentUser\",\"conditionalExecution\":false}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
+}
+
+[
+        'createIssueOfTypeEpic_calculatedProjectKey'
+].each {
+    def calculated = info?.isCloud ? '$calculated$' : 'calculated'
+    def currentIssue = info?.isCloud ? '$currentIssue$' : 'currentIssue'
+    def server = [selectIssueType.subtask , selectProject.current , "parentIssueType=$currentIssue" , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def cloud =  "{\"navigateToNewIssue\":false,\"calculatedProjectKey\":\"{{ issue.fields.project.key }}\",\"runAsType\":\"currentUser\",\"project\":\"$calculated\",\"issuetype\":\"$EpicIssueType\",\"selectedLinkType\":\"\",\"copyAllFields\":false,\"copyScreenFields\":false,\"ignoreInapplicableFields\":false,\"copySubtasks\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"copyCommentVisibility\":\"original-visibility\",\"commentAsType\":\"currentUser\",\"conditionalExecution\":false}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
+}
+
+[
+        'createIssueOfTypeEpic_inOtherProject'
+].each {
+    def calculated = info?.isCloud ? '$calculated$' : 'calculated'
+    def currentIssue = info?.isCloud ? '$currentIssue$' : 'currentIssue'
+    def server = [selectIssueType.subtask , selectProject.current , "parentIssueType=$currentIssue" , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def cloud =  "{\"navigateToNewIssue\":false,\"runAsType\":\"currentUser\",\"project\":\"JMWE\",\"issuetype\":\"$EpicIssueType\",\"selectedLinkType\":\"\",\"copyAllFields\":false,\"copyScreenFields\":false,\"ignoreInapplicableFields\":false,\"copySubtasks\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$it\"}},\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"copyCommentVisibility\":\"original-visibility\",\"commentAsType\":\"currentUser\",\"conditionalExecution\":false}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
+
+    def issue = createIssue([type: 'Task', summary: it], it)
+        def issueType;
+        if(it == 'createIssueOfTypeEpic_inOtherProject'){
+            issueType = "Epic"
+        }
+        gint.taskHelper.add([
+                [action    : 'transitionIssue',
+                 ext: ":by $it:",
+                 sleep: sleep,
+                 parameters: [
+                         issue     : { ->issue[] },
+                         transition: it,
+                 ],
+                ],
+                [action: 'getIssueList',
+                 ext: ":to check new issue created by postfunction after transition issue by:$it",
+                 sleep: sleep,
+                 parameters: [
+                         project: TestProject,
+                         jql: "project = $TestProject AND summary ~ $it AND type = $issueType",
+                         outputType: "Text",
+                         columns:"Type,Summary"
+                 ],
+                 data:[  "$issueType" ,
+                         /$it/  ],
+                ],
+                [action: 'runFromIssueList',
+                 sleep: sleep,
+                 ext: " : delete issue created by post function to check next option: " + it,
+                 parameters:[
+                         jql: "project = $TestProject AND summary ~ $it AND type = $issueType",
+                         common: [ "--action deleteIssue --issue @issue@ --continue"
+                         ]
+                 ]
+                ]
+        ])
+}
+
+[
         'createIssueOfTypeTask'
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server =  [selectIssueType('task') , selectProject('current') , selectParentIssue('none') , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def server =  [selectIssueType.task , selectProject.current , selectParentIssue.none , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$TaskIssueType\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
@@ -209,9 +569,8 @@ def multipleIssueCreation = { createMultiple, script->
 [
         'createIssueOfTypeStory'
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server =  [selectIssueType('story') , selectProject('current') , selectParentIssue('none') , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def server =  [selectIssueType.story , selectProject.current , selectParentIssue.none , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$StoryIssueType\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
@@ -219,9 +578,8 @@ def multipleIssueCreation = { createMultiple, script->
 [
         'createIssueOfTypeBug'
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server =  [selectIssueType('bug') , selectProject('current') , selectParentIssue('none') , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def server =  [selectIssueType.bug , selectProject.current , selectParentIssue.none , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueType\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
@@ -229,9 +587,8 @@ def multipleIssueCreation = { createMultiple, script->
 [
         'createIssueOfTypeInitiative'
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server =  [selectIssueType('initiative') , selectProject('current') , selectParentIssue('none') , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def server =  [selectIssueType.initiative , selectProject.current , selectParentIssue.none , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$InitiativeIssueType\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
@@ -239,9 +596,8 @@ def multipleIssueCreation = { createMultiple, script->
 [
         'createIssueOfTypeBugAndLinkToCurrentIssueByBlocks'
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server =  [selectIssueType('bug') , selectProject('current') , selectParentIssue('none') , setSummary('default') , selectLinkType('Blocks') , conditionalExecution.false , runAsUser.currentUser]
+    def server =  [selectIssueType.bug , selectProject.current , selectParentIssue.none , setSummary('default') , selectLinkType.Blocks , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueType\",\"selectedLinkType\":\"$relatedIssue.linkByBlock\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
@@ -249,9 +605,8 @@ def multipleIssueCreation = { createMultiple, script->
 [
         'createIssueOfTypeBugAndLinkToCurrentIssueByCloners'
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server =  [selectIssueType('bug') , selectProject('current') , selectParentIssue('none') , setSummary('default') , selectLinkType('Cloners') , conditionalExecution.false , runAsUser.currentUser]
+    def server =  [selectIssueType.bug , selectProject.current , selectParentIssue.none , setSummary('default') , selectLinkType.Cloners , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueType\",\"selectedLinkType\":\"$relatedIssue.linkByClones\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
@@ -259,9 +614,8 @@ def multipleIssueCreation = { createMultiple, script->
 [
         'createIssueOfTypeBugAndLinkToCurrentIssueByDuplicates'
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server =  [selectIssueType('bug') , selectProject('current') , selectParentIssue('none') , setSummary('default') , selectLinkType('Duplicate') , conditionalExecution.false , runAsUser.currentUser]
+    def server =  [selectIssueType.bug , selectProject.current , selectParentIssue.none , setSummary('default') , selectLinkType.Duplicate , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueType\",\"selectedLinkType\":\"$relatedIssue.linkByDuplicates\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
@@ -269,9 +623,8 @@ def multipleIssueCreation = { createMultiple, script->
 [
         'createIssueOfTypeBugAndLinkToCurrentIssueByRelates'
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server =  [selectIssueType('bug') , selectProject('current') , selectParentIssue('none') , setSummary('default') , selectLinkType('Relates') , conditionalExecution.false , runAsUser.currentUser]
+    def server =  [selectIssueType.bug , selectProject.current , selectParentIssue.none , setSummary('default') , selectLinkType.Relates , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueType\",\"selectedLinkType\":\"$relatedIssue.linkByRelatesTo\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"copy\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
@@ -279,9 +632,8 @@ def multipleIssueCreation = { createMultiple, script->
 [
         'createIssueOfTypeSubtaskIfConditionTrue'
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
-    def currentIssue = '$currentIssue$'
-    def server =  [selectIssueType('subtask') , selectProject('current') , selectParentIssue('currentIssue') , setSummary('default') , conditionalExecution.true , runAsUser.currentUser]
+    def currentIssue = info?.isCloud ?'$currentIssue$' : 'currentIssue'
+    def server =  [selectIssueType.subtask , selectProject.current , "parentIssueType=$currentIssue" , setSummary('default') , conditionalExecution.true , runAsUser.currentUser]
     def cloud =  "{$conditionalExecution.true,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$SubtaskIssueType\",\"selectedLinkType\":\"\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
@@ -289,9 +641,8 @@ def multipleIssueCreation = { createMultiple, script->
 [
         'createIssueOfTypeBugAndSetCustomSummary'
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server =  [selectIssueType('bug') , selectProject('current') , selectParentIssue('none') , setSummary('template') , selectLinkType('notLinked') , conditionalExecution.false , runAsUser.currentUser]
+    def server =  [selectIssueType.bug , selectProject.current , selectParentIssue.none , setSummary('template') , selectLinkType.notLinked , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueType\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
@@ -299,9 +650,8 @@ def multipleIssueCreation = { createMultiple, script->
 [
         'createIssueOfTypeBugSetCustomSummaryAndAddCommentByTemplateVisibleToAllUsers'
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server =  [selectIssueType('bug') , selectProject('current') , selectParentIssue('none') , setSummary('template') , selectLinkType('notLinked') , addComment('template',it) , commentVisibility('all') , conditionalExecution.false , runAsUser.currentUser]
+    def server =  [selectIssueType.bug , selectProject.current , selectParentIssue.none , setSummary('template') , selectLinkType.notLinked , addComment('template',it) , commentVisibility('all') , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueType\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"commentAs\":\"\",\"commentAsType\":\"currentUser\",\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
@@ -309,9 +659,8 @@ def multipleIssueCreation = { createMultiple, script->
 [
         'createIssueOfTypeBugSetCustomSummaryAndAddCommentByTemplateVisibleToAdminGroupUsers'
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server =  [selectIssueType('bug') , selectProject('current') , selectParentIssue('none') , setSummary('template') , selectLinkType('notLinked') , addComment('template',it) , commentVisibility('adminGroupUsers') , conditionalExecution.false , runAsUser.currentUser]
+    def server =  [selectIssueType.bug , selectProject.current , selectParentIssue.none , setSummary('template') , selectLinkType.notLinked , addComment('template',it) , commentVisibility('adminGroupUsers') , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"_modified\":\"2024-03-04T08:27:46.678Z\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueType\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"$jiraAdminGroupCloud\",\"commentAs\":\"\",\"commentAsType\":\"currentUser\",\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
@@ -319,9 +668,8 @@ def multipleIssueCreation = { createMultiple, script->
 [
         'createIssueOfTypeBugSetCustomSummaryAndAddCommentByTemplateVisibleToAdminRoleUsers'
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server =  [selectIssueType('bug') , selectProject('current') , selectParentIssue('none') , setSummary('template') , selectLinkType('notLinked') , addComment('template',it) , commentVisibility('adminRoleUsers') , conditionalExecution.false , runAsUser.currentUser]
+    def server =  [selectIssueType.bug , selectProject.current , selectParentIssue.none , setSummary('template') , selectLinkType.notLinked , addComment('template',it) , commentVisibility('adminRoleUsers') , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueType\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$jiraAdminRoleId,\"commentAs\":\"\",\"commentAsType\":\"currentUser\",\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
@@ -329,9 +677,8 @@ def multipleIssueCreation = { createMultiple, script->
 [
         'createIssueOfTypeBugSetCustomSummaryAndAddCommentByTemplateVisibleToTestGroupUsers'
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server =  [selectIssueType('bug') , selectProject('current') , selectParentIssue('none') , setSummary('template') , selectLinkType('notLinked') , addComment('template',it) , commentVisibility('testGroupUsers') , conditionalExecution.false , runAsUser.currentUser]
+    def server =  [selectIssueType.bug , selectProject.current , selectParentIssue.none , setSummary('template') , selectLinkType.notLinked , addComment('template',it) , commentVisibility('testGroupUsers') , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"_modified\":\"2024-03-04T08:27:46.678Z\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueType\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"$testGroupIdCloud\",\"commentAs\":\"\",\"commentAsType\":\"currentUser\",\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
@@ -339,43 +686,325 @@ def multipleIssueCreation = { createMultiple, script->
 [
         'createIssueOfTypeBugSetCustomSummaryAndAddCommentByTemplateVisibleToTestRoleUsers'
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server =  [selectIssueType('bug') , selectProject('current') , selectParentIssue('none') , setSummary('template') , selectLinkType('notLinked') , addComment('template',it) , commentVisibility('testRoleUsers') , conditionalExecution.false , runAsUser.currentUser]
+    def server =  [selectIssueType.bug , selectProject.current , selectParentIssue.none , setSummary('template') , selectLinkType.notLinked , addComment('template',it) , commentVisibility('testRoleUsers') , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueType\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"customSummary\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"comment\":\"$it\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"restrictToProjectRoleId\":$testProjectRoleId,\"commentAs\":\"\",\"commentAsType\":\"currentUser\",\"navigateToNewIssue\":false}"
     addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
-def creteTransitionIssue = "createIssueOfTypeSubtaskByCreateTransition"
 [
-        creteTransitionIssue
+        createTransitionIssue
 ].each {
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def transition = creteTransitionIssue
-    def server = [selectIssueType('subtask') , selectProject('current') , selectParentIssue('currentIssue') , setSummary(transition) , conditionalExecution.false , runAsUser.currentUser]
+    def transition = createTransitionIssue
+    def server = [selectIssueType.subtask , selectProject.current , selectParentIssue.currentIssue , setSummary(transition) , conditionalExecution.false , runAsUser.currentUser]
     def cloud =  "{\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$SubtaskIssueType\",\"selectedLinkType\":\"\",\"parentIssue\":\"$currentIssue\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$transition\"}},\"runAsType\":\"currentUser\",\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"copySubtasks\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false}"
     if(isCloud){
         addTransitionFunctionOnCreateTransition( "@create", 'postfunction', info?.isCloud? cloud : server, functionKey)
     }
 }
 
-runAsUser.remove("currentUser")
+[
+        'copyFieldsListedBelowFixVersions'
+].each {
+    def currentIssue = info?.isCloud ? '$currentIssue$' : 'currentIssue'
+    def server = [selectIssueType.subtask , selectProject.current , "parentIssueType=$currentIssue" , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def cloud =  "{\"navigateToNewIssue\":false,\"runAsType\":\"currentUser\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$SubtaskIssueType\",\"parentIssue\":\"$currentIssue\",\"selectedLinkType\":\"\",\"copyAllFields\":false,\"copyScreenFields\":false,\"ignoreInapplicableFields\":false,\"copySubtasks\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$it\"},\"fixVersions\":{\"action\":\"copy\"}},\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"copyCommentVisibility\":\"original-visibility\",\"commentAsType\":\"currentUser\",\"conditionalExecution\":false}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
+
+    def summary = it
+    def issue = createIssue([type: 'Task', summary: summary, fixVersions: defaultValueOfVersions], it)
+
+    def issueType = "Sub-task"
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":by $it:",
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->issue[] },
+                     transition: it,
+             ],
+            ],
+            [action: 'getIssueList',
+             ext: ":to check new issue created by postfunction after transition issue by:$it",
+             sleep: sleep,
+             parameters: [
+                     project: projectName,
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     outputType: "Text",
+                     columns:"Type,Summary"
+             ],
+             data:[  "$issueType" ,
+                     /$summary/  ],
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : get fix versions value from new created issue by postfunction: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action getFieldValue --issue @issue@ --field "Fix versions" --continue/  ]
+             ],
+                    data: [getFieldValue.fixVersions]
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : delete issue created by post function to check next option: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action deleteIssue --issue @issue@ --continue/  ]
+             ],
+            ]
+    ])
+}
+
+[
+        'copyFieldsFromFixVersionsToAffectsVersionsOfNewIssue'
+].each {
+    def currentIssue = info?.isCloud ? '$currentIssue$' : 'currentIssue'
+    def server = [selectIssueType.subtask , selectProject.current , "parentIssueType=$currentIssue" , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def cloud =  "{\"navigateToNewIssue\":false,\"runAsType\":\"currentUser\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$SubtaskIssueType\",\"parentIssue\":\"$currentIssue\",\"selectedLinkType\":\"\",\"copyAllFields\":false,\"copyScreenFields\":false,\"ignoreInapplicableFields\":false,\"copySubtasks\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"},\"versions\":{\"action\":\"copy-other\",\"fromField\":\"fixVersions\"}},\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"copyCommentVisibility\":\"original-visibility\",\"commentAsType\":\"currentUser\",\"conditionalExecution\":false}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
+
+    def summary = it
+    def issue = createIssue([type: 'Task', summary: summary, fixVersions: defaultValueOfVersions], it)
+
+    def issueType = "Sub-task"
+
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":by $it:",
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->issue[] },
+                     transition: it,
+             ],
+            ],
+            [action: 'getIssueList',
+             ext: ":to check new issue created by postfunction after transition issue by:$it",
+             sleep: sleep,
+             parameters: [
+                     project: projectName,
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     outputType: "Text",
+                     columns:"Type,Summary"
+             ],
+             data:[  "$issueType" ,
+                     /$summary/  ],
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : get fix versions value from new created issue by postfunction: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action getFieldValue --issue @issue@ --field "Affects versions" --continue/  ]
+             ],
+                    data: [getFieldValueOfAffectsVersions.affectsVersions]
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : delete issue created by post function to check next option: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action deleteIssue --issue @issue@ --continue/  ]
+             ],
+            ]
+    ])
+}
+
+[
+        'setSummaryFromLabelsOfCurrentIssue'
+].each {
+    def currentIssue = info?.isCloud ? '$currentIssue$' : 'currentIssue'
+    def server = [selectIssueType.subtask , selectProject.current , "parentIssueType=$currentIssue" , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def cloud =  "{\"navigateToNewIssue\":false,\"runAsType\":\"currentUser\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$SubtaskIssueType\",\"parentIssue\":\"$currentIssue\",\"selectedLinkType\":\"\",\"copyAllFields\":false,\"copyScreenFields\":false,\"ignoreInapplicableFields\":false,\"copySubtasks\":false,\"fields\":{\"summary\":{\"action\":\"copy-other\",\"fromField\":\"labels\"}},\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"copyCommentVisibility\":\"original-visibility\",\"commentAsType\":\"currentUser\",\"conditionalExecution\":false}"
+
+    addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
+
+    def summary = it
+    def issue = createIssue([type: 'Task', summary: "JMWE_Issue", labels: it], it)
+
+    def issueType = "Sub-task"
+
+    gint.taskHelper.add([
+            [action    : 'setFieldValue',
+             ext: ":Of Labels before transition $it:",
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->issue[] },
+                     field: "Labels",
+                     value: it
+             ],
+            ],
+            [action    : 'transitionIssue',
+             ext: ":by $it:",
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->issue[] },
+                     transition: it,
+             ],
+            ],
+            [action: 'getIssueList',
+             ext: ":to check new issue created by postfunction after transition issue by:$it",
+             sleep: sleep,
+             parameters: [
+                     project: projectName,
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     outputType: "Text",
+                     columns:"Type,Summary"
+             ],
+             data:[  "$issueType" ,
+                     /$summary/  ],
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : delete issue created by post function to check next option: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action deleteIssue --issue @issue@ --continue/  ]
+             ],
+            ]
+    ])
+}
+
+[
+        'createIssueOfTypeSubtask_copyAllFieldsOnCreateIssueScreen'
+].each {
+    def currentIssue = info?.isCloud ? '$currentIssue$' : 'currentIssue'
+    def server = [selectIssueType.subtask , selectProject.current , "parentIssueType=$currentIssue" , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def cloud =  "{\"navigateToNewIssue\":false,\"calculatedProjectKey\":\"\",\"runAsType\":\"currentUser\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$SubtaskIssueType\",\"parentIssue\":\"$currentIssue\",\"selectedLinkType\":\"\",\"copyAllFields\":false,\"copyScreenFields\":true,\"ignoreInapplicableFields\":false,\"copySubtasks\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"copyCommentVisibility\":\"original-visibility\",\"commentAsType\":\"currentUser\",\"conditionalExecution\":false}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
+
+    def summary = it
+    def issue = createIssue([type: 'Task', summary: summary, fixVersions: defaultValueOfVersions, affectsVersions: defaultValueOfVersions], it)
+
+    def issueType = "Sub-task"
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":by $it:",
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->issue[] },
+                     transition: it,
+             ],
+            ],
+            [action: 'getIssueList',
+             ext: ":to check new issue created by postfunction after transition issue by:$it",
+             sleep: sleep,
+             parameters: [
+                     project: projectName,
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     outputType: "Text",
+                     columns:"Type,Summary"
+             ],
+             data:[  "$issueType" ,
+                     /$summary/  ],
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : get fix versions value from new created issue by postfunction: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action getFieldValue --issue @issue@ --field "Fix versions" --continue/  ]
+             ],
+                    data: [getFieldValue.fixVersions]
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : get affects versions value from new created issue by postfunction: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action getFieldValue --issue @issue@ --field "Affects versions" --continue/  ]
+             ],
+                    data: [getFieldValueOfAffectsVersions.affectsVersions]
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : delete issue created by post function to check next option: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action deleteIssue --issue @issue@ --continue/  ]
+             ],
+            ]
+    ])
+}
+
+[
+        'createIssueOfTypeSubtaskAndCopyAllFields'
+].each {
+    def currentIssue = info?.isCloud ? '$currentIssue$' : 'currentIssue'
+    def server = [selectIssueType.subtask , selectProject.current , "parentIssueType=$currentIssue" , setSummary('default') , conditionalExecution.false , runAsUser.currentUser]
+    def cloud =  "{\"navigateToNewIssue\":false,\"calculatedProjectKey\":\"\",\"runAsType\":\"currentUser\",\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$SubtaskIssueType\",\"parentIssue\":\"$currentIssue\",\"selectedLinkType\":\"\",\"copyAllFields\":true,\"copyScreenFields\":false,\"ignoreInapplicableFields\":false,\"copySubtasks\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"CLONE - {{issue.fields.summary}}\"}},\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"copyCommentVisibility\":\"original-visibility\",\"commentAsType\":\"currentUser\",\"conditionalExecution\":false}"
+    addTransitionFunction( it, 'postfunction', info?.isCloud? cloud : server, functionKey)
+
+    def summary = it
+    def issue = createIssue([type: 'Task', summary: summary, fixVersions: defaultValueOfVersions, affectsVersions: defaultValueOfVersions], it)
+
+    def issueType = "Sub-task"
+    gint.taskHelper.add([
+            [action    : 'transitionIssue',
+             ext: ":by $it:",
+             sleep: sleep,
+             parameters: [
+                     issue     : { ->issue[] },
+                     transition: it,
+             ],
+            ],
+            [action: 'getIssueList',
+             ext: ":to check new issue created by postfunction after transition issue by:$it",
+             sleep: sleep,
+             parameters: [
+                     project: projectName,
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     outputType: "Text",
+                     columns:"Type,Summary"
+             ],
+             data:[  "$issueType" ,
+                     /$summary/  ],
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : get fix versions value from new created issue by postfunction: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action getFieldValue --issue @issue@ --field "Fix versions" --continue/  ]
+             ],
+                    data: [getFieldValue.fixVersions]
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : get affects versions value from new created issue by postfunction: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action getFieldValue --issue @issue@ --field "Affects versions" --continue/  ]
+             ],
+                    data: [getFieldValueOfAffectsVersions.affectsVersions]
+            ],
+            [action: 'runFromIssueList',
+             sleep: sleep,
+             ext: " : delete issue created by post function to check next option: " + it,
+             parameters:[
+                     jql: "project = $projectName AND summary ~ $summary AND type = $issueType",
+                     common: [ /--action deleteIssue --issue @issue@ --continue/  ]
+             ],
+            ]
+    ])
+}
+
+["currentUser","userFromScriptInvalid"].each {
+    runAsUser.remove(it)
+}
+
 runAsUser.eachWithIndex { userType, configFields, idx ->
     def transition = 'createIssueOfTypeBugSetCustomSummaryAndRunAs_' + userType
-    def sameAsCurrentIssue = '$sameAsCurrentIssue$'
     def currentIssue = '$currentIssue$'
-    def server =  [selectIssueType('bug') , selectProject('current') , selectParentIssue('none') , setSummary('template') , selectLinkType('notLinked') , conditionalExecution.false , configFields]
+    def server =  [selectIssueType.bug , selectProject.current , selectParentIssue.none , setSummary('template') , selectLinkType.notLinked , conditionalExecution.false , configFields]
     def cloud =  "{\"conditionalExecution\":false,\"project\":\"$sameAsCurrentIssue\",\"issuetype\":\"$BugIssueType\",\"selectedLinkType\":\"\",\"copySelectedFieldsOnly\":true,\"copyScreenFields\":false,\"copyAllFields\":false,\"fields\":{\"summary\":{\"action\":\"set\",\"value\":\"$customSummary\"}},\"copyCommentToNewIssue\":false,\"copyAllCommentsToNewIssue\":false,\"ignoreInapplicableFields\":false,\"navigateToNewIssue\":false,$configFields}"
     addTransitionFunction( transition, 'postfunction', info?.isCloud? cloud : server, functionKey)
     if(!isCloud){
         moveTransitionFunction(transition, 4)
     }
 }
-
-
-createWorkflowScheme()
-createProject()
 
 def defaultIssue = createIssue([type: 'Task', summary: testSummary], 'defaultIssue')
 
@@ -386,18 +1015,18 @@ if(isCloud){
              sleep: sleep,
              parameters: [
                      project: projectName,
-                     jql: "project = $projectName AND summary ~ $creteTransitionIssue AND type = Sub-task",
+                     jql: "project = $projectName AND summary ~ $createTransitionIssue AND type = Sub-task",
                      outputType: "Text",
                      columns:"Type,Summary"
              ],
              data:[  "Sub-task" ,
-                     /$creteTransitionIssue/  ],
+                     /$createTransitionIssue/  ],
             ],
             [action: 'runFromIssueList',
              sleep: sleep,
              ext: " : delete issue created by post function on create transition: ",
              parameters:[
-                     jql: "project = $projectName AND summary ~ $creteTransitionIssue AND type = Sub-task",
+                     jql: "project = $projectName AND summary ~ $createTransitionIssue AND type = Sub-task",
                      common: [ "--action deleteIssue --issue @issue@ --continue"
                      ]
              ]
@@ -406,12 +1035,13 @@ if(isCloud){
     )
 }
 
-
 [
         'createIssueOfTypeSubtask',
         'createIssueOfTypeStory',
         'createIssueOfTypeBug',
         'createIssueOfTypeInitiative',
+        'createIssueOfTypeEpic',
+        'createIssueOfTypeEpic_calculatedProjectKey',
         'createIssueOfTypeTask',
 ].each {
     def issueType;
@@ -425,6 +1055,8 @@ if(isCloud){
         issueType = "Bug"
     }else if(it == 'createIssueOfTypeInitiative'){
         issueType = "Initiative"
+    }else if(it == 'createIssueOfTypeEpic' || it == 'createIssueOfTypeEpic_calculatedProjectKey'){
+        issueType = "Epic"
     }
     gint.taskHelper.add([
             [action    : 'transitionIssue',
@@ -458,6 +1090,7 @@ if(isCloud){
             ]
     ])
 }
+
 
 def testSummary1 = "createAndLinkIssue"
 def defaultIssue1 = createIssue([type: 'Task', summary: testSummary1], 'defaultIssue1')
@@ -896,6 +1529,10 @@ def defaultIssue5 = createIssue([type: 'Task', summary: testSummary5], 'defaultI
             ]
     ])
 }
+*/
+
+
+
 
 
 

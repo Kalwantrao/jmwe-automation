@@ -71,6 +71,14 @@ def optionsCloud = [
 ]
 def options = info?.isCloud ? optionsCloud : optionsServer
 
+['create_transition'].each {
+    def server =   [sourceField.assignee , destField.labels ,  options.noOption , useOldValue.yes , returnParentChildForCascadingCustomFields.no , conditionalExecution.true]
+    def cloud =  "{$conditionalExecution.true,$runAsUser.currentUser,$sourceField.reporter,$destField.assignee,\"catenateCascading\":false,$options.noOption}"
+    if(isCloud){
+        addTransitionFunctionOnCreateTransition("create", 'postfunction', info?.isCloud? cloud : server, functionKey)
+    }
+}
+
 ['field_labels_will_take_the_value_from_assignee '].each {
     def server =  [sourceField.assignee , destField.labels , useOldValue.yes , returnParentChildForCascadingCustomFields.no , options.noOption , conditionalExecution.false]
     def cloud =  "{$conditionalExecution.false,$sourceField.assignee,$destField.labels,\"catenateCascading\":false,$options.noOption,$runAsUser.currentUser}"
@@ -107,7 +115,11 @@ def options = info?.isCloud ? optionsCloud : optionsServer
     addTransitionFunction(it, 'postfunction', info?.isCloud? cloud : server, functionKey)
 }
 
-runAsUser.remove("currentUser","userFromScript")
+def valuesToRemove = ["userFromScriptInvalid","currentUser","userFromScript"]
+
+valuesToRemove.each {
+    runAsUser.remove(it)
+}
 
 runAsUser.eachWithIndex{ userToCheck, configFields, index ->
     def transition = "run_as_" + userToCheck
@@ -118,13 +130,26 @@ runAsUser.eachWithIndex{ userToCheck, configFields, index ->
     }
 }
 
-createWorkflowScheme()
-createProject()
-
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue', assignee: user], 'defaultIssue')
+def issueOfHighPriority = createIssue([type: 'Task', summary: 'JMWE_Issue', priority: "High"], 'issueOfHighPriority')
+if(isCloud){
+    gint.taskHelper.add([
+            [action    : 'getFieldValue',
+             sleep     : sleep,
+             ext       : ":set value of assignee to reporter_when priority is High_on create transition:",
+             parameters: [
+                     issue: { -> issueOfHighPriority[] },
+                     field: "Assignee"
+             ],
+             failData  : [info?.isCloud ? "Assignee  . . . . . . . . . . . : $getCurrentUserName" : "Assignee  . . . . . . . . . . . : $user"],
+            ],
+    ])
+}
+
 
 def testLabel = "label"
 
+//runAsUser.remove("userFromScriptInvalid","currentUser","userFromScript")
 runAsUser.eachWithIndex { userToCheck, configFields, index ->
     def transition = "run_as_" + userToCheck
     if(!isServer) {

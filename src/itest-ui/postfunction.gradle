@@ -9,6 +9,9 @@ relatedIssue.put('returnsFromJqlSearch', "jql:$jqlSearchExpression")
 tearDown(projectName)
 addWorkflow()
 
+createWorkflowScheme()
+createProject()
+
 def xpath = [
         clickTransitionTab : info?.isCloud? "//div[@data-testid='issue.views.issue-base.foundation.status.actions-wrapper']" : "//a[@id='opsbar-transitions_more']",
 ]

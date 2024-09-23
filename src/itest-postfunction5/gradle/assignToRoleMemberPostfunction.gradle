@@ -8,13 +8,23 @@ buildscript {
         classpath "org.gint:gint-atlassian:3.8.3"
     }
 }
+
 apply plugin: "org.gint.atlassian"
 apply from: gint.resourceDirectory +'/src/itest-postfunction5/postfunction.gradle'
 
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__AssignToRoleMemberFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:assigntorolemember'
 
+def TEST_USER_ID = getUserId(testUser)
+def testUserId = {->TEST_USER_ID.getAt(0).trim()}
+
+def JIRA_ADMIN_PROJECT_ROLE_ID = getProjectRoleId("Administrators")
+def jiraAdminRoleId = {->JIRA_ADMIN_PROJECT_ROLE_ID.getAt(0).toString().trim()}
+
+def JIRA_TEST_PROJECT_ROLE_ID = getProjectRoleId("testprojectrole")
+def testProjectRoleId = {->JIRA_TEST_PROJECT_ROLE_ID.getAt(0).toString().trim()}
+
 ext.EMPTY_PROJECT_ROLE_ID = getProjectRoleId("emptyprojectrole")
-project.ext.emptyProjectRoleId = {->EMPTY_PROJECT_ROLE_ID.getAt(0).trim()}
+project.ext.emptyProjectRoleId = {->EMPTY_PROJECT_ROLE_ID.getAt(0).toString().trim()}
 
 def projectRole = [
         admin : ["jira.projectrole.id=$jiraAdminRoleId"],
@@ -29,11 +39,84 @@ def action = [
         ifChangedOnTransitionScreen : ["assigneeMode=forceSelectedUser"],
 ]
 
+def getFieldName = fields('NAME', 'assignee')
+def verifyFieldValue = fields('GET', 'assignee')
+
+['CreateTransition'].each {
+    def server = [projectRole.admin + conditionalExecution.false]
+    def cloud = "{\"conditionalExecution\":true,\"conditionalExecutionScript\":\"{{ issue.fields.issuetype.name == 'Story' }}\",\"sendNotifications\":true,\"role\":$jiraAdminRoleId,\"runAsType\":\"addonUser\"}"
+    if (isCloud) {
+        addTransitionFunctionOnCreateTransition("Create", 'postfunction', info?.isCloud ? cloud : server, functionKey)
+
+        def storyTypeIssue = createIssue([type: 'Story', summary: 'JMWE_Issue'], 'storyTypeIssue')
+
+        gint.taskHelper.add([
+                [action    : 'getFieldValue',
+                 sleep     : sleep,
+                 ext       : ': of assignee to check issue is assigned to admin role when issue of type story craeted_on create transition',
+                 parameters: [
+                         issue: { -> storyTypeIssue[] },
+                         field: getFieldName.assignee
+                 ],
+                 data      : [verifyFieldValue.assignee],
+                ],
+        ])
+    }
+}
+
+relatedIssuesList.each {
+    def relatedIssueConfigurationFields = createRelatedIssuesMap("CONFIGURATION", it, projectName, " ")
+    def transition = 'VerifyAssignToAdminRoleMemberPostfunctionForIssue' + it
+            relatedIssueConfigurationFields.eachWithIndex { key, value, i ->
+                def server = [projectRole.admin, conditionalExecution.false]
+                def cloud = "{\"targetIssue\":\"$value\",\"conditionalExecution\":false,\"sendNotifications\":true,\"role\":$jiraAdminRoleId,\"runAsType\":\"addonUser\"}"
+                if (isCloud) {
+                    addTransitionFunction(transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
+                }
+            }
+
+    def relatedIssuesMap = createRelatedIssuesMap("TRANSITION", it, projectName, " ")
+if(isCloud) {
+    relatedIssuesMap.eachWithIndex { key, value, int i ->
+        gint.taskHelper.add([
+                [action    : 'getFieldValue',
+                 sleep     : sleep,
+                 ext       : ":remove the assignee of target issue before transition issue with:" + transition,
+                 parameters: [
+                         issue: value,
+                         field: getFieldName.assignee,
+                         //value: " "
+                 ],
+                 failData  : [verifyFieldValue.assignee],
+                ],
+                [action    : 'transitionIssue',
+                 sleep     : sleep,
+                 ext       : "by:" + transition,
+                 parameters: [
+                         issue     : key,
+                         transition: transition,
+                 ]
+                ],
+                [action    : 'getFieldValue',
+                 sleep     : sleep,
+                 ext       : "After transition issue with transition " + transition,
+                 parameters: [
+                         issue: value,
+                         field: getFieldName.assignee
+                 ],
+                 data      : [verifyFieldValue.assignee],
+                ],
+        ])
+    }
+}
+}
+
 ['1. assignToAdminRole'].each {
     def server =  [projectRole.admin + conditionalExecution.false]
     def cloud =  "{\"conditionalExecution\":false,\"sendNotifications\":true,\"role\":$jiraAdminRoleId,\"runAsType\":\"addonUser\"}"
     addTransitionFunction( it, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
+
 ['2. assignToTestRole'].each {
     def server =  [projectRole.testRole + conditionalExecution.false]
     def cloud =  "{\"conditionalExecution\":false,\"sendNotifications\":true,\"role\":$testProjectRoleId,\"runAsType\":\"addonUser\"}"
@@ -112,17 +195,15 @@ def action = [
     }
 }
 
-createWorkflowScheme();
-createProject()
-
 def defaultIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'defaultIssue')
+
 def usersToAddInProjectRoleServer = [testUser1,testUser,inactiveAdmin, testAdmin,"@self"]
 def usersToAddInProjectRoleCloud = [testUser1,testUser, testAdmin,"@self"]
 def usersToAddInProjectRole = info?.isCloud? usersToAddInProjectRoleCloud : usersToAddInProjectRoleServer
 
 ["Administrators",testRole].each { role ->
     usersToAddInProjectRole.eachWithIndex { user, idx ->
-        gint.taskHelper.add(
+        gint.taskHelper.addSetUp(
                 action: 'removeProjectRoleActors',
                 sleep: sleep,
                 ext: ": remove user_ $user from project role_ $role",
@@ -144,7 +225,7 @@ def usersToAddInProjectRole = info?.isCloud? usersToAddInProjectRoleCloud : user
     else {
         role = testRole
     }
-    gint.taskHelper.add(
+    gint.taskHelper.addSetUp(
             action: 'addProjectRoleActors',
             sleep: sleep,
             ext: ": add user $it to project role_ $role",
@@ -156,6 +237,7 @@ def usersToAddInProjectRole = info?.isCloud? usersToAddInProjectRoleCloud : user
             ]
     )
 }
+
 
 // 1. Assign to default Admin role
 [
@@ -175,9 +257,9 @@ def usersToAddInProjectRole = info?.isCloud? usersToAddInProjectRoleCloud : user
                  ext       : it + ': of related issue',
                  parameters: [
                          issue: { -> defaultIssue[] },
-                         field: "Assignee"
+                         field: getFieldName.assignee
                  ],
-                 data      : [/Assignee  . . . . . . . . . . : $getCurrentUserName/],
+                 data      : [verifyFieldValue.assignee],
                 ],
         ])
 }
@@ -200,7 +282,7 @@ def usersToAddInProjectRole = info?.isCloud? usersToAddInProjectRoleCloud : user
              ext       : it + ': of related issue' ,
              parameters: [
                      issue: { -> defaultIssue[] },
-                     field: "Assignee"
+                     field: getFieldName.assignee
              ],
              data      : [/Assignee  . . . . . . . . . . : $testUser1/],
             ],
@@ -233,9 +315,10 @@ def usersToAddInProjectRole = info?.isCloud? usersToAddInProjectRoleCloud : user
                  ext       : it + ': of related issue',
                  parameters: [
                          issue: { -> defaultIssue[] },
-                         field: "Assignee"
+                         field: getFieldName.assignee
                  ],
                  data      : [/Assignee  . . . . . . . . . . : /],
+                 failData      : [verifyFieldValue.assignee],
                 ],
         ])
     }
@@ -295,7 +378,7 @@ def usersToAddInProjectRole = info?.isCloud? usersToAddInProjectRoleCloud : user
                  ext       : it + ': of related issue',
                  parameters: [
                          issue: { -> defaultIssue[] },
-                         field: "Assignee"
+                         field: getFieldName.assignee
                  ],
                  data      : [/Assignee  . . . . . . . . . . : $testUser1/],
                 ],
@@ -327,9 +410,9 @@ def usersToAddInProjectRole = info?.isCloud? usersToAddInProjectRoleCloud : user
                  ext       : it + ': of related issue',
                  parameters: [
                          issue: { -> defaultIssue[] },
-                         field: "Assignee"
+                         field: getFieldName.assignee
                  ],
-                 data      : [/Assignee  . . . . . . . . . . : $getCurrentUserName/],
+                 data      : [verifyFieldValue.assignee],
                 ],
                 [action    : 'updateIssue',
                  ext       : it + ': unassigned',
@@ -358,9 +441,9 @@ def usersToAddInProjectRole = info?.isCloud? usersToAddInProjectRoleCloud : user
                  ext       : it + ': of related issue',
                  parameters: [
                          issue: { -> defaultIssue[] },
-                         field: "Assignee"
+                         field: getFieldName.assignee
                  ],
-                 data      : [/Assignee  . . . . . . . . . . : $getCurrentUserName/],
+                 data      : [getFieldName.assignee],
                 ],
                 [action    : 'updateIssue',
                  ext       : it + ': unassigned',

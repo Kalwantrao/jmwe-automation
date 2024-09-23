@@ -1,7 +1,7 @@
 //gradle -b src/itest-selenium/selenium.gradle -Dbrowser=firefox -Ddelay=3
 
 def info = gint.getJiraHelper().getServerInfoWithVerify()
-def userName = info?.isCloud ? testUserNameCloud : testUserNameServer
+def userName = info?.isCloud ? user : testUserNameServer
 def password = info?.isCloud ? testUserPasswordCloud : testUserPasswordServer
 gint.getJiraHelper().getSeleniumHelper()
 gint.seleniumHelper.addInitializeTask()

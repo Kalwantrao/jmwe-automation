@@ -13,10 +13,17 @@ apply plugin: 'org.gint.atlassian'
 apply from: gint.resourceDirectory +'/src/itest-postfunction3/postfunction.gradle'
 
 def functionKey = info?.isCloud ? "com.atlassian.plugins.atlassian-connect-plugin:com.innovalog.${testCloudBuild}__CommentIssueFunction" : 'com.innovalog.jmwe.jira-misc-workflow-extensions:commentIssue-function'
-def JIRA_ADMIN_GROUP_ID= getGroupId("jira-admin", "jira-admins.*")
+
+def JIRA_ADMIN_PROJECT_ROLE_ID = getProjectRoleId("Administrators")
+def jiraAdminRoleId = {->JIRA_ADMIN_PROJECT_ROLE_ID.getAt(0).trim()}
+
+def JIRA_TEST_PROJECT_ROLE_ID = getProjectRoleId("testprojectrole")
+def testProjectRoleId = {->JIRA_TEST_PROJECT_ROLE_ID.getAt(0).trim()}
+
+def JIRA_ADMIN_GROUP_ID= getGroupId("jira-admin", info?.isCloud? "jira-admins.*": "jira-administrators")
 def jiraAdminGroup = {->JIRA_ADMIN_GROUP_ID.getAt(0).trim()}
 
-def TEST_GROUP_ID= getGroupId("testgroup", "testgroup.*")
+def TEST_GROUP_ID= getGroupId("testgroup", info?.isCloud? "testgroup.*" : "testgroup")
 def testGroupId = {->TEST_GROUP_ID.getAt(0).trim()}
 
 String addCommentByTemplate = "add_comment_to_related_issue_by_template"
@@ -36,6 +43,14 @@ def commentVisibility = [
         testProjectRoleUsers : ["restrictToGroup=", "restrictToProjectRole=$testProjectRoleId"]
 ]
 
+def relatedIssue = [:]
+def relatedIssuesMap = [:]
+
+relatedIssuesList.each{
+    relatedIssue.putAll(createRelatedIssuesMap('CONFIGURATION', it, projectName, " "))
+    relatedIssuesMap.putAll(createRelatedIssuesMap('TRANSITION', it, projectName, " "))
+}
+
 relatedIssue.eachWithIndex { key, value, i ->
     def transition = addCommentByTemplate + i
     def server =  ["valueType=template" , "value=$transition" , "selectedLinkType=$value"]
@@ -43,7 +58,7 @@ relatedIssue.eachWithIndex { key, value, i ->
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = addCommentByExpression + i
     def server =  ["valueType=expression" , "value=$groovyExpression.getDescription" , "selectedLinkType=$value"]
     if(!isCloud) {
@@ -51,44 +66,47 @@ relatedIssue.eachWithIndex { key, value, i ->
     }
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = addCommentIfConditionTrue + i
     def cloud =  "{$conditionalExecution.true,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",\"runAsType\":\"currentUser\"}"
     def server =  ["valueType=template" , "value=$transition" , commentVisibility.notSelected,  "selectedLinkType=$value" , conditionalExecution.true , runAsUser.currentUser]
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
-/*
-relatedIssue.eachWithIndex { key, value, i ->
+
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = addCommentVisibleToAdminProjectRole + i
     def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToProjectRoleId\":$jiraAdminRoleId,\"runAsType\":\"currentUser\"}"
     def server =  ["valueType=template" , "value=$transition" , commentVisibility.jiraAdminRoles ,  "selectedLinkType=$value" , conditionalExecution.false , runAsUser.currentUser]
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
-*/
-relatedIssue.eachWithIndex { key, value, i ->
+
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = addCommentVisibleToAdminGroup + i
     def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"$jiraAdminGroup\",\"runAsType\":\"currentUser\"}"
     def server =  ["valueType=template" , "value=$transition" , commentVisibility.jiraAdminGroups ,  "selectedLinkType=$value" , conditionalExecution.false , runAsUser.currentUser]
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = addCommentVisibleToTestGroup + i
     def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"$testGroupId\",\"runAsType\":\"currentUser\"}"
     def server =  ["valueType=template" , "value=$transition" , commentVisibility.testGroupUsers ,  "selectedLinkType=$value" , conditionalExecution.false , runAsUser.currentUser]
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-relatedIssue.eachWithIndex { key, value, i ->
+relatedIssue.take(1).eachWithIndex { key, value, i ->
     def transition = addCommentVisibleToTestProjectRole + i
     def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToProjectRoleId\":$testProjectRoleId,\"runAsType\":\"currentUser\"}"
     def server =  ["valueType=template" , "value=$transition" , commentVisibility.testProjectRoleUsers ,  "selectedLinkType=$value" , conditionalExecution.false , runAsUser.currentUser]
     addTransitionFunction( transition, 'postfunction', info?.isCloud ? cloud : server, functionKey)
 }
 
-runAsUser.remove("currentUser")
+["currentUser","userFromScriptInvalid"].each {
+    runAsUser.remove(it)
+}
+
 runAsUser.eachWithIndex { usersType, fieldValues, idx ->
-    relatedIssue.eachWithIndex { key, value, i ->
+    relatedIssue.take(1).eachWithIndex { key, value, i ->
         def transition = addCommentRunAsUser + usersType + i
         def cloud =  "{$conditionalExecution.false,\"targetIssue\":\"$value\",\"comment\":\"$transition\",\"restrictToInternal\":false,\"restrictToGroup\":\"\",$fieldValues}"
         def server =  ["valueType=template" , "value=$transition" , commentVisibility.notSelected , "selectedLinkType=$value" , conditionalExecution.false , fieldValues]
@@ -98,55 +116,6 @@ runAsUser.eachWithIndex { usersType, fieldValues, idx ->
         }
     }
 }
-
-createWorkflowScheme()
-createProject()
-
-def currentIssue = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'currentIssue')
-def parent = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'parent')
-def subtask = createIssue([type: 'Sub-task', summary: 'JMWE_Issue', parent: { -> parent[]}], 'Sub-task')
-def epic = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic')
-def issueBelongsToEpic = createIssue([type: 'Task', summary: 'JMWE_Issue', field: "Epic Link", value: {-> epic[]} ], 'BelongsToEpic')
-def initiative = createIssue([type: 'Initiative', summary: 'JMWE_Issue' ], 'Initiative')
-def epic_initiative = createIssue([type: 'Epic', summary: 'JMWE_Issue', field: "Epic Name", value: "JMWE_Issue"], 'Epic_initiative')
-def issueLinks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'issueLinks')
-def blocks = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'blocks')
-def clones = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'clones')
-def duplicates = createIssue([type: 'Task', summary: 'JMWE_Issue'], 'duplicates')
-def relatesTo = createIssue([type: 'Task', summary: 'JMWE_Task'], 'relatesTo')
-def jqlIssue = createIssue([type: 'Task', summary: 'JQL_ISSUE'], 'jqlIssue')
-updateIssue([issue: {->epic_initiative[]}, field: "Parent Link", value: {->initiative[]}], "parent initiative child epic")
-
-def linkIssuesMap = [
-        blocks : {->blocks[]},
-        "$clonesLinkType" : {->clones[]},
-        duplicates : {->duplicates[]},
-        'relates to': {->relatesTo[]}
-]
-
-linkIssuesMap.eachWithIndex { key, value, i ->
-    linkIssue([issue: {->issueLinks[]}, toIssue: value, link: "$key"], key)
-}
-
-def relatedIssuesMap = [
-        {->currentIssue[]} : {->currentIssue[]},
-        {->parent[]} : {->subtask[]},
-        {->subtask[]} : {->parent[]},
-        {->epic[]} : {->issueBelongsToEpic[]},
-        {->issueBelongsToEpic[]} : {->epic[]},
-        {-> initiative[]} : {->epic_initiative[]},
-        {->epic_initiative[]} : {-> initiative[]},
-        {->blocks[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->blocks[]},
-        {->blocks[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->clones[]},
-        {->clones[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->duplicates[]},
-        {->duplicates[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->relatesTo[]},
-        {->relatesTo[]} : {->issueLinks[]},
-        {->issueLinks[]} : {->jqlIssue[]}
-]
 
 [
         addCommentByTemplate
@@ -177,8 +146,9 @@ def relatedIssuesMap = [
     }
 }
 
+runAsUser.remove("userFromScriptInvalid","currentUser")
 runAsUser.eachWithIndex { userToCheck, fieldsValues, idx ->
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         def transition = addCommentRunAsUser + userToCheck + i
         def getCurrentUserName1 = info?.isCloud? info?.userDisplayName : user
         if(userToCheck == "userInFieldAssignee"){
@@ -220,7 +190,7 @@ runAsUser.eachWithIndex { userToCheck, fieldsValues, idx ->
 [
         addCommentByExpression
 ].each {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         def transition = it+i
         if (!isCloud) {
             gint.taskHelper.add([
@@ -259,17 +229,18 @@ runAsUser.eachWithIndex { userToCheck, fieldsValues, idx ->
 [
         addCommentVisibleToTestProjectRole,
 ].each {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         def transition = it + i
         ['addProjectRoleActors','removeProjectRoleActors'].each { action ->
             gint.taskHelper.add([
                     [action    : action,
-                     ext       : ":$action in $testRole role user $user before transition issue with_ $transition:after $action",
+                     ext       : ": In $testRole role user $user before transition issue with_ $transition:after $action",
                      sleep     : sleep,
                      parameters: [
                              userId : user,
                              role   : testRole,
-                             project: projectName
+                             project: projectName,
+                             continue: null
                      ],
                     ],
             ])
@@ -313,12 +284,12 @@ runAsUser.eachWithIndex { userToCheck, fieldsValues, idx ->
 [
         addCommentVisibleToTestGroup
 ].each {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         ['addUserToGroup', 'removeUserFromGroup'].each { action ->
             def transition = it + i
             gint.taskHelper.add([
                     [action    : action,
-                     ext       : ":user $user to $testGroup" + i,
+                     ext       : "$action:user $user to $testGroup",
                      sleep     : defaultSleepTime,
                      parameters: [
                              userId     : user,
@@ -365,9 +336,9 @@ runAsUser.eachWithIndex { userToCheck, fieldsValues, idx ->
 }
 
 [
-       // addCommentVisibleToAdminProjectRole,
+        addCommentVisibleToAdminProjectRole,
 ].each {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         ['removeProjectRoleActors', 'addProjectRoleActors'].each { action ->
             def transition = it + i
             gint.taskHelper.add([
@@ -421,7 +392,7 @@ runAsUser.eachWithIndex { userToCheck, fieldsValues, idx ->
 [
         //addCommentVisibleToAdminGroup
 ].each {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         def transition = it + i
         gint.taskHelper.add([
                 [action    : 'transitionIssue',
@@ -449,7 +420,7 @@ runAsUser.eachWithIndex { userToCheck, fieldsValues, idx ->
 [
         addCommentIfConditionTrue
 ].each {
-    relatedIssuesMap.eachWithIndex { key, value, i ->
+    relatedIssuesMap.take(1).eachWithIndex { key, value, i ->
         ["Low","High"].eachWithIndex { priority, idx ->
             def transition = it + i
             gint.taskHelper.add([
