@@ -7,7 +7,7 @@ import org.openqa.selenium.support.PageFactory;
 
 public class SuggestionClassExample {
 	WebDriver driver;
-	
+	/*
 	public SuggestionClassExample(WebDriver driver) {
 		this.driver = driver;
 		PageFactory.initElements(driver, this);
@@ -33,4 +33,5 @@ public class SuggestionClassExample {
 		searchUSA.sendKeys("USA");
 		Thread.sleep(2000);
 	}
+	*/
 }

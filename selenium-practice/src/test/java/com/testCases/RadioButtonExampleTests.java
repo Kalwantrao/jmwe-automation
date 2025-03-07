@@ -1,34 +1,40 @@
 package com.testCases;
 
-import org.openqa.selenium.WebDriver;
+import java.util.concurrent.TimeUnit;
+
+import org.testng.annotations.AfterTest;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
 import com.base.BaseClass;
 import com.pages.RadioButtonExample;
 
-public class RadioButtonExampleTests extends BaseClass {
+public class RadioButtonExampleTests extends BaseClass{
 	
-	WebDriver driver;
 	BaseClass test = new BaseClass();
-	RadioButtonExample RB = new RadioButtonExample(driver);
+	RadioButtonExample RB = new RadioButtonExample(BaseClass.driver);
 	
-	@Test
-	public void ValidateRadioButton1() throws InterruptedException {
+	@BeforeTest
+	public void setUp() {
 		test.openUrlBrowser();
+		driver.manage().timeouts().implicitlyWait(10, TimeUnit.SECONDS);
+	}
+	@Test
+	public void CheckRadioButton1() {
 		RB.clickRadioButton1();
-    	Thread.sleep(3000);
 	}
 	
 	@Test
-	public void ValidateRadioButton2() throws InterruptedException {
-		test.openUrlBrowser();
+	public void CheckRadioButton2() {
 		RB.clickRadioButton2();
 	}
 	
 	@Test
-	public void ValidateRadioButton3() throws InterruptedException {
-		test.openUrlBrowser();
+	public void CheckRadioButton3() {
 		RB.clickRadioButton3();
 	}
-	
+	@AfterTest
+	public void tearDown() {
+		driver.quit();
+	}
 }
